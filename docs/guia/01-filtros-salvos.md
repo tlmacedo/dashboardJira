@@ -186,6 +186,8 @@ filter = "EQP | Base | Equipe" AND resolved >= startOfMonth()
 filter = "EQP | Base | Equipe" AND duedate >= startOfWeek() AND duedate <= endOfWeek()
 ```
 
+Nota: os limites da semana dependem do primeiro dia da semana configurado no Jira e do locale do usuário, então a semana pode ir de domingo a sábado em vez de segunda a domingo. **[Confirmar na sua versão]** Para conferir, use uma tarefa com vencimento no domingo e veja se ela entra na semana atual ou na seguinte.
+
 ### EQP | Período | Criadas em 30 dias
 
 **Nome:** EQP | Período | Criadas em 30 dias
