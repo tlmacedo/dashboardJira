@@ -67,22 +67,33 @@ Em Administração > Tarefas > Campos personalizados, crie: **[Confirmar na sua 
 
 Associe os campos às telas dos projetos da equipe e confira se estão no esquema de campos, senão a regra não consegue gravar. Veja também a lista de campos do capítulo 00.
 
-### 6.2. Criar a regra
+### 6.2. Criar as regras
 
-Em Automação (menu da tarefa ou administração do projeto, conforme a versão), crie uma regra delimitada aos projetos `[CHAVE_DO_PROJETO]`. **[Confirmar na sua versão]**
+Em Automação (menu da tarefa ou administração do projeto, conforme a versão), crie duas regras delimitadas aos projetos `[CHAVE_DO_PROJETO]`. **[Confirmar na sua versão]**
 
-1. **Gatilho:** transição de issue (nas versões em inglês, "Issue transitioned"). **[Confirmar na sua versão]** Deixe os campos "de status" e "para status" vazios, para a regra valer para qualquer transição.
-2. **Ação, acumular o tempo do status que saiu:** para cada status monitorado, crie uma condição "o status de origem é <status>" e, dentro dela, uma ação "Editar issue" no campo "Horas em <status>". O novo valor é o valor atual do campo somado ao tempo decorrido desde "Entrada no status atual". Esse tempo vem de uma conta de datas com smart values entre `{{now}}` e o valor do campo "Entrada no status atual", convertida para horas. **[Confirmar na sua versão]** Os nomes das funções de data e o formato do resultado variam entre versões; monte a expressão, teste-a (6.3) e ajuste.
-3. **Ação, gravar a nova entrada:** depois do passo anterior, edite o campo "Entrada no status atual" com o valor `{{now}}`.
-4. **Primeira transição de uma tarefa antiga:** se "Entrada no status atual" estiver vazio, a conta do passo 2 falha ou dá um valor sem sentido. Acrescente uma condição "o campo não está vazio" antes de acumular, e grave `{{now}}` de qualquer forma.
+**Regra A: "Issue criada" (inicialização).** Sem ela, o tempo no primeiro status se perde, porque a regra de transição só dispara na primeira mudança de status e "Entrada no status atual" ficaria vazio em tarefas novas. Issues criadas antes da implantação também não terão histórico.
 
-A ordem importa: acumule primeiro (usando a entrada anterior) e só então sobrescreva a entrada com `{{now}}`. Se inverter, o tempo calculado será zero.
+1. **Gatilho:** criação de issue (em inglês, "Issue created"). **[Confirmar na sua versão]**
+2. **Ação:** editar a issue gravando `{{now}}` em "Entrada no status atual" e `0` em cada campo "Horas em <status>". A inicialização com 0 evita o problema do campo numérico vazio descrito na regra B. **[Confirmar na sua versão]**
+
+**Regra B: transição de issue (acumulação).**
+
+1. **Gatilho:** transição de issue (em inglês, "Issue transitioned"). **[Confirmar na sua versão]** Deixe os campos "de status" e "para status" vazios, para a regra valer para qualquer transição.
+2. **Smart values do gatilho:** o status de origem é `{{fromStatus.name}}` e o de destino é `{{toStatus.name}}`. **[Confirmar na sua versão]** Use `{{fromStatus.name}}` nas condições abaixo, porque é o status que acabou de terminar e cujo campo recebe o tempo.
+3. **Acumular o tempo do status que saiu:** para cada status monitorado, crie uma condição "`{{fromStatus.name}}` é igual a <status>" e, dentro dela, uma ação "Editar issue" no campo "Horas em <status>". O novo valor é o valor atual do campo somado ao tempo decorrido desde "Entrada no status atual". Esse tempo vem de uma conta de datas com smart values entre `{{now}}` e o valor do campo "Entrada no status atual", convertida para horas. **[Confirmar na sua versão]** Os nomes das funções de data e o formato do resultado variam entre versões; monte a expressão, teste-a (6.3) e ajuste.
+4. **Campo vazio conta como 0:** um campo numérico vazio quebra a soma. Trate vazio como 0, seja inicializando os campos na regra A, seja usando na expressão um valor padrão ou condicional para o caso vazio. A sintaxe para isso varia entre versões. **[Confirmar na sua versão]** Tarefas anteriores à implantação têm os campos vazios, então esse tratamento também é necessário na regra B.
+5. **Tarefa sem entrada anterior:** se "Entrada no status atual" estiver vazio, a conta do passo 3 falha ou dá um valor sem sentido. Acrescente uma condição "o campo não está vazio" antes de acumular, e grave `{{now}}` de qualquer forma no passo seguinte.
+6. **Gravar a nova entrada:** depois de acumular, edite "Entrada no status atual" com `{{now}}`.
+
+A ordem importa: leia a entrada antiga antes de sobrescrevê-la. Acumule primeiro e só então grave `{{now}}`. Se inverter, o tempo calculado será zero.
+
+Nota sobre valores obsoletos: em algumas versões, os smart values refletem a issue como ela estava no início da regra, e não o resultado das ações anteriores. **[Confirmar na sua versão]** Isso ajuda a ler a entrada antiga com segurança, mas pode fazer o valor atual de "Horas em <status>" ficar desatualizado entre uma ação e outra. Confirme no teste da seção 6.3 se é preciso recarregar ou consultar a issue entre as ações, ou, se preferir, calcule e grave tudo numa única ação de edição.
 
 ### 6.3. Testar antes de ativar para todos
 
 1. Ative a regra em um projeto de teste ou numa tarefa de teste.
-2. Mova a tarefa por dois ou três status, esperando alguns minutos entre as transições.
-3. Confira os campos "Horas em <status>" contra o tempo real entre as transições. A aritmética de datas em smart values deve ser testada na sua versão. **[Confirmar na sua versão]** Cuidado com arredondamento: tempos curtos podem resultar em zero se o resultado for convertido para horas inteiras.
+2. Crie uma tarefa nova (para exercitar a regra A) e mova-a por dois ou três status, esperando alguns minutos entre as transições.
+3. Confira os campos "Horas em <status>" contra o tempo real entre as transições. A aritmética de datas em smart values deve ser testada na sua versão. **[Confirmar na sua versão]** Confirme também se o valor lido entre as ações está atualizado (nota de valores obsoletos em 6.2). Cuidado com arredondamento: tempos curtos podem resultar em zero se o resultado for convertido para horas inteiras.
 4. Só então ative para os projetos da equipe.
 
 ### 6.4. Exibir no dashboard
