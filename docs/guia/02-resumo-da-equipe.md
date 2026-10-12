@@ -12,7 +12,7 @@ Os nomes dos gadgets estão em português como aparecem em instalações no idio
 
 | Métrica | Gadget **[Confirmar na sua versão]** | Filtro | Configuração |
 |---|---|---|---|
-| Total de tarefas | Resultados do Filtro ou Estatísticas da Tarefa | `EQP \| Resumo \| Tarefas` | No Resultados do Filtro, o total aparece no cabeçalho da lista. No Estatísticas da Tarefa, escolha uma estatística como Status |
+| Total de tarefas | Resultados do Filtro ou Estatísticas da Tarefa | `EQP \| Resumo \| Tarefas` | No Resultados do Filtro, o total aparece junto da lista (por exemplo, "x–y de N"); a posição varia por versão. **[Confirmar na sua versão]** O Estatísticas da Tarefa mostra uma contagem por valor da estatística escolhida (por exemplo, Status), não um total único; para obter o total, some as linhas ou use o Resultados do Filtro |
 | Total de subtarefas | Resultados do Filtro ou Estatísticas da Tarefa | `EQP \| Resumo \| Subtarefas` | Mesma configuração da linha anterior |
 | Atrasadas | Resultados do Filtro | `EQP \| Resumo \| Atrasadas` | Colunas: Chave, Resumo, Responsável, Vencimento |
 | Sem responsável | Resultados do Filtro | `EQP \| Resumo \| Sem responsável` | Colunas sugeridas: Chave, Resumo, Status, Criada |
@@ -66,7 +66,7 @@ Pontos específicos de cada tipo:
 Para cada gadget do capítulo, confira o total contra a fonte:
 
 1. Abra o Navegador de Tarefas e mude para o modo Avançado.
-2. Em vez de colar JQL, execute o mesmo filtro salvo do gadget: o Navegador aceita o filtro pelo menu de filtros ou por uma consulta que referencie o nome do filtro.
+2. Execute o mesmo filtro salvo do gadget: abra-o pelo menu Filtros, ou execute `filter = "<nome do filtro>"` na pesquisa avançada, com o nome exato do catálogo. **[Confirmar na sua versão]**
 3. Compare o total de resultados do Navegador com o número do gadget.
 4. Se os números divergirem, verifique nesta ordem: o gadget aponta para o filtro certo; o filtro foi compartilhado com o seu usuário; o cache do gadget (atualize a página); a diferença de permissões entre quem criou e quem vê.
 5. Para os gadgets de distribuição, a soma das fatias deve igualar o total do Navegador para o mesmo filtro.
