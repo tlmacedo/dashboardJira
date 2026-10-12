@@ -52,7 +52,7 @@
 
 ---
 
-### Tarefa 1: Verificador do guia (TDD)
+### Task 1: Verificador do guia (TDD)
 
 **Arquivos:**
 - Criar: `scripts/check_guia.py`
@@ -241,7 +241,7 @@ Esperado: `0 capítulo(s) verificado(s), 0 erro(s)` e código de saída 0.
 
 ---
 
-### Tarefa 2: Capítulo 00, pré-requisitos
+### Task 2: Capítulo 00, pré-requisitos
 
 **Arquivos:**
 - Criar: `docs/guia/00-pre-requisitos.md`
@@ -275,7 +275,7 @@ Esperado: `1 capítulo(s) verificado(s), 0 erro(s)`.
 
 ---
 
-### Tarefa 3: Capítulo 01, filtros salvos
+### Task 3: Capítulo 01, filtros salvos
 
 **Arquivos:**
 - Criar: `docs/guia/01-filtros-salvos.md`
@@ -340,7 +340,7 @@ Esperado: `2 capítulo(s) verificado(s), 0 erro(s)`. Os 16 filtros devem ter nom
 
 ---
 
-### Tarefa 4: Capítulo 02, resumo da equipe
+### Task 4: Capítulo 02, resumo da equipe
 
 **Arquivos:**
 - Criar: `docs/guia/02-resumo-da-equipe.md`
@@ -374,7 +374,7 @@ Esperado: `3 capítulo(s) verificado(s), 0 erro(s)`.
 
 ---
 
-### Tarefa 5: Capítulo 03, negligenciados e horas
+### Task 5: Capítulo 03, negligenciados e horas
 
 **Arquivos:**
 - Criar: `docs/guia/03-negligenciados-e-horas.md`
@@ -427,7 +427,7 @@ Esperado: `4 capítulo(s) verificado(s), 0 erro(s)`.
 
 ---
 
-### Tarefa 6: Capítulo 04, tempo por status
+### Task 6: Capítulo 04, tempo por status
 
 **Arquivos:**
 - Criar: `docs/guia/04-tempo-por-status.md`
@@ -460,7 +460,7 @@ Esperado: `5 capítulo(s) verificado(s), 0 erro(s)`.
 
 ---
 
-### Tarefa 7: Capítulo 05, divergência de datas e botão
+### Task 7: Capítulo 05, divergência de datas e botão
 
 **Arquivos:**
 - Criar: `docs/guia/05-datas-e-botao-de-sincronizacao.md`
@@ -524,7 +524,7 @@ Esperado: `6 capítulo(s) verificado(s), 0 erro(s)`.
 
 ---
 
-### Tarefa 8: Capítulo 06, layout, permissões e validação
+### Task 8: Capítulo 06, layout, permissões e validação
 
 **Arquivos:**
 - Criar: `docs/guia/06-layout-permissoes-e-validacao.md`
@@ -563,7 +563,7 @@ Esperado: `7 capítulo(s) verificado(s), 0 erro(s)`.
 
 ---
 
-### Tarefa 9: README e verificação final
+### Task 9: README e verificação final
 
 **Arquivos:**
 - Criar: `docs/guia/README.md`
