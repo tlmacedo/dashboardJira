@@ -6,7 +6,7 @@ Convenção de confiança, usada na tabela da seção 3: **confirmado** (lido em
 
 ## 1. O que o JQL de histórico faz e não faz
 
-O JQL de histórico funciona para seis campos: Assignee, Fix Version, Priority, Reporter, Resolution e Status. Os operadores são `WAS`, `WAS IN`, `WAS NOT`, `WAS NOT IN` e `CHANGED`. Os predicados são `AFTER`, `BEFORE`, `BY`, `DURING` e `ON`; `FROM` e `TO` só valem junto com `CHANGED`.
+O JQL de histórico funciona para seis campos: Assignee, Fix Version, Priority, Reporter, Resolution e Status. Os operadores são `WAS`, `WAS IN`, `WAS NOT`, `WAS NOT IN` e `CHANGED`. Os predicados são `AFTER`, `BEFORE`, `BY`, `DURING` e `ON`; `FROM` e `TO` só valem junto com `CHANGED`. As páginas de campos e de operadores da documentação se contradizem sobre Resolution como campo de histórico: teste na instância. **[Confirmar na sua versão]**
 
 O que ele entrega: a lista de issues que tiveram a transição. O que ele não entrega: a duração em cada status nem a contagem de passagens. Esses números exigem o changelog (REST ou banco), um app ou campos acumulados por Automation (seção 3).
 
@@ -106,7 +106,7 @@ filter = "EQP | Base | Equipe" AND status CHANGED BY [USUARIO] AFTER startOfMont
 | Tempo de ciclo (entre dois status) | App, REST, SQL ou eazyBI | Filtro de apoio: `status CHANGED FROM "[STATUS_EM_ANDAMENTO]" TO "[STATUS_CONCLUIDO]" DURING ("2026-01-01","2026-01-31")`; a duração vem do cálculo sobre o changelog | Confirmado para a sintaxe do JQL; o JQL só diz quais issues cumpriram a transição, não a duração |
 | Passagens por status | Jira Charting: Average Number of Times in Status. **[Exige app: Jira Charting]** | Gadget do app (mesmo campo "Time in Status" e reindexação completa) | Parcial (mesmas ressalvas do Jira Charting acima); é média por status, não contagem por issue |
 | Passagens por status | eazyBI. **[Exige app: eazyBI]** | Dimensões "Transition Status" e "Transition" | Confirmado na documentação da eazyBI |
-| Passagens por status, sem app | REST + contagem | Contar os itens do changelog com `field == "status"` e `toString` igual ao status desejado | Confirmado para o esquema; a contagem é inferência. Nenhuma fonte oficial documenta contagem de transições via JQL |
+| Passagens por status, sem app | REST + contagem | Contar os itens do changelog com `field == "status"` e `toString` igual ao status desejado; some 1 pelo status inicial, como faz a coluna `passagens_*` do script | Confirmado para o esquema; a contagem é inferência. Nenhuma fonte oficial documenta contagem de transições via JQL |
 | Reaberturas | Filtro "Reabertas" (seção 2) + REST para contar | Filtro para listar; REST para contar quantas vezes | Confirmado para o formato `CHANGED FROM/TO`; o filtro não diz quantas vezes |
 | Histórico com autor e data | REST | `changelog.histories[]`: `author`, `created`, `items[]` | Confirmado na referência REST 9.12.0 |
 | Issues que passaram por um status no período | Filtros da seção 2 | `status CHANGED TO "[STATUS_EM_ANDAMENTO]" AFTER startOfMonth()` ou `status WAS "[STATUS_EM_ANDAMENTO]" DURING ("2026-01-01","2026-01-31")` | Confirmado para a sintaxe; a semântica de `DURING` em `WAS` não foi lida em detalhe e deve ser testada. **[Confirmar na sua versão]** |
@@ -146,7 +146,7 @@ filter = "EQP | Base | Equipe" AND status CHANGED BY [USUARIO] AFTER startOfMont
 
 Para o cálculo de tempo em status, filtre no cliente os itens com `field == "status"`: não há filtro de changelog no servidor (pedido JRASERVER-71168, aberto).
 
-**Em lote.** `GET /rest/api/2/search?jql=<jql>&expand=changelog&fields=status,created,resolutiondate&startAt=0&maxResults=100`. O teto de `maxResults` é ditado pela propriedade `jira.search.views.default.max`. Pagine aumentando `startAt` até cobrir o `total`. Para listas grandes de operandos ou JQL longo, use `POST /rest/api/2/search`.
+**Em lote.** `GET /rest/api/2/search?jql=<jql>&expand=changelog&fields=status,created,resolutiondate&startAt=0&maxResults=100`. O teto de `maxResults` é ditado pela propriedade `jira.search.views.default.max`. Pagine aumentando `startAt` até cobrir o `total`; use `ORDER BY key` na JQL para a paginação ser estável. Para listas grandes de operandos ou JQL longo, use `POST /rest/api/2/search`.
 
 **Limites conhecidos do changelog.**
 
@@ -176,10 +176,11 @@ Como rodar:
 
 ```bash
 export JIRA_PAT="<seu token>"
-python3 scripts/tempo_em_status.py --url https://jira.exemplo.com --jql 'filter = 12345' --token-env JIRA_PAT --saida tempos.csv
+python3 scripts/tempo_em_status.py --url https://jira.exemplo.com --jql 'filter = 12345 ORDER BY key' --token-env JIRA_PAT --saida tempos.csv \
+  --status-inicio "<seu status de início>" --status-fim "<seu status de conclusão>"
 ```
 
-As opções são `--url`, `--jql`, `--token-env`, `--saida`, `--status-inicio` e `--status-fim`. As duas últimas definem o par de status do tempo de ciclo; os detalhes de cada opção e do formato do CSV ficam na ajuda do próprio script (`--help`).
+As opções são `--url`, `--jql`, `--token-env`, `--saida`, `--status-inicio` e `--status-fim`. As duas últimas definem o par de status do tempo de ciclo; os detalhes de cada opção e do formato do CSV ficam na ajuda do próprio script (`--help`). Exemplo num fluxo em português: `--status-inicio "Em andamento" --status-fim "Concluído"`. Os padrões do script são `In Progress` e `Done` (fluxo em inglês); num fluxo em português, sem as duas opções `ciclo_horas` sai vazio e `reaberturas` sai 0. A coluna `reaberturas` conta TODA saída de `--status-fim` para outro status (Done para Closed também conta), enquanto o filtro "Reabertas" exige sair de concluído PARA reaberto. Se o changelog lido tiver menos mudanças que `changelog.total`, o script avisa em stderr com a chave da issue. O último intervalo de uma issue reaberta cujo `resolutiondate` não foi limpo é truncado em 0 (o intervalo não fica negativo).
 
 Validação: o cálculo foi testado apenas com fixtures no formato do REST do Jira; **não foi validado contra um Jira real**. Antes de confiar nos números, escolha duas ou três issues de histórico conhecido e confira o resultado do script com a aba Histórico de cada uma. Confira em especial uma issue que nunca mudou de status e uma que foi reaberta.
 

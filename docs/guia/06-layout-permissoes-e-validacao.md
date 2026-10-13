@@ -4,7 +4,7 @@ Este capítulo junta o que foi montado nos capítulos 01 a 05: define a ordem do
 
 Ao final, você terá o dashboard montado em 3 colunas, compartilhado com o grupo certo, com os números conferidos à mão e com um plano de manutenção.
 
-Pré-requisito: capítulos 00 a 05 concluídos, a amostra de 10 tarefas do capítulo 00 separada e o dashboard criado.
+Pré-requisito: capítulos 00 a 05 concluídos (e 07, para a seção 5), a amostra de 10 tarefas do capítulo 00 separada e o dashboard criado.
 
 ## 1. Layout em 3 colunas
 
@@ -26,7 +26,7 @@ O dashboard usa o layout de 3 colunas. Os nomes e a disponibilidade dos gadgets 
 | 3. Negligenciados, coluna 2 | Sem estimativa (Resultados do Filtro) | `EQP \| Negligenciados \| Sem estimativa` | 03 |
 | 3. Negligenciados, coluna 3 | Sem vencimento (Resultados do Filtro) | `EQP \| Negligenciados \| Sem vencimento` | 03 |
 | 4. Datas e horas, coluna 2 | Timesheet de app **[Exige app: Timesheet]** **[Confirmar na sua versão]** | `EQP \| Horas \| Com worklog no mês` | 03 |
-| 4. Datas e horas, coluna 3 | Módulo de tempo por status, se instalado. **[Exige app: Time in Status]** ou **[Exige app: eazyBI]**, conforme a escolha do capítulo 04; com campos de Automation, uma lista com as colunas dos campos | Depende da alternativa escolhida no capítulo 04 | 04 |
+| 4. Datas e horas, coluna 3 | Módulo de tempo por status, se instalado. **[Exige app: Time in Status]**, **[Exige app: Jira Charting]** ou **[Exige app: eazyBI]**, conforme a escolha do capítulo 04; com campos de Automation, uma lista com as colunas dos campos | Depende da alternativa escolhida no capítulo 04 | 04 |
 | 5. Divergência, coluna 1 | Subtarefas com vencimento divergente (Resultados do Filtro) | `EQP \| Datas \| Subtarefas com vencimento divergente` | 05 |
 
 Observações sobre a tabela:
@@ -41,7 +41,7 @@ Recomendação: no máximo 12 a 15 gadgets no dashboard. Cada gadget executa uma
 
 A tabela acima soma 15 gadgets sem o módulo opcional, o limite superior do recomendado. Se instalar o módulo de tempo por status, corte o "Total de subtarefas" (faixa 1, coluna 2) para manter 15.
 
-**Filtros do capítulo 07 (opcionais).** Os filtros de histórico (`EQP | Histórico | Entraram em andamento no mês`, `EQP | Histórico | Concluídas no mês por transição`, `EQP | Histórico | Reabertas`, entre os demais do capítulo 07) podem alimentar gadgets Resultados do Filtro na faixa 4 (coluna 1, que está livre) ou no lugar de outros gadgets. Cada gadget de histórico acrescentado exige cortar um da tabela, para não passar de 15. Corte nesta ordem: "Total de subtarefas" (se ainda não foi cortado pelo módulo de tempo por status), "Pizza de tipo", "Criadas vs Resolvidas" e "Sem estimativa". Antes de publicar esses gadgets, faça os testes da seção 5; o custo de `WAS`/`CHANGED` em dashboards não está documentado.
+**Filtros do capítulo 07 (opcionais).** Os filtros de histórico (`EQP | Histórico | Entraram em andamento no mês`, `EQP | Histórico | Concluídas no mês por transição`, `EQP | Histórico | Reabertas`, entre os demais do capítulo 07) podem alimentar gadgets Resultados do Filtro na faixa 4 (coluna 1, que está livre) ou no lugar de outros gadgets. Cada gadget de histórico acrescentado exige cortar um da tabela, para não passar de 15. Corte nesta ordem: "Total de subtarefas" (o corte mais barato; se ainda não foi cortado pelo módulo de tempo por status), "Pizza de tipo" (se cortar a Pizza de tipo, pule o item "tipos somam o total" do checklist da seção 4), "Criadas vs Resolvidas" e "Sem estimativa". Antes de publicar esses gadgets, faça os testes da seção 5; o custo de `WAS`/`CHANGED` em dashboards não está documentado.
 
 ## 2. Onde fica o botão
 
@@ -77,13 +77,13 @@ Se um item falhar, siga a ordem de diagnóstico do capítulo 02, seção 4: filt
 
 Faça estes testes na sua instância antes de depender dos filtros do capítulo 07 e do script da seção 5 dele. As fontes lidas descrevem principalmente as versões 10.7 e 11.3; só a referência REST foi lida para a 9.12. **[Confirmar na sua versão]** Registre o resultado de cada item (aceitou ou rejeitou a consulta; o que retornou numa amostra conhecida).
 
-- [ ] Issue recém-criada e nunca transitada contra `status WAS "[STATUS_INICIAL]"`: o valor inicial conta como histórico? Faça isso antes de confiar em `EQP | Histórico | Nunca estiveram em andamento`.
+- [ ] Issue recém-criada e nunca transitada contra `status WAS "[STATUS_EM_ANDAMENTO]"`: o valor inicial conta como histórico? Faça isso antes de confiar em `EQP | Histórico | Nunca estiveram em andamento`.
 - [ ] `NOT (status CHANGED AFTER "-14d")`, com e sem aspas: a forma é aceita, e uma issue recém-criada e nunca alterada entra ou não no resultado? (Afeta `EQP | Negligenciados | Parada no mesmo status`, que continua a validar.)
-- [ ] `GET /rest/api/2/issue/{key}?expand=changelog` numa issue com mais de 100 mudanças: conte `histories`, compare com `total`, anote a ordem e se há truncamento. O script do capítulo 07 depende disso.
+- [ ] `GET /rest/api/2/issue/{key}?expand=changelog` numa issue com mais de 100 mudanças: conte `histories`, compare com `total`, anote a ordem e se há truncamento. O script do capítulo 07 usa `/search` com `expand=changelog`; confira também o resultado desse `/search` contra a aba Histórico numa issue com histórico longo (o script avisa em stderr quando `histories` tem menos itens que `total`).
 - [ ] `GET /rest/api/2/issue/{key}/changelog`: se retornar 404 na 9.12, a referência REST dessa versão está certa para a sua instância. Na 10.x, confira a referência REST 10.x, que pode trazer o endpoint.
 - [ ] Rode `scripts/tempo_em_status.py` contra duas ou três issues de histórico conhecido e compare com a aba Histórico de cada uma; inclua uma issue que nunca mudou de status e uma que foi reaberta. O script só foi testado com fixtures, não contra um Jira real.
 - [ ] Fuso de `worklogDate`: registre horas perto da meia-noite e confira em qual dia a consulta as conta (fuso do usuário contra o do servidor).
-- [ ] `worklogAuthor` e `worklogDate` na mesma consulta (`EQP | Horas | Com worklog no mês`, `EQP | Histórico | Status alterado por usuário no mês`): os dois critérios casam no mesmo worklog, ou cada um pode ser cumprido por um worklog diferente da issue?
+- [ ] `worklogAuthor` e `worklogDate` na mesma consulta (`EQP | Horas | Com worklog no mês`): os dois critérios casam no mesmo worklog, ou cada um pode ser cumprido por um worklog diferente da issue?
 - [ ] Gravar o mesmo valor num campo atualiza `updated` e cria entrada no histórico? Isso afeta `EQP | Negligenciados | Sem atualização` e as regras de Automation que regravam campos.
 - [ ] Automation: o "Advanced compare" e `{{initiator}}` (capítulo 05) funcionam em homologação como o guia descreve? Teste também `{{fieldChange.fromString}}` e `{{fieldChange.toString}}` (capítulo 04); `{{fromStatus}}` e `{{toStatus}}` não foram encontrados na documentação do Data Center.
 - [ ] Abra o dashboard com e sem os filtros de histórico e compare o tempo de carga (seção 6).

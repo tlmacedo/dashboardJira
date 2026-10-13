@@ -39,7 +39,7 @@ A tabela resume o que o núcleo nativo entrega e o que exige app. A coluna "Cap�
 | Botão de sincronização | Não | Automation com gatilho manual **[Confirmar na sua versão]**, ou **[Exige app: ScriptRunner]** ou **[Exige app: JMWE]**. | 05 |
 | Cards de horas separados por tipo (tarefas e subtarefas) | Não | Um Timesheet por filtro **[Exige app: Timesheet]**, ou **[Exige app: eazyBI]** para os cards completos. | 03 |
 
-Sobre o eazyBI: a eazyBI declara compromisso com o Data Center em post do fornecedor, mas a Atlassian informa que a venda a novos clientes Data Center terminou em 30/03/2026; 30/03/2028 é a data em que clientes existentes deixam de comprar produtos, apps e expansões; 28/03/2029 é o fim de vida (assinaturas e apps somente leitura). Confirme com o fornecedor a disponibilidade para o seu caso. Licença paga no Marketplace; consultar o preço atual para o seu número de usuários, que define a faixa de licença. Detalhes no capítulo 04.
+Sobre o eazyBI: a venda de Data Center a novos clientes terminou em 30/03/2026; clientes Data Center existentes ainda podem comprar produtos, apps e expansões até 30/03/2028; 28/03/2029 é o fim de vida (assinaturas e apps somente leitura). A eazyBI declara compromisso com o Data Center em post do próprio fornecedor (sem prova de fim de venda do app); confirme com o fornecedor a disponibilidade para o seu caso. Licença paga no Marketplace; consultar o preço atual para o seu número de usuários, que define a faixa de licença. Detalhes no capítulo 04.
 
 Duas limitações nativas valem ser lembradas desde já: dashboards nativos não têm filtros globais interativos e não executam ações.
 

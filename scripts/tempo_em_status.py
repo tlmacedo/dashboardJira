@@ -30,8 +30,13 @@ Colunas do CSV (uma linha por issue):
   ciclo_horas              horas entre a primeira entrada em --status-inicio e a
                            primeira entrada em --status-fim depois dela; vazio
                            se não houver o par
-  reaberturas              quantas vezes a issue saiu de --status-fim para outro
-                           status
+  reaberturas              quantas vezes a issue saiu de --status-fim para
+                           QUALQUER outro status (Done -> Closed também conta;
+                           o filtro "Reabertas" do guia exige destino reaberto)
+
+Os padrões de --status-inicio/--status-fim são "In Progress" e "Done" (fluxo em
+inglês). Num fluxo em português, informe as duas opções; sem elas, ciclo_horas
+sai vazio e reaberturas sai 0.
 
 O último intervalo de cada issue termina em resolutiondate, se existir; senão,
 no instante atual. O token (PAT) é lido da variável de ambiente indicada em
@@ -171,6 +176,18 @@ def buscar_issues(url, token, jql, abrir=urllib.request.urlopen, dormir=time.sle
             return
 
 
+def avisar_truncamento(issue, saida=None):
+    """Avisa em stderr se o changelog lido tem menos mudanças que changelog.total."""
+    saida = saida or sys.stderr
+    changelog = issue.get("changelog") or {}
+    total = changelog.get("total")
+    lidas = len(changelog.get("histories") or [])
+    if total is not None and lidas < total:
+        print(f"{issue.get('key', '?')}: changelog possivelmente truncado: "
+              f"{lidas} de {total} mudanças lidas; os tempos desta issue podem estar errados.",
+              file=saida)
+
+
 def _horas(delta):
     return f"{delta.total_seconds() / 3600:.1f}"
 
@@ -229,6 +246,8 @@ def main(argv=None, abrir=urllib.request.urlopen, dormir=time.sleep):
     except RuntimeError as erro:
         print(str(erro), file=sys.stderr)
         return 1
+    for issue in issues:
+        avisar_truncamento(issue)
     linhas = linhas_csv(issues, agora, args.status_inicio, args.status_fim)
     if args.saida:
         with open(args.saida, "w", newline="", encoding="utf-8") as f:

@@ -1,6 +1,6 @@
 # Capítulo 05: divergência de datas e botão de sincronização
 
-Este capítulo resolve duas necessidades ligadas ao vencimento das subtarefas: enxergar quais subtarefas têm vencimento diferente do da tarefa-pai e, quando fizer sentido, alinhar essas datas com um botão. O filtro criado aqui alimenta o item 5 do layout do capítulo 06, e a regra do botão é citada por ele.
+Este capítulo resolve duas necessidades ligadas ao vencimento das subtarefas: enxergar quais subtarefas têm vencimento diferente do da tarefa-pai e, quando fizer sentido, alinhar essas datas com um botão. O filtro criado aqui alimenta o faixa 5 do layout do capítulo 06, e a regra do botão é citada por ele.
 
 Ao final, você terá uma regra agendada que sinaliza as divergências, um filtro que as lista, uma regra manual de sincronização e um roteiro para testá-la em homologação antes de liberar em produção.
 

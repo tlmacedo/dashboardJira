@@ -34,8 +34,8 @@ Notas sobre a tabela:
 
 ## 2. Limites dos gadgets nativos
 
-- **Percentuais.** A documentação oficial não confirma que o Gráfico de Pizza exiba percentual; em muitas instalações a fatia mostra contagem e, ao passar o mouse, o percentual. **[Confirmar na sua versão]** Os demais gadgets exibem contagens.
-- **Percentual de forma garantida exige planilha ou eazyBI.** Para calcular, por exemplo, a taxa de atrasadas sobre o total, exporte os números para uma planilha ou use o eazyBI. **[Exige app: eazyBI]** Custo do eazyBI: licença paga no Marketplace; consultar o preço atual para o seu número de usuários. A eazyBI declara compromisso com o Data Center em post do fornecedor, mas a Atlassian informa que a venda a novos clientes Data Center terminou em 30/03/2026 (ver capítulo 04).
+- **Percentuais.** A documentação oficial não confirma que o Gráfico de Pizza exiba percentual; a fatia pode mostrar a contagem e, ao passar o mouse, o percentual. **[Confirmar na sua versão]** Os demais gadgets exibem contagens.
+- **Percentual de forma garantida exige planilha ou eazyBI.** Para calcular, por exemplo, a taxa de atrasadas sobre o total, exporte os números para uma planilha ou use o eazyBI. **[Exige app: eazyBI]** Custo do eazyBI: licença paga no Marketplace; consultar o preço atual para o seu número de usuários. A venda de Data Center a novos clientes terminou em 30/03/2026; clientes existentes ainda podem comprar apps e expansões até 30/03/2028, e a eazyBI declara compromisso com o Data Center em post do próprio fornecedor (ver capítulo 04).
 - **Não há card numérico nativo.** Não existe um gadget que mostre um número grande isolado, como um indicador. Os gadgets Resultados do Filtro e Estatísticas da Tarefa trazem os dados em formato de lista ou tabela, não como número isolado. Quando você precisar de um card real, veja o módulo com eazyBI no capítulo 03 (seção dos cards de tempo dedicado) e no capítulo 04 (seção 5).
 - **Sem filtros interativos globais.** Como explicado no capítulo 01, o leitor não escolhe o time ou o período no topo do dashboard. Cada recorte é um filtro salvo.
 

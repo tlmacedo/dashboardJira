@@ -262,5 +262,38 @@ class TestStatusInicialDesconhecido(unittest.TestCase):
         t.linhas_csv([issue, ISSUE], AGORA, "In Progress", "Done")
 
 
+class TestTruncamentoChangelog(unittest.TestCase):
+    def _pagina(self, issue):
+        corpo = json.dumps({"startAt": 0, "total": 1, "issues": [issue]}).encode("utf-8")
+        resposta = io.BytesIO(corpo)
+        return lambda req, **kw: resposta
+
+    def _rodar(self, issue):
+        import os
+        from unittest import mock
+        err = io.StringIO()
+        with mock.patch.dict(os.environ, {"TOK_TESTE": "token-secreto"}), \
+                redirect_stderr(err), redirect_stdout(io.StringIO()):
+            codigo = t.main(["--url", "https://j.exemplo.com", "--jql", "project = SEGREDO",
+                             "--token-env", "TOK_TESTE"], abrir=self._pagina(issue))
+        return codigo, err.getvalue()
+
+    def test_avisa_quando_changelog_truncado(self):
+        issue = copy.deepcopy(ISSUE)
+        issue["changelog"]["total"] = 120  # só 5 históricos lidos
+        codigo, err = self._rodar(issue)
+        self.assertEqual(codigo, 0)
+        self.assertIn("ABC-1", err)
+        self.assertIn("changelog possivelmente truncado: 5 de 120 mudanças lidas", err)
+        for proibido in ("token-secreto", "SEGREDO", "j.exemplo.com"):
+            self.assertNotIn(proibido, err)
+
+    def test_sem_aviso_quando_completo_ou_sem_total(self):
+        completo = copy.deepcopy(ISSUE)
+        completo["changelog"]["total"] = 5
+        self.assertEqual(self._rodar(completo)[1], "")
+        self.assertEqual(self._rodar(copy.deepcopy(ISSUE))[1], "")
+
+
 if __name__ == "__main__":
     unittest.main()
