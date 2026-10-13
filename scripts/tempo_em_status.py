@@ -39,6 +39,10 @@ no instante atual. O token (PAT) é lido da variável de ambiente indicada em
 """
 
 
+# Nome usado quando a primeira transição não informa o status de origem.
+STATUS_DESCONHECIDO = "(desconhecido)"
+
+
 def analisar_data(texto):
     """Converte datas do Jira (+0000, com ou sem milissegundos) em datetime com fuso."""
     for formato in ("%Y-%m-%dT%H:%M:%S.%f%z", "%Y-%m-%dT%H:%M:%S%z"):
@@ -60,7 +64,7 @@ def transicoes_de_status(issue):
             resultado.append({
                 "quando": analisar_data(h["created"]),
                 "autor": (h.get("author") or {}).get("name", ""),
-                "de": item.get("fromString"),
+                "de": item.get("fromString") or STATUS_DESCONHECIDO,
                 "para": item.get("toString"),
             })
     resultado.sort(key=lambda x: x["quando"])  # ordenação estável
@@ -190,7 +194,7 @@ def linhas_csv(issues, agora, status_inicio, status_fim):
     return linhas
 
 
-def main(argv=None):
+def main(argv=None, abrir=urllib.request.urlopen):
     parser = argparse.ArgumentParser(
         description="Calcula tempo em status, passagens, tempo de ciclo e reaberturas "
                     "a partir do changelog do Jira (REST).",
@@ -212,7 +216,19 @@ def main(argv=None):
         return 1
 
     agora = datetime.now(timezone.utc)
-    issues = list(buscar_issues(args.url, token, args.jql))
+    # Mensagens curtas: sem URL, JQL nem token.
+    try:
+        issues = list(buscar_issues(args.url, token, args.jql, abrir=abrir))
+    except urllib.error.HTTPError as erro:
+        dica = " Verifique o PAT e as permissões." if erro.code in (401, 403) else ""
+        print(f"O Jira respondeu com erro HTTP {erro.code}.{dica}", file=sys.stderr)
+        return 1
+    except urllib.error.URLError:
+        print("Falha de conexão com o Jira; verifique o endereço e a rede.", file=sys.stderr)
+        return 1
+    except RuntimeError as erro:
+        print(str(erro), file=sys.stderr)
+        return 1
     linhas = linhas_csv(issues, agora, args.status_inicio, args.status_fim)
     if args.saida:
         with open(args.saida, "w", newline="", encoding="utf-8") as f:

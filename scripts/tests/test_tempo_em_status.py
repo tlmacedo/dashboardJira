@@ -191,6 +191,56 @@ class TestMain(unittest.TestCase):
         for parte in ("--status-inicio", "--status-fim", "ciclo_horas"):
             self.assertIn(parte, texto)
 
+    def _rodar(self, abrir, env):
+        import os
+        from unittest import mock
+        err = io.StringIO()
+        with mock.patch.dict(os.environ, env, clear=False), redirect_stderr(err), \
+                redirect_stdout(io.StringIO()):
+            codigo = t.main(["--url", "https://j.exemplo.com", "--jql", "project = SEGREDO",
+                             "--token-env", "TOK_TESTE"], abrir=abrir)
+        return codigo, err.getvalue()
+
+    def test_401_sai_com_1_sem_vazar_token(self):
+        def abrir(req, **kw):
+            raise urllib.error.HTTPError(req.full_url, 401, "Unauthorized", {}, None)
+
+        codigo, err = self._rodar(abrir, {"TOK_TESTE": "token-secreto"})
+        self.assertEqual(codigo, 1)
+        self.assertIn("401", err)
+        self.assertIn("PAT", err)
+        for proibido in ("token-secreto", "SEGREDO", "j.exemplo.com"):
+            self.assertNotIn(proibido, err)
+
+    def test_500_sai_com_1(self):
+        def abrir(req, **kw):
+            raise urllib.error.HTTPError(req.full_url, 500, "Erro", {}, None)
+
+        codigo, err = self._rodar(abrir, {"TOK_TESTE": "x"})
+        self.assertEqual((codigo, "500" in err), (1, True))
+
+    def test_erro_de_rede_sai_com_1(self):
+        def abrir(req, **kw):
+            raise urllib.error.URLError("sem rede")
+
+        self.assertEqual(self._rodar(abrir, {"TOK_TESTE": "x"})[0], 1)
+
+    def test_variavel_ausente_sai_com_1(self):
+        import os
+        os.environ.pop("TOK_TESTE", None)
+        codigo, err = self._rodar(lambda *a, **k: None, {})
+        self.assertEqual(codigo, 1)
+        self.assertIn("TOK_TESTE", err)
+
+
+class TestStatusInicialDesconhecido(unittest.TestCase):
+    def test_sem_from_string(self):
+        issue = copy.deepcopy(ISSUE)
+        del issue["changelog"]["histories"][0]["items"][0]["fromString"]
+        self.assertIn("(desconhecido)", t.tempo_por_status(issue, AGORA))
+        self.assertIn("(desconhecido)", t.passagens_por_status(issue))
+        t.linhas_csv([issue, ISSUE], AGORA, "In Progress", "Done")
+
 
 if __name__ == "__main__":
     unittest.main()
