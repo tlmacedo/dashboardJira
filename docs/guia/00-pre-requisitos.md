@@ -34,7 +34,7 @@ A tabela resume o que o núcleo nativo entrega e o que exige app. A coluna "Cap�
 | Sem atualização, sem estimativa, sem vencimento, sem responsável | Sim | Nada além do próprio Jira. | 03 |
 | Parada no mesmo status | Parcialmente nativo, a validar na amostra | Variante com `status CHANGED` precisa de teste. A alternativa segura é o filtro de sem atualização. | 03 |
 | Tempo por status | Não | **[Exige app: Time in Status ou eazyBI]**, ou campos personalizados alimentados por Automation (mais manutenção, sem histórico retroativo). | 04 |
-| Horas por pessoa | Parcialmente: gadget Timesheet, **[Confirmar na sua versão]** | Estimado × registrado por pessoa e por período exige **[Exige app: eazyBI]**. | 03 |
+| Horas por pessoa | Parcialmente: gadget Timesheet, **[Confirmar na sua versão]** | Se o Timesheet não existir na sua versão, ele pode ser um app do Marketplace **[Exige app: Timesheet — confirmar no Marketplace e na compatibilidade com Data Center]**, ou use o eazyBI **[Exige app: eazyBI]**. Estimado × registrado por pessoa e por período exige **[Exige app: eazyBI]**. | 03 |
 | Divergência de vencimento entre pai e subtarefa | Não | Automation, ScriptRunner ou eazyBI. **[Exige app: ScriptRunner]** ou **[Exige app: eazyBI]** nos dois últimos casos. | 05 |
 | Botão de sincronização | Não | Automation com gatilho manual **[Confirmar na sua versão]**, ou **[Exige app: ScriptRunner]** ou **[Exige app: JMWE]**. | 05 |
 | Cards de horas separados por tipo (tarefas e subtarefas) | Parcialmente | Um Timesheet por filtro, **[Confirmar na sua versão]**, ou **[Exige app: eazyBI]** para os cards completos. | 03 |

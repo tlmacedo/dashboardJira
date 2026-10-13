@@ -57,14 +57,14 @@ Nota: este filtro parte do filtro-base alternativo, porque o `EQP | Base | Equip
 ### EQP | Negligenciados | Parada no mesmo status
 
 **Nome:** EQP | Negligenciados | Parada no mesmo status
-**Descrição:** **A validar na amostra.** Abertas sem mudança de status nos últimos 14 dias
+**Descrição:** **A validar na amostra.** Abertas, criadas há pelo menos 14 dias, sem mudança de status nos últimos 14 dias
 **Critério de data:** atualização
 
 ```jql
-filter = "EQP | Base | Equipe" AND statusCategory != Done AND NOT (status CHANGED AFTER -14d)
+filter = "EQP | Base | Equipe" AND statusCategory != Done AND created <= -14d AND NOT (status CHANGED AFTER -14d)
 ```
 
-Aviso: a negação do operador `CHANGED` pode não ser aceita ou pode se comportar de forma diferente conforme a versão. **[Confirmar na sua versão]** Teste o filtro numa amostra em que você conheça o histórico: uma tarefa que mudou de status ontem não deve aparecer, e uma parada há mais de 14 dias deve aparecer. Se a sua versão rejeitar a negação com `CHANGED`, use `EQP | Negligenciados | Sem atualização` como substituto seguro, e registre o resultado do teste.
+Aviso: a negação do operador `CHANGED` pode não ser aceita ou pode se comportar de forma diferente conforme a versão. **[Confirmar na sua versão]** Teste o filtro numa amostra em que você conheça o histórico: uma tarefa que mudou de status ontem não deve aparecer, uma parada há mais de 14 dias deve aparecer, e uma tarefa criada há 3 dias não deve aparecer. Se a sua versão rejeitar a negação com `CHANGED`, use `EQP | Negligenciados | Sem atualização` como substituto seguro, e registre o resultado do teste.
 
 A diferença entre os dois filtros: "sem atualização" considera qualquer edição ou comentário, então uma tarefa comentada ontem sai da lista mesmo sem ter andado. "Parada no status" considera só a mudança de status, então ela continua na lista até que o status mude de fato. Por isso "parada no status" é o indicador mais exigente.
 
@@ -118,7 +118,7 @@ filter = "EQP | Base | Equipe" AND issuetype in subTaskIssueTypes() AND timespen
 | Gadget Timesheet | Soma de horas por pessoa e por dia. **[Confirmar na sua versão]** | Depende de o gadget existir e de quais opções ele oferece na sua instalação |
 | eazyBI | Estimado × registrado por pessoa e período. **[Exige app: eazyBI]** | Licença paga no Marketplace; consultar o preço atual para o seu número de usuários |
 
-**Recomendação:** use o Timesheet para as horas por pessoa no núcleo nativo, e o eazyBI quando for preciso comparar com o estimado.
+**Recomendação:** use o Timesheet para as horas por pessoa no núcleo nativo, e o eazyBI quando for preciso comparar com o estimado. Se o gadget Timesheet não existir na sua versão, ele pode ser um app do Marketplace **[Exige app: Timesheet — confirmar no Marketplace e na compatibilidade com Data Center]**, ou use o eazyBI **[Exige app: eazyBI]**. Opcionalmente, o gadget Gráfico de Pizza de carga de trabalho (Workload Pie Chart) mostra a estimativa restante por responsável, mas não soma Time Spent. **[Confirmar na sua versão]**
 
 ### Configuração do Timesheet
 
@@ -140,9 +140,9 @@ Os cards respondem "quanto tempo a equipe dedicou" a tarefas e a subtarefas. Doi
 
 | Card | Campo | Filtro | Exibição |
 |---|---|---|---|
-| Tempo em tarefas | Time Spent | `EQP \| Horas \| Tarefas com horas` | Coluna Time Spent na lista de resultados do filtro. **[Confirmar na sua versão]** |
-| Tempo em subtarefas | Time Spent | `EQP \| Horas \| Subtarefas com horas` | Coluna Time Spent na lista de resultados do filtro. **[Confirmar na sua versão]** |
-| Conjunto | Soma dos dois cards acima | Os dois filtros acima | Soma dos dois valores. Alternativa: Σ Time Spent só das tarefas padrão |
+| Tempo em tarefas | Time Spent | `EQP \| Horas \| Tarefas com horas` | Timesheet, um por filtro (ver a configuração do Timesheet neste capítulo) **[Confirmar na sua versão]** |
+| Tempo em subtarefas | Time Spent | `EQP \| Horas \| Subtarefas com horas` | Timesheet, um por filtro (ver a configuração do Timesheet neste capítulo) **[Confirmar na sua versão]** |
+| Conjunto | Soma dos dois cards acima | Os dois filtros acima | Soma dos dois valores dos Timesheets acima. Alternativa: Σ Time Spent só das tarefas padrão |
 | Estimado × realizado | Estimativa original e tempo registrado | Definido no eazyBI | **[Exige app: eazyBI]** |
 
 > **Regra de ouro: nunca some o Σ Time Spent do pai com o Time Spent das subtarefas.** O Σ do pai já contém as horas das subtarefas, então a soma conta tudo duas vezes.

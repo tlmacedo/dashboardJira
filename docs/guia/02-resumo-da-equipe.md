@@ -36,7 +36,7 @@ Notas sobre a tabela:
 
 - **Percentuais só na pizza.** O Gráfico de Pizza mostra a fatia em percentual. Os demais gadgets exibem apenas contagens.
 - **Percentual nos demais gadgets exige planilha ou eazyBI.** Para calcular, por exemplo, a taxa de atrasadas sobre o total, exporte os números para uma planilha ou use o eazyBI. **[Exige app: eazyBI]** Custo do eazyBI: licença paga no Marketplace; consultar o preço atual para o seu número de usuários.
-- **Não há card numérico nativo.** Não existe um gadget que mostre um número grande isolado, como um indicador. Os gadgets Resultados do Filtro e Estatísticas da Tarefa mostram o total, mas em formato de lista ou tabela. Quando você precisar de um card real, veja o módulo com eazyBI no capítulo 04.
+- **Não há card numérico nativo.** Não existe um gadget que mostre um número grande isolado, como um indicador. Os gadgets Resultados do Filtro e Estatísticas da Tarefa mostram o total, mas em formato de lista ou tabela. Quando você precisar de um card real, veja o módulo com eazyBI no capítulo 03 (seção dos cards de tempo dedicado) e no capítulo 04 (seção 5).
 - **Sem filtros interativos globais.** Como explicado no capítulo 01, o leitor não escolhe o time ou o período no topo do dashboard. Cada recorte é um filtro salvo.
 
 ## 3. Como adicionar cada tipo de gadget

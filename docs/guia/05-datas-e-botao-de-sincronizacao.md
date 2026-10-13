@@ -19,18 +19,18 @@ Em Automação (menu da tarefa ou administração do projeto, conforme a versão
 1. **Nome:** `Sinalizar vencimento divergente`.
 2. **Gatilho:** agendado, por exemplo a cada hora e fora do horário de pico. Configure a busca JQL do gatilho como `project in ([CHAVE_DO_PROJETO]) AND issuetype in subTaskIssueTypes() AND (statusCategory != Done OR labels = venc-divergente)` e a ação para cada issue encontrada. A segunda parte da busca recolhe também subtarefas já concluídas que ainda carregam o rótulo, para que ele possa ser removido. **[Confirmar na sua versão]** (a existência do gatilho agendado com busca JQL e o número máximo de issues por execução variam).
 3. **Condição 1 (se/senão):** `statusCategory` da subtarefa diferente de `Done`. **[Confirmar na sua versão]** (sintaxe do bloco se/senão).
-   - **Senão (subtarefa concluída):** ação Editar issue, removendo o rótulo `venc-divergente`, e a regra termina para essa issue.
+   - **Senão (subtarefa concluída):** só se a subtarefa contém o rótulo `venc-divergente`, ação Editar issue removendo o rótulo; a regra termina para essa issue. Sem o rótulo, nada é feito.
 4. **Condição 2 (dentro do "se" da condição 1, se/senão):** o vencimento do pai não é vazio. Use a comparação avançada: `{{issue.parent.duedate}}` não é igual a vazio. **[Confirmar na sua versão]** (a existência da condição de comparação avançada e a sintaxe do smart value variam).
-   - **Senão (pai sem vencimento):** ação Editar issue, removendo o rótulo `venc-divergente`, porque pai sem vencimento não é divergência.
+   - **Senão (pai sem vencimento):** só se a subtarefa contém o rótulo `venc-divergente`, ação Editar issue removendo o rótulo, porque pai sem vencimento não é divergência. Sem o rótulo, nada é feito.
 5. **Condição 3 (dentro do "se" da condição 2, se/senão):** comparação avançada com `{{issue.duedate}}` diferente de `{{issue.parent.duedate}}`. **[Confirmar na sua versão]**
-6. **Se divergir:** ação Editar issue, adicionando o rótulo `venc-divergente`.
-7. **Senão (alinhada):** ação Editar issue, removendo o rótulo `venc-divergente`.
+6. **Se divergir:** só se a subtarefa NÃO contém o rótulo `venc-divergente`, ação Editar issue adicionando o rótulo. Se já o contém, nada é feito.
+7. **Senão (alinhada):** só se a subtarefa contém o rótulo `venc-divergente`, ação Editar issue removendo o rótulo. Sem o rótulo, nada é feito. **[Confirmar na sua versão]** (a sintaxe da condição sobre rótulos, por exemplo `labels` contém `venc-divergente`).
 
 Limites desta camada:
 
-- Em todos os caminhos em que não há divergência (subtarefa concluída, pai sem vencimento, datas iguais) o rótulo é removido; assim ele não fica obsoleto quando o vencimento do pai é apagado ou a subtarefa é concluída.
+- Em todos os caminhos em que não há divergência (subtarefa concluída, pai sem vencimento, datas iguais) o rótulo é removido, mas só quando a subtarefa o contém; assim ele não fica obsoleto quando o vencimento do pai é apagado ou a subtarefa é concluída, e a regra não edita subtarefas que não precisam de mudança.
 - O dado reflete a última execução da regra. Se alguém mudar uma data agora, o rótulo só muda na próxima execução.
-- Editar o rótulo gera histórico e atualiza o campo `updated` da subtarefa. Isso afeta o filtro de issues sem atualização do capítulo 03: uma subtarefa que recebe ou perde o rótulo deixa de parecer parada. Considere esse efeito ao interpretar o indicador.
+- Editar o rótulo gera histórico e atualiza o campo `updated` da subtarefa, mas isso só acontece quando o rótulo realmente muda (a regra não edita quem já está no estado certo). Isso afeta o filtro de issues sem atualização do capítulo 03: uma subtarefa que recebe ou perde o rótulo deixa de parecer parada. Considere esse efeito ao interpretar o indicador.
 - A sintaxe dos smart values e o limite de issues por execução do agendamento dependem da versão. **[Confirmar na sua versão]** Teste a regra com poucas subtarefas antes de liberar para o projeto inteiro.
 
 ### 1.2. Filtro de divergência
@@ -138,7 +138,7 @@ Todos estes smart values e a forma como se comportam dentro de um ramo dependem 
 
 ## 9. Roteiro de teste em homologação
 
-Execute os casos abaixo em um projeto de homologação, nunca direto em produção.
+Execute os casos abaixo em um projeto de homologação, nunca direto em produção. Antes, troque `[CHAVE_DO_PROJETO]` na busca do gatilho da regra agendada pela chave do projeto de homologação.
 
 | Caso | Preparação | Resultado esperado |
 |---|---|---|
@@ -146,7 +146,7 @@ Execute os casos abaixo em um projeto de homologação, nunca direto em produç�
 | 2. Subtarefa concluída | Subtarefa concluída com data diferente | Não é alterada |
 | 3. Já alinhada | Subtarefa já com 20/10/2026 | Não é alterada e não recebe comentário |
 | 4. Pai sem vencimento | Pai sem data de vencimento | Nenhuma subtarefa é alterada e a tarefa recebe o comentário de cancelamento |
-| 5. Subtarefa sem vencimento | Subtarefa aberta sem data | Recebe a data do pai |
+| 5. Subtarefa sem vencimento | Subtarefa aberta sem data | Recebe a data do pai. O comentário mostra a data antiga vazia |
 | 6. Usuário fora do grupo | Usuário que não está em `[grupo-que-pode-sincronizar]` | O botão não aparece ou a execução é negada |
 | 7. Repetir a execução | Executar de novo logo após o caso 1 | Nenhuma alteração nova |
 

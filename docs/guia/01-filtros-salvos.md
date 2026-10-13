@@ -8,7 +8,7 @@ Ao final, você terá o filtro-base apontando para a sua equipe, os 16 filtros d
 
 Existe um único filtro-base, chamado `EQP | Base | Equipe`. Ele define quais issues pertencem à equipe: as dos projetos escolhidos, atribuídas aos membros da equipe. Todos os outros filtros começam com `filter = "EQP | Base | Equipe"` e acrescentam uma condição (tipo, categoria de status, data).
 
-A vantagem é a manutenção: quando alguém entra ou sai da equipe, ou quando um projeto é acrescentado, você altera o filtro-base em um único lugar e todos os derivados, e os gadgets que usam esses derivados, passam a refletir a mudança.
+A vantagem é a manutenção: quando alguém entra ou sai da equipe, ou quando um projeto é acrescentado, você altera o filtro-base em um único lugar e todos os derivados, e os gadgets que usam esses derivados, passam a refletir a mudança. Exceção: os filtros de sem responsável derivam de `EQP | Base | Equipe sem responsável`, não do base principal. Como as duas bases têm `project in (...)`, ao acrescentar um projeto altere TAMBÉM `EQP | Base | Equipe sem responsável`, senão os filtros de sem responsável não incluem o projeto novo.
 
 ## 2. Dois modos do filtro-base
 
@@ -146,6 +146,8 @@ filter = "EQP | Base | Equipe" AND statusCategory = "To Do"
 filter = "EQP | Base | Equipe" AND resolution = Unresolved AND duedate < startOfDay()
 ```
 
+Nota: `resolution = Unresolved` em fluxos que concluem tarefas sem preencher a resolução faz o filtro contar issues já concluídas. Nesses fluxos, troque por `statusCategory != Done`. **[Confirmar na sua versão]**
+
 ### EQP | Resumo | Sem responsável
 
 **Nome:** EQP | Resumo | Sem responsável
@@ -155,6 +157,8 @@ filter = "EQP | Base | Equipe" AND resolution = Unresolved AND duedate < startOf
 ```jql
 filter = "EQP | Base | Equipe sem responsável" AND resolution = Unresolved
 ```
+
+Nota: `resolution = Unresolved` em fluxos que concluem tarefas sem preencher a resolução faz o filtro contar issues já concluídas. Nesses fluxos, troque por `statusCategory != Done`. **[Confirmar na sua versão]**
 
 ### EQP | Período | Criadas no mês
 

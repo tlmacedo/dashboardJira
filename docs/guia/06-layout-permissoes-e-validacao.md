@@ -1,6 +1,6 @@
 # Capítulo 06: layout, permissões e validação
 
-Este capítulo junta o que foi montado nos capítulos 01 a 05: define a ordem dos gadgets no dashboard, as permissões para que todos enxerguem os números, o checklist para validar os totais, as regras de desempenho e manutenção e as melhorias futuras. Nenhum filtro novo é criado aqui; todos são citados pelo nome exato do catálogo do capítulo 01.
+Este capítulo junta o que foi montado nos capítulos 01 a 05: define a ordem dos gadgets no dashboard, as permissões para que todos enxerguem os números, o checklist para validar os totais, as regras de desempenho e manutenção e as melhorias futuras. Nenhum filtro novo é criado aqui; todos são citados pelo nome exato do catálogo dos capítulos 01, 03 e 05.
 
 Ao final, você terá o dashboard montado em 3 colunas, compartilhado com o grupo certo, com os números conferidos à mão e com um plano de manutenção.
 
@@ -16,8 +16,8 @@ O dashboard usa o layout de 3 colunas. Os nomes e a disponibilidade dos gadgets 
 | 1. Totais, coluna 2 | Total de subtarefas (Resultados do Filtro ou Estatísticas da Tarefa) | `EQP \| Resumo \| Subtarefas` | 02 |
 | 1. Totais, coluna 3 | Atrasadas (Resultados do Filtro) | `EQP \| Resumo \| Atrasadas` | 02 |
 | 1. Totais, coluna 1 | Sem responsável (Resultados do Filtro) | `EQP \| Resumo \| Sem responsável` | 02 |
-| 1. Totais, coluna 2 | Card de horas: tempo em tarefas (coluna Time Spent) | `EQP \| Horas \| Tarefas com horas` | 03 |
-| 1. Totais, coluna 3 | Card de horas: tempo em subtarefas (coluna Time Spent) | `EQP \| Horas \| Subtarefas com horas` | 03 |
+| 1. Totais, coluna 2 | Card de horas: tempo em tarefas (Timesheet, um por filtro (ver a configuração do Timesheet no capítulo 03) **[Confirmar na sua versão]**) | `EQP \| Horas \| Tarefas com horas` | 03 |
+| 1. Totais, coluna 3 | Card de horas: tempo em subtarefas (Timesheet, um por filtro (ver a configuração do Timesheet no capítulo 03) **[Confirmar na sua versão]**) | `EQP \| Horas \| Subtarefas com horas` | 03 |
 | 2. Equipe, coluna 1 | Pizza de status (Gráfico de Pizza, estatística Status) | `EQP \| Base \| Equipe` | 02 |
 | 2. Equipe, coluna 2 | Pizza de tipo (Gráfico de Pizza, estatística Tipo de tarefa) | `EQP \| Base \| Equipe` | 02 |
 | 2. Equipe, coluna 3 | Responsável × status (Estatísticas de Filtro Bidimensional) | `EQP \| Base \| Equipe` | 02 |
@@ -25,7 +25,6 @@ O dashboard usa o layout de 3 colunas. Os nomes e a disponibilidade dos gadgets 
 | 3. Negligenciados, coluna 1 | Sem atualização (Resultados do Filtro) | `EQP \| Negligenciados \| Sem atualização` | 03 |
 | 3. Negligenciados, coluna 2 | Sem estimativa (Resultados do Filtro) | `EQP \| Negligenciados \| Sem estimativa` | 03 |
 | 3. Negligenciados, coluna 3 | Sem vencimento (Resultados do Filtro) | `EQP \| Negligenciados \| Sem vencimento` | 03 |
-| 3. Negligenciados, coluna 1 | Sem responsável (Resultados do Filtro) | `EQP \| Negligenciados \| Sem responsável` | 03 |
 | 4. Datas e horas, coluna 2 | Timesheet **[Confirmar na sua versão]** | `EQP \| Horas \| Com worklog no mês` | 03 |
 | 4. Datas e horas, coluna 3 | Módulo de tempo por status, se instalado. **[Exige app: Time in Status]** ou **[Exige app: eazyBI]**, conforme a escolha do capítulo 04; com campos de Automation, uma lista com as colunas dos campos | Depende da alternativa escolhida no capítulo 04 | 04 |
 | 5. Divergência, coluna 1 | Subtarefas com vencimento divergente (Resultados do Filtro) | `EQP \| Datas \| Subtarefas com vencimento divergente` | 05 |
@@ -34,13 +33,13 @@ Observações sobre a tabela:
 
 - O módulo de tempo por status é opcional. Se o app tiver painel próprio, ele fica fora do dashboard nativo ou entra como gadget, conforme o app. **[Confirmar na documentação do app instalado]**
 - A faixa 5 pode ficar na coluna que estiver mais vazia; o que importa é a ordem de leitura.
-- Os dois "Sem responsável" usam filtros diferentes (`EQP | Resumo | Sem responsável` e `EQP | Negligenciados | Sem responsável`). Se os dois mostrarem o mesmo número na sua instância, mantenha só um.
+- O filtro de negligenciados sem responsável (`EQP | Negligenciados | Sem responsável`) ficou fora do layout para não repetir o da faixa 1 (`EQP | Resumo | Sem responsável`). Se preferir o critério por statusCategory, troque um pelo outro, mas mantenha só um dos dois. O Resultados do Filtro não totaliza horas; por isso os cards de horas usam o Timesheet.
 
 ### Quantos gadgets usar
 
 Recomendação: no máximo 12 a 15 gadgets no dashboard. Cada gadget executa uma consulta JQL ao abrir a página, e cada pessoa que abre o dashboard repete todas elas. Com muitos gadgets, o dashboard demora a carregar e pesa no servidor, principalmente em instância grande.
 
-A tabela acima tem 16 gadgets sem o módulo opcional, ou seja, passa do recomendado. Para voltar à faixa de 12 a 15, corte primeiro os repetidos: o segundo "Sem responsável" (mantendo só um dos dois), e depois o total de subtarefas, se o seu grupo não o usa. Se instalar o módulo de tempo por status, corte mais um gadget para compensar.
+A tabela acima soma 15 gadgets sem o módulo opcional, o limite superior do recomendado. Se instalar o módulo de tempo por status, corte o "Total de subtarefas" (faixa 1, coluna 2) para manter 15.
 
 ## 2. Onde fica o botão
 
@@ -89,6 +88,7 @@ Se um item falhar, siga a ordem de diagnóstico do capítulo 02, seção 4: filt
 | Dono dos filtros e do dashboard | O dono sai, muda de função ou a conta é desativada | O administrador transfere a propriedade para a conta de serviço e confere o compartilhamento. **[Confirmar na sua versão]** |
 | Fluxo de trabalho | Status novos, renomeados ou removidos | Revise os filtros que dependem de categoria de status e as pizzas de status; no tempo por status, atualize os campos e as regras do capítulo 04 e refaça o teste |
 | Conta da automação | Senha, desativação ou mudança de permissões da conta | Confirme as permissões da seção 7 do capítulo 05 e rode o roteiro de testes de novo |
+| Projeto novo na equipe | Um projeto é acrescentado | Altere `project in (...)` em `EQP \| Base \| Equipe` e TAMBÉM em `EQP \| Base \| Equipe sem responsável`; senão os filtros de sem responsável não incluem o projeto novo |
 | Prazo de 14 dias da inatividade | A equipe decide outro prazo | Troque o `-14d` nos filtros `EQP \| Negligenciados \| Sem atualização` e `EQP \| Negligenciados \| Parada no mesmo status`, e revalide |
 
 ## 7. Melhorias futuras
