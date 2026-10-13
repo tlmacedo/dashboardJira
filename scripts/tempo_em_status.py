@@ -194,7 +194,7 @@ def linhas_csv(issues, agora, status_inicio, status_fim):
     return linhas
 
 
-def main(argv=None, abrir=urllib.request.urlopen):
+def main(argv=None, abrir=urllib.request.urlopen, dormir=time.sleep):
     parser = argparse.ArgumentParser(
         description="Calcula tempo em status, passagens, tempo de ciclo e reaberturas "
                     "a partir do changelog do Jira (REST).",
@@ -218,7 +218,7 @@ def main(argv=None, abrir=urllib.request.urlopen):
     agora = datetime.now(timezone.utc)
     # Mensagens curtas: sem URL, JQL nem token.
     try:
-        issues = list(buscar_issues(args.url, token, args.jql, abrir=abrir))
+        issues = list(buscar_issues(args.url, token, args.jql, abrir=abrir, dormir=dormir))
     except urllib.error.HTTPError as erro:
         dica = " Verifique o PAT e as permissões." if erro.code in (401, 403) else ""
         print(f"O Jira respondeu com erro HTTP {erro.code}.{dica}", file=sys.stderr)

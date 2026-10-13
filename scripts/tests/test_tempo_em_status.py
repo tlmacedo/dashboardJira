@@ -225,6 +225,26 @@ class TestMain(unittest.TestCase):
 
         self.assertEqual(self._rodar(abrir, {"TOK_TESTE": "x"})[0], 1)
 
+    def test_429_esgotado_sai_com_1_sem_vazar(self):
+        import os
+        from unittest import mock
+
+        def abrir(req, **kw):
+            raise erro_429("1")
+
+        sonos = []
+        err = io.StringIO()
+        with mock.patch.dict(os.environ, {"TOK_TESTE": "token-secreto"}), \
+                redirect_stderr(err), redirect_stdout(io.StringIO()):
+            codigo = t.main(["--url", "https://j.exemplo.com", "--jql", "project = SEGREDO",
+                             "--token-env", "TOK_TESTE"], abrir=abrir, dormir=sonos.append)
+        self.assertEqual(codigo, 1)
+        self.assertIn("429", err.getvalue())
+        self.assertIn("tentativas", err.getvalue())
+        self.assertEqual(len(sonos), 4)
+        for proibido in ("token-secreto", "SEGREDO", "j.exemplo.com"):
+            self.assertNotIn(proibido, err.getvalue())
+
     def test_variavel_ausente_sai_com_1(self):
         import os
         os.environ.pop("TOK_TESTE", None)
