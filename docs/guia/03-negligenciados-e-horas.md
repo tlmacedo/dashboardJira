@@ -142,7 +142,7 @@ Os cards respondem "quanto tempo a equipe dedicou" a tarefas e a subtarefas. Doi
 |---|---|---|---|
 | Tempo em tarefas | Time Spent | `EQP \| Horas \| Tarefas com horas` | App de Timesheet, um por filtro (ver a configuração do Timesheet neste capítulo) **[Exige app: Timesheet]** **[Confirmar na sua versão]** |
 | Tempo em subtarefas | Time Spent | `EQP \| Horas \| Subtarefas com horas` | App de Timesheet, um por filtro (ver a configuração do Timesheet neste capítulo) **[Exige app: Timesheet]** **[Confirmar na sua versão]** |
-| Conjunto | Soma dos dois cards acima | Os dois filtros acima | Soma dos dois valores dos Timesheets acima. Alternativa: Σ Time Spent só das tarefas padrão |
+| Conjunto | Soma dos dois cards acima | Os dois filtros acima | Soma dos dois valores dos Timesheets acima. Alternativa: Σ Time Spent só das tarefas padrão (exibir a coluna Σ Time Spent; não é pesquisável em JQL, então não filtre por ela; o Resultados do Filtro também não totaliza a coluna) |
 | Estimado × realizado | Estimativa original e tempo registrado | Definido no eazyBI | **[Exige app: eazyBI]** (licença paga no Marketplace; consultar o preço atual para o seu número de usuários) |
 
 > **Regra de ouro: nunca some o Σ Time Spent do pai com o Time Spent das subtarefas.** O Σ do pai já contém as horas das subtarefas, então a soma conta tudo duas vezes.

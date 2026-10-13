@@ -99,7 +99,7 @@ Em Automação, crie uma regra com estes passos. Os nomes de menus e opções va
 3. **Condição:** `{{issue.duedate}}` não vazio, em tarefas padrão. **[Confirmar na sua versão]** Se estiver vazio, execute a ação Adicionar comentário na tarefa com o texto "Sincronização cancelada: a tarefa não tem data de vencimento." e encerre a regra.
 4. **Ramificação:** Para subtarefas (branch). **[Confirmar na sua versão]** (o nome do ramo e o limite de issues por ramo).
 5. **Condição dentro do ramo:** `statusCategory` da subtarefa diferente de `Done`.
-6. **Condição dentro do ramo:** comparação avançada, `{{issue.duedate}}` diferente de `{{triggerIssue.duedate}}`. **[Confirmar na sua versão]** Se forem iguais, nada é feito, nem comentário.
+6. **Condição dentro do ramo:** comparação avançada ("Advanced compare"), `{{issue.duedate}}` diferente de `{{triggerIssue.duedate}}`. **[Confirmar na sua versão]** Testar em homologação. Se a condição não existir na sua versão, uma alternativa possível, sem garantia, é usar a condição de campo da issue comparando o vencimento com o valor do pai via smart value, ou uma condição JQL equivalente. **[Confirmar na sua versão]** Se forem iguais, nada é feito, nem comentário.
 7. **Ações, nesta ordem:**
    1. Adicionar comentário na subtarefa com o texto: "Vencimento alterado de {{issue.duedate}} para {{triggerIssue.duedate}} por {{initiator.displayName}} (sincronização com a tarefa {{triggerIssue.key}})."
    2. Editar issue: Data de vencimento = `{{triggerIssue.duedate}}`.
