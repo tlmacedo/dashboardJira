@@ -17,14 +17,18 @@ O JQL nativo não compara o vencimento da subtarefa com o do pai. Não existe um
 Em Automação (menu da tarefa ou administração do projeto, conforme a versão), crie a regra abaixo. **[Confirmar na sua versão]**
 
 1. **Nome:** `Sinalizar vencimento divergente`.
-2. **Gatilho:** agendado, por exemplo a cada hora e fora do horário de pico. Configure a busca JQL do gatilho como `project in ([CHAVE_DO_PROJETO]) AND issuetype in subTaskIssueTypes() AND statusCategory != Done` e a ação para cada issue encontrada. **[Confirmar na sua versão]** (a existência do gatilho agendado com busca JQL e o número máximo de issues por execução variam).
-3. **Condição 1:** o vencimento do pai não é vazio. Use a comparação avançada: `{{issue.parent.duedate}}` não é igual a vazio. **[Confirmar na sua versão]** (a existência da condição de comparação avançada e a sintaxe do smart value variam).
-4. **Condição 2 (se/senão):** comparação avançada com `{{issue.duedate}}` diferente de `{{issue.parent.duedate}}`. **[Confirmar na sua versão]**
-5. **Se divergir:** ação Editar issue, adicionando o rótulo `venc-divergente`.
-6. **Senão:** ação Editar issue, removendo o rótulo `venc-divergente`.
+2. **Gatilho:** agendado, por exemplo a cada hora e fora do horário de pico. Configure a busca JQL do gatilho como `project in ([CHAVE_DO_PROJETO]) AND issuetype in subTaskIssueTypes() AND (statusCategory != Done OR labels = venc-divergente)` e a ação para cada issue encontrada. A segunda parte da busca recolhe também subtarefas já concluídas que ainda carregam o rótulo, para que ele possa ser removido. **[Confirmar na sua versão]** (a existência do gatilho agendado com busca JQL e o número máximo de issues por execução variam).
+3. **Condição 1 (se/senão):** `statusCategory` da subtarefa diferente de `Done`. **[Confirmar na sua versão]** (sintaxe do bloco se/senão).
+   - **Senão (subtarefa concluída):** ação Editar issue, removendo o rótulo `venc-divergente`, e a regra termina para essa issue.
+4. **Condição 2 (dentro do "se" da condição 1, se/senão):** o vencimento do pai não é vazio. Use a comparação avançada: `{{issue.parent.duedate}}` não é igual a vazio. **[Confirmar na sua versão]** (a existência da condição de comparação avançada e a sintaxe do smart value variam).
+   - **Senão (pai sem vencimento):** ação Editar issue, removendo o rótulo `venc-divergente`, porque pai sem vencimento não é divergência.
+5. **Condição 3 (dentro do "se" da condição 2, se/senão):** comparação avançada com `{{issue.duedate}}` diferente de `{{issue.parent.duedate}}`. **[Confirmar na sua versão]**
+6. **Se divergir:** ação Editar issue, adicionando o rótulo `venc-divergente`.
+7. **Senão (alinhada):** ação Editar issue, removendo o rótulo `venc-divergente`.
 
 Limites desta camada:
 
+- Em todos os caminhos em que não há divergência (subtarefa concluída, pai sem vencimento, datas iguais) o rótulo é removido; assim ele não fica obsoleto quando o vencimento do pai é apagado ou a subtarefa é concluída.
 - O dado reflete a última execução da regra. Se alguém mudar uma data agora, o rótulo só muda na próxima execução.
 - Editar o rótulo gera histórico e atualiza o campo `updated` da subtarefa. Isso afeta o filtro de issues sem atualização do capítulo 03: uma subtarefa que recebe ou perde o rótulo deixa de parecer parada. Considere esse efeito ao interpretar o indicador.
 - A sintaxe dos smart values e o limite de issues por execução do agendamento dependem da versão. **[Confirmar na sua versão]** Teste a regra com poucas subtarefas antes de liberar para o projeto inteiro.
@@ -58,7 +62,7 @@ issueFunction in subtasksOf("project in ([CHAVE_DO_PROJETO]) AND duedate is not 
 ```
 
 ```jql
-issueFunction in parentsOf("labels = venc-divergente")
+issueFunction in parentsOf("labels = venc-divergente AND statusCategory != Done")
 ```
 
 Atenção: essas funções listam subtarefas ou pais a partir de uma busca. Não há garantia de que comparem datas entre pai e filho. Teste na instância antes de contar com isso. **[Confirmar na documentação do app instalado]**
