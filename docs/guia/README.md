@@ -37,7 +37,7 @@ Siga os capítulos nesta ordem. Cada um cita o anterior como pré-requisito.
 
 - capítulo [04](04-tempo-por-status.md) inteiro: app de Time in Status, eazyBI ou campos personalizados com Automation;
 - capítulo [05](05-datas-e-botao-de-sincronizacao.md), seção 2: módulos ScriptRunner e eazyBI para a divergência;
-- Timesheet (Tempo, Simple Reports ou Decadis sumUp), usado nos cards de horas do capítulo 03 e do layout: é app, não recurso nativo;
+- Timesheet (Tempo, Simple Reports ou Decadis sumUp), usado nos cards de horas do capítulo 03 e do layout: é um app, que precisa estar instalado;
 - partes eazyBI e de outros apps citadas nos capítulos 02 e 03 (por exemplo, percentuais fora do gráfico de pizza, cards numéricos reais e cards completos de estimado × realizado);
 - capítulo [07](07-historico-de-status.md): os filtros JQL de histórico e o script usam só o Jira (JQL e REST), mas dependem de acesso REST com token e de confirmação na sua versão; tempo em status por app (eazyBI, Jira Charting) exige o app.
 
