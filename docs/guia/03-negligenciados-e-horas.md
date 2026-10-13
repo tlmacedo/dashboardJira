@@ -61,10 +61,10 @@ Nota: este filtro parte do filtro-base alternativo, porque o `EQP | Base | Equip
 **Critério de data:** atualização
 
 ```jql
-filter = "EQP | Base | Equipe" AND statusCategory != Done AND created <= -14d AND NOT (status CHANGED AFTER -14d)
+filter = "EQP | Base | Equipe" AND statusCategory != Done AND created <= -14d AND NOT (status CHANGED AFTER "-14d")
 ```
 
-Aviso: a negação do operador `CHANGED` pode não ser aceita ou pode se comportar de forma diferente conforme a versão. **[Confirmar na sua versão]** Teste o filtro numa amostra em que você conheça o histórico: uma tarefa que mudou de status ontem não deve aparecer, uma parada há mais de 14 dias deve aparecer, e uma tarefa criada há 3 dias não deve aparecer. Se a sua versão rejeitar a negação com `CHANGED`, use `EQP | Negligenciados | Sem atualização` como substituto seguro, e registre o resultado do teste.
+Aviso: a negação do operador `CHANGED` pode não ser aceita ou pode se comportar de forma diferente conforme a versão, e a ressalva vale para os dois `-14d` do filtro (o de `created` e o de `CHANGED`). **[Confirmar na sua versão]** Pendência: a criação da issue conta como mudança de status? Não confirmado. Teste o filtro numa amostra em que você conheça o histórico: uma tarefa que mudou de status ontem não deve aparecer, uma parada há mais de 14 dias deve aparecer, e uma tarefa criada há 3 dias não deve aparecer. Se a sua versão rejeitar a negação com `CHANGED`, use `EQP | Negligenciados | Sem atualização` como substituto seguro, e registre o resultado do teste. Anote também se a criação da issue contou como mudança de status.
 
 A diferença entre os dois filtros: "sem atualização" considera qualquer edição ou comentário, então uma tarefa comentada ontem sai da lista mesmo sem ter andado. "Parada no status" considera só a mudança de status, então ela continua na lista até que o status mude de fato. Por isso "parada no status" é o indicador mais exigente.
 
@@ -106,7 +106,7 @@ filter = "EQP | Base | Equipe" AND issuetype in standardIssueTypes() AND timespe
 **Critério de data:** nenhum (retrato do momento)
 
 ```jql
-filter = "EQP | Base | Equipe" AND issuetype in subTaskIssueTypes() AND timespent > 0
+filter = "EQP | Base | Equipe" AND issuetype in subtaskIssueTypes() AND timespent > 0
 ```
 
 ### Como obter horas por pessoa: comparação das alternativas
@@ -114,17 +114,17 @@ filter = "EQP | Base | Equipe" AND issuetype in subTaskIssueTypes() AND timespen
 | Alternativa | O que entrega | Limite |
 |---|---|---|
 | JQL com `worklogAuthor` e `worklogDate` | Lista das issues com registro de horas por pessoa e período | Não soma horas; só diz quais tarefas têm registro |
-| Relatório de Time Tracking | Estimado × registrado por projeto, versão ou sprint | Não aceita período livre; o escopo disponível depende da versão. **[Confirmar na sua versão]** |
-| Gadget Timesheet | Soma de horas por pessoa e por dia. **[Confirmar na sua versão]** | Depende de o gadget existir e de quais opções ele oferece na sua instalação |
-| eazyBI | Estimado × registrado por pessoa e período. **[Exige app: eazyBI]** | Licença paga no Marketplace; consultar o preço atual para o seu número de usuários |
+| Relatório de Time Tracking | Estimado × registrado, por versão (projeto ou sprint: não confirmado) | Não aceita período livre; o escopo disponível depende da versão. **[Confirmar na sua versão]** |
+| App de Timesheet (Tempo, Simple Reports ou Decadis sumUp) | Soma de horas por pessoa e por dia. **[Exige app: Timesheet — Tempo, Simple Reports ou Decadis sumUp; confirmar compatibilidade com Data Center no Marketplace]** | Licença paga no Marketplace; consultar o preço atual para o seu número de usuários. As opções do gadget dependem do app escolhido |
+| eazyBI | Estimado × registrado por pessoa e período. **[Exige app: eazyBI]** | Licença paga no Marketplace; consultar o preço atual para o seu número de usuários. O eazyBI declara compromisso com o Data Center em post do fornecedor, mas o ciclo de vida do Data Center limita a compra (ver o capítulo 00) |
 
-**Recomendação:** use o Timesheet para as horas por pessoa no núcleo nativo, e o eazyBI quando for preciso comparar com o estimado. Se o gadget Timesheet não existir na sua versão, ele pode ser um app do Marketplace **[Exige app: Timesheet — confirmar no Marketplace e na compatibilidade com Data Center]**, ou use o eazyBI **[Exige app: eazyBI]**. Opcionalmente, o gadget Gráfico de Pizza de carga de trabalho (Workload Pie Chart) mostra a estimativa restante por responsável, mas não soma Time Spent. **[Confirmar na sua versão]**
+**Recomendação:** use um app de Timesheet ou o eazyBI para horas por pessoa e período; sem app, use a REST de worklog. O Timesheet é fornecido por apps **[Exige app: Timesheet — Tempo, Simple Reports ou Decadis sumUp; confirmar compatibilidade com Data Center no Marketplace]**; o eazyBI serve quando for preciso comparar com o estimado **[Exige app: eazyBI]**. Opcionalmente, o gadget Gráfico de Pizza de carga de trabalho (Workload Pie Chart) mostra a estimativa restante por responsável, mas não soma Time Spent, e exige o Jira Charting App. **[Exige app: Jira Charting]** **[Confirmar na sua versão]**
 
 ### Configuração do Timesheet
 
-**[Confirmar na sua versão]** (existência do gadget, nomes das opções e posição dos totais variam).
+**[Exige app: Timesheet]** **[Confirmar na sua versão]** (nomes das opções e posição dos totais variam conforme o app escolhido).
 
-1. Adicione o gadget Timesheet ao dashboard.
+1. Com o app de Timesheet instalado, adicione o gadget Timesheet ao dashboard.
 2. Como filtro, escolha `EQP | Horas | Com worklog no mês`.
 3. Defina o período como o mês atual.
 4. Agrupe por usuário.
@@ -136,14 +136,14 @@ filter = "EQP | Base | Equipe" AND issuetype in subTaskIssueTypes() AND timespen
 Os cards respondem "quanto tempo a equipe dedicou" a tarefas e a subtarefas. Dois campos entram em jogo:
 
 - `timespent` (Time Spent): o tempo registrado na própria issue.
-- `aggregatetimespent` (Σ Time Spent): o tempo da issue somado ao das suas subtarefas.
+- `aggregatetimespent` (Σ Time Spent): o tempo da issue somado ao das suas subtarefas. Os campos Σ não são pesquisáveis em JQL, segundo fonte secundária (JIRAAUTOSERVER-1231); **não confirmado** na página oficial de campos. Por isso nenhum filtro deste capítulo usa `aggregatetimespent`.
 
 | Card | Campo | Filtro | Exibição |
 |---|---|---|---|
-| Tempo em tarefas | Time Spent | `EQP \| Horas \| Tarefas com horas` | Timesheet, um por filtro (ver a configuração do Timesheet neste capítulo) **[Confirmar na sua versão]** |
-| Tempo em subtarefas | Time Spent | `EQP \| Horas \| Subtarefas com horas` | Timesheet, um por filtro (ver a configuração do Timesheet neste capítulo) **[Confirmar na sua versão]** |
+| Tempo em tarefas | Time Spent | `EQP \| Horas \| Tarefas com horas` | App de Timesheet, um por filtro (ver a configuração do Timesheet neste capítulo) **[Exige app: Timesheet]** **[Confirmar na sua versão]** |
+| Tempo em subtarefas | Time Spent | `EQP \| Horas \| Subtarefas com horas` | App de Timesheet, um por filtro (ver a configuração do Timesheet neste capítulo) **[Exige app: Timesheet]** **[Confirmar na sua versão]** |
 | Conjunto | Soma dos dois cards acima | Os dois filtros acima | Soma dos dois valores dos Timesheets acima. Alternativa: Σ Time Spent só das tarefas padrão |
-| Estimado × realizado | Estimativa original e tempo registrado | Definido no eazyBI | **[Exige app: eazyBI]** |
+| Estimado × realizado | Estimativa original e tempo registrado | Definido no eazyBI | **[Exige app: eazyBI]** (licença paga no Marketplace; consultar o preço atual para o seu número de usuários) |
 
 > **Regra de ouro: nunca some o Σ Time Spent do pai com o Time Spent das subtarefas.** O Σ do pai já contém as horas das subtarefas, então a soma conta tudo duas vezes.
 
@@ -163,8 +163,8 @@ Uma tarefa-pai com 2h registradas nela mesma e duas subtarefas, de 3h e 1h:
 
 O resultado correto do conjunto é 6h, e **não** 12h. Se um número do dashboard passar do total real, procure primeiro uma soma de Σ Time Spent com Time Spent.
 
-### Limites nativos
+### Limites do núcleo e do app
 
 - O gadget Resultados do Filtro mostra a coluna de tempo, mas não totaliza. **[Confirmar na sua versão]**
-- O Timesheet respeita o filtro escolhido, e o responsável da issue pode diferir de quem registrou as horas. Por isso o filtro `EQP | Horas | Com worklog no mês` usa `worklogAuthor`, e não `assignee`.
-- Para totais por tipo (tarefas e subtarefas), use um Timesheet por filtro, cada um apontando para o seu filtro da tabela acima.
+- O app de Timesheet respeita o filtro escolhido, e o responsável da issue pode diferir de quem registrou as horas. Por isso o filtro `EQP | Horas | Com worklog no mês` usa `worklogAuthor`, e não `assignee`.
+- Para totais por tipo (tarefas e subtarefas), use um Timesheet (do app) por filtro, cada um apontando para o seu filtro da tabela acima.
