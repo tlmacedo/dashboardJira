@@ -11,7 +11,7 @@ Preencha a tabela antes de seguir para o capítulo 01. Os capítulos seguintes c
 | Dado | Onde encontrar | Por que importa |
 |---|---|---|
 | Versão exata do Jira Data Center | Administração > Informações do sistema, ou rodapé de qualquer página | Define quais gadgets e recursos de Automation existem. Muitos pontos deste guia levam a marca **[Confirmar na sua versão]**. |
-| Apps instalados (ScriptRunner, eazyBI, Time in Status, JMWE, Automation) | Administração > Gerenciar apps | Define quais módulos opcionais você consegue implantar sem comprar nada. |
+| Apps instalados (ScriptRunner, eazyBI, Time in Status, JMWE, Jira Charting, Timesheet) e se o Automation aparece | Administração > Gerenciar apps; menu Automação numa tarefa | Define quais módulos opcionais você consegue implantar sem comprar nada. O Automation é embutido no Jira Software Data Center desde a 9.0, então em 9.12 e 10.x normalmente não é app à parte. **[Confirmar na sua versão]** |
 | Permissão para instalar apps | Decisão interna (administração do Jira, TI, compras) | Sem permissão, o guia segue só com o núcleo nativo. Custo de app: licença paga no Marketplace; consultar o preço atual para o seu número de usuários. |
 | Chaves dos projetos | Lista de projetos, coluna "Chave" | Substituem `[CHAVE_DO_PROJETO]` nos filtros e delimitam a regra de Automation. |
 | Usernames ou grupo da equipe | Administração > Gerenciamento de usuários (grupos) | Alimentam o filtro-base. Se o grupo não existir ou estiver vazio, o filtro dá erro ou não retorna nada. Confira o grupo antes e, se preciso, use uma lista de usernames. No Data Center a identificação é por username ou user key. |
@@ -19,7 +19,7 @@ Preencha a tabela antes de seguir para o capítulo 01. Os capítulos seguintes c
 | Tipos de tarefa em uso e se as subtarefas seguem o fluxo do pai | Administração > Tarefas > Tipos de tarefa, e os esquemas de fluxo de trabalho | Separa tarefas padrão de subtarefas nos cards e nas regras. Subtarefas com fluxo próprio mudam o que significa "concluída". |
 | Campos personalizados relevantes | Administração > Tarefas > Campos personalizados | Necessários se você optar por campos com Automation (tempo por status, marca de divergência). |
 | Time Tracking ativo e estimativa preenchida | Administração > Tarefas > Controle de tempo, e uma amostra de tarefas | Sem Time Tracking ativo não há horas registradas. Sem estimativa preenchida, o filtro de "sem estimativa" retorna quase tudo. |
-| Volume aproximado de issues | Navegador de Tarefas sem filtro, total de resultados | Influencia o desempenho dos filtros e a escolha de agendamentos fora do horário de pico. |
+| Volume aproximado de issues | Navegador de Tarefas sem filtro, total de resultados | Influencia o desempenho dos filtros e a escolha de agendamentos fora do horário de pico. Uma busca JQL devolve no máximo 1000 issues por padrão (limite configurável pelo administrador; no Automation, o gatilho agendado também tem limite de 1000 issues por execução). **[Confirmar na sua versão]** |
 
 ## 2. Matriz nativo × app
 
@@ -28,24 +28,26 @@ A tabela resume o que o núcleo nativo entrega e o que exige app. A coluna "Cap�
 | Funcionalidade | Nativo? | O que exige | Capítulo |
 |---|---|---|---|
 | Filtros e JQL de data | Sim | Nada além do próprio Jira. | 01 |
-| Gadgets de resumo (totais, pizza, responsável × status, Criadas vs Resolvidas, mapa de calor, lista) | Sim, **[Confirmar na sua versão]** | Conferir se cada gadget existe e como se chama na sua versão. | 02 |
-| Percentuais fora do gráfico de pizza | Não | **[Exige app: eazyBI]** | 02 |
-| Cards numéricos reais | Não | **[Exige app: eazyBI]** | 02, 03 |
+| Gadgets de resumo (totais, pizza, responsável × status, Criadas vs Resolvidas, mapa de calor, lista) | Sim, **[Confirmar na sua versão]** | Conferir se cada gadget existe e como se chama na sua versão. A lista oficial de gadgets nativos inclui Filter Results, Pie Chart, Issue Statistics, Two Dimensional Filter Statistics, Heat Map e Created vs Resolved. | 02 |
+| Percentuais fora do gráfico de pizza (e, na própria pizza, a exibição de percentual **[Confirmar na sua versão]**) | Não | Planilha, ou **[Exige app: eazyBI]** (ver ressalva da eazyBI abaixo da tabela). | 02 |
+| Cards numéricos reais | Não | **[Exige app: eazyBI]** (ver ressalva abaixo da tabela) | 02, 03 |
 | Sem atualização, sem estimativa, sem vencimento, sem responsável | Sim | Nada além do próprio Jira. | 03 |
 | Parada no mesmo status | Parcialmente nativo, a validar na amostra | Variante com `status CHANGED` precisa de teste. A alternativa segura é o filtro de sem atualização. | 03 |
-| Tempo por status | Não | **[Exige app: Time in Status ou eazyBI]**, ou campos personalizados alimentados por Automation (mais manutenção, sem histórico retroativo). | 04 |
-| Horas por pessoa | Parcialmente: gadget Timesheet, **[Confirmar na sua versão]** | Se o Timesheet não existir na sua versão, ele pode ser um app do Marketplace **[Exige app: Timesheet — confirmar no Marketplace e na compatibilidade com Data Center]**, ou use o eazyBI **[Exige app: eazyBI]**. Estimado × registrado por pessoa e por período exige **[Exige app: eazyBI]**. | 03 |
+| Tempo por status | Não | **[Exige app: Time in Status ou eazyBI]**, o gadget Average Time in Status (ou Average Number of Times in Status) do Jira Charting **[Exige app: Jira Charting]**, script via REST, ou campos personalizados alimentados por Automation (embutido desde a 9.0; mais manutenção, sem histórico retroativo). | 04, 07 |
+| Horas por pessoa | Não: o Timesheet é fornecido por apps (Tempo, Simple Reports, Decadis sumUp) | **[Exige app: Timesheet]** (confirmar no Marketplace a compatibilidade com Data Center e o preço), ou **[Exige app: eazyBI]**. O gadget Workload Pie Chart exige o Jira Charting App **[Exige app: Jira Charting]**. Estimado × registrado por pessoa e por período exige **[Exige app: eazyBI]**. | 03 |
 | Divergência de vencimento entre pai e subtarefa | Não | Automation, ScriptRunner ou eazyBI. **[Exige app: ScriptRunner]** ou **[Exige app: eazyBI]** nos dois últimos casos. | 05 |
 | Botão de sincronização | Não | Automation com gatilho manual **[Confirmar na sua versão]**, ou **[Exige app: ScriptRunner]** ou **[Exige app: JMWE]**. | 05 |
-| Cards de horas separados por tipo (tarefas e subtarefas) | Parcialmente | Um Timesheet por filtro, **[Confirmar na sua versão]**, ou **[Exige app: eazyBI]** para os cards completos. | 03 |
+| Cards de horas separados por tipo (tarefas e subtarefas) | Não | Um Timesheet por filtro **[Exige app: Timesheet]**, ou **[Exige app: eazyBI]** para os cards completos. | 03 |
+
+Sobre o eazyBI: a venda de Data Center a novos clientes terminou em 30/03/2026; clientes Data Center existentes ainda podem comprar produtos, apps e expansões até 30/03/2028; 28/03/2029 é o fim de vida (assinaturas e apps somente leitura). A eazyBI declara compromisso com o Data Center em post do próprio fornecedor (sem prova de fim de venda do app); confirme com o fornecedor a disponibilidade para o seu caso. Licença paga no Marketplace; consultar o preço atual para o seu número de usuários, que define a faixa de licença. Detalhes no capítulo 04.
 
 Duas limitações nativas valem ser lembradas desde já: dashboards nativos não têm filtros globais interativos e não executam ações.
 
 ## 3. Checagem de versão em 5 minutos
 
 1. Anote a versão exata do Jira (Administração > Informações do sistema, ou rodapé).
-2. Abra um dashboard e clique em Adicionar gadget. Confira se existem os gadgets citados no capítulo 02. Anote os que faltarem ou tiverem outro nome.
-3. Abra uma tarefa e confira se o menu Automação aparece. Se aparecer, abra as regras e veja se há gatilho manual disponível.
+2. Abra um dashboard e clique em Adicionar gadget. Confira se existem os gadgets citados no capítulo 02. Anote os que faltarem ou tiverem outro nome. Se pretende usar o tempo médio por status, confira também se os gadgets do Jira Charting estão instalados.
+3. Abra uma tarefa e confira se o menu Automação aparece (o Automation vem embutido no Jira Software Data Center desde a 9.0, então a ausência indica versão anterior, produto sem Jira Software ou recurso desabilitado). Se aparecer, abra as regras e veja se há gatilho manual disponível.
 4. Abra Administração > Gerenciar apps e anote os apps instalados e suas versões.
 5. Confira em Administração > Tarefas > Controle de tempo se o Time Tracking está ativo.
 

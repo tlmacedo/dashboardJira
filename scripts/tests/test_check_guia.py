@@ -86,6 +86,10 @@ class TestVerificarReferencias(unittest.TestCase):
         texto = '```jql\nfilter = "EQP | Base | Fantasma"\n```\n'
         self.assertTrue(verificar_referencias({"a.md": texto}))
 
+    def test_capitulo_07_registrado(self):
+        from check_guia import CAPITULOS
+        self.assertIn("07-historico-de-status.md", CAPITULOS)
+
 
 if __name__ == "__main__":
     unittest.main()

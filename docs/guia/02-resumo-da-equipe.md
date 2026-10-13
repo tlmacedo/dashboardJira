@@ -1,6 +1,6 @@
 # Capítulo 02: resumo da equipe
 
-Este capítulo liga cada métrica do resumo da equipe a um gadget nativo do Jira Data Center e a um filtro salvo do capítulo 01. Os filtros são citados pelo nome exato; nenhum filtro novo é criado aqui.
+Este capítulo liga cada métrica do resumo da equipe a um gadget nativo do Jira Data Center (a lista oficial de gadgets nativos, com 43 itens, inclui Filter Results, Pie Chart, Issue Statistics, Two Dimensional Filter Statistics, Heat Map, Created vs Resolved, Average Age, Resolution Time, Time Since e Recently Created) e a um filtro salvo do capítulo 01. Os filtros são citados pelo nome exato; nenhum filtro novo é criado aqui.
 
 Ao final, você terá a tabela métrica → gadget → filtro → configuração, saberá o que os gadgets nativos não fazem e terá validado cada total contra o Navegador de Tarefas.
 
@@ -12,7 +12,7 @@ Os nomes dos gadgets estão em português como aparecem em instalações no idio
 
 | Métrica | Gadget **[Confirmar na sua versão]** | Filtro | Configuração |
 |---|---|---|---|
-| Total de tarefas | Resultados do Filtro ou Estatísticas da Tarefa | `EQP \| Resumo \| Tarefas` | No Resultados do Filtro, o total aparece junto da lista (por exemplo, "x–y de N"); a posição varia por versão. **[Confirmar na sua versão]** O Estatísticas da Tarefa mostra uma contagem por valor da estatística escolhida (por exemplo, Status), não um total único; para obter o total, some as linhas ou use o Resultados do Filtro |
+| Total de tarefas | Resultados do Filtro ou Estatísticas da Tarefa | `EQP \| Resumo \| Tarefas` | O Resultados do Filtro mostra a lista de issues; se ele exibe também o total de resultados (por exemplo, no formato "x–y de N"), isso não é descrito na documentação oficial. **[Confirmar na sua versão]** O Estatísticas da Tarefa mostra uma contagem por valor da estatística escolhida (por exemplo, Status), não um total único; para obter o total, some as linhas ou use o Resultados do Filtro |
 | Total de subtarefas | Resultados do Filtro ou Estatísticas da Tarefa | `EQP \| Resumo \| Subtarefas` | Mesma configuração da linha anterior |
 | Atrasadas | Resultados do Filtro | `EQP \| Resumo \| Atrasadas` | Colunas: Chave, Resumo, Responsável, Vencimento |
 | Sem responsável | Resultados do Filtro | `EQP \| Resumo \| Sem responsável` | Colunas sugeridas: Chave, Resumo, Status, Criada |
@@ -20,7 +20,7 @@ Os nomes dos gadgets estão em português como aparecem em instalações no idio
 | Distribuição por tipo | Gráfico de Pizza | `EQP \| Base \| Equipe` | Estatística: Tipo de tarefa |
 | Distribuição por responsável | Gráfico de Pizza | `EQP \| Base \| Equipe` | Estatística: Responsável |
 | Responsável × status | Estatísticas de Filtro Bidimensional | `EQP \| Base \| Equipe` | Eixo X: Status; eixo Y: Responsável |
-| Concluídas, em andamento e a fazer | Opção A: Gráfico de Pizza. Opção B: três gadgets Estatísticas da Tarefa | Opção A: `EQP \| Base \| Equipe`. Opção B: `EQP \| Resumo \| Concluídas`, `EQP \| Resumo \| Em andamento` e `EQP \| Resumo \| A fazer` | Opção A: estatística por categoria de status, se a sua versão oferecer. Opção B: um gadget por filtro **[Confirmar na sua versão]** |
+| Concluídas, em andamento e a fazer | Opção A: Gráfico de Pizza. Opção B: três gadgets Estatísticas da Tarefa | Opção A: `EQP \| Base \| Equipe`. Opção B: `EQP \| Resumo \| Concluídas`, `EQP \| Resumo \| Em andamento` e `EQP \| Resumo \| A fazer` | Opção A: estatística por categoria de status, se o Gráfico de Pizza da sua versão oferecer esse agrupamento (a documentação oficial não lista os tipos de estatística). **[Confirmar na sua versão]** Opção B: um gadget por filtro **[Confirmar na sua versão]** |
 | Tendência | Criadas vs Resolvidas | `EQP \| Base \| Equipe` | Período: 30 dias; agrupamento diário ou semanal |
 | Concentração | Mapa de Calor | `EQP \| Base \| Equipe` | Estatística: Responsável |
 
@@ -29,14 +29,14 @@ Notas sobre a tabela:
 - **Tarefas e subtarefas ficam separadas.** O filtro `EQP | Resumo | Tarefas` exclui subtarefas, e o `EQP | Resumo | Subtarefas` traz só elas. Para o total geral, some os dois valores ou use o gadget direto sobre `EQP | Base | Equipe`.
 - **Atrasadas.** O vencimento de hoje não conta como atrasado, porque o filtro compara com o início do dia. Uma tarefa que vence hoje só aparece amanhã, se continuar aberta.
 - **Sem responsável.** O filtro parte de `EQP | Base | Equipe sem responsável`, que não depende de membros da equipe, e por isso a contagem inclui issues sem dono dos projetos escolhidos.
-- **Concluídas, em andamento e a fazer.** Se o gadget de pizza da sua versão não agrupar por categoria de status, use a opção B. A opção B é a mais previsível, ao custo de três gadgets.
+- **Concluídas, em andamento e a fazer.** Se o gadget de pizza da sua versão não agrupar por categoria de status (não confirmado na documentação oficial), use a opção B. A opção B é a mais previsível, ao custo de três gadgets.
 - **Tendência.** O Criadas vs Resolvidas usa o filtro-base e não os filtros de período, porque o próprio gadget já aplica o recorte de 30 dias.
 
 ## 2. Limites dos gadgets nativos
 
-- **Percentuais só na pizza.** O Gráfico de Pizza mostra a fatia em percentual. Os demais gadgets exibem apenas contagens.
-- **Percentual nos demais gadgets exige planilha ou eazyBI.** Para calcular, por exemplo, a taxa de atrasadas sobre o total, exporte os números para uma planilha ou use o eazyBI. **[Exige app: eazyBI]** Custo do eazyBI: licença paga no Marketplace; consultar o preço atual para o seu número de usuários.
-- **Não há card numérico nativo.** Não existe um gadget que mostre um número grande isolado, como um indicador. Os gadgets Resultados do Filtro e Estatísticas da Tarefa mostram o total, mas em formato de lista ou tabela. Quando você precisar de um card real, veja o módulo com eazyBI no capítulo 03 (seção dos cards de tempo dedicado) e no capítulo 04 (seção 5).
+- **Percentuais.** A documentação oficial não confirma que o Gráfico de Pizza exiba percentual; a fatia pode mostrar a contagem e, ao passar o mouse, o percentual. **[Confirmar na sua versão]** Os demais gadgets exibem contagens.
+- **Percentual de forma garantida exige planilha ou eazyBI.** Para calcular, por exemplo, a taxa de atrasadas sobre o total, exporte os números para uma planilha ou use o eazyBI. **[Exige app: eazyBI]** Custo do eazyBI: licença paga no Marketplace; consultar o preço atual para o seu número de usuários. A venda de Data Center a novos clientes terminou em 30/03/2026; clientes existentes ainda podem comprar apps e expansões até 30/03/2028, e a eazyBI declara compromisso com o Data Center em post do próprio fornecedor (ver capítulo 04).
+- **Não há card numérico nativo.** Não existe um gadget que mostre um número grande isolado, como um indicador. Os gadgets Resultados do Filtro e Estatísticas da Tarefa trazem os dados em formato de lista ou tabela, não como número isolado. Quando você precisar de um card real, veja o módulo com eazyBI no capítulo 03 (seção dos cards de tempo dedicado) e no capítulo 04 (seção 5).
 - **Sem filtros interativos globais.** Como explicado no capítulo 01, o leitor não escolhe o time ou o período no topo do dashboard. Cada recorte é um filtro salvo.
 
 ## 3. Como adicionar cada tipo de gadget
@@ -56,7 +56,7 @@ Pontos específicos de cada tipo:
 
 - **Resultados do Filtro:** defina o número de linhas e as colunas. Mantenha poucas linhas (por exemplo, 10), para a lista não dominar o painel.
 - **Estatísticas da Tarefa:** escolha o filtro e a estatística; o gadget mostra a contagem por valor.
-- **Gráfico de Pizza:** escolha o filtro e a estatística. Esta é a única visão com percentuais.
+- **Gráfico de Pizza:** escolha o filtro e a estatística. Se a sua versão exibir percentual, é aqui. **[Confirmar na sua versão]**
 - **Estatísticas de Filtro Bidimensional:** defina o eixo X (Status) e o eixo Y (Responsável); a célula é a contagem do cruzamento.
 - **Criadas vs Resolvidas:** informe o período em dias, o agrupamento (diário ou semanal) e se quer o acumulado.
 - **Mapa de Calor:** escolha o filtro e a estatística (Responsável).

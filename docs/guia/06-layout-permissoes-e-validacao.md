@@ -1,10 +1,10 @@
 # Capítulo 06: layout, permissões e validação
 
-Este capítulo junta o que foi montado nos capítulos 01 a 05: define a ordem dos gadgets no dashboard, as permissões para que todos enxerguem os números, o checklist para validar os totais, as regras de desempenho e manutenção e as melhorias futuras. Nenhum filtro novo é criado aqui; todos são citados pelo nome exato do catálogo dos capítulos 01, 03 e 05.
+Este capítulo junta o que foi montado nos capítulos 01 a 05: define a ordem dos gadgets no dashboard, as permissões para que todos enxerguem os números, o checklist para validar os totais, as regras de desempenho e manutenção e as melhorias futuras. Nenhum filtro novo é criado aqui; todos são citados pelo nome exato do catálogo dos capítulos 01, 03, 05 e 07.
 
 Ao final, você terá o dashboard montado em 3 colunas, compartilhado com o grupo certo, com os números conferidos à mão e com um plano de manutenção.
 
-Pré-requisito: capítulos 00 a 05 concluídos, a amostra de 10 tarefas do capítulo 00 separada e o dashboard criado.
+Pré-requisito: capítulos 00 a 05 concluídos (e 07, para a seção 5), a amostra de 10 tarefas do capítulo 00 separada e o dashboard criado.
 
 ## 1. Layout em 3 colunas
 
@@ -16,8 +16,8 @@ O dashboard usa o layout de 3 colunas. Os nomes e a disponibilidade dos gadgets 
 | 1. Totais, coluna 2 | Total de subtarefas (Resultados do Filtro ou Estatísticas da Tarefa) | `EQP \| Resumo \| Subtarefas` | 02 |
 | 1. Totais, coluna 3 | Atrasadas (Resultados do Filtro) | `EQP \| Resumo \| Atrasadas` | 02 |
 | 1. Totais, coluna 1 | Sem responsável (Resultados do Filtro) | `EQP \| Resumo \| Sem responsável` | 02 |
-| 1. Totais, coluna 2 | Card de horas: tempo em tarefas (Timesheet, um por filtro (ver a configuração do Timesheet no capítulo 03) **[Confirmar na sua versão]**) | `EQP \| Horas \| Tarefas com horas` | 03 |
-| 1. Totais, coluna 3 | Card de horas: tempo em subtarefas (Timesheet, um por filtro (ver a configuração do Timesheet no capítulo 03) **[Confirmar na sua versão]**) | `EQP \| Horas \| Subtarefas com horas` | 03 |
+| 1. Totais, coluna 2 | Card de horas: tempo em tarefas (Timesheet de app, um por filtro (ver a configuração do Timesheet no capítulo 03) **[Exige app: Timesheet]** **[Confirmar na sua versão]**) | `EQP \| Horas \| Tarefas com horas` | 03 |
+| 1. Totais, coluna 3 | Card de horas: tempo em subtarefas (Timesheet de app, um por filtro (ver a configuração do Timesheet no capítulo 03) **[Exige app: Timesheet]** **[Confirmar na sua versão]**) | `EQP \| Horas \| Subtarefas com horas` | 03 |
 | 2. Equipe, coluna 1 | Pizza de status (Gráfico de Pizza, estatística Status) | `EQP \| Base \| Equipe` | 02 |
 | 2. Equipe, coluna 2 | Pizza de tipo (Gráfico de Pizza, estatística Tipo de tarefa) | `EQP \| Base \| Equipe` | 02 |
 | 2. Equipe, coluna 3 | Responsável × status (Estatísticas de Filtro Bidimensional) | `EQP \| Base \| Equipe` | 02 |
@@ -25,21 +25,23 @@ O dashboard usa o layout de 3 colunas. Os nomes e a disponibilidade dos gadgets 
 | 3. Negligenciados, coluna 1 | Sem atualização (Resultados do Filtro) | `EQP \| Negligenciados \| Sem atualização` | 03 |
 | 3. Negligenciados, coluna 2 | Sem estimativa (Resultados do Filtro) | `EQP \| Negligenciados \| Sem estimativa` | 03 |
 | 3. Negligenciados, coluna 3 | Sem vencimento (Resultados do Filtro) | `EQP \| Negligenciados \| Sem vencimento` | 03 |
-| 4. Datas e horas, coluna 2 | Timesheet **[Confirmar na sua versão]** | `EQP \| Horas \| Com worklog no mês` | 03 |
-| 4. Datas e horas, coluna 3 | Módulo de tempo por status, se instalado. **[Exige app: Time in Status]** ou **[Exige app: eazyBI]**, conforme a escolha do capítulo 04; com campos de Automation, uma lista com as colunas dos campos | Depende da alternativa escolhida no capítulo 04 | 04 |
+| 4. Datas e horas, coluna 2 | Timesheet de app **[Exige app: Timesheet]** **[Confirmar na sua versão]** | `EQP \| Horas \| Com worklog no mês` | 03 |
+| 4. Datas e horas, coluna 3 | Módulo de tempo por status, se instalado. **[Exige app: Time in Status]**, **[Exige app: Jira Charting]** ou **[Exige app: eazyBI]**, conforme a escolha do capítulo 04; com campos de Automation, uma lista com as colunas dos campos | Depende da alternativa escolhida no capítulo 04 | 04 |
 | 5. Divergência, coluna 1 | Subtarefas com vencimento divergente (Resultados do Filtro) | `EQP \| Datas \| Subtarefas com vencimento divergente` | 05 |
 
 Observações sobre a tabela:
 
 - O módulo de tempo por status é opcional. Se o app tiver painel próprio, ele fica fora do dashboard nativo ou entra como gadget, conforme o app. **[Confirmar na documentação do app instalado]**
 - A faixa 5 pode ficar na coluna que estiver mais vazia; o que importa é a ordem de leitura.
-- O filtro de negligenciados sem responsável (`EQP | Negligenciados | Sem responsável`) ficou fora do layout para não repetir o da faixa 1 (`EQP | Resumo | Sem responsável`). Se preferir o critério por statusCategory, troque um pelo outro, mas mantenha só um dos dois. O Resultados do Filtro não totaliza horas; por isso os cards de horas usam o Timesheet.
+- O filtro de negligenciados sem responsável (`EQP | Negligenciados | Sem responsável`) ficou fora do layout para não repetir o da faixa 1 (`EQP | Resumo | Sem responsável`). Se preferir o critério por statusCategory, troque um pelo outro, mas mantenha só um dos dois. O Resultados do Filtro não totaliza horas; por isso os cards de horas usam o Timesheet, que é de app (capítulo 03).
 
 ### Quantos gadgets usar
 
 Recomendação: no máximo 12 a 15 gadgets no dashboard. Cada gadget executa uma consulta JQL ao abrir a página, e cada pessoa que abre o dashboard repete todas elas. Com muitos gadgets, o dashboard demora a carregar e pesa no servidor, principalmente em instância grande.
 
 A tabela acima soma 15 gadgets sem o módulo opcional, o limite superior do recomendado. Se instalar o módulo de tempo por status, corte o "Total de subtarefas" (faixa 1, coluna 2) para manter 15.
+
+**Filtros do capítulo 07 (opcionais).** Os filtros de histórico (`EQP | Histórico | Entraram em andamento no mês`, `EQP | Histórico | Concluídas no mês por transição`, `EQP | Histórico | Reabertas`, entre os demais do capítulo 07) podem alimentar gadgets Resultados do Filtro na faixa 4 (coluna 1, que está livre) ou no lugar de outros gadgets. Cada gadget de histórico acrescentado exige cortar um da tabela, para não passar de 15. Corte nesta ordem: "Total de subtarefas" (o corte mais barato; se ainda não foi cortado pelo módulo de tempo por status), "Pizza de tipo" (se cortar a Pizza de tipo, pule o item "tipos somam o total" do checklist da seção 4), "Criadas vs Resolvidas" e "Sem estimativa". Antes de publicar esses gadgets, faça os testes da seção 5; o custo de `WAS`/`CHANGED` em dashboards não está documentado.
 
 ## 2. Onde fica o botão
 
@@ -53,7 +55,7 @@ Filtros e dashboard têm compartilhamento independente. Ter acesso ao dashboard 
 - **O que o leitor vê sem acesso ao filtro.** Quem vê o dashboard mas não tem acesso a um filtro vê o gadget vazio ou com mensagem de erro. Se um colega relatar um gadget vazio, a primeira checagem é o compartilhamento do filtro.
 - **Dono da conta.** O dono do dashboard e dos filtros deve ser uma conta de serviço ou de administrador, e não uma pessoa da equipe. Assim, uma saída ou uma desativação de usuário não derruba os gadgets.
 - **Se o dono sair.** O administrador transfere a propriedade do dashboard e dos filtros para a conta de serviço. Os menus e os passos da transferência variam conforme a versão. **[Confirmar na sua versão]** Depois da transferência, confira o compartilhamento e abra o dashboard com um usuário comum.
-- **Nome duplicado.** Filtros com o mesmo nome e donos diferentes causam ambiguidade nas referências por nome. Mantenha um único dono e, se precisar, referencie o filtro por ID (`filter = 12345`).
+- **Nome duplicado.** Filtros com o mesmo nome e donos diferentes causam ambiguidade nas referências por nome. Mantenha um único dono e prefira referenciar o filtro por ID (`filter = 12345`), que não depende do nome nem do dono. Lembre que um `ORDER BY` digitado na pesquisa substitui o `ORDER BY` do filtro salvo (capítulo 01).
 - **Conta da automação.** A conta que executa a regra do botão e a regra agendada precisa das permissões descritas na seção 7 do capítulo 05 (Procurar Projetos, Editar Tarefas, Agendar Tarefas e Adicionar Comentários no projeto das subtarefas).
 
 ## 4. Checklist de validação dos números
@@ -71,16 +73,31 @@ Use a amostra de 10 tarefas do capítulo 00 e um usuário comum do grupo. Marque
 
 Se um item falhar, siga a ordem de diagnóstico do capítulo 02, seção 4: filtro correto no gadget, compartilhamento, cache e permissões de quem criou contra quem vê. Antes de qualquer teste com `membersOf`, confira que o grupo existe e tem membros; se não, use a alternativa com lista de usernames do capítulo 01.
 
-## 5. Desempenho em instâncias grandes
+## 5. Testes de histórico de status
+
+Faça estes testes na sua instância antes de depender dos filtros do capítulo 07 e do script da seção 5 dele. As fontes lidas descrevem principalmente as versões 10.7 e 11.3; só a referência REST foi lida para a 9.12. **[Confirmar na sua versão]** Registre o resultado de cada item (aceitou ou rejeitou a consulta; o que retornou numa amostra conhecida).
+
+- [ ] Issue recém-criada e nunca transitada contra `status WAS "[STATUS_EM_ANDAMENTO]"`: o valor inicial conta como histórico? Faça isso antes de confiar em `EQP | Histórico | Nunca estiveram em andamento`.
+- [ ] `NOT (status CHANGED AFTER "-14d")`, com e sem aspas: a forma é aceita, e uma issue recém-criada e nunca alterada entra ou não no resultado? (Afeta `EQP | Negligenciados | Parada no mesmo status`, que continua a validar.)
+- [ ] `GET /rest/api/2/issue/{key}?expand=changelog` numa issue com mais de 100 mudanças: conte `histories`, compare com `total`, anote a ordem e se há truncamento. O script do capítulo 07 usa `/search` com `expand=changelog`; confira também o resultado desse `/search` contra a aba Histórico numa issue com histórico longo (o script avisa em stderr quando `histories` tem menos itens que `total`).
+- [ ] `GET /rest/api/2/issue/{key}/changelog`: se retornar 404 na 9.12, a referência REST dessa versão está certa para a sua instância. Na 10.x, confira a referência REST 10.x, que pode trazer o endpoint.
+- [ ] Rode `scripts/tempo_em_status.py` contra duas ou três issues de histórico conhecido e compare com a aba Histórico de cada uma; inclua uma issue que nunca mudou de status e uma que foi reaberta. O script só foi testado com fixtures, não contra um Jira real.
+- [ ] Fuso de `worklogDate`: registre horas perto da meia-noite e confira em qual dia a consulta as conta (fuso do usuário contra o do servidor).
+- [ ] `worklogAuthor` e `worklogDate` na mesma consulta (`EQP | Horas | Com worklog no mês`): os dois critérios casam no mesmo worklog, ou cada um pode ser cumprido por um worklog diferente da issue?
+- [ ] Gravar o mesmo valor num campo atualiza `updated` e cria entrada no histórico? Isso afeta `EQP | Negligenciados | Sem atualização` e as regras de Automation que regravam campos.
+- [ ] Automation: o "Advanced compare" e `{{initiator}}` (capítulo 05) funcionam em homologação como o guia descreve? Teste também `{{fieldChange.fromString}}` e `{{fieldChange.toString}}` (capítulo 04); `{{fromStatus}}` e `{{toStatus}}` não foram encontrados na documentação do Data Center.
+- [ ] Abra o dashboard com e sem os filtros de histórico e compare o tempo de carga (seção 6).
+
+## 6. Desempenho em instâncias grandes
 
 - Evite encadeamento profundo de filtros (filtro que chama filtro que chama filtro). Cada nível aumenta o custo da consulta.
-- Evite `status CHANGED` e funções de app pesadas em filtros usados por muitos gadgets. Use-os só onde precisar, como em `EQP | Negligenciados | Parada no mesmo status`.
+- O impacto de `WAS`/`CHANGED` em dashboards não está documentado pelas fontes lidas e deve ser medido: abra o dashboard com e sem os filtros que usam esses operadores (como `EQP | Negligenciados | Parada no mesmo status` e os do capítulo 07) e compare os tempos. Evite também funções de app pesadas em filtros usados por muitos gadgets e use-as só onde precisar. **[Confirmar na sua versão]**
 - Agende a regra de divergência (capítulo 05) e a importação do eazyBI (capítulo 04) fora do horário de pico.
 - Delimite as consultas por projeto, com a chave em `[CHAVE_DO_PROJETO]`, em vez de pesquisar a instância inteira.
 - Nos gadgets Resultados do Filtro, limite colunas e linhas (por exemplo, 10 linhas e só as colunas necessárias).
 - Mantenha o número de gadgets na faixa recomendada da seção 1.
 
-## 6. Manutenção
+## 7. Manutenção
 
 | Ponto | Quando muda | O que fazer |
 |---|---|---|
@@ -89,10 +106,11 @@ Se um item falhar, siga a ordem de diagnóstico do capítulo 02, seção 4: filt
 | Fluxo de trabalho | Status novos, renomeados ou removidos | Revise os filtros que dependem de categoria de status e as pizzas de status; no tempo por status, atualize os campos e as regras do capítulo 04 e refaça o teste |
 | Conta da automação | Senha, desativação ou mudança de permissões da conta | Confirme as permissões da seção 7 do capítulo 05 e rode o roteiro de testes de novo |
 | Projeto novo na equipe | Um projeto é acrescentado | Altere `project in (...)` em `EQP \| Base \| Equipe` e TAMBÉM em `EQP \| Base \| Equipe sem responsável`; senão os filtros de sem responsável não incluem o projeto novo |
-| Prazo de 14 dias da inatividade | A equipe decide outro prazo | Troque o `-14d` nos filtros `EQP \| Negligenciados \| Sem atualização` e `EQP \| Negligenciados \| Parada no mesmo status`, e revalide |
+| Prazo de 14 dias da inatividade | A equipe decide outro prazo | Troque **todos** os `-14d` nos filtros `EQP \| Negligenciados \| Sem atualização` e `EQP \| Negligenciados \| Parada no mesmo status` (este tem dois), e revalide |
 
-## 7. Melhorias futuras
+## 8. Melhorias futuras
 
 - **Alertas de tarefas atrasadas por e-mail via Automation.** Uma regra agendada sobre `EQP | Resumo | Atrasadas` que avise o responsável ou a equipe. Depende de o Automation estar disponível e de como ele envia e-mails na sua versão. **[Confirmar na sua versão]**
 - **Assinatura de filtro por e-mail.** O Jira pode enviar por e-mail o resultado de um filtro. A assinatura envia a lista de tarefas do filtro, e **não** o dashboard inteiro. Disponibilidade e opções de agenda variam por versão. **[Confirmar na sua versão]**
 - **Relatório periódico em PDF do dashboard.** Não é nativo. Só use um app cuja compatibilidade com Data Center esteja confirmada na listagem do Marketplace. **[Exige app: app de exportação com compatibilidade com Data Center confirmada no Marketplace]** Custo: licença paga no Marketplace; consultar o preço atual para o seu número de usuários.
+- **Horizonte do Data Center e saída.** Segundo a Atlassian (https://www.atlassian.com/licensing/data-center-end-of-life), 30/03/2026 foi o fim das vendas a novos clientes; 30/03/2028 é quando os clientes existentes deixam de comprar produtos, apps e expansões; 28/03/2029 é o fim de vida, com assinaturas e apps somente leitura. Este dashboard tem, portanto, horizonte de uso até 03/2029. Planeje a saída: o que depende de app (eazyBI, Timesheet, Jira Charting, módulo de tempo por status) ou de regras de Automation precisará ser refeito ou migrado, e a data de renovação dos apps deve ficar registrada. A eazyBI e a ScriptRunner declararam, em posts dos próprios fornecedores, compromisso com o Data Center até o fim de vida; para os demais apps não há compromisso confirmado.

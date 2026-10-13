@@ -1,12 +1,12 @@
 # Capítulo 05: divergência de datas e botão de sincronização
 
-Este capítulo resolve duas necessidades ligadas ao vencimento das subtarefas: enxergar quais subtarefas têm vencimento diferente do da tarefa-pai e, quando fizer sentido, alinhar essas datas com um botão. O filtro criado aqui alimenta o item 5 do layout do capítulo 06, e a regra do botão é citada por ele.
+Este capítulo resolve duas necessidades ligadas ao vencimento das subtarefas: enxergar quais subtarefas têm vencimento diferente do da tarefa-pai e, quando fizer sentido, alinhar essas datas com um botão. O filtro criado aqui alimenta o faixa 5 do layout do capítulo 06, e a regra do botão é citada por ele.
 
 Ao final, você terá uma regra agendada que sinaliza as divergências, um filtro que as lista, uma regra manual de sincronização e um roteiro para testá-la em homologação antes de liberar em produção.
 
 Pré-requisito: o filtro `EQP | Base | Equipe` do capítulo 01 já existe e retorna as issues da equipe.
 
-Aviso geral sobre o Automation: dependendo da versão do Jira Data Center, o Automation pode ser um recurso incluído ou um app instalado à parte. **[Confirmar na sua versão]** Use a checagem do capítulo 00. Se for um app, o custo é o de uma licença paga no Marketplace; consultar o preço atual para o seu número de usuários.
+Aviso geral sobre o Automation: ele é embutido no Jira Software Data Center desde a 9.0, então em 9.12 e 10.x normalmente não é um app à parte e não tem custo de licença adicional. **[Confirmar na sua versão]** Use a checagem do capítulo 00. Sintaxe de condições, smart values e permissões citadas abaixo vêm de páginas que descrevem outras versões: teste tudo em homologação antes de liberar.
 
 ## 1. Detectar a divergência de vencimento
 
@@ -17,12 +17,12 @@ O JQL nativo não compara o vencimento da subtarefa com o do pai. Não existe um
 Em Automação (menu da tarefa ou administração do projeto, conforme a versão), crie a regra abaixo. **[Confirmar na sua versão]**
 
 1. **Nome:** `Sinalizar vencimento divergente`.
-2. **Gatilho:** agendado, por exemplo a cada hora e fora do horário de pico. Configure a busca JQL do gatilho como `project in ([CHAVE_DO_PROJETO]) AND issuetype in subTaskIssueTypes() AND (statusCategory != Done OR labels = venc-divergente)` e a ação para cada issue encontrada. A segunda parte da busca recolhe também subtarefas já concluídas que ainda carregam o rótulo, para que ele possa ser removido. **[Confirmar na sua versão]** (a existência do gatilho agendado com busca JQL e o número máximo de issues por execução variam).
+2. **Gatilho:** agendado, por exemplo a cada hora e fora do horário de pico. Configure a busca JQL do gatilho como `project in ([CHAVE_DO_PROJETO]) AND issuetype in subtaskIssueTypes() AND (statusCategory != Done OR labels = venc-divergente)` e a ação para cada issue encontrada. A segunda parte da busca recolhe também subtarefas já concluídas que ainda carregam o rótulo, para que ele possa ser removido. **[Confirmar na sua versão]** (a existência do gatilho agendado com busca JQL e o número máximo de issues por execução variam).
 3. **Condição 1 (se/senão):** `statusCategory` da subtarefa diferente de `Done`. **[Confirmar na sua versão]** (sintaxe do bloco se/senão).
    - **Senão (subtarefa concluída):** só se a subtarefa contém o rótulo `venc-divergente`, ação Editar issue removendo o rótulo; a regra termina para essa issue. Sem o rótulo, nada é feito.
-4. **Condição 2 (dentro do "se" da condição 1, se/senão):** o vencimento do pai não é vazio. Use a comparação avançada: `{{issue.parent.duedate}}` não é igual a vazio. **[Confirmar na sua versão]** (a existência da condição de comparação avançada e a sintaxe do smart value variam).
+4. **Condição 2 (dentro do "se" da condição 1, se/senão):** o vencimento do pai não é vazio. Use a comparação avançada: `{{issue.parent.duedate}}` não é igual a vazio. **[Confirmar na sua versão]** Testar em homologação: a existência da condição "Advanced compare" e a sintaxe do smart value não estão confirmadas para a sua versão.
    - **Senão (pai sem vencimento):** só se a subtarefa contém o rótulo `venc-divergente`, ação Editar issue removendo o rótulo, porque pai sem vencimento não é divergência. Sem o rótulo, nada é feito.
-5. **Condição 3 (dentro do "se" da condição 2, se/senão):** comparação avançada com `{{issue.duedate}}` diferente de `{{issue.parent.duedate}}`. **[Confirmar na sua versão]**
+5. **Condição 3 (dentro do "se" da condição 2, se/senão):** comparação avançada ("Advanced compare") com `{{issue.duedate}}` diferente de `{{issue.parent.duedate}}`. **[Confirmar na sua versão]** Testar em homologação.
 6. **Se divergir:** só se a subtarefa NÃO contém o rótulo `venc-divergente`, ação Editar issue adicionando o rótulo. Se já o contém, nada é feito.
 7. **Senão (alinhada):** só se a subtarefa contém o rótulo `venc-divergente`, ação Editar issue removendo o rótulo. Sem o rótulo, nada é feito. **[Confirmar na sua versão]** (a sintaxe da condição sobre rótulos, por exemplo `labels` contém `venc-divergente`).
 
@@ -83,8 +83,8 @@ O botão aplica à subtarefa o vencimento da tarefa-pai. Há quatro caminhos:
 
 | Opção | Viável? | Prós | Contras | Quando usar |
 |---|---|---|---|---|
-| (a) Automation com gatilho manual | Sim, se a sua versão tiver o gatilho manual. **[Confirmar na sua versão]** (se o Automation vem incluído e se o gatilho manual existe) | **Recomendada.** O botão fica na própria tarefa, sem código | Depende do Automation e do gatilho manual na sua versão | Quando a checagem do capítulo 00 confirmar os dois |
-| (b) Webhook de entrada acionado por link | Parcialmente. **[Confirmar na sua versão]** | Não exige botão na tela da tarefa | Um link dispara GET, e o webhook costuma esperar POST; o segredo vai na URL, o que o expõe em históricos e logs | Só se não houver o gatilho manual e houver quem trate o risco do segredo |
+| (a) Automation com gatilho manual | Sim, se a sua versão tiver o gatilho manual (o Automation é embutido desde a 9.0). **[Confirmar na sua versão]** (se o gatilho manual existe) | **Recomendada.** O botão fica na própria tarefa, sem código | Depende do Automation e do gatilho manual na sua versão | Quando a checagem do capítulo 00 confirmar os dois |
+| (b) Webhook de entrada acionado por link | Parcialmente. **[Confirmar na sua versão]** | Não exige botão na tela da tarefa | Um link dispara GET, e só o POST está documentado para o webhook de entrada (GET e o uso de segredo não estão confirmados); se o segredo for na URL, ele fica exposto em históricos e logs | Só se não houver o gatilho manual e houver quem trate o risco do segredo |
 | (c) ScriptRunner ou JMWE | Sim, com o app. **[Exige app: ScriptRunner]** **[Exige app: JMWE]** | Resolve sem o Automation (fragmento de tela no ScriptRunner, transição no JMWE) | Exige app e manutenção. Licença paga no Marketplace; consultar o preço atual para o seu número de usuários | Se não houver Automation utilizável e o app já existir |
 | (d) Gadget personalizado | Possível, mas não recomendado | Interface sob medida | Custo alto de desenvolvimento e manutenção, e fragilidade a cada atualização | Não recomendado |
 
@@ -99,7 +99,7 @@ Em Automação, crie uma regra com estes passos. Os nomes de menus e opções va
 3. **Condição:** `{{issue.duedate}}` não vazio, em tarefas padrão. **[Confirmar na sua versão]** Se estiver vazio, execute a ação Adicionar comentário na tarefa com o texto "Sincronização cancelada: a tarefa não tem data de vencimento." e encerre a regra.
 4. **Ramificação:** Para subtarefas (branch). **[Confirmar na sua versão]** (o nome do ramo e o limite de issues por ramo).
 5. **Condição dentro do ramo:** `statusCategory` da subtarefa diferente de `Done`.
-6. **Condição dentro do ramo:** comparação avançada, `{{issue.duedate}}` diferente de `{{triggerIssue.duedate}}`. **[Confirmar na sua versão]** Se forem iguais, nada é feito, nem comentário.
+6. **Condição dentro do ramo:** comparação avançada ("Advanced compare"), `{{issue.duedate}}` diferente de `{{triggerIssue.duedate}}`. **[Confirmar na sua versão]** Testar em homologação. Se a condição não existir na sua versão, uma alternativa possível, sem garantia, é usar a condição de campo da issue comparando o vencimento com o valor do pai via smart value, ou uma condição JQL equivalente. **[Confirmar na sua versão]** Se forem iguais, nada é feito, nem comentário.
 7. **Ações, nesta ordem:**
    1. Adicionar comentário na subtarefa com o texto: "Vencimento alterado de {{issue.duedate}} para {{triggerIssue.duedate}} por {{initiator.displayName}} (sincronização com a tarefa {{triggerIssue.key}})."
    2. Editar issue: Data de vencimento = `{{triggerIssue.duedate}}`.
@@ -117,11 +117,11 @@ Em Automação, crie uma regra com estes passos. Os nomes de menus e opções va
 | `{{triggerIssue.key}}` | Chave da tarefa que originou a sincronização |
 | `{{issue.parent.duedate}}` | Vencimento do pai, usado na regra agendada da seção 1 |
 
-Todos estes smart values e a forma como se comportam dentro de um ramo dependem da versão. **[Confirmar na sua versão]** O formato de data que aparece nos comentários também depende da versão; se vier fora do esperado, formate com os sufixos de data suportados, como `.jiraDate` ou `.shortDate`, por exemplo `{{triggerIssue.duedate.jiraDate}}`. **[Confirmar na sua versão]**
+Todos estes smart values e a forma como se comportam dentro de um ramo dependem da versão. **[Confirmar na sua versão]** Testar em homologação, em especial `{{initiator.displayName}}` e a grafia do campo de vencimento nos smart values (`duedate` ou `dueDate`), que a documentação não deixa claro. O formato de data que aparece nos comentários também depende da versão; se vier fora do esperado, formate com os sufixos de data suportados, como `.jiraDate` ou `.shortDate`, por exemplo `{{triggerIssue.duedate.jiraDate}}`. **[Confirmar na sua versão]**
 
 ## 7. Permissões
 
-- O ator da regra precisa, no projeto das subtarefas, de Procurar Projetos, Editar Tarefas, Agendar Tarefas (necessária para alterar o vencimento) e Adicionar Comentários.
+- O ator da regra precisa, no projeto das subtarefas, de Procurar Projetos, Editar Tarefas, Agendar Tarefas (necessária para alterar o vencimento; um KB do Data Center cita Editar Tarefas, então testar em homologação qual das duas é exigida) e Adicionar Comentários.
 - A regra roda como o ator configurado. Uma conta de serviço é recomendada, para que as alterações não dependam de uma pessoa específica. Com isso, o histórico mostra a conta de serviço como autora da edição, e o nome de quem acionou aparece pelo comentário (`{{initiator.displayName}}`).
 - Quem aciona o botão precisa estar no grupo `[grupo-que-pode-sincronizar]`.
 - Quem administra a regra precisa de permissão de administração do projeto ou do Jira. **[Confirmar na sua versão]**
