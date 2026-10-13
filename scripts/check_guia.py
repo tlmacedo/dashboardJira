@@ -20,6 +20,7 @@ CAPITULOS = [
     "04-tempo-por-status.md",
     "05-datas-e-botao-de-sincronizacao.md",
     "06-layout-permissoes-e-validacao.md",
+    "07-historico-de-status.md",
 ]
 
 PROIBIDOS = re.compile(r"\b(TBD|TODO|XXX|FIXME)\b")
