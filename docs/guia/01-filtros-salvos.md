@@ -6,7 +6,7 @@ Ao final, você terá o filtro-base apontando para a sua equipe, os 16 filtros d
 
 ## 1. Como o filtro-base funciona
 
-Existe um único filtro-base, chamado `EQP | Base | Equipe`. Ele define quais issues pertencem à equipe: as dos projetos escolhidos, atribuídas aos membros da equipe. Todos os outros filtros começam com `filter = "EQP | Base | Equipe"` e acrescentam uma condição (tipo, categoria de status, data).
+Existe um único filtro-base, chamado `EQP | Base | Equipe`. Ele define quais issues pertencem à equipe: as dos projetos escolhidos, atribuídas aos membros da equipe. Todos os outros filtros começam com `filter = "EQP | Base | Equipe"` e acrescentam uma condição (tipo, categoria de status, data). O catálogo escreve a referência pelo nome por legibilidade, mas a documentação do Jira recomenda referenciar filtros pelo ID numérico (`filter = 12345`): o padrão recomendado é trocar o nome pelo ID de cada filtro ao criar os derivados (ver a seção 3). **[Confirmar na sua versão]**
 
 A vantagem é a manutenção: quando alguém entra ou sai da equipe, ou quando um projeto é acrescentado, você altera o filtro-base em um único lugar e todos os derivados, e os gadgets que usam esses derivados, passam a refletir a mudança. Exceção: os filtros de sem responsável derivam de `EQP | Base | Equipe sem responsável`, não do base principal. Como as duas bases têm `project in (...)`, ao acrescentar um projeto altere TAMBÉM `EQP | Base | Equipe sem responsável`, senão os filtros de sem responsável não incluem o projeto novo.
 
@@ -29,9 +29,9 @@ Para usar o segundo modo, edite a consulta do filtro `EQP | Base | Equipe` e man
 ## 3. Cuidados
 
 - **Confira o grupo antes.** Se `grupo-da-equipe` não existir, o Jira acusa erro na consulta. Se existir mas estiver vazio, o filtro funciona e não retorna nada, o que parece um dashboard zerado. Verifique em Administração > Gerenciamento de usuários (grupos) e teste o filtro no Navegador de Tarefas antes de criar os derivados.
-- **Um único dono para os filtros.** Os filtros são referenciados por nome. Se dois filtros com o mesmo nome pertencem a donos diferentes, a referência pode ficar ambígua. Mantenha todos os filtros do catálogo com o mesmo dono (de preferência uma conta de serviço ou a pessoa responsável pelo dashboard) e evite criar cópias com o mesmo nome.
-- **Alternativa por ID.** Se a referência por nome causar problema, use o ID numérico do filtro, que aparece na URL ao abrir o filtro. Em vez do nome, a consulta usa `filter = 12345` (com o seu número). O custo é a legibilidade: o ID não diz o que o filtro faz, então anote a correspondência.
-- **Sem ORDER BY no filtro-base.** Deixe a ordenação para os filtros que alimentam listas. Um `ORDER BY` herdado do base pode conflitar com a ordenação dos derivados.
+- **Um único dono para os filtros.** Se você mantiver a referência por nome, e dois filtros com o mesmo nome pertencem a donos diferentes, a referência pode ficar ambígua. Mantenha todos os filtros do catálogo com o mesmo dono (de preferência uma conta de serviço ou a pessoa responsável pelo dashboard) e evite criar cópias com o mesmo nome.
+- **Referência por ID (padrão recomendado).** Use o ID numérico do filtro, que aparece na URL ao abrir o filtro: a consulta fica `filter = 12345` (com o seu número). A documentação recomenda o ID porque ele não muda quando o filtro é renomeado e não fica ambíguo. O custo é a legibilidade: o ID não diz o que o filtro faz, então anote a correspondência (por exemplo, como comentário na descrição do filtro). A referência por nome (`filter = "EQP | Base | Equipe"`, como no catálogo) fica como alternativa legível. **[Confirmar na sua versão]**
+- **Sem ORDER BY no filtro-base.** Deixe a ordenação para os filtros que alimentam listas. Um `ORDER BY` digitado na pesquisa substitui o `ORDER BY` do filtro salvo, então a ordenação do base não prevalece. Manter o filtro-base sem `ORDER BY` é só uma questão de clareza: a ordenação fica em um lugar só, nos filtros que alimentam listas.
 
 ## 4. Segmentação por time, tipo, responsável e período
 
@@ -44,7 +44,7 @@ Há opções para contornar o limite, cada uma com seu preço:
 | Filtros salvos separados por recorte | Simples e nativo | Muitos filtros e gadgets duplicados | Zero |
 | JQL com funções de data (`startOfWeek()`, `startOfMonth()`, `-30d`) | Sempre atualiza sozinho | Recortes fixos | Zero |
 | Navegador de Tarefas para período livre | Qualquer data | Manual e não alimenta o dashboard | Zero |
-| eazyBI com filtros de página | Filtros interativos de período, time e tipo | Dados importados em lotes e configuração própria. **[Exige app: eazyBI]** | Licença paga no Marketplace; consultar o preço atual para o seu número de usuários |
+| eazyBI com filtros de página | Filtros interativos de período, time e tipo | Dados importados em lotes e configuração própria. **[Exige app: eazyBI]**; a eazyBI declara compromisso com o Data Center em post do fornecedor, mas a Atlassian informa que a venda a novos clientes Data Center terminou em 30/03/2026 (ver capítulo 04) | Licença paga no Marketplace; consultar o preço atual para o seu número de usuários (a licença é por faixa de usuários) |
 | Outras soluções do Marketplace | Podem oferecer filtros interativos | Só recomendar após confirmar a compatibilidade com Data Center na listagem do app. Nenhuma é nomeada neste guia | Consultar a listagem do app |
 
 O catálogo da seção 7 usa as duas primeiras linhas da tabela: filtros separados por recorte e funções de data. Para um time, tipo ou responsável diferente, duplique o filtro-base com outro grupo ou outra lista de usernames e crie os derivados que precisar, seguindo o padrão de nomes.
@@ -103,7 +103,7 @@ filter = "EQP | Base | Equipe" AND issuetype in standardIssueTypes()
 **Critério de data:** nenhum (retrato do momento)
 
 ```jql
-filter = "EQP | Base | Equipe" AND issuetype in subTaskIssueTypes()
+filter = "EQP | Base | Equipe" AND issuetype in subtaskIssueTypes()
 ```
 
 ### EQP | Resumo | Concluídas
@@ -225,9 +225,9 @@ filter = "EQP | Base | Equipe" AND updated >= -30d
 ### EQP | Período | Criadas em 3 meses
 
 **Nome:** EQP | Período | Criadas em 3 meses
-**Descrição:** Criadas no mês atual e nos 2 anteriores (o JQL não tem início de trimestre)
+**Descrição:** Criadas no mês atual e nos 2 anteriores, com `startOfMonth("-2M")` (o JQL não tem `startOfQuarter`)
 **Critério de data:** criação
 
 ```jql
-filter = "EQP | Base | Equipe" AND created >= startOfMonth(-2)
+filter = "EQP | Base | Equipe" AND created >= startOfMonth("-2M")
 ```
