@@ -1,5 +1,6 @@
+# Defina POSTGRES_PASSWORD no arquivo .env (ao lado deste arquivo) antes de subir; não há senha padrão.
 # Demonstração:      docker compose up --build            (http://localhost:8000, dados fictícios)
-# Produção (Jira):   JIRADASH_MODE=jira docker compose --profile prod up --build
+# Produção (Jira):   JIRADASH_MODE=jira docker compose up --build
 services:
   painel:
     build: .
@@ -7,12 +8,15 @@ services:
     env_file: [{path: .env, required: false}]
     environment:
       JIRADASH_MODE: ${JIRADASH_MODE:-demo}
-      DATABASE_URL: ${DATABASE_URL:-postgresql+psycopg://jiradash:jiradash@db/jiradash}
+      DATABASE_URL: postgresql+psycopg://jiradash:${POSTGRES_PASSWORD:?defina POSTGRES_PASSWORD no .env}@db/jiradash
     depends_on: [db]
     volumes: ["./config:/app/config:ro"]
   db:
     image: postgres:16-alpine
-    environment: {POSTGRES_USER: jiradash, POSTGRES_PASSWORD: jiradash, POSTGRES_DB: jiradash}
+    environment:
+      POSTGRES_USER: jiradash
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?defina POSTGRES_PASSWORD no .env}
+      POSTGRES_DB: jiradash
     volumes: ["pgdata:/var/lib/postgresql/data"]
 volumes:
   pgdata:
