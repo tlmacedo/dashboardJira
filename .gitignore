@@ -1,2 +1,7 @@
 .superpowers/
 __pycache__/
+app/data/
+app/.env
+app/config/equipes.yaml
+*.db
+.pytest_cache/
