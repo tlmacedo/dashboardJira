@@ -13,7 +13,7 @@ JIRADASH_MODE=demo python -m uvicorn jiradash.main:app      # http://localhost:8
 python -m pytest -q                                          # 42 testes
 ```
 
-O modo demonstração gera ~1.000 issues, histórico de status, horas, férias e licenças relativas a hoje. Há um aviso fixo na tela; nenhum número vem do seu Jira.
+O modo demonstração gera ~900 issues, histórico de status, horas, férias e licenças relativas a hoje. Há um aviso fixo na tela; nenhum número vem do seu Jira.
 
 ## Ligar ao seu Jira (uso real)
 
