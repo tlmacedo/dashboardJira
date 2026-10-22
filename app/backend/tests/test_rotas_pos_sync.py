@@ -113,8 +113,6 @@ def test_integridade_ve_mudancas_de_vencimento_e_labels(api):
     assert r["catalogo"] is not None and r["resumo"] is not None
 
 
-@pytest.mark.xfail(reason="BUG api/routes.py: /api/integrity com date_from/date_to grava a data crua no AuditLog.detail (JSON) -> 500 "
-                          "(TypeError: date is not JSON serializable). Corrigir com isoformat() em _log/integrity.", strict=False)
 def test_integridade_com_periodo(api):
     assert api.get("/api/integrity?date_from=2000-01-01").status_code == 200
 

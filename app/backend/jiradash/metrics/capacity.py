@@ -86,7 +86,7 @@ def schedule(items: list[tuple[str, float]], cap_by_week: list[dict], start: dat
             need -= take
             if need > 1e-9:
                 wi += 1
-        if need > 1e-9:
+        if need > 1e-9 or wi >= len(remaining):
             out[key] = None
         else:
             w0 = date.fromisoformat(cap_by_week[wi]["week"])

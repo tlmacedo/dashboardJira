@@ -35,13 +35,7 @@ COMBOS = {
 INVALIDOS = {"pessoa_texto": {"person": "abc"}, "data_impossivel": {"date_from": "2026-13-45"}, "data_texto": {"date_to": "ontem"}}
 
 # (endpoint, combo) -> motivo do bug conhecido (descoberto por esta suíte)
-BUGS = {}
-for _c in ("periodo_futuro", "periodo_invertido", "periodo_um_dia", "periodo_antigo"):
-    BUGS[("/api/review", _c)] = BUGS[("/api/alerts", _c)] = (
-        "BUG reports.py:266 review_view: round(None) quando há pares mas nenhum ciclo no período -> 500")
-for _c in ("periodo_30d", "periodo_futuro", "periodo_invertido", "periodo_um_dia", "periodo_antigo", "so_date_from", "so_date_to", "tudo_junto"):
-    BUGS[("/api/integrity", _c)] = ("BUG api/routes.py integrity: date_from/date_to vão crus para AuditLog.detail (JSON) -> "
-                                    "TypeError: date is not JSON serializable -> 500")
+BUGS = {}  # bugs encontrados no 1º ciclo (reports.py round(None), AuditLog com data crua) foram corrigidos; mantenha aqui só o que ainda falhar
 
 
 @pytest.fixture(scope="module")
@@ -103,6 +97,9 @@ def casos():
 @pytest.mark.parametrize("ep,nome", list(casos()))
 def test_endpoint_com_filtros_responde_200_sem_nan(client, ep, nome):
     r = client.get(ep, params=COMBOS[nome])
+    if nome == "periodo_invertido" and ep not in ("/api/health", "/api/audit", "/api/sync/status", "/api/distribution/suggestions"):
+        assert r.status_code == 422, f"intervalo invertido deve ser 422: {r.status_code}"  # validação adicionada depois do 1º relatório
+        return
     assert r.status_code == 200, f"{r.status_code}: {r.text[:200]}"
     if ep.endswith(".csv"):
         assert "﻿" in r.text[:5] or r.text.startswith("#") or "key" in r.text
@@ -171,7 +168,7 @@ def test_filtros_sem_resultado_dao_zero(client, combo):
     assert ov.status_code == 200 and ov.json()["cards"]["abertas"] == 0
 
 
-@pytest.mark.parametrize("combo", ["periodo_futuro", "periodo_antigo", "periodo_invertido"])
+@pytest.mark.parametrize("combo", ["periodo_futuro", "periodo_antigo"])
 def test_periodo_vazio_zera_sem_excecao(client, combo):
     c = client.get("/api/closed", params=COMBOS[combo])
     assert c.status_code == 200
@@ -182,9 +179,9 @@ def test_periodo_vazio_zera_sem_excecao(client, combo):
     assert client.get("/api/goals", params=COMBOS[combo]).status_code == 200
 
 
-def test_periodo_invertido_e_tratado_como_vazio_ou_422(client):
+def test_periodo_invertido_da_422(client):
     r = client.get("/api/closed", params=COMBOS["periodo_invertido"])
-    assert r.status_code in (200, 422)
+    assert r.status_code == 422
 
 
 def test_periodo_estreito_e_subconjunto_do_largo(client):
@@ -216,3 +213,10 @@ def test_csv_leva_os_filtros_no_cabecalho(client):
     cab = r.text.splitlines()[0]
     assert "squad=pagamentos" in cab and "tipo=Bug" in cab
     assert client.get("/api/export/naoexiste.csv").status_code == 404
+
+
+def test_schedule_com_horizonte_esgotado():
+    from jiradash.metrics.capacity import schedule
+    semanas = [{"week": "2026-10-19", "hours": 10.0}]
+    r = schedule([("A-1", 1000.0), ("A-2", 0.0)], semanas, date(2026, 10, 19))
+    assert r["A-1"] is None and r["A-2"] is None

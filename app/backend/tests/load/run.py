@@ -139,19 +139,24 @@ def run_level(srv: Server, users: int, duration: float, meta: dict, timeout=120)
 def warmup(srv: Server, meta: dict):
     with httpx.Client(base_url=srv.url, timeout=300) as c:
         for _, p, _ in ENDPOINTS:
-            c.get(p)
+            try:
+                c.get(p)
+            except Exception as e:  # servidor lento/caiu: o erro aparece depois nas taxas de erro
+                print(f"   warm-up {p} falhou: {e!r}", flush=True)
 
 
-def sequencial(srv: Server, meta: dict, reps=2) -> dict:
+def sequencial(srv: Server, meta: dict, reps=2, leve=False) -> dict:
     """Latência de cada endpoint, uma requisição por vez, com cada variante de filtro (cache deve estar desligado)."""
     rng = random.Random(7)
-    var = variantes(meta, rng)[::2] + [variantes(meta, rng)[8]]
+    v = variantes(meta, rng)
+    var = [v[0], v[2]] if leve else v[::2] + [v[8]]
     res = {}
-    with httpx.Client(base_url=srv.url, timeout=600) as c:
+    with httpx.Client(base_url=srv.url, timeout=1800) as c:
         for n, p, _ in ENDPOINTS:
             lats, err = [], 0
             for params in var:
                 for _ in range(reps):
+                    print(f"   seq {n} {params}", flush=True)
                     t = time.perf_counter()
                     try:
                         r = c.get(p, params=params)
@@ -164,17 +169,51 @@ def sequencial(srv: Server, meta: dict, reps=2) -> dict:
     return res
 
 
-def cenario(nome: str, db: str | None, ttl: float, users: list[int], duration: float, seq: bool) -> dict:
+def sequencial_isolado(db: str, ttl: float, timeout: float) -> dict:
+    """Dataset grande: um servidor novo por endpoint (requisição estourada continuaria consumindo CPU no servidor e
+    contaminaria as seguintes). Duas variantes de filtro; estouro de `timeout` vira erro 'timeout'."""
+    res = {}
+    for n, p, _ in ENDPOINTS:
+        srv = Server(db, ttl)
+        try:
+            srv.wait()
+            meta = httpx.get(srv.url + "/api/meta", timeout=120).json()
+            v = variantes(meta, random.Random(7))
+            lats, err, tos = [], 0, 0
+            with httpx.Client(base_url=srv.url, timeout=timeout) as c:
+                for params in (v[0], v[2]):
+                    t = time.perf_counter()
+                    try:
+                        err += c.get(p, params=params).status_code != 200
+                        lats.append(time.perf_counter() - t)
+                    except httpx.TimeoutException:
+                        tos += 1
+                        break  # as próximas variantes seriam igualmente lentas
+                    except Exception:
+                        err += 1
+            res[n] = {"n": len(lats), "p50_ms": round(pct(lats, 50) * 1000) if lats else None, "p95_ms": round(pct(lats, 95) * 1000) if lats else None,
+                      "max_ms": round(max(lats) * 1000) if lats else None, "erros": err, "timeouts": tos, "timeout_s": timeout}
+            print(f"   {n}: {res[n]}", flush=True)
+        finally:
+            srv.stop()
+    return res
+
+
+def cenario(nome: str, db: str | None, ttl: float, users: list[int], duration: float, seq: bool, leve=False, big_timeout=300.0) -> dict:
     print(f"== cenário: {nome} (cache TTL={ttl})", flush=True)
     srv = Server(db, ttl)
     try:
         srv.wait()
         meta = httpx.get(srv.url + "/api/meta", timeout=60).json()
         t = time.time()
-        warmup(srv, meta)
+        if not leve:
+            warmup(srv, meta)
         out = {"nome": nome, "cache_ttl": ttl, "warmup_s": round(time.time() - t, 1), "issues": None, "niveis": {}}
-        if seq:
-            out["sequencial"] = sequencial(srv, meta)
+        if seq and leve:
+            srv.stop()
+            out["sequencial"] = sequencial_isolado(db, ttl, big_timeout)
+        elif seq:
+            out["sequencial"] = sequencial(srv, meta, reps=1 if leve else 2, leve=leve)
             print("   sequencial ok", flush=True)
         for u in users:
             out["niveis"][str(u)] = run_level(srv, u, duration, meta)
@@ -194,10 +233,15 @@ def markdown(res: dict) -> str:
               + (f"Dataset: {sc['dataset']}" if sc.get("dataset") else ""), ""]
         if sc.get("sequencial"):
             L += ["### Latência sequencial por endpoint (1 requisição por vez, filtros variados, sem cache)", "",
-                  "| Endpoint | n | p50 (ms) | p95 (ms) | máx (ms) | erros | > 1 s? |", "|---|--:|--:|--:|--:|--:|:--:|"]
+                  "| Endpoint | n | p50 (ms) | p95 (ms) | máx (ms) | erros | timeouts | > 1 s? |", "|---|--:|--:|--:|--:|--:|--:|:--:|"]
             for n, r in sc["sequencial"].items():
-                L.append(f"| {n} | {r['n']} | {r['p50_ms']} | {r['p95_ms']} | {r['max_ms']} | {r['erros']} | {'SIM' if r['p50_ms'] > 1000 else ''} |")
+                lento = r.get("timeouts") or (r["p50_ms"] or 0) > 1000
+                to = f"{r['timeouts']} (> {int(r['timeout_s'])} s)" if r.get("timeouts") else "0"
+                L.append(f"| {n} | {r['n']} | {r['p50_ms']} | {r['p95_ms']} | {r['max_ms']} | {r['erros']} | {to} | {'SIM' if lento else ''} |")
             L.append("")
+        if sc.get("sequencial") and any(r.get("timeout_s") for r in sc["sequencial"].values()):
+            L += ["Dataset grande: um servidor novo por endpoint, 2 requisições (sem filtro e com squad); como n=2, o p50 é a mais rápida "
+                  "(com squad) e p95/máx é a sem filtro.", ""]
         L += ["### Visão por nível de concorrência", "", "| Usuários | requisições | RPS | p50 (ms) | p95 (ms) | p99 (ms) | erros (%) |", "|--:|--:|--:|--:|--:|--:|--:|"]
         for u, r in sc["niveis"].items():
             t = r["total"]
@@ -216,16 +260,18 @@ def main():
     ap.add_argument("--users", default="1,5,20,50")
     ap.add_argument("--duration", type=float, default=20, help="segundos por nível (demo)")
     ap.add_argument("--big-duration", type=float, default=30)
-    ap.add_argument("--big-users", default="1,5")
+    ap.add_argument("--big-users", default="", help="níveis de concorrência no dataset grande (vazio = só sequencial)")
     ap.add_argument("--big-issues", type=int, default=20000)
     ap.add_argument("--skip-big", action="store_true")
+    ap.add_argument("--skip-demo", action="store_true")
+    ap.add_argument("--big-timeout", type=float, default=300, help="segundos por requisição no dataset grande")
     ap.add_argument("--out", default=str(BACKEND.parent / "docs-testes"))
     a = ap.parse_args()
     users = [int(x) for x in a.users.split(",")]
     res = {"quando": time.strftime("%Y-%m-%d %H:%M"), "maquina": f"{os.cpu_count()} vCPU, Python {sys.version.split()[0]}", "cenarios": []}
     tmp = Path(tempfile.mkdtemp(prefix="jiradash_load_"))
     # demo: banco novo temporário (nunca o data/demo.db)
-    for nome, ttl in (("Demo (~900 issues), cache ligado (TTL 60 s, padrão)", 60), ("Demo (~900 issues), cache desligado (TTL 0)", 0)):
+    for nome, ttl in (() if a.skip_demo else (("Demo (~900 issues), cache ligado (TTL 60 s, padrão)", 60), ("Demo (~900 issues), cache desligado (TTL 0)", 0))):
         sc = cenario(nome, str(tmp / f"demo_{int(ttl)}.db"), ttl, users, a.duration, seq=(ttl == 0))
         sc["dataset"] = "demo do próprio produto"
         res["cenarios"].append(sc)
@@ -234,13 +280,19 @@ def main():
         info = generate(str(tmp / "big.db"), a.big_issues)
         print("dataset grande:", info, flush=True)
         sc = cenario(f"Dataset grande ({info['issues']} issues), cache desligado", str(tmp / "big.db"), 0,
-                     [int(x) for x in a.big_users.split(",")], a.big_duration, seq=True)
+                     [int(x) for x in a.big_users.split(",") if x], a.big_duration, seq=True, leve=True, big_timeout=a.big_timeout)
         sc["dataset"] = (f"{info['issues']} issues, {info['transicoes']} transições, {info['eventos']} eventos, "
-                         f"{info['worklogs']} worklogs, {info['abertas']} abertas.")
+                         f"{info['worklogs']} worklogs, {info['abertas']} abertas, {info['pessoas']} pessoas extras + 9 do YAML.")
         res["dataset_grande"] = info
         res["cenarios"].append(sc)
     out = Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
+    antigo = out / "resultados_carga.json"
+    if antigo.exists():  # mescla com execuções anteriores (cenários de mesmo nome são substituídos)
+        prev = json.loads(antigo.read_text(encoding="utf-8"))
+        novos = {c["nome"].split(" (")[0] + c["nome"].split(",")[-1] for c in res["cenarios"]}
+        res["cenarios"] = [c for c in prev["cenarios"] if c["nome"].split(" (")[0] + c["nome"].split(",")[-1] not in novos] + res["cenarios"]
+        res.setdefault("dataset_grande", prev.get("dataset_grande"))
     (out / "resultados_carga.json").write_text(json.dumps(res, ensure_ascii=False, indent=1), encoding="utf-8")
     (out / "resultados_carga.md").write_text(markdown(res), encoding="utf-8")
     print("gravado em", out)

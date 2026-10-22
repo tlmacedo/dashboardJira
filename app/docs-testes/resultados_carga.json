@@ -1,0 +1,1234 @@
+{
+ "quando": "2026-10-22 05:13",
+ "maquina": "4 vCPU, Python 3.13.16",
+ "cenarios": [
+  {
+   "nome": "Demo (~900 issues), cache ligado (TTL 60 s, padrão)",
+   "cache_ttl": 60,
+   "warmup_s": 6.8,
+   "issues": null,
+   "niveis": {
+    "1": {
+     "total": {
+      "n": 102,
+      "rps": 5.03,
+      "p50_ms": 110,
+      "p95_ms": 513,
+      "p99_ms": 1026,
+      "erros": 0,
+      "erro_pct": 0.0
+     },
+     "endpoints": {
+      "bottlenecks": {
+       "n": 2,
+       "rps": 0.1,
+       "p50_ms": 27,
+       "p95_ms": 348,
+       "p99_ms": 348,
+       "max_ms": 348,
+       "erros": 0,
+       "erro_pct": 0.0
+      },
+      "capacity": {
+       "n": 7,
+       "rps": 0.35,
+       "p50_ms": 20,
+       "p95_ms": 300,
+       "p99_ms": 300,
+       "max_ms": 300,
+       "erros": 0,
+       "erro_pct": 0.0
+      },
+      "closed": {
+       "n": 7,
+       "rps": 0.35,
+       "p50_ms": 111,
+       "p95_ms": 513,
+       "p99_ms": 513,
+       "max_ms": 513,
+       "erros": 0,
+       "erro_pct": 0.0
+      },
+      "distribution/pending": {
+       "n": 11,
+       "rps": 0.54,
+       "p50_ms": 316,
+       "p95_ms": 421,
+       "p99_ms": 421,
+       "max_ms": 421,
+       "erros": 0,
+       "erro_pct": 0.0
+      },
+      "forecast": {
+       "n": 6,
+       "rps": 0.3,
+       "p50_ms": 18,
+       "p95_ms": 422,
+       "p99_ms": 422,
+       "max_ms": 422,
+       "erros": 0,
+       "erro_pct": 0.0
+      },
+      "goals": {
+       "n": 7,
+       "rps": 0.35,
+       "p50_ms": 88,
+       "p95_ms": 492,
+       "p99_ms": 492,
+       "max_ms": 492,
+       "erros": 0,
+       "erro_pct": 0.0
+      },
+      "integrity": {
+       "n": 3,
+       "rps": 0.15,
+       "p50_ms": 123,
+       "p95_ms": 382,
+       "p99_ms": 382,
+       "max_ms": 382,
+       "erros": 0,
+       "erro_pct": 0.0
+      },
+      "negative": {
+       "n": 6,
+       "rps": 0.3,
+       "p50_ms": 139,
+       "p95_ms": 483,
+       "p99_ms": 483,
+       "max_ms": 483,
+       "erros": 0,
+       "erro_pct": 0.0
+      },
+      "open": {
+       "n": 17,
+       "rps": 0.84,
+       "p50_ms": 24,
+       "p95_ms": 312,
+       "p99_ms": 402,
+       "max_ms": 402,
+       "erros": 0,
+       "erro_pct": 0.0
+      },
+      "overview": {
+       "n": 22,
+       "rps": 1.09,
+       "p50_ms": 23,
+       "p95_ms": 1026,
+       "p99_ms": 2088,
+       "max_ms": 2088,
+       "erros": 0,
+       "erro_pct": 0.0
+      },
+      "people": {
+       "n": 7,
+       "rps": 0.35,
+       "p50_ms": 137,
+       "p95_ms": 458,
+       "p99_ms": 458,
+       "max_ms": 458,
+       "erros": 0,
+       "erro_pct": 0.0
+      },
+      "review": {
+       "n": 7,
+       "rps": 0.35,
+       "p50_ms": 115,
+       "p95_ms": 411,
+       "p99_ms": 411,
+       "max_ms": 411,
+       "erros": 0,
+       "erro_pct": 0.0
+      }
+     }
+    },
+    "5": {
+     "total": {
+      "n": 52,
+      "rps": 2.41,
+      "p50_ms": 111,
+      "p95_ms": 10315,
+      "p99_ms": 10860,
+      "erros": 0,
+      "erro_pct": 0.0
+     },
+     "endpoints": {
+      "bottlenecks": {
+       "n": 2,
+       "rps": 0.09,
+       "p50_ms": 51,
+       "p95_ms": 4595,
+       "p99_ms": 4595,
+       "max_ms": 4595,
+       "erros": 0,
+       "erro_pct": 0.0
+      },
+      "capacity": {
+       "n": 4,
+       "rps": 0.19,
+       "p50_ms": 4932,
+       "p95_ms": 10610,
+       "p99_ms": 10610,
+       "max_ms": 10610,
+       "erros": 0,
+       "erro_pct": 0.0
+      },
+      "closed": {
+       "n": 6,
+       "rps": 0.28,
+       "p50_ms": 73,
+       "p95_ms": 4951,
+       "p99_ms": 4951,
+       "max_ms": 4951,
+       "erros": 0,
+       "erro_pct": 0.0
+      },
+      "distribution/pending": {
+       "n": 3,
+       "rps": 0.14,
+       "p50_ms": 5600,
+       "p95_ms": 10315,
+       "p99_ms": 10315,
+       "max_ms": 10315,
+       "erros": 0,
+       "erro_pct": 0.0
+      },
+      "forecast": {
+       "n": 5,
+       "rps": 0.23,
+       "p50_ms": 119,
+       "p95_ms": 3897,
+       "p99_ms": 3897,
+       "max_ms": 3897,
+       "erros": 0,
+       "erro_pct": 0.0
+      },
+      "goals": {
+       "n": 2,
+       "rps": 0.09,
+       "p50_ms": 38,
+       "p95_ms": 88,
+       "p99_ms": 88,
+       "max_ms": 88,
+       "erros": 0,
+       "erro_pct": 0.0
+      },
+      "integrity": {
+       "n": 1,
+       "rps": 0.05,
+       "p50_ms": 12329,
+       "p95_ms": 12329,
+       "p99_ms": 12329,
+       "max_ms": 12329,
+       "erros": 0,
+       "erro_pct": 0.0
+      },
+      "negative": {
+       "n": 5,
+       "rps": 0.23,
+       "p50_ms": 127,
+       "p95_ms": 10102,
+       "p99_ms": 10102,
+       "max_ms": 10102,
+       "erros": 0,
+       "erro_pct": 0.0
+      },
+      "open": {
+       "n": 8,
+       "rps": 0.37,
+       "p50_ms": 66,
+       "p95_ms": 4270,
+       "p99_ms": 4270,
+       "max_ms": 4270,
+       "erros": 0,
+       "erro_pct": 0.0
+      },
+      "overview": {
+       "n": 10,
+       "rps": 0.46,
+       "p50_ms": 60,
+       "p95_ms": 10860,
+       "p99_ms": 10860,
+       "max_ms": 10860,
+       "erros": 0,
+       "erro_pct": 0.0
+      },
+      "people": {
+       "n": 3,
+       "rps": 0.14,
+       "p50_ms": 111,
+       "p95_ms": 123,
+       "p99_ms": 123,
+       "max_ms": 123,
+       "erros": 0,
+       "erro_pct": 0.0
+      },
+      "review": {
+       "n": 3,
+       "rps": 0.14,
+       "p50_ms": 111,
+       "p95_ms": 5062,
+       "p99_ms": 5062,
+       "max_ms": 5062,
+       "erros": 0,
+       "erro_pct": 0.0
+      }
+     }
+    },
+    "20": {
+     "total": {
+      "n": 54,
+      "rps": 0.78,
+      "p50_ms": 650,
+      "p95_ms": 64651,
+      "p99_ms": 65262,
+      "erros": 10,
+      "erro_pct": 18.5
+     },
+     "endpoints": {
+      "bottlenecks": {
+       "n": 2,
+       "rps": 0.03,
+       "p50_ms": 499,
+       "p95_ms": 19203,
+       "p99_ms": 19203,
+       "max_ms": 19203,
+       "erros": 0,
+       "erro_pct": 0.0
+      },
+      "capacity": {
+       "n": 8,
+       "rps": 0.12,
+       "p50_ms": 846,
+       "p95_ms": 65506,
+       "p99_ms": 65506,
+       "max_ms": 65506,
+       "erros": 2,
+       "erro_pct": 25.0
+      },
+      "closed": {
+       "n": 7,
+       "rps": 0.1,
+       "p50_ms": 576,
+       "p95_ms": 59807,
+       "p99_ms": 59807,
+       "max_ms": 59807,
+       "erros": 0,
+       "erro_pct": 0.0
+      },
+      "distribution/pending": {
+       "n": 3,
+       "rps": 0.04,
+       "p50_ms": 41804,
+       "p95_ms": 47450,
+       "p99_ms": 47450,
+       "max_ms": 47450,
+       "erros": 2,
+       "erro_pct": 66.7
+      },
+      "forecast": {
+       "n": 7,
+       "rps": 0.1,
+       "p50_ms": 13484,
+       "p95_ms": 64651,
+       "p99_ms": 64651,
+       "max_ms": 64651,
+       "erros": 1,
+       "erro_pct": 14.3
+      },
+      "goals": {
+       "n": 3,
+       "rps": 0.04,
+       "p50_ms": 703,
+       "p95_ms": 21066,
+       "p99_ms": 21066,
+       "max_ms": 21066,
+       "erros": 0,
+       "erro_pct": 0.0
+      },
+      "integrity": {
+       "n": 1,
+       "rps": 0.01,
+       "p50_ms": 21806,
+       "p95_ms": 21806,
+       "p99_ms": 21806,
+       "max_ms": 21806,
+       "erros": 1,
+       "erro_pct": 100.0
+      },
+      "negative": {
+       "n": 3,
+       "rps": 0.04,
+       "p50_ms": 396,
+       "p95_ms": 625,
+       "p99_ms": 625,
+       "max_ms": 625,
+       "erros": 0,
+       "erro_pct": 0.0
+      },
+      "open": {
+       "n": 6,
+       "rps": 0.09,
+       "p50_ms": 31472,
+       "p95_ms": 64737,
+       "p99_ms": 64737,
+       "max_ms": 64737,
+       "erros": 3,
+       "erro_pct": 50.0
+      },
+      "overview": {
+       "n": 7,
+       "rps": 0.1,
+       "p50_ms": 456,
+       "p95_ms": 53185,
+       "p99_ms": 53185,
+       "max_ms": 53185,
+       "erros": 1,
+       "erro_pct": 14.3
+      },
+      "people": {
+       "n": 3,
+       "rps": 0.04,
+       "p50_ms": 649,
+       "p95_ms": 31920,
+       "p99_ms": 31920,
+       "max_ms": 31920,
+       "erros": 0,
+       "erro_pct": 0.0
+      },
+      "review": {
+       "n": 4,
+       "rps": 0.06,
+       "p50_ms": 564,
+       "p95_ms": 650,
+       "p99_ms": 650,
+       "max_ms": 650,
+       "erros": 0,
+       "erro_pct": 0.0
+      }
+     }
+    },
+    "50": {
+     "total": {
+      "n": 53,
+      "rps": 0.63,
+      "p50_ms": 31108,
+      "p95_ms": 79703,
+      "p99_ms": 80488,
+      "erros": 29,
+      "erro_pct": 54.7
+     },
+     "endpoints": {
+      "bottlenecks": {
+       "n": 3,
+       "rps": 0.04,
+       "p50_ms": 31186,
+       "p95_ms": 80488,
+       "p99_ms": 80488,
+       "max_ms": 80488,
+       "erros": 2,
+       "erro_pct": 66.7
+      },
+      "capacity": {
+       "n": 5,
+       "rps": 0.06,
+       "p50_ms": 64457,
+       "p95_ms": 80315,
+       "p99_ms": 80315,
+       "max_ms": 80315,
+       "erros": 1,
+       "erro_pct": 20.0
+      },
+      "closed": {
+       "n": 9,
+       "rps": 0.11,
+       "p50_ms": 31263,
+       "p95_ms": 73612,
+       "p99_ms": 73612,
+       "max_ms": 73612,
+       "erros": 5,
+       "erro_pct": 55.6
+      },
+      "distribution/pending": {
+       "n": 1,
+       "rps": 0.01,
+       "p50_ms": 31120,
+       "p95_ms": 31120,
+       "p99_ms": 31120,
+       "max_ms": 31120,
+       "erros": 1,
+       "erro_pct": 100.0
+      },
+      "forecast": {
+       "n": 6,
+       "rps": 0.07,
+       "p50_ms": 30602,
+       "p95_ms": 62459,
+       "p99_ms": 62459,
+       "max_ms": 62459,
+       "erros": 3,
+       "erro_pct": 50.0
+      },
+      "goals": {
+       "n": 3,
+       "rps": 0.04,
+       "p50_ms": 55778,
+       "p95_ms": 65251,
+       "p99_ms": 65251,
+       "max_ms": 65251,
+       "erros": 1,
+       "erro_pct": 33.3
+      },
+      "integrity": {
+       "n": 3,
+       "rps": 0.04,
+       "p50_ms": 30761,
+       "p95_ms": 30839,
+       "p99_ms": 30839,
+       "max_ms": 30839,
+       "erros": 3,
+       "erro_pct": 100.0
+      },
+      "negative": {
+       "n": 2,
+       "rps": 0.02,
+       "p50_ms": 61946,
+       "p95_ms": 66848,
+       "p99_ms": 66848,
+       "max_ms": 66848,
+       "erros": 0,
+       "erro_pct": 0.0
+      },
+      "open": {
+       "n": 6,
+       "rps": 0.07,
+       "p50_ms": 30711,
+       "p95_ms": 59001,
+       "p99_ms": 59001,
+       "max_ms": 59001,
+       "erros": 5,
+       "erro_pct": 83.3
+      },
+      "overview": {
+       "n": 9,
+       "rps": 0.11,
+       "p50_ms": 30803,
+       "p95_ms": 81237,
+       "p99_ms": 81237,
+       "max_ms": 81237,
+       "erros": 6,
+       "erro_pct": 66.7
+      },
+      "people": {
+       "n": 2,
+       "rps": 0.02,
+       "p50_ms": 9625,
+       "p95_ms": 64551,
+       "p99_ms": 64551,
+       "max_ms": 64551,
+       "erros": 0,
+       "erro_pct": 0.0
+      },
+      "review": {
+       "n": 4,
+       "rps": 0.05,
+       "p50_ms": 74763,
+       "p95_ms": 79703,
+       "p99_ms": 79703,
+       "max_ms": 79703,
+       "erros": 2,
+       "erro_pct": 50.0
+      }
+     }
+    }
+   },
+   "dataset": "demo do próprio produto"
+  },
+  {
+   "nome": "Demo (~900 issues), cache desligado (TTL 0)",
+   "cache_ttl": 0,
+   "warmup_s": 6.2,
+   "issues": null,
+   "niveis": {
+    "1": {
+     "total": {
+      "n": 52,
+      "rps": 2.55,
+      "p50_ms": 362,
+      "p95_ms": 779,
+      "p99_ms": 1070,
+      "erros": 0,
+      "erro_pct": 0.0
+     },
+     "endpoints": {
+      "bottlenecks": {
+       "n": 2,
+       "rps": 0.1,
+       "p50_ms": 357,
+       "p95_ms": 415,
+       "p99_ms": 415,
+       "max_ms": 415,
+       "erros": 0,
+       "erro_pct": 0.0
+      },
+      "capacity": {
+       "n": 2,
+       "rps": 0.1,
+       "p50_ms": 313,
+       "p95_ms": 435,
+       "p99_ms": 435,
+       "max_ms": 435,
+       "erros": 0,
+       "erro_pct": 0.0
+      },
+      "closed": {
+       "n": 3,
+       "rps": 0.15,
+       "p50_ms": 131,
+       "p95_ms": 410,
+       "p99_ms": 410,
+       "max_ms": 410,
+       "erros": 0,
+       "erro_pct": 0.0
+      },
+      "distribution/pending": {
+       "n": 5,
+       "rps": 0.24,
+       "p50_ms": 308,
+       "p95_ms": 390,
+       "p99_ms": 390,
+       "max_ms": 390,
+       "erros": 0,
+       "erro_pct": 0.0
+      },
+      "forecast": {
+       "n": 3,
+       "rps": 0.15,
+       "p50_ms": 362,
+       "p95_ms": 539,
+       "p99_ms": 539,
+       "max_ms": 539,
+       "erros": 0,
+       "erro_pct": 0.0
+      },
+      "goals": {
+       "n": 3,
+       "rps": 0.15,
+       "p50_ms": 298,
+       "p95_ms": 471,
+       "p99_ms": 471,
+       "max_ms": 471,
+       "erros": 0,
+       "erro_pct": 0.0
+      },
+      "integrity": {
+       "n": 1,
+       "rps": 0.05,
+       "p50_ms": 278,
+       "p95_ms": 278,
+       "p99_ms": 278,
+       "max_ms": 278,
+       "erros": 0,
+       "erro_pct": 0.0
+      },
+      "negative": {
+       "n": 4,
+       "rps": 0.2,
+       "p50_ms": 297,
+       "p95_ms": 492,
+       "p99_ms": 492,
+       "max_ms": 492,
+       "erros": 0,
+       "erro_pct": 0.0
+      },
+      "open": {
+       "n": 10,
+       "rps": 0.49,
+       "p50_ms": 295,
+       "p95_ms": 482,
+       "p99_ms": 482,
+       "max_ms": 482,
+       "erros": 0,
+       "erro_pct": 0.0
+      },
+      "overview": {
+       "n": 12,
+       "rps": 0.59,
+       "p50_ms": 549,
+       "p95_ms": 1070,
+       "p99_ms": 2142,
+       "max_ms": 2142,
+       "erros": 0,
+       "erro_pct": 0.0
+      },
+      "people": {
+       "n": 5,
+       "rps": 0.24,
+       "p50_ms": 324,
+       "p95_ms": 381,
+       "p99_ms": 381,
+       "max_ms": 381,
+       "erros": 0,
+       "erro_pct": 0.0
+      },
+      "review": {
+       "n": 2,
+       "rps": 0.1,
+       "p50_ms": 116,
+       "p95_ms": 404,
+       "p99_ms": 404,
+       "max_ms": 404,
+       "erros": 0,
+       "erro_pct": 0.0
+      }
+     }
+    },
+    "5": {
+     "total": {
+      "n": 11,
+      "rps": 0.43,
+      "p50_ms": 11267,
+      "p95_ms": 24072,
+      "p99_ms": 24072,
+      "erros": 0,
+      "erro_pct": 0.0
+     },
+     "endpoints": {
+      "capacity": {
+       "n": 2,
+       "rps": 0.08,
+       "p50_ms": 5122,
+       "p95_ms": 8868,
+       "p99_ms": 8868,
+       "max_ms": 8868,
+       "erros": 0,
+       "erro_pct": 0.0
+      },
+      "closed": {
+       "n": 2,
+       "rps": 0.08,
+       "p50_ms": 7556,
+       "p95_ms": 12687,
+       "p99_ms": 12687,
+       "max_ms": 12687,
+       "erros": 0,
+       "erro_pct": 0.0
+      },
+      "forecast": {
+       "n": 1,
+       "rps": 0.04,
+       "p50_ms": 11917,
+       "p95_ms": 11917,
+       "p99_ms": 11917,
+       "max_ms": 11917,
+       "erros": 0,
+       "erro_pct": 0.0
+      },
+      "goals": {
+       "n": 1,
+       "rps": 0.04,
+       "p50_ms": 3954,
+       "p95_ms": 3954,
+       "p99_ms": 3954,
+       "max_ms": 3954,
+       "erros": 0,
+       "erro_pct": 0.0
+      },
+      "negative": {
+       "n": 1,
+       "rps": 0.04,
+       "p50_ms": 11267,
+       "p95_ms": 11267,
+       "p99_ms": 11267,
+       "max_ms": 11267,
+       "erros": 0,
+       "erro_pct": 0.0
+      },
+      "overview": {
+       "n": 2,
+       "rps": 0.08,
+       "p50_ms": 6357,
+       "p95_ms": 24072,
+       "p99_ms": 24072,
+       "max_ms": 24072,
+       "erros": 0,
+       "erro_pct": 0.0
+      },
+      "people": {
+       "n": 1,
+       "rps": 0.04,
+       "p50_ms": 14024,
+       "p95_ms": 14024,
+       "p99_ms": 14024,
+       "max_ms": 14024,
+       "erros": 0,
+       "erro_pct": 0.0
+      },
+      "review": {
+       "n": 1,
+       "rps": 0.04,
+       "p50_ms": 12263,
+       "p95_ms": 12263,
+       "p99_ms": 12263,
+       "max_ms": 12263,
+       "erros": 0,
+       "erro_pct": 0.0
+      }
+     }
+    },
+    "20": {
+     "total": {
+      "n": 20,
+      "rps": 0.27,
+      "p50_ms": 67269,
+      "p95_ms": 71843,
+      "p99_ms": 72291,
+      "erros": 3,
+      "erro_pct": 15.0
+     },
+     "endpoints": {
+      "capacity": {
+       "n": 3,
+       "rps": 0.04,
+       "p50_ms": 67269,
+       "p95_ms": 70572,
+       "p99_ms": 70572,
+       "max_ms": 70572,
+       "erros": 0,
+       "erro_pct": 0.0
+      },
+      "closed": {
+       "n": 4,
+       "rps": 0.05,
+       "p50_ms": 71216,
+       "p95_ms": 71843,
+       "p99_ms": 71843,
+       "max_ms": 71843,
+       "erros": 2,
+       "erro_pct": 50.0
+      },
+      "forecast": {
+       "n": 3,
+       "rps": 0.04,
+       "p50_ms": 31069,
+       "p95_ms": 68964,
+       "p99_ms": 68964,
+       "max_ms": 68964,
+       "erros": 0,
+       "erro_pct": 0.0
+      },
+      "goals": {
+       "n": 2,
+       "rps": 0.03,
+       "p50_ms": 30463,
+       "p95_ms": 70118,
+       "p99_ms": 70118,
+       "max_ms": 70118,
+       "erros": 1,
+       "erro_pct": 50.0
+      },
+      "negative": {
+       "n": 1,
+       "rps": 0.01,
+       "p50_ms": 64882,
+       "p95_ms": 64882,
+       "p99_ms": 64882,
+       "max_ms": 64882,
+       "erros": 0,
+       "erro_pct": 0.0
+      },
+      "open": {
+       "n": 1,
+       "rps": 0.01,
+       "p50_ms": 30961,
+       "p95_ms": 30961,
+       "p99_ms": 30961,
+       "max_ms": 30961,
+       "erros": 0,
+       "erro_pct": 0.0
+      },
+      "overview": {
+       "n": 3,
+       "rps": 0.04,
+       "p50_ms": 71392,
+       "p95_ms": 72291,
+       "p99_ms": 72291,
+       "max_ms": 72291,
+       "erros": 0,
+       "erro_pct": 0.0
+      },
+      "people": {
+       "n": 1,
+       "rps": 0.01,
+       "p50_ms": 27783,
+       "p95_ms": 27783,
+       "p99_ms": 27783,
+       "max_ms": 27783,
+       "erros": 0,
+       "erro_pct": 0.0
+      },
+      "review": {
+       "n": 2,
+       "rps": 0.03,
+       "p50_ms": 68878,
+       "p95_ms": 69480,
+       "p99_ms": 69480,
+       "max_ms": 69480,
+       "erros": 0,
+       "erro_pct": 0.0
+      }
+     }
+    },
+    "50": {
+     "total": {
+      "n": 55,
+      "rps": 0.63,
+      "p50_ms": 31558,
+      "p95_ms": 79148,
+      "p99_ms": 83162,
+      "erros": 29,
+      "erro_pct": 52.7
+     },
+     "endpoints": {
+      "bottlenecks": {
+       "n": 3,
+       "rps": 0.03,
+       "p50_ms": 31488,
+       "p95_ms": 31638,
+       "p99_ms": 31638,
+       "max_ms": 31638,
+       "erros": 2,
+       "erro_pct": 66.7
+      },
+      "capacity": {
+       "n": 4,
+       "rps": 0.05,
+       "p50_ms": 42399,
+       "p95_ms": 63812,
+       "p99_ms": 63812,
+       "max_ms": 63812,
+       "erros": 1,
+       "erro_pct": 25.0
+      },
+      "closed": {
+       "n": 11,
+       "rps": 0.13,
+       "p50_ms": 31600,
+       "p95_ms": 77848,
+       "p99_ms": 77848,
+       "max_ms": 77848,
+       "erros": 7,
+       "erro_pct": 63.6
+      },
+      "distribution/pending": {
+       "n": 1,
+       "rps": 0.01,
+       "p50_ms": 31444,
+       "p95_ms": 31444,
+       "p99_ms": 31444,
+       "max_ms": 31444,
+       "erros": 1,
+       "erro_pct": 100.0
+      },
+      "forecast": {
+       "n": 6,
+       "rps": 0.07,
+       "p50_ms": 31582,
+       "p95_ms": 64474,
+       "p99_ms": 64474,
+       "max_ms": 64474,
+       "erros": 3,
+       "erro_pct": 50.0
+      },
+      "goals": {
+       "n": 3,
+       "rps": 0.03,
+       "p50_ms": 31534,
+       "p95_ms": 79148,
+       "p99_ms": 79148,
+       "max_ms": 79148,
+       "erros": 1,
+       "erro_pct": 33.3
+      },
+      "integrity": {
+       "n": 3,
+       "rps": 0.03,
+       "p50_ms": 31099,
+       "p95_ms": 31548,
+       "p99_ms": 31548,
+       "max_ms": 31548,
+       "erros": 3,
+       "erro_pct": 100.0
+      },
+      "negative": {
+       "n": 2,
+       "rps": 0.02,
+       "p50_ms": 2087,
+       "p95_ms": 57744,
+       "p99_ms": 57744,
+       "max_ms": 57744,
+       "erros": 0,
+       "erro_pct": 0.0
+      },
+      "open": {
+       "n": 7,
+       "rps": 0.08,
+       "p50_ms": 31308,
+       "p95_ms": 80787,
+       "p99_ms": 80787,
+       "max_ms": 80787,
+       "erros": 4,
+       "erro_pct": 57.1
+      },
+      "overview": {
+       "n": 9,
+       "rps": 0.1,
+       "p50_ms": 31618,
+       "p95_ms": 83335,
+       "p99_ms": 83335,
+       "max_ms": 83335,
+       "erros": 5,
+       "erro_pct": 55.6
+      },
+      "people": {
+       "n": 1,
+       "rps": 0.01,
+       "p50_ms": 9528,
+       "p95_ms": 9528,
+       "p99_ms": 9528,
+       "max_ms": 9528,
+       "erros": 0,
+       "erro_pct": 0.0
+      },
+      "review": {
+       "n": 5,
+       "rps": 0.06,
+       "p50_ms": 44614,
+       "p95_ms": 76256,
+       "p99_ms": 76256,
+       "max_ms": 76256,
+       "erros": 2,
+       "erro_pct": 40.0
+      }
+     }
+    }
+   },
+   "sequencial": {
+    "overview": {
+     "n": 12,
+     "p50_ms": 1910,
+     "p95_ms": 2064,
+     "max_ms": 2072,
+     "erros": 0
+    },
+    "open": {
+     "n": 12,
+     "p50_ms": 360,
+     "p95_ms": 471,
+     "max_ms": 491,
+     "erros": 0
+    },
+    "closed": {
+     "n": 12,
+     "p50_ms": 405,
+     "p95_ms": 509,
+     "max_ms": 533,
+     "erros": 0
+    },
+    "negative": {
+     "n": 12,
+     "p50_ms": 346,
+     "p95_ms": 476,
+     "max_ms": 497,
+     "erros": 0
+    },
+    "people": {
+     "n": 12,
+     "p50_ms": 327,
+     "p95_ms": 467,
+     "max_ms": 501,
+     "erros": 0
+    },
+    "capacity": {
+     "n": 12,
+     "p50_ms": 305,
+     "p95_ms": 437,
+     "max_ms": 447,
+     "erros": 0
+    },
+    "forecast": {
+     "n": 12,
+     "p50_ms": 357,
+     "p95_ms": 483,
+     "max_ms": 489,
+     "erros": 0
+    },
+    "goals": {
+     "n": 12,
+     "p50_ms": 319,
+     "p95_ms": 414,
+     "max_ms": 419,
+     "erros": 0
+    },
+    "review": {
+     "n": 12,
+     "p50_ms": 322,
+     "p95_ms": 450,
+     "max_ms": 466,
+     "erros": 0
+    },
+    "integrity": {
+     "n": 12,
+     "p50_ms": 117,
+     "p95_ms": 373,
+     "max_ms": 419,
+     "erros": 4
+    },
+    "bottlenecks": {
+     "n": 12,
+     "p50_ms": 384,
+     "p95_ms": 528,
+     "max_ms": 588,
+     "erros": 0
+    },
+    "distribution/pending": {
+     "n": 12,
+     "p50_ms": 341,
+     "p95_ms": 432,
+     "max_ms": 462,
+     "erros": 0
+    }
+   },
+   "dataset": "demo do próprio produto"
+  },
+  {
+   "nome": "Dataset grande (22012 issues), cache desligado",
+   "cache_ttl": 0,
+   "warmup_s": 0.0,
+   "issues": null,
+   "niveis": {},
+   "sequencial": {
+    "overview": {
+     "n": 0,
+     "p50_ms": null,
+     "p95_ms": null,
+     "max_ms": null,
+     "erros": 0,
+     "timeouts": 1,
+     "timeout_s": 240.0
+    },
+    "open": {
+     "n": 2,
+     "p50_ms": 7001,
+     "p95_ms": 31175,
+     "max_ms": 31175,
+     "erros": 0,
+     "timeouts": 0,
+     "timeout_s": 240.0
+    },
+    "closed": {
+     "n": 2,
+     "p50_ms": 5827,
+     "p95_ms": 23602,
+     "max_ms": 23602,
+     "erros": 0,
+     "timeouts": 0,
+     "timeout_s": 240.0
+    },
+    "negative": {
+     "n": 2,
+     "p50_ms": 6774,
+     "p95_ms": 23099,
+     "max_ms": 23099,
+     "erros": 0,
+     "timeouts": 0,
+     "timeout_s": 240.0
+    },
+    "people": {
+     "n": 2,
+     "p50_ms": 6270,
+     "p95_ms": 22557,
+     "max_ms": 22557,
+     "erros": 0,
+     "timeouts": 0,
+     "timeout_s": 240.0
+    },
+    "capacity": {
+     "n": 2,
+     "p50_ms": 5898,
+     "p95_ms": 24034,
+     "max_ms": 24034,
+     "erros": 0,
+     "timeouts": 0,
+     "timeout_s": 240.0
+    },
+    "forecast": {
+     "n": 2,
+     "p50_ms": 6935,
+     "p95_ms": 22745,
+     "max_ms": 22745,
+     "erros": 0,
+     "timeouts": 0,
+     "timeout_s": 240.0
+    },
+    "goals": {
+     "n": 2,
+     "p50_ms": 7343,
+     "p95_ms": 24461,
+     "max_ms": 24461,
+     "erros": 0,
+     "timeouts": 0,
+     "timeout_s": 240.0
+    },
+    "review": {
+     "n": 2,
+     "p50_ms": 6101,
+     "p95_ms": 22161,
+     "max_ms": 22161,
+     "erros": 0,
+     "timeouts": 0,
+     "timeout_s": 240.0
+    },
+    "integrity": {
+     "n": 2,
+     "p50_ms": 6422,
+     "p95_ms": 20989,
+     "max_ms": 20989,
+     "erros": 0,
+     "timeouts": 0,
+     "timeout_s": 240.0
+    },
+    "bottlenecks": {
+     "n": 2,
+     "p50_ms": 7163,
+     "p95_ms": 23609,
+     "max_ms": 23609,
+     "erros": 0,
+     "timeouts": 0,
+     "timeout_s": 240.0
+    },
+    "distribution/pending": {
+     "n": 2,
+     "p50_ms": 5627,
+     "p95_ms": 16907,
+     "max_ms": 16907,
+     "erros": 0,
+     "timeouts": 0,
+     "timeout_s": 240.0
+    }
+   },
+   "dataset": "22012 issues, 104525 transições, 47609 eventos, 42601 worklogs, 2068 abertas, 107 pessoas extras + 9 do YAML."
+  }
+ ],
+ "dataset_grande": {
+  "db": "/tmp/jiradash_load_h2aa_p9z/big.db",
+  "issues": 22012,
+  "transicoes": 104525,
+  "mudancas_responsavel": 8707,
+  "eventos": 47609,
+  "worklogs": 42601,
+  "pessoas": 107,
+  "abertas": 2068,
+  "segundos_geracao": 1.6,
+  "segundos_total": 8.9
+ }
+}

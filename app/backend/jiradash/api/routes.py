@@ -32,6 +32,8 @@ def actor(x_user: str | None = Header(default=None)) -> str:
 
 def flt(squad: str | None = None, project: str | None = None, person: int | None = None, type: str | None = None,
         priority: str | None = None, date_from: date | None = None, date_to: date | None = None) -> Filters:
+    if date_from and date_to and date_from > date_to:
+        raise HTTPException(422, "date_from não pode ser depois de date_to")
     return Filters(squad or None, project or None, person, type or None, priority or None, date_from, date_to)
 
 
@@ -91,7 +93,7 @@ def epics(a: Analytics = Depends(A)):
 
 @router.get("/integrity", dependencies=guard)
 def integrity(a: Analytics = Depends(A), db: Session = Depends(get_db), who: str = Depends(actor)):
-    _log(db, who, "consultar_integridade", {"filtros": {k: v for k, v in vars(a.f).items() if v}})
+    _log(db, who, "consultar_integridade", {"filtros": {k: str(v) for k, v in vars(a.f).items() if v}})
     db.commit()
     return cache.get_or_compute(("integrity", tuple(vars(a.f).values())), lambda: reports.integrity_view(a))
 

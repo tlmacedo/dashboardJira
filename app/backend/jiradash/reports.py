@@ -36,6 +36,10 @@ def original_due(r: m.IssueRec) -> date | None:
     return parse_due(evs[0].from_value) or parse_due(evs[0].to_value)
 
 
+def r1(v):
+    return None if v is None else round(v, 1)
+
+
 def bucket_of(delta: int) -> str:
     """delta = dia da resolução − vencimento (em dias de calendário, fuso local)."""
     if delta <= -3:
@@ -262,10 +266,10 @@ def review_view(a: Analytics) -> dict:
     cont = {"review_atrasada_checklist_atrasado_pct": pct(sum(1 for x in rl_ if not x["review_no_prazo"] and not x["checklist_no_prazo"]), [x for x in rl_ if not x["review_no_prazo"]]),
             "review_no_prazo_checklist_atrasado_pct": pct(sum(1 for x in rl_ if x["review_no_prazo"] and not x["checklist_no_prazo"]), [x for x in rl_ if x["review_no_prazo"]])}
     kp = {"pares": n, "checklists_sem_review": len(orphans),
-          "review_ciclo_p50_d": round(m.pct([x["ciclo_review_d"] for x in done], 50), 1) if done else None,
-          "checklist_ciclo_p50_d": round(m.pct([x["ciclo_checklist_d"] for x in rows if x["ciclo_checklist_d"] is not None], 50), 1) if rows else None,
-          "review_pct_do_ciclo_p50": round(m.pct([x["review_pct_do_ciclo"] for x in rows if x["review_pct_do_ciclo"] is not None], 50), 1) if rows else None,
-          "criacao_review_p50_h": round(m.pct(lag, 50), 1) if lag else None,
+          "review_ciclo_p50_d": r1(m.pct([x["ciclo_review_d"] for x in done], 50)) if done else None,
+          "checklist_ciclo_p50_d": r1(m.pct([x["ciclo_checklist_d"] for x in rows if x["ciclo_checklist_d"] is not None], 50)),
+          "review_pct_do_ciclo_p50": r1(m.pct([x["review_pct_do_ciclo"] for x in rows if x["review_pct_do_ciclo"] is not None], 50)),
+          "criacao_review_p50_h": r1(m.pct(lag, 50)),
           "review_antes_do_pai_pct": pct(sum(1 for d in before if d >= 0), [1] * len(before)) if before else None,
           "mesma_pessoa_pct": pct(len(same)), "venc_review_depois_pct": pct(len(late_due)), "pai_fechado_antes_pct": pct(len(closed_first)),
           "com_alerta_pct": pct(sum(1 for x in rows if x["alertas"]))}

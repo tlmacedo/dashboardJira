@@ -9,6 +9,7 @@ TTL = float(os.getenv("JIRADASH_CACHE_TTL", "60"))
 _lock = threading.Lock()
 _store: dict[tuple, tuple[float, object]] = {}
 _gen = 0
+_inflight: dict[tuple, threading.Lock] = {}
 
 
 def get_or_compute(key: tuple, fn):
@@ -20,11 +21,20 @@ def get_or_compute(key: tuple, fn):
         hit = _store.get(k)
         if hit and now - hit[0] < TTL:
             return hit[1]
-    val = fn()
+    # "single-flight": quem chega com o cache frio espera o primeiro calcular em vez de recalcular em paralelo
     with _lock:
-        if len(_store) > 500:
-            _store.clear()
-        _store[k] = (now, val)
+        flight = _inflight.setdefault(k, threading.Lock())
+    with flight:
+        with _lock:
+            hit = _store.get(k)
+            if hit and time.time() - hit[0] < TTL:
+                return hit[1]
+        val = fn()
+        with _lock:
+            if len(_store) > 500:
+                _store.clear()
+            _store[k] = (time.time(), val)
+            _inflight.pop(k, None)
     return val
 
 

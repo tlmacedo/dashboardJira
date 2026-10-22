@@ -5,7 +5,8 @@ from collections import Counter, defaultdict
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta
 
-from sqlalchemy.orm import Session, joinedload
+from sqlalchemy import or_
+from sqlalchemy.orm import Session, selectinload
 
 from .config import load_teams
 from .distribution import engine as eng
@@ -55,6 +56,7 @@ class Analytics:
         self.squads = {s.id: s for s in db.query(Squad).all()}
         self.holidays = {h.day for h in db.query(Holiday).all()}
         self._recs: list[m.IssueRec] | None = None
+        self._memo: dict = {}
         self._all: list[m.IssueRec] | None = None
 
     # ------------------------------------------------------------------ carga
@@ -79,8 +81,13 @@ class Analytics:
     def load_all(self) -> list[m.IssueRec]:
         """Todas as issues (sem filtro de pessoa/tipo), para referências históricas do squad."""
         if self._all is None:
-            q = self.db.query(Issue).options(joinedload(Issue.transitions), joinedload(Issue.assignee_changes), joinedload(Issue.events)) \
-                .filter(Issue.deleted_at.is_(None))
+            # janela de histórico: abertas + resolvidas desde o corte (selectinload evita o produto cartesiano de joins)
+            days = int(self.cfg.get("history_days", 270))
+            cutoff = self.today - timedelta(days=days)
+            if self.f.date_from:
+                cutoff = min(cutoff, self.f.date_from - timedelta(days=5))
+            q = self.db.query(Issue).options(selectinload(Issue.transitions), selectinload(Issue.assignee_changes), selectinload(Issue.events)) \
+                .filter(Issue.deleted_at.is_(None), or_(Issue.resolved.is_(None), Issue.resolved >= datetime.combine(cutoff, datetime.min.time())))
             sid = self._squad_id()
             if sid is not None:
                 q = q.filter(Issue.squad_id == sid)
@@ -122,6 +129,13 @@ class Analytics:
 
     # ------------------------------------------------------------------ referências
     def cycle_hist_days(self, rs: list[m.IssueRec] | None = None, weeks: int = 16) -> list[float]:
+        if rs is None:
+            if ("cyc", weeks) not in self._memo:
+                self._memo[("cyc", weeks)] = self._cycle_hist_days(None, weeks)
+            return self._memo[("cyc", weeks)]
+        return self._cycle_hist_days(rs, weeks)
+
+    def _cycle_hist_days(self, rs: list[m.IssueRec] | None = None, weeks: int = 16) -> list[float]:
         since = self.today - timedelta(weeks=weeks)
         base = rs if rs is not None else self.load_all()
         out = []
@@ -132,6 +146,11 @@ class Analytics:
         return out
 
     def status_median_days(self) -> dict[str, float]:
+        if "smed" not in self._memo:
+            self._memo["smed"] = self._status_median_days()
+        return self._memo["smed"]
+
+    def _status_median_days(self) -> dict[str, float]:
         by: dict[str, list[float]] = defaultdict(list)
         for r in self.load_all():
             if r.resolved and r.resolved.date() >= self.today - timedelta(weeks=16):
@@ -180,6 +199,12 @@ class Analytics:
         return cap.issue_hours(r.remaining_s, r.original_estimate_s, r.time_spent_s, r.story_points, self.hours_fallback)
 
     def plan(self, horizon_weeks: int = 12, ignore_absences: bool = False) -> dict:
+        k = ("plan", horizon_weeks, ignore_absences)
+        if k not in self._memo:
+            self._memo[k] = self._plan(horizon_weeks, ignore_absences)
+        return self._memo[k]
+
+    def _plan(self, horizon_weeks: int = 12, ignore_absences: bool = False) -> dict:
         """Agenda a fila de cada pessoa na sua capacidade semanal: data prevista por issue e carga por semana."""
         caps = self._person_caps(self.member_ids())
         if ignore_absences:

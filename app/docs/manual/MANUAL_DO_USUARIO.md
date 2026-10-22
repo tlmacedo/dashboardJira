@@ -140,10 +140,10 @@ Conferido no código de cada endpoint. "Sim" = filtra os dados exibidos; "Parcia
 
 | Tela | Squad | Projeto | Pessoa | Tipo | Prioridade | Datas |
 |---|---|---|---|---|---|---|
-| Visão geral | Sim (cartões); **não** nos cartões de squad | Sim | Sim (cartões) | Sim | Sim | Não |
+| Visão geral | Sim | Sim | Sim | Sim | Sim | Não (últimos 30 dias fixos) |
 | Meu painel | Sim | Sim | **Obrigatório** | Sim | Sim | Não |
 | Abertas | Sim | Sim | Sim | Sim | Sim | Não |
-| Épicos | Sim | Sim | **Não** | **Não** | **Não** | Não |
+| Épicos | Sim | Sim | (oculto) | (oculto) | (oculto) | Não |
 | Negligenciadas | Sim | Sim | Sim | Sim | Sim | Não |
 | Riscos | Sim | Sim | Sim | Sim | Sim | Não |
 | Previsão | Sim | Sim | Sim | Sim | Sim | Não |
@@ -153,9 +153,9 @@ Conferido no código de cada endpoint. "Sim" = filtra os dados exibidos; "Parcia
 | Metas e prazos | Sim | Sim | Sim | Sim | Sim | **Sim** (+ granularidade) |
 | Checklist × Review | Sim | Sim | Sim (pelo checklist) | Sim (pelo checklist) | Sim (pelo checklist) | **Sim** |
 | Integridade | Sim | Sim | Sim | Sim | Sim | **Sim** |
-| Carga por pessoa | Sim | Sim | Sim | Parcial | Parcial | Não |
-| Capacidade e ausências | Sim | Sim | Sim | Parcial | Parcial | Não |
-| Gargalos e fluxo | Sim | Sim | Parcial | Parcial | Parcial | Não (fixo em 60 dias) |
+| Carga por pessoa | Sim | Sim | Sim | (oculto) | (oculto) | Não |
+| Capacidade e ausências | Sim | Sim | Sim | (oculto) | (oculto) | Não |
+| Gargalos e fluxo | Sim | Sim | Sim | (oculto) | (oculto) | Não (fixo em 60 dias) |
 | Distribuição | **Só squad** | Não | Não | Não | Não | Não |
 | Rebalanceamento | **Só squad** | Não | Não | Não | Não | Não |
 | Qualidade dos dados | Sim | Sim | Sim | Sim | Sim | Não |
@@ -163,10 +163,10 @@ Conferido no código de cada endpoint. "Sim" = filtra os dados exibidos; "Parcia
 
 Notas:
 
-- **Parcial (tipo/prioridade) nas telas de capacidade**: a carga e a capacidade de cada pessoa são calculadas sobre *todas* as issues abertas dela dentro do squad/projeto; os filtros de tipo e prioridade **não** reduzem a carga (a capacidade de uma pessoa não depende do tipo da tarefa). O filtro de pessoa limita as linhas exibidas.
-- **Épicos** usa todas as issues do squad/projeto; pessoa, tipo e prioridade são ignorados (na barra eles aparecem, mas não alteram a tabela).
-- **Visão geral**: os cartões do rodapé "Squads" sempre mostram os três squads (respeitam projeto, tipo e prioridade, mas não o filtro de squad nem o de pessoa).
-- **Distribuição e Rebalanceamento** consideram apenas o squad. A lista "Sugestões aguardando decisão" mostra as pendentes de todos os squads.
+- **Filtros ocultos**: em cada tela, a barra mostra apenas os filtros que alteram os números. Em Épicos, Carga por pessoa, Capacidade e Gargalos, tipo e prioridade ficam ocultos, porque a capacidade de uma pessoa não depende do tipo da tarefa e a carga considera todas as issues abertas dela. Em Distribuição e Rebalanceamento só o squad aparece.
+- **Visão geral**: os cartões do rodapé "Squads" respeitam squad, projeto, pessoa, tipo e prioridade.
+- **Distribuição**: a tabela de pendentes e a lista de sugestões aguardando decisão respeitam o squad escolhido.
+- **Datas e fuso**: "no prazo", D-1/D-2 e "dia do vencimento" usam o dia civil no fuso configurado em `JIRADASH_TZ` (padrão America/Sao_Paulo) em todas as telas.
 
 ### 2.4 Exemplos passo a passo
 
@@ -894,18 +894,12 @@ O arquivo é UTF-8 com BOM, separador `;`, decimal com vírgula. Use *Dados > Ob
 **Como atualizar os dados?**
 Em modo Jira há sincronização automática a cada `JIRADASH_SYNC_MIN` minutos e uma reconciliação completa por dia; a tela Sincronização permite disparar manualmente. No demo, não há sincronização.
 
-### Pontos de atenção conhecidos (inconsistências observadas ao escrever este manual)
+### Observações e limites conhecidos
 
-Estas observações vêm da leitura do código e das telas; não estão corrigidas neste manual:
-
-1. **Visão geral:** o cartão "Negligenciadas" (em andamento sem atualização > 7 d) pode mostrar 0 enquanto a Central de atenção mostra "Negligenciadas: 3", porque a Central soma "sem atualização" + "paradas no status" (que podem repetir a mesma issue).
-2. **Visão geral:** o cartão "Ciclo P50" usa seta com sentido invertido (▲ verde = ciclo menor).
-3. **Visão geral:** os cartões por squad ignoram os filtros de squad e pessoa e o período.
-4. **Épicos** ignora os filtros de pessoa, tipo e prioridade, embora apareçam na barra.
-5. **Distribuição:** "Sugestões pendentes" e a lista de sugestões não respeitam o filtro de squad, e a tabela "Pendentes" só respeita o squad.
-6. **Capacidade/Carga/Gargalos:** tipo e prioridade não alteram a carga (apenas squad, projeto e pessoa).
-7. **Integridade:** o texto de ajuda não menciona o requisito de 12 pontos para o nível "alto" (e os requisitos do "médio").
-8. **"No prazo"** usa a data de resolução em UTC na Visão geral/Fechadas e no fuso local em Metas e prazos; os valores podem divergir levemente.
-9. **Metas e prazos, "Por tipo":** inclui os tipos Checklist e Review (apenas "Epic" é excluído), o que pode contar trabalho duas vezes (pai e filha).
-10. **Riscos:** a lista só mostra score ≥ 30; a gaveta de issues com score < 30 mostra "baixo".
-11. **Campos de data** podem exibir `mm/dd/yyyy` conforme o idioma configurado no navegador (nas capturas deste manual, feitas em navegador automatizado).
+1. **Central de atenção × cartão "Negligenciadas":** o cartão da Visão geral conta issues em andamento sem atualização há mais de 7 dias; a Central soma essas com as "paradas no status", sem contar a mesma issue duas vezes. Por isso a Central pode mostrar um número maior.
+2. **Ciclo P50:** a seta mostra a direção real da variação; a cor verde indica melhora (ciclo menor é melhor).
+3. **Riscos:** a lista mostra só risco médio e alto (pontuação ≥ 30); issues com pontuação menor aparecem como "baixo" na gaveta de detalhe, mas não na lista.
+4. **Metas e prazos, "Por tipo":** Checklist e Review são issues diferentes, cada uma com seu vencimento, e entram separadamente. Para olhar só um deles, use o filtro Tipo.
+5. **Campos de data** exibem o formato do idioma do navegador (dd/mm/aaaa em navegador em português do Brasil; as capturas deste manual foram feitas em navegador automatizado e podem mostrar mm/dd/yyyy).
+6. **Demonstração:** as ocupações muito altas de algumas pessoas (por exemplo, acima de 250%) vêm de issues "Demanda acumulada" geradas de propósito para exercitar alertas e rebalanceamento.
+7. **Níveis de atenção da Integridade:** alto = ≥ 12 pontos, ≥ 3× a mediana da equipe e ≥ 3 sinais graves; médio = ≥ 6 pontos e ≥ 2× a mediana.
