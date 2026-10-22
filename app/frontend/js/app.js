@@ -8,8 +8,9 @@ const ROUTES = [
   ["grp", "Governança"], ["qualidade", "Qualidade dos dados", "☑"], ["auditoria", "Auditoria", "☰"], ["sync", "Sincronização", "⟳"],
 ];
 const TITLES = Object.fromEntries(ROUTES.filter((r) => r[0] !== "grp").map((r) => [r[0], r[1]]));
+TITLES.tarefas = "Tarefas";
 const FILTERS = [["squad", "Squad"], ["project", "Projeto"], ["person", "Pessoa"], ["type", "Tipo"], ["priority", "Prioridade"]];
-const NO_FILTER = new Set(["auditoria", "sync"]);
+const NO_FILTER = new Set(["auditoria", "sync", "tarefas"]);
 // filtros que de fato alteram cada tela (os demais ficam ocultos para não enganar)
 const SQ_PR = ["squad", "project"], SQ_PR_PE = ["squad", "project", "person"];
 const FILTERS_BY_SCREEN = { epicos: SQ_PR, pessoas: SQ_PR_PE, capacidade: SQ_PR_PE, gargalos: SQ_PR_PE, distribuicao: ["squad"], rebalanceamento: ["squad"] };

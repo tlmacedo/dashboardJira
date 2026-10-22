@@ -177,7 +177,7 @@ def pair_row(a: Analytics, p: m.IssueRec, r: m.IssueRec) -> dict:
     }
 
 
-def review_view(a: Analytics) -> dict:
+def review_pairs(a: Analytics):
     allr = a.load_all()
     by_key = {r.key: r for r in allr}
     start = a.f.date_from or a.today - timedelta(days=89)
@@ -201,6 +201,11 @@ def review_view(a: Analytics) -> dict:
         for r in kids:
             pairs.append((p, r))
     rows = [pair_row(a, p, r) for p, r in pairs]
+    return start, end, pairs, rows, orphans
+
+
+def review_view(a: Analytics) -> dict:
+    start, end, pairs, rows, orphans = review_pairs(a)
     n = len(rows)
     done = [x for x in rows if x["ciclo_review_d"] is not None]
 
@@ -314,7 +319,7 @@ SEVERITY = {"prazo_resgatado": 3, "apropriacao": 3, "fechamento_instantaneo": 3,
 CRIT_LABELS = {"urgente", "sla", "regressao"}
 
 
-def integrity_view(a: Analytics) -> dict:
+def integrity_core(a: Analytics):
     start = a.f.date_from or a.today - timedelta(days=89)
     end = a.f.date_to or a.today
     pool = [r for r in a.recs() if r.type not in a.review_types or True]
@@ -414,6 +419,11 @@ def integrity_view(a: Analytics) -> dict:
                 i = j + 1
             else:
                 i += 1
+    return start, end, ev, resolved_in
+
+
+def integrity_view(a: Analytics) -> dict:
+    start, end, ev, resolved_in = integrity_core(a)
     # ---- agregação por pessoa
     denom: Counter = Counter()
     ok_cur: Counter = Counter()
@@ -513,18 +523,18 @@ def alerts_view(a: Analytics) -> dict:
     soon = [x for x in cap["ausencias"] if x["inicio"] <= (a.today + timedelta(days=14)).isoformat()]
     est = next((c for c in q["checks"] if c["id"] == "sem_estimativa"), {"pct": 0})
     items = [
-        ("Vencidas", ov["vencidas"], "bad", "aberta", "abertas depois do vencimento"),
-        ("Risco alto", ov["risco_alto"], "bad", "riscos", "issues com pontuação ≥ 60"),
-        ("Pessoas acima da capacidade", len(over), "bad", "capacidade", "demanda das próximas 4 semanas > 110%"),
-        ("Atrasos previstos pela capacidade", len(cap["atrasos_previstos"]), "bad", "capacidade", "terminam depois do vencimento"),
-        ("Negligenciadas", ng["sem_atualizacao"], "warn", "negligenciadas", "sem atualização ou paradas no status"),
-        ("Sem responsável", ng["sem_responsavel"], "warn", "negligenciadas", "abertas sem pessoa atribuída"),
-        ("Bloqueadas", ng["bloqueadas"], "warn", "negligenciadas", "status de bloqueio ou impedimento"),
-        ("Ausências nos próximos 14 dias", len(soon), "info", "capacidade", "avalie rebalancear antes"),
-        ("Pessoas com folga", len(idle), "info", "distribuicao", "candidatas a receber trabalho"),
-        ("Meta de prazo", None if gl["kpis"]["no_prazo_pct"] is None else f"{gl['kpis']['no_prazo_pct']}%", "bad" if (gl["kpis"]["no_prazo_pct"] or 100) < gl["metas"]["no_prazo_pct"] else "ok", "metas", f"meta {gl['metas']['no_prazo_pct']}%"),
-        ("Pares checklist×review com alerta", rv["kpis"]["com_alerta_pct"] if rv["kpis"]["com_alerta_pct"] is None else f"{rv['kpis']['com_alerta_pct']}%", "warn", "review", "vencimento, revisor e fechamento"),
-        ("Pessoas com indícios de adulteração (alto)", ig["resumo"]["pessoas_alto"], "bad", "integridade", "revisão humana necessária"),
-        ("Issues sem estimativa", f"{est['pct']}%", "warn" if est["pct"] > 20 else "ok", "qualidade", "enfraquece previsões"),
+        ("Vencidas", ov["vencidas"], "bad", "aberta", "abertas depois do vencimento", ["vencidas"]),
+        ("Risco alto", ov["risco_alto"], "bad", "riscos", "issues com pontuação ≥ 60", ["risco","alto"]),
+        ("Pessoas acima da capacidade", len(over), "bad", "capacidade", "demanda das próximas 4 semanas > 110%", ["sobrecarregados"]),
+        ("Atrasos previstos pela capacidade", len(cap["atrasos_previstos"]), "bad", "capacidade", "terminam depois do vencimento", ["slips"]),
+        ("Negligenciadas", ng["sem_atualizacao"], "warn", "negligenciadas", "sem atualização ou paradas no status", ["neglig2"]),
+        ("Sem responsável", ng["sem_responsavel"], "warn", "negligenciadas", "abertas sem pessoa atribuída", ["neglig","sem_responsavel"]),
+        ("Bloqueadas", ng["bloqueadas"], "warn", "negligenciadas", "status de bloqueio ou impedimento", ["bloqueadas"]),
+        ("Ausências nos próximos 14 dias", len(soon), "info", "capacidade", "avalie rebalancear antes", ["ausentes14"]),
+        ("Pessoas com folga", len(idle), "info", "distribuicao", "candidatas a receber trabalho", None),
+        ("Meta de prazo", None if gl["kpis"]["no_prazo_pct"] is None else f"{gl['kpis']['no_prazo_pct']}%", "bad" if (gl["kpis"]["no_prazo_pct"] or 100) < gl["metas"]["no_prazo_pct"] else "ok", "metas", f"meta {gl['metas']['no_prazo_pct']}%", ["meta","atrasadas"]),
+        ("Pares checklist×review com alerta", rv["kpis"]["com_alerta_pct"] if rv["kpis"]["com_alerta_pct"] is None else f"{rv['kpis']['com_alerta_pct']}%", "warn", "review", "vencimento, revisor e fechamento", ["r_pares","com_alerta"]),
+        ("Pessoas com indícios de adulteração (alto)", ig["resumo"]["pessoas_alto"], "bad", "integridade", "revisão humana necessária", ["i_alto","alto"]),
+        ("Issues sem estimativa", f"{est['pct']}%", "warn" if est["pct"] > 20 else "ok", "qualidade", "enfraquece previsões", ["qualidade","sem_estimativa"]),
     ]
-    return {"itens": [{"titulo": t, "valor": v, "tom": (tone if v not in (0, "0%", None) else "ok"), "tela": scr, "detalhe": d} for t, v, tone, scr, d in items]}
+    return {"itens": [{"titulo": t, "valor": v, "tom": (tone if v not in (0, "0%", None) else "ok"), "tela": scr, "detalhe": d, "drill": dr} for t, v, tone, scr, d, dr in items]}

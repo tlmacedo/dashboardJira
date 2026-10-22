@@ -1,4 +1,7 @@
 const $ = (sel, root = document) => root.querySelector(sel);
+/* KD: mapa rótulo-do-card -> [kind, v1, v2, extra] (ou função que o devolve) definido por tela */
+let __kd = {};
+const KD = (m) => { __kd = m || {}; };
 const state = { filters: {}, meta: null, sync: null, cache: {} };
 
 async function api(path, params = {}, opts = {}) {
@@ -13,10 +16,11 @@ async function api(path, params = {}, opts = {}) {
   return r.json();
 }
 
-function kpi(label, value, { foot = "", tone = "", delta = null, unit = "", lowerIsBetter = false } = {}) {
+function kpi(label, value, { foot = "", tone = "", delta = null, unit = "", lowerIsBetter = false, drill = null } = {}) {
+  if (!drill && __kd[label]) { const k = __kd[label]; drill = typeof k === "function" ? k() : k; }
   let d = "";
   if (delta != null) d = `<span class="delta ${delta === 0 ? "flat" : (delta > 0) !== lowerIsBetter ? "up" : "down"}" title="variação vs. período anterior (verde = melhora)">${delta > 0 ? "▲" : delta < 0 ? "▼" : "■"} ${fmtN(Math.abs(delta), 1)}%</span>`;
-  return `<div class="card kpi ${tone}"><div class="lbl">${escx(label)}</div><div class="val">${value == null ? "—" : escx(value)}${unit ? `<small style="font-size:.9rem;color:var(--mute)"> ${unit}</small>` : ""}${d}</div><div class="foot">${foot}</div></div>`;
+  return `<div class="card kpi ${tone} ${drill ? "clickable" : ""}" ${drill ? dlAttr(...drill) : ""}><div class="lbl">${escx(label)}</div><div class="val">${value == null ? "—" : escx(value)}${unit ? `<small style="font-size:.9rem;color:var(--mute)"> ${unit}</small>` : ""}${d}</div><div class="foot">${foot}${drill ? ' <span class="hint">▸ ver tasks</span>' : ""}</div></div>`;
 }
 const card = (title, sub, body, cls = "") => `<section class="card ${cls}"><h3>${escx(title)}</h3>${sub ? `<p class="sub">${sub}</p>` : ""}${body}</section>`;
 const pill = (txt, tone = "mute") => `<span class="pill ${tone}">${escx(txt)}</span>`;

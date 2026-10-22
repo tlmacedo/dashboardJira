@@ -84,3 +84,13 @@ svg text{fill:var(--mute);font-size:11px}svg .grid-line{stroke:var(--line)}
   .shell{grid-template-columns:1fr}.side{position:fixed;left:-270px;width:260px;z-index:40;transition:left .2s}.side.open{left:0}
   .only-mobile{display:inline-block}.top{padding:10px 14px}main{padding:14px}.g-2{grid-template-columns:1fr}
 }
+
+.clickable{cursor:pointer}
+.card.kpi.clickable:hover,.bar-row.clickable:hover{outline:2px solid var(--accent);outline-offset:-2px;border-radius:8px}
+rect.clickable:hover{opacity:.75;stroke:var(--ink);stroke-width:1}
+.c.clickable:hover{outline:2px solid var(--accent)}
+.hint{color:var(--accent);font-size:.72rem;white-space:nowrap}
+a.dl{font-weight:600;text-decoration:underline dotted}
+.modal-bg{position:fixed;inset:0;background:rgba(10,16,28,.55);z-index:20;display:flex;align-items:flex-start;justify-content:center;padding:4vh 16px;overflow:auto}
+.modal{background:var(--panel);border:1px solid var(--line);border-radius:14px;box-shadow:0 20px 60px rgba(0,0,0,.35);width:min(1180px,100%);padding:18px 20px}
+.drawer{z-index:40}

@@ -1,10 +1,12 @@
 const wk = (iso) => fmtDM(iso);
+const addDays = (iso, n) => { const d = new Date(iso + "T12:00:00"); d.setDate(d.getDate() + n); return d.toISOString().slice(0, 10); };
 const toneBy = (v, bad, warn) => (v >= bad ? "bad" : v >= warn ? "warn" : "ok");
 const ocTone = (v) => (v > 1.1 ? "bad" : v > 0.85 ? "warn" : "ok");
 
 const SCREENS = {
 /* ------------------------------------------------------------------ 1 */
 async visao(root, f) {
+  KD({ "Abertas": ["abertas"], "Concluídas (30 d)": ["fechadas", "", "", { date_from: addDays(state.meta.today, -29), date_to: state.meta.today }], "Ciclo P50": ["fechadas", "", "", { date_from: addDays(state.meta.today, -29), date_to: state.meta.today }], "No prazo (30 d)": ["meta", "no_prazo", "", { date_from: addDays(state.meta.today, -29), date_to: state.meta.today }], "Vencidas": ["vencidas"], "Negligenciadas": ["negligenciadas"], "Bloqueadas": ["bloqueadas"], "Risco alto": ["risco", "alto"] });
   const [d, al] = await Promise.all([api("overview", f), api("alerts", f)]), c = d.cards;
   const tp = d.throughput;
   root.innerHTML = `
@@ -18,9 +20,9 @@ async visao(root, f) {
     ${kpi("Bloqueadas", c.bloqueadas, { tone: c.bloqueadas ? "warn" : "ok" })}
     ${kpi("Risco alto", c.risco_alto, { tone: c.risco_alto ? "bad" : "ok", foot: `${c.risco_medio} de risco médio` })}
   </div>
-  ${card("Central de atenção", "O que pede ação agora. Clique para abrir a tela.", `<div class="grid g-kpi" style="gap:8px">${al.itens.map((i) => `<a href="#/${i.tela}" style="text-decoration:none;color:inherit;border:1px solid var(--line);border-radius:10px;padding:8px 10px;display:block"><div class="note">${escx(i.titulo)}</div><div style="font-size:1.4rem;font-weight:650;color:var(--${i.tom === "bad" ? "bad" : i.tom === "warn" ? "warn" : i.tom === "ok" ? "ok" : "ink"})">${i.tom === "bad" ? "▲ " : i.tom === "warn" ? "● " : ""}${escx(i.valor ?? "—")}</div><div class="note">${escx(i.detalhe)}</div></a>`).join("")}</div>`, "wide")}
+  ${card("Central de atenção", "O que pede ação agora. Clique para abrir a tela.", `<div class="grid g-kpi" style="gap:8px">${al.itens.map((i) => `<div class="${i.drill ? "clickable" : ""}" ${i.drill ? dlAttr(...i.drill) : ""} style="border:1px solid var(--line);border-radius:10px;padding:8px 10px;display:block"><div class="note">${escx(i.titulo)}</div><div style="font-size:1.4rem;font-weight:650;color:var(--${i.tom === "bad" ? "bad" : i.tom === "warn" ? "warn" : i.tom === "ok" ? "ok" : "ink"})">${i.tom === "bad" ? "▲ " : i.tom === "warn" ? "● " : ""}${escx(i.valor ?? "—")}</div><div class="note">${escx(i.detalhe)} · ${i.drill ? '<span class="hint">▸ ver tasks</span> · ' : ""}<a href="#/${i.tela}">abrir tela</a></div></div>`).join("")}</div>`, "wide")}
   <div class="grid g-2" style="margin-top:14px">
-    ${card("Entregas por semana", "Itens concluídos (exclui cancelados e duplicados)", colChart(tp, { label: (x) => wk(x.week), value: (x) => x.count, title: "Entregas por semana" }))}
+    ${card("Entregas por semana", "Itens concluídos (exclui cancelados e duplicados)", colChart(tp, { label: (x) => wk(x.week), value: (x) => x.count, title: "Entregas por semana", drill: (x) => ["fechadas_semana", x.week] }))}
     ${card("Quando o backlog aberto termina?", `Monte Carlo sobre as últimas ${d.forecast_backlog.samples} semanas · confiança: ${escx(d.forecast_backlog.confidence)}`,
       d.forecast_backlog.weeks ? `<div class="grid g-3">${[["P50", "metade das simulações"], ["P85", "compromisso seguro"], ["P95", "cenário conservador"]].map(([k, t]) => `<div><div class="lbl note">${k} · ${t}</div><div style="font-size:1.7rem;font-weight:650">${d.forecast_backlog.weeks[k.toLowerCase()]} sem.</div></div>`).join("")}</div><p class="note">${c.abertas} itens abertos. Assume o ritmo recente e que nenhum item novo entra.</p>` : '<div class="empty">Sem histórico suficiente.</div>')}
   </div>
@@ -38,6 +40,7 @@ async visao(root, f) {
 
 /* ------------------------------------------------------------------ 2 */
 async aberta(root, f) {
+  KD({ "Abertas": ["abertas"], "Acima do P85": ["acima_p85"] });
   const d = await api("open", f);
   const col = (cat) => ({ todo: "var(--c5)", active: "var(--c1)", wait: "var(--c6)", blocked: "var(--bad)" }[cat] || "var(--c5)");
   root.innerHTML = `
@@ -48,10 +51,10 @@ async aberta(root, f) {
     ${kpi("Acima do P85", d.issues.filter((i) => d.aging.p85 && i.category !== "todo" && i.idade_d > d.aging.p85).length, { tone: "warn", foot: "em andamento" })}
   </div>
   <div class="grid g-3" style="margin-top:14px">
-    ${card("Por status", "Onde o trabalho está parado", hbars(d.by_status.map((s) => ({ label: s.status, value: s.count, cat: s.category })), { colorOf: (x) => col(x.cat) }))}
-    ${card("Por prioridade", "", hbars(d.by_priority.map((p) => ({ label: p.priority, value: p.count })), { color: "var(--c4)" }))}
-    ${card("Idade", "Desde o início do trabalho (ou criação)", hbars(d.age_buckets.map((p) => ({ label: p.bucket, value: p.count })), { color: "var(--c3)" }))}
-    ${card("Vencimento", "", hbars(d.due_buckets.map((p) => ({ label: p.bucket, value: p.count })), { colorOf: (x) => (x.label === "vencidas" ? "var(--bad)" : x.label === "vence em 7 d" ? "var(--warn)" : "var(--c5)") }))}
+    ${card("Por status", "Onde o trabalho está parado", hbars(d.by_status.map((s) => ({ label: s.status, value: s.count, cat: s.category, drill: ["status", s.status] })), { colorOf: (x) => col(x.cat) }))}
+    ${card("Por prioridade", "", hbars(d.by_priority.map((p) => ({ label: p.priority, value: p.count, drill: ["prioridade", p.priority] })), { color: "var(--c4)" }))}
+    ${card("Idade", "Desde o início do trabalho (ou criação)", hbars(d.age_buckets.map((p) => ({ label: p.bucket, value: p.count, drill: ["idade", p.bucket] })), { color: "var(--c3)" }))}
+    ${card("Vencimento", "", hbars(d.due_buckets.map((p) => ({ label: p.bucket, value: p.count, drill: ["vencimento", p.bucket] })), { colorOf: (x) => (x.label === "vencidas" ? "var(--bad)" : x.label === "vence em 7 d" ? "var(--warn)" : "var(--c5)") }))}
   </div>
   ${card("Issues abertas", `Clique numa linha para o detalhe · <a href="/api/export/open.csv?${new URLSearchParams(f)}">exportar CSV</a>`, table(issueCols([{ k: "no_status_d", label: "No status (d)", num: true }, { k: "previsao", label: "Previsão", render: (r) => fmtDate(r.previsao) }, riskCol]), d.issues, { onClick: openIssue }), "wide")}`;
 },
@@ -63,7 +66,7 @@ async negligenciadas(root, f) {
   const help = { sem_atualizacao: `Em andamento e sem mudança há mais de ${d.idle_days} dias.`, sem_responsavel: "Sem pessoa atribuída.", vencidas: "Venceram e continuam abertas.", bloqueadas: "Em status de bloqueio ou com impedimento sinalizado.", paradas_no_status: "Há mais que 2× a mediana histórica do status atual (mín. 3 d).", a_fazer_antigas: "Criadas há mais de 30 dias e nunca iniciadas." };
   let active = Object.keys(labels).find((k) => d.counts[k]) || "sem_atualizacao";
   const draw = () => {
-    root.innerHTML = `<div class="grid g-kpi">${Object.keys(labels).map((k) => kpi(labels[k], d.counts[k], { tone: d.counts[k] ? (k === "vencidas" ? "bad" : "warn") : "ok" })).join("")}</div>
+    root.innerHTML = `<div class="grid g-kpi">${Object.keys(labels).map((k) => kpi(labels[k], d.counts[k], { tone: d.counts[k] ? (k === "vencidas" ? "bad" : "warn") : "ok", drill: ["neglig", k] })).join("")}</div>
     <div style="margin-top:14px">${tabs("tb", Object.keys(labels).map((k) => [k, labels[k], d.counts[k]]), active)}
     <p class="note">${help[active]}</p>${card(labels[active], "", table(issueCols([{ k: "no_status_d", label: "No status (d)", num: true }, riskCol]), d.groups[active], { onClick: openIssue }), "wide")}</div>`;
     $("#tb").onclick = (e) => { const b = e.target.closest("button"); if (b) { active = b.dataset.tab; draw(); } };
@@ -73,6 +76,7 @@ async negligenciadas(root, f) {
 
 /* ------------------------------------------------------------------ 4 */
 async fechadas(root, f) {
+  KD({ "Concluídas": ["fechadas"], "Ciclo P50 / P85": ["fechadas"], "Lead time P50 / P85": ["fechadas"], "No prazo": () => ["meta", "no_prazo", "", { date_from: d.periodo.de, date_to: d.periodo.ate }], "Canceladas/descartadas": ["canceladas"] });
   const d = await api("closed", f);
   root.innerHTML = `
   <div class="grid g-kpi">
@@ -84,13 +88,13 @@ async fechadas(root, f) {
     ${kpi("Canceladas/descartadas", d.totais.canceladas_ou_descartadas, { foot: "fora das métricas de entrega" })}
   </div>
   <div class="grid g-2" style="margin-top:14px">
-    ${card("Entregas por semana", "", colChart(d.throughput, { label: (x) => wk(x.week), value: (x) => x.count, title: "Entregas por semana" }))}
+    ${card("Entregas por semana", "", colChart(d.throughput, { label: (x) => wk(x.week), value: (x) => x.count, title: "Entregas por semana", drill: (x) => ["fechadas_semana", x.week] }))}
     ${card("Dispersão do tempo de ciclo", "Cada ponto é uma issue; linhas = percentis do período", scatter(d.scatter, [{ name: "P50", v: d.ciclo.p50, color: "var(--ok)" }, { name: "P85", v: d.ciclo.p85, color: "var(--warn)" }, { name: "P95", v: d.ciclo.p95, color: "var(--bad)" }], { title: "Dispersão do tempo de ciclo" }))}
-    ${card("Por tipo", "", hbars(d.by_type.map((x) => ({ label: x.type, value: x.count })), { color: "var(--c2)" }))}
-    ${card("Por projeto", "", hbars(d.by_project.map((x) => ({ label: x.project, value: x.count })), { color: "var(--c4)" }))}
+    ${card("Por tipo", "", hbars(d.by_type.map((x) => ({ label: x.type, value: x.count, drill: ["fechadas_tipo", x.type] })), { color: "var(--c2)" }))}
+    ${card("Por projeto", "", hbars(d.by_project.map((x) => ({ label: x.project, value: x.count, drill: ["fechadas_projeto", x.project] })), { color: "var(--c4)" }))}
   </div>
   ${card("Entregas por pessoa", "Ordem alfabética, de propósito. 'Finalizou' = responsável na conclusão; 'participou' inclui quem trabalhou em algum momento. Use para conversar sobre fluxo, não para ranquear.", table([
-    { k: "nome", label: "Pessoa" }, { k: "finalizadas", label: "Finalizou", num: true }, { k: "participou", label: "Participou", num: true },
+    { k: "nome", label: "Pessoa" }, { k: "finalizadas", label: "Finalizou", num: true, render: (r) => dlLink(r.finalizadas, "fechadas_pessoa", r.person_id ?? "None") }, { k: "participou", label: "Participou", num: true, render: (r) => dlLink(r.participou, "fechadas_pessoa", r.person_id ?? "None", "participou") },
     { k: "pontos", label: "Pontos", num: true }, { k: "ciclo_p50_d", label: "Ciclo P50 (d)", num: true, render: (r) => fmtN(r.ciclo_p50_d, 1) },
     { k: "ciclo_p85_d", label: "P85 (d)", num: true, render: (r) => fmtN(r.ciclo_p85_d, 1) }, { k: "tempo_ativo_h", label: "Tempo ativo (h)", num: true, render: (r) => fmtN(r.tempo_ativo_h, 0) },
     { k: "estimado_h", label: "Estimado (h)", num: true, render: (r) => fmtN(r.estimado_h, 0) }, { k: "gasto_h", label: "Registrado (h)", num: true, render: (r) => fmtN(r.gasto_h, 0) },
@@ -106,6 +110,7 @@ async fechadas(root, f) {
 
 /* ------------------------------------------------------------------ 5 */
 async negativas(root, f) {
+  KD({ "Reabertas": ["neg", "reabertas"], "Devolvidas": ["neg", "devolvidas"], "Canceladas/descartadas": ["neg", "canceladas_descartadas"], "Concluídas com atraso": ["neg", "concluidas_atrasadas"], "Abertas vencidas": ["neg", "abertas_vencidas"], "Estouro de estimativa": ["neg", "estouro_estimativa"], "Muitas trocas de responsável": ["neg", "muitas_trocas_responsavel"], "Taxa de reabertura": ["neg", "reabertas"], "Taxa de devolução": ["neg", "devolvidas"], "Taxa de atraso": ["neg", "concluidas_atrasadas"] });
   const d = await api("negative", f);
   const labels = { reabertas: "Reabertas", devolvidas: "Devolvidas", canceladas_descartadas: "Canceladas/descartadas", concluidas_atrasadas: "Concluídas com atraso", abertas_vencidas: "Abertas vencidas", estouro_estimativa: "Estouro de estimativa", muitas_trocas_responsavel: "Muitas trocas de responsável" };
   const help = { reabertas: "Voltaram de Concluído para outro status.", devolvidas: "Retornaram a uma etapa anterior do fluxo (ex.: revisão → desenvolvimento).", canceladas_descartadas: "Resolução negativa: cancelado, duplicado, não será feito.", concluidas_atrasadas: "Resolvidas depois do vencimento.", abertas_vencidas: "Ainda abertas e já vencidas.", estouro_estimativa: "Horas registradas acima de 125% do estimado.", muitas_trocas_responsavel: "3 ou mais trocas de responsável." };
@@ -121,7 +126,7 @@ async negativas(root, f) {
     ${card(labels[active], "A coluna 'Maior tempo' mostra em qual status a issue mais ficou.", table(issueCols([
       { k: "maior", label: "Maior tempo", render: (r) => { const e = Object.entries(r.tempo_por_status_d || {})[0]; return e ? `${escx(e[0])}: ${fmtN(e[1], 1)} d` : "—"; } },
       { k: "reaberturas", label: "Reab.", num: true }, { k: "devolucoes", label: "Devol.", num: true }]), d.groups[active], { onClick: openIssue }), "wide")}</div>
-    ${card("Por responsável", "Contagens por categoria. Ordem alfabética; olhe padrões do time (ex.: um status que devolve muito), não culpados.", table([{ k: "nome", label: "Responsável" }, ...Object.keys(labels).map((k) => ({ k, label: labels[k], num: true, render: (r) => r[k] || "" }))], d.por_responsavel), "wide")}`;
+    ${card("Por responsável", "Contagens por categoria. Ordem alfabética; olhe padrões do time (ex.: um status que devolve muito), não culpados.", table([{ k: "nome", label: "Responsável" }, ...Object.keys(labels).map((k) => ({ k, label: labels[k], num: true, render: (r) => dlLink(r[k] || "", "neg", k, r.person_id ?? "None") }))], d.por_responsavel), "wide")}`;
     $("#tb").onclick = (e) => { const b = e.target.closest("button"); if (b) { active = b.dataset.tab; draw(); } };
   };
   draw();
@@ -137,8 +142,8 @@ async tempo(root, f) {
     ${kpi("Paradas além do normal", d.abertas_paradas.length, { tone: d.abertas_paradas.length ? "warn" : "ok", foot: "abertas com tempo no status acima de 1,5× a mediana" })}</div>
   <div class="grid g-2" style="margin-top:14px">
   ${card("Tempo por status (concluídas)", "Mediana e P85 em dias · barra = P85", d.status.map((s) => `<div class="bar-row" style="grid-template-columns:120px 1fr 120px"><span>${escx(s.status)}</span><span class="track"><span class="fill" style="display:block;width:${(100 * s.p85_d) / mx}%;background:${s.categoria === "active" ? "var(--c1)" : s.categoria === "blocked" ? "var(--bad)" : "var(--c6)"}"></span></span><b style="text-align:right">${fmtN(s.p50_d, 1)} / ${fmtN(s.p85_d, 1)} d</b></div>`).join("") + legend([["ativo", "var(--c1)"], ["espera/revisão", "var(--c6)"], ["bloqueado", "var(--bad)"]]))}
-  ${card("Onde o tempo é gasto", "Participação no tempo total das concluídas", hbars(d.status.map((s) => ({ label: s.status, value: s.participacao_pct })), { color: "var(--c4)", fmt: (v) => fmtN(v, 1) + "%" }))}</div>
-  ${card("Mediana por pessoa e status (dias)", "Compara padrões de espera por etapa. Células vazias = sem amostra.", heat(d.matriz.map((m) => m.nome), d.colunas, d.matriz.map((m) => d.colunas.map((c) => m.valores[c] ?? null)), { fmt: (v) => fmtN(v, 1), level: (v) => (v > 6 ? "bad" : v > 3 ? "warn" : "ok"), title: "Mediana por pessoa e status" }), "wide")}
+  ${card("Onde o tempo é gasto", "Participação no tempo total das concluídas", hbars(d.status.map((s) => ({ label: s.status, value: s.participacao_pct, drill: ["tempo_status", s.status] })), { color: "var(--c4)", fmt: (v) => fmtN(v, 1) + "%" }))}</div>
+  ${card("Mediana por pessoa e status (dias)", "Compara padrões de espera por etapa. Células vazias = sem amostra.", heat(d.matriz.map((m) => m.nome), d.colunas, d.matriz.map((m) => d.colunas.map((c) => m.valores[c] ?? null)), { fmt: (v) => fmtN(v, 1), level: (v) => (v > 6 ? "bad" : v > 3 ? "warn" : "ok"), title: "Mediana por pessoa e status", drillOf: (i, j, v) => (v == null ? null : ["tempo_status", d.colunas[j], String(d.matriz[i].person_id ?? "None")]) }), "wide")}
   ${card("Abertas paradas além do normal", "Tempo no status atual comparado com a mediana histórica desse status", table([{ k: "key", label: "Issue", render: (r) => jiraLink(r.key) }, { k: "summary", label: "Resumo", render: (r) => escx(r.summary.slice(0, 55)) }, { k: "assignee", label: "Responsável" }, { k: "status", label: "Status" }, { k: "dias", label: "Dias no status", num: true }, { k: "mediana_status_d", label: "Mediana (d)", num: true }], d.abertas_paradas), "wide")}`;
 },
 
@@ -149,17 +154,18 @@ async pessoas(root, f) {
     ${kpi("Maior ocupação", fmtN((d.equidade.max ?? 0) * 100) + "%", { foot: "demanda ÷ capacidade das próximas 4 semanas" })}
     ${kpi("Menor ocupação", fmtN((d.equidade.min ?? 0) * 100) + "%")}</div>
   ${card("Carga por pessoa", `Ordem ${escx(d.ordem)}. Ocupação = demanda das próximas 4 semanas (horas restantes distribuídas até cada vencimento) ÷ capacidade líquida do período (descontadas ausências e feriados).`, table([
-    { k: "nome", label: "Pessoa" }, { k: "abertas", label: "Abertas", num: true }, { k: "wip", label: "WIP", num: true },
-    { k: "horas_restantes", label: "Fila (h)", num: true, render: (r) => fmtN(r.horas_restantes, 0) },
+    { k: "nome", label: "Pessoa" }, { k: "abertas", label: "Abertas", num: true, render: (r) => dlLink(r.abertas, "p_abertas", r.person_id) }, { k: "wip", label: "WIP", num: true, render: (r) => dlLink(r.wip, "p_abertas", r.person_id, "wip") },
+    { k: "horas_restantes", label: "Fila (h)", num: true, render: (r) => dlLink(fmtN(r.horas_restantes, 0), "p_abertas", r.person_id) },
     { k: "capacidade_4s_h", label: "Capacidade 4 sem. (h)", num: true, render: (r) => fmtN(r.capacidade_4s_h, 0) },
     { k: "utilizacao_4s", label: "Ocupação", num: true, render: (r) => `<div style="min-width:130px"><div class="track" style="background:var(--bg);height:8px;border-radius:5px;overflow:hidden"><div style="height:100%;width:${Math.min(100, r.utilizacao_4s * 100)}%;background:${r.utilizacao_4s > 1.1 ? "var(--bad)" : r.utilizacao_4s > 0.85 ? "var(--warn)" : "var(--ok)"}"></div></div><b>${r.utilizacao_4s > 1.1 ? "▲ " : ""}${fmtN(r.utilizacao_4s * 100)}%</b></div>` },
     { k: "dias_ausencia_4s", label: "Ausência (d)", num: true }, { k: "horas_registradas_30d", label: "Horas reg. 30 d", num: true, render: (r) => fmtN(r.horas_registradas_30d, 0) },
-    { k: "itens_acima_p85", label: "> P85", num: true }, { k: "vencidas", label: "Vencidas", num: true }, { k: "itens_risco_alto", label: "Risco alto", num: true },
+    { k: "itens_acima_p85", label: "> P85", num: true, render: (r) => dlLink(r.itens_acima_p85, "p_abertas", r.person_id, "p85") }, { k: "vencidas", label: "Vencidas", num: true, render: (r) => dlLink(r.vencidas, "p_abertas", r.person_id, "vencidas") }, { k: "itens_risco_alto", label: "Risco alto", num: true, render: (r) => dlLink(r.itens_risco_alto, "p_abertas", r.person_id, "risco") },
   ], d.pessoas), "wide")}`;
 },
 
 /* ------------------------------------------------------------------ 8 */
 async riscos(root, f) {
+  KD({ "Risco alto": ["risco", "alto"], "Risco médio": ["risco", "medio"] });
   const d = await api("risks", f);
   root.innerHTML = `<div class="grid g-kpi">${kpi("Risco alto", d.resumo["alto"] || 0, { tone: "bad" })}${kpi("Risco médio", d.resumo["médio"] || 0, { tone: "warn" })}</div>
   <p class="note" style="margin-top:8px">${escx(d.nota)} Clique numa linha para ver cada fator e quantos pontos ele somou.</p>
@@ -170,12 +176,13 @@ async riscos(root, f) {
 
 /* ------------------------------------------------------------------ 9 */
 async previsao(root, f) {
+  KD({ "Backlog aberto": ["abertas"] });
   const d = await api("forecast", f), q = d.quando_termina;
   root.innerHTML = `<div class="grid g-kpi">${kpi("Backlog aberto", d.backlog_aberto, { unit: "itens" })}
     ${["p50", "p85", "p95"].map((k) => kpi(`Termina em (${k.toUpperCase()})`, q.weeks ? q.weeks[k] : null, { unit: "semanas", foot: q.datas ? "até " + fmtDate(q.datas[k]) : "" })).join("")}
     ${kpi("Confiança", q.confidence, { tone: q.confidence === "ok" ? "ok" : "warn", foot: `${q.samples} semanas de histórico (mín. recomendado: 8)` })}</div>
   <div class="grid g-2" style="margin-top:14px">
-   ${card("Throughput semanal", "Base da simulação", colChart(d.throughput_semanal, { label: (x) => wk(x.week), value: (x) => x.count, title: "Throughput semanal" }))}
+   ${card("Throughput semanal", "Base da simulação", colChart(d.throughput_semanal, { label: (x) => wk(x.week), value: (x) => x.count, title: "Throughput semanal", drill: (x) => ["fechadas_semana", x.week] }))}
    ${card("Quantos itens até…", "Estimativa conservadora (P85 = 85% das simulações entregam pelo menos isso)", `<table><thead><tr><th>Horizonte</th><th class="num">P50</th><th class="num">P85</th><th class="num">P95</th></tr></thead><tbody>${Object.entries(d.quantos_ate).map(([k, v]) => `<tr><td>${k.replace("s", " semanas")}</td>${["p50", "p85", "p95"].map((p) => `<td class="num">${v.items ? v.items[p] : "—"}</td>`).join("")}</tr>`).join("")}</tbody></table><p class="note">${escx(d.metodo)}</p>`)}</div>
   ${card("Previsão por issue em andamento", "P50/P85: itens históricos mais longos que a idade atual. 'Pela capacidade': fila da pessoa preenchida com horas líquidas (ausências e feriados). 'Atrasa' = alguma previsão passa do vencimento.", table([
     { k: "key", label: "Issue", render: (r) => jiraLink(r.key) }, { k: "assignee", label: "Responsável" }, { k: "status", label: "Status" }, { k: "idade_d", label: "Idade (d)", num: true },
@@ -190,25 +197,26 @@ async gargalos(root, f) {
   const keys = d.estados.map((e) => e.status);  // etapas abertas; o concluído acumulado esconderia as demais bandas
   root.innerHTML = `${card("Trabalho em aberto por etapa (60 dias)", "Diagrama de fluxo cumulativo sem a etapa final. Banda que alarga = trabalho acumulando naquela etapa; bandas estáveis = fluxo saudável.", stackedArea(d.cfd, keys, { title: "Trabalho em aberto por etapa" }), "wide")}
   <div class="grid g-2" style="margin-top:14px">
-  ${card("Estado das etapas", escx(d.nota), table([{ k: "status", label: "Etapa" }, { k: "itens", label: "Itens", num: true }, { k: "limite_wip", label: "Limite WIP", num: true, render: (r) => r.limite_wip ?? "—" },
+  ${card("Estado das etapas", escx(d.nota), table([{ k: "status", label: "Etapa" }, { k: "itens", label: "Itens", num: true, render: (r) => dlLink(r.itens, "etapa", r.status) }, { k: "limite_wip", label: "Limite WIP", num: true, render: (r) => r.limite_wip ?? "—" },
     { k: "uso_limite", label: "Uso", num: true, render: (r) => (r.uso_limite != null ? fmtN(r.uso_limite * 100) + "%" : "—") }, { k: "mediana_historica_d", label: "Mediana (d)", num: true }, { k: "variacao_15d", label: "Δ 15 d", num: true, render: (r) => (r.variacao_15d > 0 ? "+" : "") + r.variacao_15d },
     { k: "gargalo", label: "Gargalo?", render: (r) => (r.gargalo ? pill("▲ sim", "bad") : pill("não", "ok")) }], d.estados))}
-  ${card("Pessoas acima da capacidade", "Demanda das próximas 4 semanas > 110% da capacidade", d.sobrecarregados.length ? hbars(d.sobrecarregados.map((u) => ({ label: u.nome, value: u.utilizacao_4s * 100 })), { color: "var(--bad)", fmt: (v) => fmtN(v) + "%", max: Math.max(150, ...d.sobrecarregados.map((u) => u.utilizacao_4s * 100)) }) : '<div class="empty">Ninguém acima da capacidade.</div>')}
-  ${card("Folga disponível", "Ocupação abaixo de 50%: candidatos naturais para receber trabalho", d.ociosos.length ? hbars(d.ociosos.map((u) => ({ label: u.nome, value: u.utilizacao_4s * 100 })), { color: "var(--ok)", fmt: (v) => fmtN(v) + "%", max: 100 }) : '<div class="empty">Sem folga relevante.</div>')}</div>`;
+  ${card("Pessoas acima da capacidade", "Demanda das próximas 4 semanas > 110% da capacidade", d.sobrecarregados.length ? hbars(d.sobrecarregados.map((u) => ({ label: u.nome, value: u.utilizacao_4s * 100, drill: ["p_abertas", String(u.person_id)] })), { color: "var(--bad)", fmt: (v) => fmtN(v) + "%", max: Math.max(150, ...d.sobrecarregados.map((u) => u.utilizacao_4s * 100)) }) : '<div class="empty">Ninguém acima da capacidade.</div>')}
+  ${card("Folga disponível", "Ocupação abaixo de 50%: candidatos naturais para receber trabalho", d.ociosos.length ? hbars(d.ociosos.map((u) => ({ label: u.nome, value: u.utilizacao_4s * 100, drill: ["p_abertas", String(u.person_id)] })), { color: "var(--ok)", fmt: (v) => fmtN(v) + "%", max: 100 }) : '<div class="empty">Sem folga relevante.</div>')}</div>`;
 },
 
 /* ------------------------------------------------------------------ 11 */
 async capacidade(root, f) {
+  KD({ "Atrasos previstos": ["slips"], "Por causa de ausência": ["slips", "ausência"], "Alertas de carga/ausência": ["sobrecarregados"] });
   const d = await api("capacity", f);
   const rows = d.pessoas;
   root.innerHTML = `<div class="grid g-kpi">${kpi("Alertas de carga/ausência", d.alertas.length, { tone: d.alertas.length ? "warn" : "ok" })}
     ${kpi("Atrasos previstos", d.atrasos_previstos.length, { tone: d.atrasos_previstos.length ? "bad" : "ok", foot: "previsão pela capacidade > vencimento" })}
     ${kpi("Por causa de ausência", d.atrasos_previstos.filter((x) => x.por_ausencia).length, { tone: "warn", foot: "no prazo se ninguém se ausentasse" })}
     ${kpi("Equidade (Jain)", fmtN(d.equidade.jain, 2))}</div>
-  ${card("Mapa de capacidade (próximas semanas)", "Demanda ÷ capacidade líquida de cada semana. Cada issue espalha suas horas até o vencimento (sem vencimento: 2 semanas se iniciada, 4 se não). ▲ = acima de 110%. ‘aus.’ = semana sem capacidade; as horas aparecem para replanejar.", heat(rows.map((r) => r.nome), d.semanas.map(wk), rows.map((r) => r.semanas.slice(0, d.semanas.length).map((s) => (s.capacidade_h < 0.5 ? (s.carga_h > 0.5 ? "▲ " + (s.ausente_dias >= 1 ? "aus. " : "") + fmtN(s.carga_h) + " h" : (s.ausente_dias >= 1 ? "aus." : null)) : s.ocupacao))), { title: "Mapa de capacidade" }), "wide")}
+  ${card("Mapa de capacidade (próximas semanas)", "Demanda ÷ capacidade líquida de cada semana. Cada issue espalha suas horas até o vencimento (sem vencimento: 2 semanas se iniciada, 4 se não). ▲ = acima de 110%. ‘aus.’ = semana sem capacidade; as horas aparecem para replanejar.", heat(rows.map((r) => r.nome), d.semanas.map(wk), rows.map((r) => r.semanas.slice(0, d.semanas.length).map((s) => (s.capacidade_h < 0.5 ? (s.carga_h > 0.5 ? "▲ " + (s.ausente_dias >= 1 ? "aus. " : "") + fmtN(s.carga_h) + " h" : (s.ausente_dias >= 1 ? "aus." : null)) : s.ocupacao))), { title: "Mapa de capacidade", drillOf: (i, j, v) => (v == null ? null : ["p_semana", String(rows[i].person_id), d.semanas[j]]) }), "wide")}
   <div class="grid g-2" style="margin-top:14px">
-   ${card("Alertas", "O que olhar antes que vire atraso", d.alertas.length ? `<ul class="stack" style="padding-left:18px">${d.alertas.map((a) => `<li>${pill(a.tipo, a.tipo === "carga" ? "bad" : "warn")} <b>${escx(a.nome)}</b> · sem. ${wk(a.semana)} · ${escx(a.detalhe)}</li>`).join("")}</ul>` : '<div class="empty">Sem alertas.</div>')}
-   ${card("Ausências planejadas", "Sem motivo detalhado (privacidade)", table([{ k: "nome", label: "Pessoa" }, { k: "inicio", label: "De", render: (r) => fmtDate(r.inicio) }, { k: "fim", label: "Até", render: (r) => fmtDate(r.fim) }, { k: "tipo", label: "Tipo" }, { k: "dias_uteis", label: "Dias úteis", num: true }], d.ausencias))}
+   ${card("Alertas", "O que olhar antes que vire atraso", d.alertas.length ? `<ul class="stack" style="padding-left:18px">${d.alertas.map((a) => `<li>${pill(a.tipo, a.tipo === "carga" ? "bad" : "warn")} <b>${dlLink(a.nome, "p_abertas", a.person_id)}</b> · sem. ${wk(a.semana)} · ${escx(a.detalhe)}</li>`).join("")}</ul>` : '<div class="empty">Sem alertas.</div>')}
+   ${card("Ausências planejadas", "Sem motivo detalhado (privacidade)", table([{ k: "nome", label: "Pessoa", render: (r) => dlLink(r.nome, "p_abertas", r.person_id) }, { k: "inicio", label: "De", render: (r) => fmtDate(r.inicio) }, { k: "fim", label: "Até", render: (r) => fmtDate(r.fim) }, { k: "tipo", label: "Tipo" }, { k: "dias_uteis", label: "Dias úteis", num: true }], d.ausencias))}
    ${card("Feriados no horizonte", "", d.feriados.length ? `<ul>${d.feriados.map((h) => `<li>${fmtDate(h.dia)} · ${escx(h.nome)}</li>`).join("")}</ul>` : '<div class="empty">Nenhum.</div>')}
    ${card("Rebalancear?", "O sistema propõe mover só issues não iniciadas, o mínimo necessário.", `<a href="#/rebalanceamento"><button>Ver sugestões de rebalanceamento</button></a>`)}</div>
   ${card("Atrasos previstos pela capacidade", "Issues que, pela fila e pelas horas líquidas da pessoa, terminam depois do vencimento", table([{ k: "key", label: "Issue", render: (r) => jiraLink(r.key) }, { k: "summary", label: "Resumo", render: (r) => escx(r.summary.slice(0, 55)) }, { k: "assignee", label: "Responsável" }, { k: "vencimento", label: "Venc.", render: (r) => fmtDate(r.vencimento) }, { k: "previsao", label: "Previsão", render: (r) => (r.previsao.includes("-") ? fmtDate(r.previsao) : escx(r.previsao)) }, { k: "por_ausencia", label: "Causa", render: (r) => (r.por_ausencia ? pill("ausência", "warn") : pill("carga", "bad")) }], d.atrasos_previstos), "wide")}`;
@@ -216,6 +224,7 @@ async capacidade(root, f) {
 
 /* ------------------------------------------------------------------ 12 */
 async distribuicao(root, f) {
+  KD({ "Aguardando distribuição": ["abertas"] });
   const pend = await api("distribution/pending", f);
   const sugg = await api("distribution/suggestions", { status: "pendente", squad: f.squad });
   const draw = (preview) => {
@@ -255,7 +264,7 @@ async rebalanceamento(root, f) {
 async qualidade(root, f) {
   const d = await api("quality", f);
   const names = { sem_estimativa: "Sem estimativa", sem_responsavel: "Sem responsável", sem_vencimento: "Sem vencimento", sem_epico: "Sem épico", em_andamento_sem_horas: "Em andamento sem horas registradas", sem_squad: "Sem squad mapeado", prioridade_padrao: "Prioridade padrão (média)" };
-  root.innerHTML = `<p class="note">${escx(d.nota)}</p><div class="grid g-3" style="margin-top:10px">${d.checks.map((c) => `<section class="card"><h3>${names[c.id]}</h3><div class="val" style="font-size:1.8rem;font-weight:650">${c.qtd} <small class="note">de ${d.total_abertas} (${fmtN(c.pct, 1)}%)</small></div><div class="track" style="background:var(--bg);height:8px;border-radius:5px;margin:8px 0;overflow:hidden"><div style="height:100%;width:${c.pct}%;background:${c.pct > 30 ? "var(--bad)" : c.pct > 10 ? "var(--warn)" : "var(--ok)"}"></div></div><div class="note">${c.exemplos.map(escx).join(", ")}</div></section>`).join("")}</div>`;
+  root.innerHTML = `<p class="note">${escx(d.nota)}</p><div class="grid g-3" style="margin-top:10px">${d.checks.map((c) => `<section class="card ${c.qtd ? "clickable" : ""}" ${c.qtd ? dlAttr("qualidade", c.id) : ""}><h3>${names[c.id]}</h3><div class="val" style="font-size:1.8rem;font-weight:650">${c.qtd} <small class="note">de ${d.total_abertas} (${fmtN(c.pct, 1)}%)</small></div><div class="track" style="background:var(--bg);height:8px;border-radius:5px;margin:8px 0;overflow:hidden"><div style="height:100%;width:${c.pct}%;background:${c.pct > 30 ? "var(--bad)" : c.pct > 10 ? "var(--warn)" : "var(--ok)"}"></div></div><div class="note">${c.exemplos.map(escx).join(", ")} ${c.qtd ? '<span class="hint">▸ ver todas as tasks</span>' : ""}</div></section>`).join("")}</div>`;
 },
 
 /* ------------------------------------------------------------------ 15 */
@@ -267,6 +276,7 @@ async auditoria(root) {
 
 /* ------------------------------------------------------------------ 16 */
 async meu(root, f) {
+  KD({ "Minhas abertas": ["abertas"] });
   if (!f.person) { root.innerHTML = '<div class="empty">Escolha uma pessoa no filtro “Pessoa” para ver o painel individual (visão da própria pessoa).</div>'; return; }
   const [o, p, c, r] = await Promise.all([api("open", f), api("people", { ...f }), api("capacity", { ...f }), api("risks", f)]);
   const me = p.pessoas[0];
