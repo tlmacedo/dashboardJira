@@ -371,11 +371,10 @@ class Analytics:
             "issues": sorted(rows, key=lambda x: -x["idade_d"]),
         }
 
-    def neglected(self, idle_days: int = 7) -> dict:
+    def neglected_sets(self, idle_days: int = 7) -> dict[str, list[m.IssueRec]]:
         op = self.open_recs()
-        hist, smed, plan = self.cycle_hist_days(), self.status_median_days(), self.plan()
-        row = lambda r: self.issue_row(r, hist, smed, plan)  # noqa: E731
-        groups = {
+        smed = self.status_median_days()
+        return {
             "sem_atualizacao": [r for r in op if (self.now - r.updated).days > idle_days and r.category in STARTED],
             "sem_responsavel": [r for r in op if r.assignee_id is None],
             "vencidas": [r for r in op if r.due and r.due < self.today],
@@ -384,6 +383,11 @@ class Analytics:
                                   max(3.0, 2 * smed.get(r.status, 1.5))],
             "a_fazer_antigas": [r for r in op if r.category == "todo" and (self.now - r.created).days > 30],
         }
+
+    def neglected(self, idle_days: int = 7) -> dict:
+        hist, smed, plan = self.cycle_hist_days(), self.status_median_days(), self.plan()
+        row = lambda r: self.issue_row(r, hist, smed, plan)  # noqa: E731
+        groups = self.neglected_sets(idle_days)
         return {"idle_days": idle_days,
                 "counts": {k: len(v) for k, v in groups.items()},
                 "groups": {k: sorted([row(r) for r in v], key=lambda x: -x["idade_d"])[:100] for k, v in groups.items()}}
@@ -449,7 +453,7 @@ class Analytics:
             "issues": sorted([self._closed_row(r) for r in allc], key=lambda x: x["resolved"], reverse=True)[:300],
         }
 
-    def negative_view(self) -> dict:
+    def negative_sets(self) -> tuple[date, date, dict[str, list[m.IssueRec]], list[m.IssueRec]]:
         start = self.f.date_from or self.today - timedelta(days=89)
         end = self.f.date_to or self.today
         pool = self.recs()
@@ -464,6 +468,10 @@ class Analytics:
                                    (r.category != "done" or (r.resolved and r.resolved.date() >= start))],
             "muitas_trocas_responsavel": [r for r in pool if m.reassign_count(r) >= 3 and r.updated.date() >= start],
         }
+        return start, end, cats, closed
+
+    def negative_view(self) -> dict:
+        start, end, cats, closed = self.negative_sets()
         rows = {k: sorted([self._closed_row(r) if r.resolved else self.issue_row(r, [], {}, None) for r in v],
                           key=lambda x: x["key"])[:150] for k, v in cats.items()}
         for k, v in cats.items():
@@ -688,7 +696,7 @@ class Analytics:
         sid_members = self.member_ids()
         for a in self.db.query(Absence).filter(Absence.end >= self.today).order_by(Absence.start):
             if a.person_id in sid_members:
-                abs_rows.append({"nome": self.name(a.person_id), "inicio": a.start.isoformat(), "fim": a.end.isoformat(),
+                abs_rows.append({"person_id": a.person_id, "nome": self.name(a.person_id), "inicio": a.start.isoformat(), "fim": a.end.isoformat(),
                                  "tipo": a.kind, "dias_uteis": sum(1 for k in range((a.end - a.start).days + 1)
                                                                    if cap.is_workday(a.start + timedelta(days=k), self.holidays))})
         hol = [{"dia": h.isoformat(), "nome": self.db.query(Holiday).filter_by(day=h).first().name}
@@ -711,11 +719,10 @@ class Analytics:
         return {"semanas": plan["weeks"][:weeks], "pessoas": rows, "alertas": alerts, "ausencias": abs_rows, "feriados": hol,
                 "equidade": self.fairness_from(rows), "atrasos_previstos": sorted(slips, key=lambda x: x["vencimento"])[:100]}
 
-    def quality(self) -> dict:
+    def quality_sets(self) -> dict[str, list[m.IssueRec]]:
         op = self.open_recs()
-        n = max(1, len(op))
         started = [r for r in op if r.category in STARTED]
-        checks = {
+        return {
             "sem_estimativa": [r for r in op if r.original_estimate_s is None and r.story_points is None],
             "sem_responsavel": [r for r in op if r.assignee_id is None],
             "sem_vencimento": [r for r in op if r.due is None],
@@ -724,6 +731,11 @@ class Analytics:
             "sem_squad": [r for r in op if r.squad_id is None],
             "prioridade_padrao": [r for r in op if (r.priority or "").lower() in ("medium", "média")],
         }
+
+    def quality(self) -> dict:
+        op = self.open_recs()
+        n = max(1, len(op))
+        checks = self.quality_sets()
         return {"total_abertas": len(op),
                 "checks": [{"id": k, "qtd": len(v), "pct": round(100 * len(v) / n, 1), "exemplos": [r.key for r in v[:8]]} for k, v in checks.items()],
                 "nota": "Previsão e carga dependem de estimativa; sem ela o sistema usa horas-padrão e marca baixa confiança."}

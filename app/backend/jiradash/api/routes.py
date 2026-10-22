@@ -15,7 +15,7 @@ from sqlalchemy.orm import Session
 from ..analytics import Analytics, Filters
 from ..config import settings
 from ..db import get_db
-from .. import cache, reports
+from .. import cache, drill as drill_mod, reports
 from ..models import AssignmentSuggestion, AuditLog, Issue, Person, SyncState
 
 router = APIRouter(prefix="/api")
@@ -79,6 +79,17 @@ def review(a: Analytics = Depends(A)):
 @router.get("/review/pair", dependencies=guard)
 def review_pair(key: str, a: Analytics = Depends(A)):
     return reports.pair_detail(a, key)
+
+
+@router.get("/drill", dependencies=guard)
+def drill(kind: str, v1: str = "", v2: str = "", a: Analytics = Depends(A)):
+    """Tasks por trás de um card ou item de card (mesmos filtros da tela de origem)."""
+    if kind not in drill_mod.KINDS:
+        raise HTTPException(422, f"kind desconhecido: {kind}")
+    try:
+        return cache.get_or_compute(("drill", kind, v1, v2, tuple(vars(a.f).values())), lambda: drill_mod.run(a, kind, v1, v2))
+    except (ValueError, KeyError) as e:
+        raise HTTPException(422, f"parâmetros inválidos para {kind}: {e}")
 
 
 @router.get("/alerts", dependencies=guard)

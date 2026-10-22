@@ -58,6 +58,8 @@ O modo demonstração gera ~900 issues, histórico de status, horas, férias e l
 | Ação | Distribuição · Rebalanceamento | sugerir/aprovar/trocar com motivo/rejeitar, ranking com os fatores |
 | Governança | Qualidade dos dados · Auditoria · Sincronização | dados faltantes que enfraquecem as previsões; quem decidiu o quê |
 
+**Detalhamento:** cartões, barras, colunas, células de mapas de calor e números de tabelas são clicáveis e abrem a lista de tasks que compõem aquele número (janela, nova aba por link `#/tarefas?...` e CSV). Endpoint: `GET /api/drill?kind=...&v1=...&v2=...`.
+
 Os filtros (squad, projeto, pessoa, tipo, prioridade, período; cada tela mostra só os que alteram os números) ficam na URL. Listas exportam CSV com os filtros no cabeçalho.
 
 ## Como a distribuição decide

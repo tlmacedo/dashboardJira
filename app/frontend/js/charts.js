@@ -11,7 +11,7 @@ function niceMax(v) {
   return (n <= 1 ? 1 : n <= 2 ? 2 : n <= 5 ? 5 : 10) * p;
 }
 
-function colChart(items, { w = 560, h = 190, color = C[0], label = (d) => d.label, value = (d) => d.value, title = "" } = {}) {
+function colChart(items, { w = 560, h = 190, color = C[0], label = (d) => d.label, value = (d) => d.value, title = "", drill = null } = {}) {
   const pad = { l: 34, r: 8, t: 10, b: 24 }, iw = w - pad.l - pad.r, ih = h - pad.t - pad.b;
   const max = niceMax(Math.max(1, ...items.map(value)));
   const bw = iw / Math.max(1, items.length);
@@ -22,7 +22,8 @@ function colChart(items, { w = 560, h = 190, color = C[0], label = (d) => d.labe
   }
   items.forEach((d, i) => {
     const v = value(d), bh = (ih * v) / max, x = pad.l + i * bw + bw * 0.14;
-    s += `<rect x="${x}" y="${pad.t + ih - bh}" width="${bw * 0.72}" height="${bh}" rx="3" fill="${color}"><title>${escx(label(d))}: ${fmtN(v)}</title></rect>`;
+    const dr = drill ? drill(d) : null;
+    s += `<rect ${dr ? dlAttr(...dr) + ' class="clickable"' : ""} x="${x}" y="${pad.t + ih - bh}" width="${bw * 0.72}" height="${Math.max(bh, dr ? 3 : 0)}" rx="3" fill="${color}"><title>${escx(label(d))}: ${fmtN(v)}${dr ? " · clique para ver as tasks" : ""}</title></rect>`;
     if (items.length <= 16 || i % 2 === 0) s += `<text x="${x + bw * 0.36}" y="${h - 8}" text-anchor="middle">${escx(label(d))}</text>`;
   });
   return s + "</svg>";
@@ -99,28 +100,29 @@ function sparkline(vals, { w = 110, h = 28 } = {}) {
 function hbars(items, { color = C[0], max, fmt = (v) => fmtN(v), colorOf } = {}) {
   const m = max ?? Math.max(1, ...items.map((d) => d.value));
   if (!items.length) return '<div class="empty">Sem dados.</div>';
-  return items.map((d) => `<div class="bar-row"><span title="${escx(d.label)}">${escx(d.label)}</span><span class="track"><span class="fill" style="display:block;width:${Math.max(1, (100 * d.value) / m)}%;background:${colorOf ? colorOf(d) : color}"></span></span><b style="text-align:right">${fmt(d.value)}</b></div>`).join("");
+  return items.map((d) => `<div class="bar-row ${d.drill ? "clickable" : ""}" ${d.drill ? dlAttr(...d.drill) : ""}><span title="${escx(d.label)}">${escx(d.label)}</span><span class="track"><span class="fill" style="display:block;width:${Math.max(1, (100 * d.value) / m)}%;background:${colorOf ? colorOf(d) : color}"></span></span><b style="text-align:right">${fmt(d.value)}</b></div>`).join("");
 }
 
 function legend(pairs) { return `<div class="legend">${pairs.map(([n, c]) => `<span><i style="background:${c}"></i>${escx(n)}</span>`).join("")}</div>`; }
 
 /* Mapa de calor com valor numérico e símbolo em cada célula (não depende só da cor). */
-function heat(rowsLabels, colLabels, matrix, { fmt = (v) => fmtN(v * 100) + "%", level = (v) => (v > 1.1 ? "bad" : v > 0.85 ? "warn" : v > 0 ? "ok" : "mute"), nameW = 130, title = "" } = {}) {
+function heat(rowsLabels, colLabels, matrix, { drillOf = null, fmt = (v) => fmtN(v * 100) + "%", level = (v) => (v > 1.1 ? "bad" : v > 0.85 ? "warn" : v > 0 ? "ok" : "mute"), nameW = 130, title = "" } = {}) {
   const cols = colLabels.length;
   let s = `<div class="heat" role="table" aria-label="${escx(title)}" style="grid-template-columns:${nameW}px repeat(${cols},minmax(48px,1fr))"><span></span>${colLabels.map((c) => `<span class="h">${escx(c)}</span>`).join("")}`;
   rowsLabels.forEach((r, i) => {
     s += `<span class="n" title="${escx(r)}">${escx(r)}</span>`;
-    matrix[i].forEach((v) => {
-      if (v == null || typeof v === "string") { s += `<span class="c pill mute" style="border-radius:4px;justify-content:center">${v == null ? "—" : escx(v)}</span>`; return; }
+    matrix[i].forEach((v, j) => {
+      const dr = drillOf ? drillOf(i, j, v) : null, at = dr ? dlAttr(...dr) : "", cl = dr ? " clickable" : "";
+      if (v == null || typeof v === "string") { s += `<span ${at} class="c pill mute${cl}" style="border-radius:4px;justify-content:center">${v == null ? "—" : escx(v)}</span>`; return; }
       const lv = level(v), sym = lv === "bad" ? "▲ " : lv === "warn" ? "● " : "";
-      s += `<span class="c pill ${lv}" style="border-radius:4px;justify-content:center">${sym}${fmt(v)}</span>`;
+      s += `<span ${at} class="c pill ${lv}${cl}" style="border-radius:4px;justify-content:center">${sym}${fmt(v)}</span>`;
     });
   });
   return s + "</div>";
 }
 
 /* Colunas empilhadas por período; rows: [{label, ...chaves}] */
-function stackedCols(rows, keys, colors, { w = 700, h = 230, title = "", line = null } = {}) {
+function stackedCols(rows, keys, colors, { w = 700, h = 230, title = "", line = null, drillOf = null } = {}) {
   const pad = { l: 36, r: 8, t: 10, b: 26 }, iw = w - pad.l - pad.r, ih = h - pad.t - pad.b;
   const max = niceMax(Math.max(1, ...rows.map((r) => keys.reduce((a, k) => a + (r[k] || 0), 0))));
   const bw = iw / Math.max(1, rows.length);
@@ -128,7 +130,7 @@ function stackedCols(rows, keys, colors, { w = 700, h = 230, title = "", line = 
   for (let i = 0; i <= 4; i++) { const y = pad.t + ih - (ih * i) / 4; s += `<line class="grid-line" x1="${pad.l}" x2="${w - pad.r}" y1="${y}" y2="${y}"/><text x="${pad.l - 5}" y="${y + 4}" text-anchor="end">${fmtN((max * i) / 4)}</text>`; }
   rows.forEach((r, i) => {
     let acc = 0; const x = pad.l + i * bw + bw * 0.12;
-    keys.forEach((k, j) => { const v = r[k] || 0; if (!v) return; const bh = (ih * v) / max; acc += bh; s += `<rect x="${x}" y="${pad.t + ih - acc}" width="${bw * 0.76}" height="${bh}" fill="${colors[j]}"><title>${escx(r.label)} · ${escx(k)}: ${v}</title></rect>`; });
+    keys.forEach((k, j) => { const v = r[k] || 0; if (!v) return; const bh = (ih * v) / max; acc += bh; const dr = drillOf ? drillOf(r, k) : null; s += `<rect ${dr ? dlAttr(...dr) + ' class="clickable"' : ""} x="${x}" y="${pad.t + ih - acc}" width="${bw * 0.76}" height="${bh}" fill="${colors[j]}"><title>${escx(r.label)} · ${escx(k)}: ${v}${dr ? " · clique para ver as tasks" : ""}</title></rect>`; });
     if (rows.length <= 14 || i % 2 === 0) s += `<text x="${x + bw * 0.38}" y="${h - 8}" text-anchor="middle">${escx(r.label)}</text>`;
   });
   return s + "</svg>" + legend(keys.map((k, j) => [k, colors[j]]));

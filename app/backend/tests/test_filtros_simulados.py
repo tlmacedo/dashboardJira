@@ -56,8 +56,8 @@ def endpoints():
     for p, d in app.openapi()["paths"].items():
         if "get" not in d or not p.startswith("/api"):
             continue
-        if p == "/api/review/pair":
-            continue  # exige ?key=; coberto em teste próprio
+        if p in ("/api/review/pair", "/api/drill"):
+            continue  # exigem parâmetros próprios; cobertos em test_reports.py e test_drill.py
         if "{view}" in p:
             out += [p.replace("{view}", v) for v in ("open", "closed", "risks")]
         else:
