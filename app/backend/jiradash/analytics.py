@@ -275,7 +275,9 @@ class Analytics:
     def by_squad(self) -> list[dict]:
         out = []
         for s in self.squads.values():
-            a = Analytics(self.db, Filters(squad=s.key, project=self.f.project, type=self.f.type,
+            if self.f.squad and s.key != self.f.squad:
+                continue
+            a = Analytics(self.db, Filters(squad=s.key, project=self.f.project, person=self.f.person, type=self.f.type,
                                            priority=self.f.priority), self.now)
             op = a.open_recs()
             cl = a.done_ok(a.closed_recs(self.today - timedelta(days=29), self.today))

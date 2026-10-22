@@ -100,7 +100,7 @@ SCREENS.integridade = async function (root, f) {
   <div class="grid g-2" style="margin-top:14px">
    ${card("Evidências por sinal", "Gravidade ▲ a ▲▲▲", hbars(rs.por_sinal.map((s) => ({ label: s.nome, value: s.qtd, g: s.gravidade })), { colorOf: (x) => (x.g >= 3 ? "var(--bad)" : x.g === 2 ? "var(--warn)" : "var(--c5)") }))}
    ${card("Impacto nas metas", "Diferença entre % no prazo atual e pela data original (pontos percentuais). Positivo alto = prazos empurrados.", hbars(people.filter((p) => p.impacto_na_meta_pp > 0).map((p) => ({ label: p.nome, value: p.impacto_na_meta_pp })), { color: "var(--warn)", fmt: (v) => "+" + fmtN(v, 1) + " pp", max: 50 }) )}</div>
-  ${card("Pessoas por nível de atenção", "Taxa = pontos de gravidade ÷ concluídas (mín. 8) comparada com a mediana da equipe. Alto exige ≥ 3× a mediana e ≥ 3 sinais graves. Ordenado por pontos; não é nota de desempenho.", table([
+  ${card("Pessoas por nível de atenção", `Taxa = pontos de gravidade ÷ concluídas (mín. 8) comparada com a mediana da equipe. ${escx(d.regras_nivel)} Ordenado por pontos; não é nota de desempenho.`, table([
     { k: "nome", label: "Pessoa" }, { k: "nivel", label: "Atenção", render: (r) => pill((r.nivel === "alto" ? "▲ " : r.nivel === "médio" ? "● " : "✓ ") + r.nivel, tone[r.nivel]) }, { k: "pontos", label: "Pontos", num: true },
     { k: "vezes_a_mediana", label: "× mediana", num: true, render: (r) => fmtN(r.vezes_a_mediana, 1) + "×" }, { k: "concluidas", label: "Concluídas", num: true },
     { k: "sinais", label: "Sinais", render: (r) => Object.entries(r.sinais).map(([s, c]) => pill(`${(d.catalogo.find((x) => x.sinal === s) || {}).nome || s}: ${c}`, "mute")).join(" ") },

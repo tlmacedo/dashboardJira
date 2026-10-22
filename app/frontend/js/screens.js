@@ -11,7 +11,7 @@ async visao(root, f) {
   <div class="grid g-kpi">
     ${kpi("Abertas", c.abertas, { foot: `${c.em_andamento} em andamento` })}
     ${kpi("Concluídas (30 d)", c.concluidas_30d.value, { delta: c.concluidas_30d.delta_pct, foot: "vs. 30 d anteriores" })}
-    ${kpi("Ciclo P50", c.ciclo_p50_d.value != null ? fmtN(c.ciclo_p50_d.value, 1) : null, { unit: "d", delta: c.ciclo_p50_d.delta_pct == null ? null : -c.ciclo_p50_d.delta_pct, foot: `P85: ${fmtN(c.ciclo_p85_d, 1)} d` })}
+    ${kpi("Ciclo P50", c.ciclo_p50_d.value != null ? fmtN(c.ciclo_p50_d.value, 1) : null, { unit: "d", delta: c.ciclo_p50_d.delta_pct, lowerIsBetter: true, foot: `P85: ${fmtN(c.ciclo_p85_d, 1)} d` })}
     ${kpi("No prazo (30 d)", c.no_prazo_pct != null ? fmtN(c.no_prazo_pct, 1) + "%" : null, { tone: c.no_prazo_pct < 80 ? "warn" : "ok", foot: "entregues até o vencimento" })}
     ${kpi("Vencidas", c.vencidas, { tone: c.vencidas ? "bad" : "ok", foot: "abertas após o vencimento" })}
     ${kpi("Negligenciadas", c.negligenciadas, { tone: c.negligenciadas ? "warn" : "ok", foot: "em andamento sem atualização > 7 d" })}
@@ -163,7 +163,7 @@ async riscos(root, f) {
   const d = await api("risks", f);
   root.innerHTML = `<div class="grid g-kpi">${kpi("Risco alto", d.resumo["alto"] || 0, { tone: "bad" })}${kpi("Risco médio", d.resumo["médio"] || 0, { tone: "warn" })}</div>
   <p class="note" style="margin-top:8px">${escx(d.nota)} Clique numa linha para ver cada fator e quantos pontos ele somou.</p>
-  ${card("Issues em risco", "Pontuação de 0 a 100, explicável fator a fator", table([...issueCols().slice(0, 4), { k: "idade_d", label: "Idade (d)", num: true }, { k: "due", label: "Venc.", render: (r) => fmtDate(r.due) }, { k: "previsao", label: "Previsão", render: (r) => fmtDate(r.previsao) }, riskCol,
+  ${card("Issues em risco", "Somente risco médio e alto (pontuação ≥ 30 de 100), explicável fator a fator", table([...issueCols().slice(0, 4), { k: "idade_d", label: "Idade (d)", num: true }, { k: "due", label: "Venc.", render: (r) => fmtDate(r.due) }, { k: "previsao", label: "Previsão", render: (r) => fmtDate(r.previsao) }, riskCol,
     { k: "fatores", label: "Principal fator", render: (r) => escx(r.fatores_risco[0]?.why || "") }], d.issues, { onClick: openIssue }), "wide")}
   ${card("Sinais por pessoa", "Para apoiar e destravar, não para avaliar. Ordem alfabética.", table([{ k: "nome", label: "Pessoa" }, { k: "alto", label: "Risco alto", num: true, render: (r) => r.alto || "" }, { k: "medio", label: "Risco médio", num: true, render: (r) => r.medio || "" }, { k: "idade", label: "Idade > mediana", num: true, render: (r) => r.idade || "" }, { k: "parada", label: "Paradas", num: true, render: (r) => r.parada || "" }, { k: "estouro", label: "Estouro de horas", num: true, render: (r) => r.estouro || "" }], d.sinais_por_pessoa), "wide")}`;
 },
@@ -217,7 +217,7 @@ async capacidade(root, f) {
 /* ------------------------------------------------------------------ 12 */
 async distribuicao(root, f) {
   const pend = await api("distribution/pending", f);
-  const sugg = await api("distribution/suggestions", { status: "pendente" });
+  const sugg = await api("distribution/suggestions", { status: "pendente", squad: f.squad });
   const draw = (preview) => {
     root.innerHTML = `<div class="grid g-kpi">${kpi("Aguardando distribuição", pend.issues.length, { foot: "A fazer, sem responsável ou no nome do gerente" })}${kpi("Sugestões pendentes", sugg.filter((s) => s.tipo === "novo").length)}</div>
     <div class="banner" style="margin:12px 0">Modo <b>sugerir e aprovar</b>: o sistema calcula e explica; nada é atribuído sem decisão de um gerente. ${state.sync?.escrita_no_jira ? "Escrita no Jira <b>ligada</b>." : state.sync?.mode === "demo" ? "Demonstração: a aprovação altera só os dados fictícios." : "Escrita no Jira <b>desligada</b> (modo sombra): a decisão fica registrada, sem gravar no Jira."}</div>
@@ -231,7 +231,7 @@ async distribuicao(root, f) {
   let prev = "";
   if (arguments[2]) {
     prev = arguments[2].squads.map((s) => `<section class="card wide" style="margin-bottom:12px"><h3>${escx(s.squad)}: equidade antes ${fmtN(s.equidade_antes.jain, 2)} → depois ${fmtN(s.equidade_depois.jain, 2)}</h3><p class="sub">Maior ocupação projetada: ${fmtN((s.equidade_depois.max ?? 0) * 100)}% · menor: ${fmtN((s.equidade_depois.min ?? 0) * 100)}%. ${arguments[2].aviso}</p></section>`).join("");
-    const fresh = await api("distribution/suggestions", { status: "pendente" });
+    const fresh = await api("distribution/suggestions", { status: "pendente", squad: f.squad });
     sugg.length = 0; sugg.push(...fresh);
   }
   draw(prev);
@@ -239,7 +239,7 @@ async distribuicao(root, f) {
 
 /* ------------------------------------------------------------------ 13 */
 async rebalanceamento(root, f) {
-  const sugg = (await api("distribution/suggestions", { status: "pendente" })).filter((s) => s.tipo === "rebalanceamento");
+  const sugg = (await api("distribution/suggestions", { status: "pendente", squad: f.squad })).filter((s) => s.tipo === "rebalanceamento");
   root.innerHTML = `<div class="banner" style="margin:0 0 12px">Gatilho: ocupação projetada acima de 110% nas próximas 4 semanas (inclui o efeito de férias e licenças). Só issues <b>não iniciadas</b> são movidas, para não gerar troca de contexto. Há histerese: sem ganho claro, nada é movido.</div>
   <div class="row" style="margin-bottom:12px"><button id="gen">Calcular rebalanceamento</button></div><div id="res"></div>
   ${card("Movimentos aguardando decisão", "", sugg.length ? suggList(sugg) : '<div class="empty">Nenhum movimento pendente.</div>', "wide")}`;

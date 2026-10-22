@@ -140,8 +140,12 @@ def dist_suggest(body: SuggestIn, db: Session = Depends(get_db), who: str = Depe
 
 
 @router.get("/distribution/suggestions", dependencies=guard)
-def dist_list(status: str | None = None, db: Session = Depends(get_db)):
+def dist_list(status: str | None = None, squad: str | None = None, db: Session = Depends(get_db)):
     q = db.query(AssignmentSuggestion).order_by(AssignmentSuggestion.id.desc())
+    if squad:
+        from ..models import Squad
+        sq = db.query(Squad).filter_by(key=squad).first()
+        q = q.filter(AssignmentSuggestion.squad_id == (sq.id if sq else -1))
     if status:
         q = q.filter_by(status=status)
     names = {p.id: p.name for p in db.query(Person).all()}

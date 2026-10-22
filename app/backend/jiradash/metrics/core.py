@@ -19,6 +19,15 @@ import numpy as np
 DAY = 86400.0
 
 
+def local_date(dt: datetime) -> date:
+    """Data civil no fuso configurado (JIRADASH_TZ). Datas do banco estão em UTC sem fuso."""
+    from datetime import timezone
+    from zoneinfo import ZoneInfo
+
+    from ..config import settings
+    return dt.replace(tzinfo=timezone.utc).astimezone(ZoneInfo(settings.tz)).date()
+
+
 @dataclass
 class Transition:
     at: datetime
@@ -225,7 +234,7 @@ def estimate_ratio(rec: IssueRec) -> float | None:
 def on_time(rec: IssueRec) -> bool | None:
     if rec.resolved is None or rec.due is None:
         return None
-    return rec.resolved.date() <= rec.due
+    return local_date(rec.resolved) <= rec.due
 
 
 def jain_index(values: Sequence[float]) -> float | None:

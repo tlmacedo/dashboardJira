@@ -13,9 +13,9 @@ async function api(path, params = {}, opts = {}) {
   return r.json();
 }
 
-function kpi(label, value, { foot = "", tone = "", delta = null, unit = "" } = {}) {
+function kpi(label, value, { foot = "", tone = "", delta = null, unit = "", lowerIsBetter = false } = {}) {
   let d = "";
-  if (delta != null) d = `<span class="delta ${delta > 0 ? "up" : delta < 0 ? "down" : "flat"}" title="variação vs. período anterior">${delta > 0 ? "▲" : delta < 0 ? "▼" : "■"} ${fmtN(Math.abs(delta), 1)}%</span>`;
+  if (delta != null) d = `<span class="delta ${delta === 0 ? "flat" : (delta > 0) !== lowerIsBetter ? "up" : "down"}" title="variação vs. período anterior (verde = melhora)">${delta > 0 ? "▲" : delta < 0 ? "▼" : "■"} ${fmtN(Math.abs(delta), 1)}%</span>`;
   return `<div class="card kpi ${tone}"><div class="lbl">${escx(label)}</div><div class="val">${value == null ? "—" : escx(value)}${unit ? `<small style="font-size:.9rem;color:var(--mute)"> ${unit}</small>` : ""}${d}</div><div class="foot">${foot}</div></div>`;
 }
 const card = (title, sub, body, cls = "") => `<section class="card ${cls}"><h3>${escx(title)}</h3>${sub ? `<p class="sub">${sub}</p>` : ""}${body}</section>`;

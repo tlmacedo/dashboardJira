@@ -10,6 +10,9 @@ const ROUTES = [
 const TITLES = Object.fromEntries(ROUTES.filter((r) => r[0] !== "grp").map((r) => [r[0], r[1]]));
 const FILTERS = [["squad", "Squad"], ["project", "Projeto"], ["person", "Pessoa"], ["type", "Tipo"], ["priority", "Prioridade"]];
 const NO_FILTER = new Set(["auditoria", "sync"]);
+// filtros que de fato alteram cada tela (os demais ficam ocultos para não enganar)
+const SQ_PR = ["squad", "project"], SQ_PR_PE = ["squad", "project", "person"];
+const FILTERS_BY_SCREEN = { epicos: SQ_PR, pessoas: SQ_PR_PE, capacidade: SQ_PR_PE, gargalos: SQ_PR_PE, distribuicao: ["squad"], rebalanceamento: ["squad"] };
 const DATE_SCREENS = new Set(["fechadas", "negativas", "tempo", "metas", "review", "integridade"]);
 
 function parseHash() {
@@ -30,11 +33,13 @@ function renderFilters(cur, f) {
   const m = state.meta;
   if (NO_FILTER.has(cur)) { $("#filters").innerHTML = ""; return; }
   const opt = (list, val, all) => `<option value="">${all}</option>` + list.map(([v, l]) => `<option value="${escx(v)}" ${String(v) === String(val) ? "selected" : ""}>${escx(l)}</option>`).join("");
+  const allow = FILTERS_BY_SCREEN[cur];
   let h = `<select data-f="squad" aria-label="Squad">${opt(m.squads.map((s) => [s.key, s.name]), f.squad, "Todos os squads")}</select>
   <select data-f="project" aria-label="Projeto">${opt(m.projects.map((x) => [x, x]), f.project, "Todos os projetos")}</select>
   <select data-f="person" aria-label="Pessoa">${opt(m.people.filter((p) => p.role !== "gerente").map((p) => [p.id, p.name]), f.person, "Todas as pessoas")}</select>
   <select data-f="type" aria-label="Tipo">${opt(m.types.map((x) => [x, x]), f.type, "Todos os tipos")}</select>
   <select data-f="priority" aria-label="Prioridade">${opt(m.priorities.map((x) => [x, x]), f.priority, "Todas as prioridades")}</select>`;
+  if (allow) { const t = document.createElement("div"); t.innerHTML = h; t.querySelectorAll("select").forEach((x) => { if (!allow.includes(x.dataset.f)) x.remove(); }); h = t.innerHTML; }
   if (DATE_SCREENS.has(cur)) h += `<input type="date" data-f="date_from" value="${escx(f.date_from || "")}" aria-label="De"><input type="date" data-f="date_to" value="${escx(f.date_to || "")}" aria-label="Até">`;
   $("#filters").innerHTML = h;
   $("#filters").onchange = (e) => { const k = e.target.dataset.f; if (k) { const nf = { ...parseHash().f, [k]: e.target.value }; go(cur, nf); } };

@@ -460,6 +460,7 @@ def integrity_view(a: Analytics) -> dict:
                        "por_sinal": [{"sinal": s, "nome": SIGNALS[s][0], "qtd": c, "explicacao": SIGNALS[s][1], "gravidade": SEVERITY[s]} for s, c in by_signal.most_common()]},
             "pessoas": people, "evidencias": sorted(ev, key=lambda e: (-e["gravidade"], e["pessoa"]))[:600],
             "catalogo": [{"sinal": k, "nome": v[0], "explicacao": v[1], "gravidade": SEVERITY[k]} for k, v in SIGNALS.items()],
+            "regras_nivel": "alto = ≥ 12 pontos, ≥ 3× a mediana da equipe e ≥ 3 sinais graves; médio = ≥ 6 pontos e ≥ 2× a mediana.",
             "aviso": "Indícios para revisão humana, não prova de má-fé. Conferir cada evidência no Jira, ouvir a pessoa e considerar o contexto "
                      "(ex.: prorrogação autorizada pelo cliente). Não use como nota de desempenho."}
 
@@ -496,7 +497,10 @@ def alerts_view(a: Analytics) -> dict:
     ov = a.overview()["cards"]
     cap = a.capacity_view()
     q = a.quality()
-    ng = a.neglected()["counts"]
+    ngv = a.neglected()
+    ng = dict(ngv["counts"])
+    ng["sem_atualizacao"] = len({r["key"] for g in ("sem_atualizacao", "paradas_no_status") for r in ngv["groups"][g]})  # sem dupla contagem
+    ng["paradas_no_status"] = 0
     rv = review_view(a)
     ig = integrity_view(a)
     gl = goals_view(a)
@@ -509,7 +513,7 @@ def alerts_view(a: Analytics) -> dict:
         ("Risco alto", ov["risco_alto"], "bad", "riscos", "issues com pontuação ≥ 60"),
         ("Pessoas acima da capacidade", len(over), "bad", "capacidade", "demanda das próximas 4 semanas > 110%"),
         ("Atrasos previstos pela capacidade", len(cap["atrasos_previstos"]), "bad", "capacidade", "terminam depois do vencimento"),
-        ("Negligenciadas", ng["sem_atualizacao"] + ng["paradas_no_status"], "warn", "negligenciadas", "sem atualização ou paradas no status"),
+        ("Negligenciadas", ng["sem_atualizacao"], "warn", "negligenciadas", "sem atualização ou paradas no status"),
         ("Sem responsável", ng["sem_responsavel"], "warn", "negligenciadas", "abertas sem pessoa atribuída"),
         ("Bloqueadas", ng["bloqueadas"], "warn", "negligenciadas", "status de bloqueio ou impedimento"),
         ("Ausências nos próximos 14 dias", len(soon), "info", "capacidade", "avalie rebalancear antes"),
