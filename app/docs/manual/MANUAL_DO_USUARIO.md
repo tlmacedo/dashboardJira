@@ -94,6 +94,23 @@ A gaveta mostra: status, prioridade, tipo e nível de risco; responsável e squa
 
 ![Gaveta com explicação de risco](img/gaveta_risco.png)
 
+### 1.7.1 Ver as tasks de qualquer card (detalhamento)
+
+Quase tudo que mostra um número é clicável: cartões de indicadores (os que mostram "▸ ver tasks"), barras e colunas dos gráficos, células dos mapas de calor, números dentro das tabelas (sublinhados com pontilhado) e itens da Central de atenção. Ao clicar, abre uma janela com **as tasks que compõem aquele número**, calculadas com os mesmos filtros e o mesmo período da tela.
+
+![Janela com as tasks de uma fatia do gráfico de metas](img/detalhe_tasks_janela.png)
+
+Na janela:
+
+- **Filtrar por texto** (chave, resumo, pessoa, status) e **ordenar** clicando no título das colunas.
+- **Clicar numa linha** abre a gaveta de detalhe da issue (histórico de status, fatores de risco).
+- **Abrir em nova aba** leva a uma página própria com a mesma lista e os mesmos filtros (`#/tarefas?kind=...`), que pode ser compartilhada por link.
+- **Exportar CSV** baixa a lista (com o texto da coluna "Detalhe").
+- A coluna **Detalhe** explica por que a task entrou: dia da entrega em relação ao vencimento (D-2, atrasada…), horas da semana, tempo no status, evidências de integridade, alertas do par checklist × review etc.
+- A quantidade de tasks da janela é igual ao número do card; se não for (por exemplo, em "Evidências", que conta evidências e não issues), a descrição explica a diferença.
+
+![Mesma lista aberta em nova aba](img/detalhe_tasks_aba.png)
+
 ### 1.8 Dados em cache
 
 Os resultados de cada tela ficam em cache por 60 segundos (configurável). Se você acabou de sincronizar ou de decidir uma sugestão, o cache é invalidado automaticamente; fora isso, a diferença pode levar até um minuto para aparecer.

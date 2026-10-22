@@ -22,7 +22,7 @@ const DRILL_COLS = (rows) => {
     { k: "status", label: "Status", render: (r) => pill(r.status, r.bloqueada ? "bad" : "info") }, { k: "priority", label: "Prior." },
     { k: "created", label: "Criada", render: (r) => fmtDate(r.created) }, { k: "due", label: "Venc.", render: (r) => fmtDate(r.due) },
   ];
-  if (has("resolved")) c.push({ k: "resolved", label: "Resolvida", render: (r) => fmtDate(r.resolved) }, { k: "ciclo_d", label: "Ciclo (d)", num: true });
+  if (has("resolved")) c.push({ k: "resolved", label: "Resolvida", render: (r) => fmtDate(r.resolved) }, { k: "ciclo_d", label: "Ciclo (d)", num: true, render: (r) => fmtN(r.ciclo_d, 1) });
   c.push({ k: "idade_d", label: "Idade (d)", num: true, render: (r) => fmtN(r.idade_d, 1) });
   if (has("nivel_risco")) c.push(riskCol);
   if (has("extra")) c.push({ k: "extra", label: "Detalhe", render: (r) => escx(r.extra || "") });

@@ -105,3 +105,17 @@ def test_detalhe_respeita_filtros_e_traz_colunas(client):
     assert 0 < pay["total"] < todos and {i["squad"] for i in pay["issues"]} == {"Pagamentos"}
     row = pay["issues"][0]
     assert {"key", "summary", "assignee", "status", "priority", "idade_d", "created"} <= set(row)
+
+
+@pytest.mark.parametrize("filtros", [{}, {"squad": "pagamentos"}, {"project": "PAY"}, {"squad": "inexistente"}, {"person": 99999},
+                                     {"date_from": "2026-09-01", "date_to": "2026-09-30"}, {"date_from": "2030-01-01"}, {"type": "Bug", "priority": "Alta"}])
+@pytest.mark.parametrize("kind,v1,v2", [("abertas", "", ""), ("fechadas", "", ""), ("neg", "reabertas", ""), ("meta", "all", ""), ("r_pares", "all", ""),
+                                        ("i_sinal", "", ""), ("slips", "", ""), ("sobrecarregados", "", ""), ("tempo_status", "Em Revisão", ""), ("risco", "alto", "")])
+def test_detalhe_com_filtros_nunca_da_500(client, kind, v1, v2, filtros):
+    r = client.get("/api/drill", params={"kind": kind, "v1": v1, "v2": v2, **filtros})
+    assert r.status_code == 200, r.text[:200]
+    assert r.json()["total"] == len(r.json()["issues"]) or r.json()["truncado"]
+
+
+def test_detalhe_com_intervalo_invertido_da_422(client):
+    assert client.get("/api/drill", params={"kind": "abertas", "date_from": "2026-10-10", "date_to": "2026-10-01"}).status_code == 422

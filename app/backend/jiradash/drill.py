@@ -340,7 +340,13 @@ def _meta(a, v1, v2):
     titles = {"no_prazo": "Concluídas no prazo", "antecipadas": "Antecipadas (D-1 ou antes)", "d1d2": "Entregues em D-1 ou D-2", "no_dia": "Entregues no dia do vencimento",
               "atrasadas": "Concluídas com atraso", "sem_venc": "Concluídas sem vencimento", "orig_no_prazo": "No prazo pela data original",
               "queda_original": "No prazo só por causa de prorrogação", "all": "Concluídas com vencimento"}
-    return titles.get(v1, f"Entregas: {v1}") + (f" · {' · '.join(f'{k}={v}' for k, v in q.items() if k != 'g')}" if q else ""), \
+    def pretty(k, v):
+        if k == "periodo":
+            return {"week": "semana de ", "month": "mês ", "day": "dia "}.get(q.get("g", "week"), "") + (date.fromisoformat(v).strftime("%d/%m/%Y") if len(v) == 10 else v)
+        if k == "pessoa":
+            return a.name(pid(v))
+        return v
+    return titles.get(v1, f"Entregas: {v1}") + (f" · {' · '.join(pretty(k, v) for k, v in q.items() if k != 'g')}" if q else ""), \
         f"Resolvidas de {start:%d/%m/%Y} a {end:%d/%m/%Y}; a coluna Detalhe mostra o dia da entrega em relação ao vencimento.", out
 
 
