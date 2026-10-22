@@ -71,7 +71,9 @@ def bootstrap(db: Session, online_holidays: bool = False) -> dict:
                                end=_d(m["end"]) if m.get("end") else None))
         squads += 1
     db.flush()
-    db.query(Absence).delete()
+    from .config import settings
+    if "absences" in cfg or settings.mode != "demo":  # no demo, as ausências geradas pelo seed não são apagadas
+        db.query(Absence).delete()
     for a in cfg.get("absences", []):
         p = people.get(a["person"])
         if p:

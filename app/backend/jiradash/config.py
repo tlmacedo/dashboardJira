@@ -7,6 +7,12 @@ from pathlib import Path
 
 import yaml
 
+try:  # carrega app/.env se existir (variáveis já definidas no ambiente têm prioridade)
+    from dotenv import load_dotenv
+    load_dotenv(Path(__file__).resolve().parents[2] / ".env")
+except ImportError:
+    pass
+
 ROOT = Path(__file__).resolve().parents[2]
 CONFIG_DIR = Path(os.getenv("JIRADASH_CONFIG_DIR", ROOT / "config"))
 

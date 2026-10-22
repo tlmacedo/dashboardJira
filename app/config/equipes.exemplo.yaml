@@ -32,3 +32,9 @@ absences:
 # Feriados nacionais já vêm embutidos (2026-2027). Acrescente estaduais/municipais/facultativos:
 holidays:
   - {date: 2027-02-09, name: Carnaval (ponto facultativo)}
+
+# Análise checklist x review: tipos de issue (nomes exatos no seu Jira). A review é subtarefa/filha do checklist.
+checklist_types: ["Checklist"]
+review_types: ["Review"]
+# Metas de prazo (%): resolvidas até o vencimento; resolvidas antecipadamente (D-1 ou antes)
+goals: {on_time_pct: 90, early_pct: 35}

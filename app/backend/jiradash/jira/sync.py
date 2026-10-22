@@ -7,13 +7,18 @@ from datetime import datetime, timedelta, timezone
 from sqlalchemy.orm import Session
 
 from ..config import load_teams
-from ..models import (AssigneeChange, Issue, Person, Squad, StatusTransition, SyncState, Worklog)
+from ..models import (AssigneeChange, ChangeEvent, Issue, Person, Squad, StatusTransition, SyncState, Worklog)
 from .client import JiraClient
 
 log = logging.getLogger("jiradash.sync")
 BASE_FIELDS = ["summary", "issuetype", "priority", "status", "resolution", "assignee", "reporter", "created",
                "updated", "resolutiondate", "duedate", "timeoriginalestimate", "timeestimate", "timespent",
                "labels", "components", "parent", "project"]
+
+
+# nome do campo no changelog -> nome interno ("Due Date" no DC; "duedate" no Cloud)
+TRACKED_FIELDS = {"duedate": "duedate", "Due Date": "duedate", "labels": "labels", "timeoriginalestimate": "timeoriginalestimate",
+                  "Original Estimate": "timeoriginalestimate", "priority": "priority", "resolution": "resolution"}
 
 
 def parse_dt(s: str | None) -> datetime | None:
@@ -110,7 +115,7 @@ class Syncer:
         return iss
 
     def _apply_changelog(self, iss: Issue, histories: list[dict]) -> None:
-        seen = {t.changelog_id for t in iss.transitions} | {a.changelog_id for a in iss.assignee_changes}
+        seen = {t.changelog_id for t in iss.transitions} | {a.changelog_id for a in iss.assignee_changes} | {e.changelog_id for e in iss.events}
         for h in histories:
             at = parse_dt(h["created"])
             for n, it in enumerate(h.get("items", [])):
@@ -121,6 +126,13 @@ class Syncer:
                 if it.get("field") == "status":
                     iss.transitions.append(StatusTransition(
                         changelog_id=cid, at=at, from_status=it.get("fromString"), to_status=it.get("toString"),
+                        author_id=(self.person(h.get("author")) or Person(id=None)).id))
+                elif it.get("field") in TRACKED_FIELDS:
+                    fld = TRACKED_FIELDS[it["field"]]
+                    iss.events.append(ChangeEvent(
+                        changelog_id=cid, at=at, field=fld,
+                        from_value=(it.get("from") if fld == "duedate" and it.get("from") else it.get("fromString")),
+                        to_value=(it.get("to") if fld == "duedate" and it.get("to") else it.get("toString")),
                         author_id=(self.person(h.get("author")) or Person(id=None)).id))
                 elif it.get("field") == "assignee":
                     iss.assignee_changes.append(AssigneeChange(

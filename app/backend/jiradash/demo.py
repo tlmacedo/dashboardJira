@@ -87,11 +87,12 @@ def seed_demo(db: Session, now: datetime | None = None, seed: int = 7) -> dict:
             iid += 1
             key = f"{proj}-{seq}"
             est_h = round(sp * 4 * rng.uniform(0.7, 1.4), 1) if rng.random() < 0.82 else None
+            no_sp = est_h is None and rng.random() < 0.7
             due = (created + timedelta(days=rng.uniform(8, 35))).date() if rng.random() < 0.7 else None
             issue = Issue(id=iid, key=key, project=proj, summary=f"{rng.choice(TOPICS[proj])} #{seq}", type=typ,
                           priority=prio, status="Backlog", status_category="todo", assignee_id=owner.id, reporter_id=mgr.id,
                           squad_id=sq.id, created=created, updated=created, due=due,
-                          original_estimate_s=int(est_h * 3600) if est_h else None, story_points=float(sp),
+                          original_estimate_s=int(est_h * 3600) if est_h else None, story_points=None if no_sp else float(sp),
                           labels=[f"skill:{rng.choice(owner.skills)}"] if rng.random() < 0.3 else [],
                           components=[], epic_key=f"{proj}-E{rng.randint(1, 6)}" if rng.random() < 0.75 else None)
             db.add(issue)
@@ -114,6 +115,8 @@ def seed_demo(db: Session, now: datetime | None = None, seed: int = 7) -> dict:
                          components=[], epic_key=f"{proj}-E{rng.randint(1, 6)}"))
             n_issues += 1
     db.flush()
+    from .demo_extra import seed_extras
+    seed_extras(db, rng, now)
     _overload_and_absences(db, rng, today, now)
     db.commit()
     return {"issues": n_issues, "now": now.isoformat()}
@@ -181,6 +184,8 @@ def _apply(db, issue, trs, completed, end_at, outcome, resolution, reopen, now, 
                 if at2 < now:
                     issue.assignee_changes.append(AssigneeChange(changelog_id=f"{issue.id}-a1", at=at2, from_person_id=other.id, to_person_id=third.id))
                     issue.assignee_id = third.id
+    for tr in issue.transitions:  # quem move o status é o responsável final (no Jira real vem do changelog)
+        tr.author_id = issue.assignee_id
     # horas registradas: ~2,8 h/dia em andamento, com 15% das pessoas/issues sem registro (qualidade de dados)
     active_days = 0.0
     prev_t, prev_s = issue.created, "A Fazer"

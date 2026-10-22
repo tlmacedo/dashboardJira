@@ -117,7 +117,7 @@ class JiraClient:
         for k in range(0, len(ids), 1000):
             token = None
             while True:
-                body = {"issueIdsOrKeys": ids[k:k + 1000], "fieldIds": ["status", "assignee"], "maxResults": 1000}
+                body = {"issueIdsOrKeys": ids[k:k + 1000], "fieldIds": ["status", "assignee", "duedate", "labels", "timeoriginalestimate", "priority", "resolution"], "maxResults": 1000}
                 if token:
                     body["nextPageToken"] = token
                 data = self._request("POST", self.api + "/changelog/bulkfetch", json=body).json()

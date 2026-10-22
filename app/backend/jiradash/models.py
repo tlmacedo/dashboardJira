@@ -98,6 +98,7 @@ class Issue(Base):
         back_populates="issue", order_by="AssigneeChange.at", cascade="all, delete-orphan"
     )
     worklogs: Mapped[list["Worklog"]] = relationship(back_populates="issue", cascade="all, delete-orphan")
+    events: Mapped[list["ChangeEvent"]] = relationship(order_by="ChangeEvent.at", cascade="all, delete-orphan")
 
 
 class StatusTransition(Base):
@@ -176,3 +177,16 @@ class SyncState(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     key: Mapped[str] = mapped_column(String(60), unique=True)
     value: Mapped[str] = mapped_column(Text)
+
+
+class ChangeEvent(Base):
+    """Outras mudanças do changelog (vencimento, labels, estimativa, prioridade, resolução): base da análise de integridade."""
+    __tablename__ = "change_event"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    changelog_id: Mapped[str] = mapped_column(String(48), unique=True)
+    issue_id: Mapped[int] = mapped_column(ForeignKey("issue.id"), index=True)
+    at: Mapped[datetime] = mapped_column(DateTime)
+    field: Mapped[str] = mapped_column(String(40), index=True)  # duedate | labels | timeoriginalestimate | priority | resolution
+    from_value: Mapped[str | None] = mapped_column(String(300))
+    to_value: Mapped[str | None] = mapped_column(String(300))
+    author_id: Mapped[int | None] = mapped_column(ForeignKey("person.id"))

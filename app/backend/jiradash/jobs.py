@@ -44,6 +44,8 @@ def start_scheduler(session_factory) -> None:
                 with session_factory() as db:
                     n += 1
                     run_sync(db, full=(n % 144 == 0))  # reconciliação completa ~1x por dia com intervalo de 10 min
+                    from . import cache
+                    cache.invalidate()
             except Exception:
                 log.exception("falha na sincronização")
             time.sleep(settings.sync_interval_min * 60)

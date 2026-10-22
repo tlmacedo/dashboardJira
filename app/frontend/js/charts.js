@@ -118,3 +118,24 @@ function heat(rowsLabels, colLabels, matrix, { fmt = (v) => fmtN(v * 100) + "%",
   });
   return s + "</div>";
 }
+
+/* Colunas empilhadas por período; rows: [{label, ...chaves}] */
+function stackedCols(rows, keys, colors, { w = 700, h = 230, title = "", line = null } = {}) {
+  const pad = { l: 36, r: 8, t: 10, b: 26 }, iw = w - pad.l - pad.r, ih = h - pad.t - pad.b;
+  const max = niceMax(Math.max(1, ...rows.map((r) => keys.reduce((a, k) => a + (r[k] || 0), 0))));
+  const bw = iw / Math.max(1, rows.length);
+  let s = `<svg viewBox="0 0 ${w} ${h}" role="img" aria-label="${escx(title)}" width="100%">`;
+  for (let i = 0; i <= 4; i++) { const y = pad.t + ih - (ih * i) / 4; s += `<line class="grid-line" x1="${pad.l}" x2="${w - pad.r}" y1="${y}" y2="${y}"/><text x="${pad.l - 5}" y="${y + 4}" text-anchor="end">${fmtN((max * i) / 4)}</text>`; }
+  rows.forEach((r, i) => {
+    let acc = 0; const x = pad.l + i * bw + bw * 0.12;
+    keys.forEach((k, j) => { const v = r[k] || 0; if (!v) return; const bh = (ih * v) / max; acc += bh; s += `<rect x="${x}" y="${pad.t + ih - acc}" width="${bw * 0.76}" height="${bh}" fill="${colors[j]}"><title>${escx(r.label)} · ${escx(k)}: ${v}</title></rect>`; });
+    if (rows.length <= 14 || i % 2 === 0) s += `<text x="${x + bw * 0.38}" y="${h - 8}" text-anchor="middle">${escx(r.label)}</text>`;
+  });
+  return s + "</svg>" + legend(keys.map((k, j) => [k, colors[j]]));
+}
+
+/* Barra de progresso com texto */
+function progress(pct, { tone } = {}) {
+  const t = tone || (pct >= 80 ? "var(--ok)" : pct >= 50 ? "var(--c1)" : "var(--warn)");
+  return `<div style="min-width:110px"><div style="background:var(--bg);height:8px;border-radius:5px;overflow:hidden"><div style="height:100%;width:${Math.min(100, pct)}%;background:${t}"></div></div><small>${fmtN(pct, 1)}%</small></div>`;
+}

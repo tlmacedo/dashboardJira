@@ -5,7 +5,7 @@ const ocTone = (v) => (v > 1.1 ? "bad" : v > 0.85 ? "warn" : "ok");
 const SCREENS = {
 /* ------------------------------------------------------------------ 1 */
 async visao(root, f) {
-  const d = await api("overview", f), c = d.cards;
+  const [d, al] = await Promise.all([api("overview", f), api("alerts", f)]), c = d.cards;
   const tp = d.throughput;
   root.innerHTML = `
   <div class="grid g-kpi">
@@ -18,6 +18,7 @@ async visao(root, f) {
     ${kpi("Bloqueadas", c.bloqueadas, { tone: c.bloqueadas ? "warn" : "ok" })}
     ${kpi("Risco alto", c.risco_alto, { tone: c.risco_alto ? "bad" : "ok", foot: `${c.risco_medio} de risco médio` })}
   </div>
+  ${card("Central de atenção", "O que pede ação agora. Clique para abrir a tela.", `<div class="grid g-kpi" style="gap:8px">${al.itens.map((i) => `<a href="#/${i.tela}" style="text-decoration:none;color:inherit;border:1px solid var(--line);border-radius:10px;padding:8px 10px;display:block"><div class="note">${escx(i.titulo)}</div><div style="font-size:1.4rem;font-weight:650;color:var(--${i.tom === "bad" ? "bad" : i.tom === "warn" ? "warn" : i.tom === "ok" ? "ok" : "ink"})">${i.tom === "bad" ? "▲ " : i.tom === "warn" ? "● " : ""}${escx(i.valor ?? "—")}</div><div class="note">${escx(i.detalhe)}</div></a>`).join("")}</div>`, "wide")}
   <div class="grid g-2" style="margin-top:14px">
     ${card("Entregas por semana", "Itens concluídos (exclui cancelados e duplicados)", colChart(tp, { label: (x) => wk(x.week), value: (x) => x.count, title: "Entregas por semana" }))}
     ${card("Quando o backlog aberto termina?", `Monte Carlo sobre as últimas ${d.forecast_backlog.samples} semanas · confiança: ${escx(d.forecast_backlog.confidence)}`,

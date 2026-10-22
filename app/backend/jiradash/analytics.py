@@ -47,6 +47,10 @@ class Analytics:
         self.negative = set(cfg.get("negative_resolutions", ["Won't Do", "Cancelado", "Duplicado"]))
         self.status_wip_limits: dict[str, int] = cfg.get("status_wip_limits", {})
         self.hours_fallback = float(cfg.get("default_issue_hours", 6))
+        self.cfg = cfg
+        self.review_types = set(cfg.get("review_types", ["Review"]))
+        self.checklist_types = set(cfg.get("checklist_types", ["Checklist"]))
+        self.goals = {"on_time_pct": 90.0, "early_pct": 35.0, **(cfg.get("goals") or {})}
         self.people = {p.id: p for p in db.query(Person).all()}
         self.squads = {s.id: s for s in db.query(Squad).all()}
         self.holidays = {h.day for h in db.query(Holiday).all()}
@@ -67,14 +71,15 @@ class Analytics:
             squad_id=i.squad_id, created=i.created, updated=i.updated, resolved=i.resolved, due=i.due,
             original_estimate_s=i.original_estimate_s, remaining_s=i.remaining_s, time_spent_s=i.time_spent_s,
             story_points=i.story_points, labels=i.labels or [], components=i.components or [],
-            epic_key=i.epic_key, flagged=i.flagged,
-            transitions=[m.Transition(t.at, t.from_status, t.to_status) for t in i.transitions],
+            epic_key=i.epic_key, flagged=i.flagged, parent_key=i.parent_key, reporter_id=i.reporter_id,
+            transitions=[m.Transition(t.at, t.from_status, t.to_status, t.author_id) for t in i.transitions],
+            events=[m.Event(e.at, e.field, e.from_value, e.to_value, e.author_id) for e in i.events],
             assignee_changes=[(a.at, a.from_person_id, a.to_person_id) for a in i.assignee_changes])
 
     def load_all(self) -> list[m.IssueRec]:
         """Todas as issues (sem filtro de pessoa/tipo), para referências históricas do squad."""
         if self._all is None:
-            q = self.db.query(Issue).options(joinedload(Issue.transitions), joinedload(Issue.assignee_changes)) \
+            q = self.db.query(Issue).options(joinedload(Issue.transitions), joinedload(Issue.assignee_changes), joinedload(Issue.events)) \
                 .filter(Issue.deleted_at.is_(None))
             sid = self._squad_id()
             if sid is not None:

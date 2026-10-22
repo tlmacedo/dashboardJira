@@ -24,6 +24,16 @@ class Transition:
     at: datetime
     from_status: str | None
     to_status: str
+    author_id: int | None = None
+
+
+@dataclass
+class Event:
+    at: datetime
+    field: str
+    from_value: str | None
+    to_value: str | None
+    author_id: int | None = None
 
 
 @dataclass
@@ -60,6 +70,9 @@ class IssueRec:
     flagged: bool = False
     transitions: list[Transition] = field(default_factory=list)
     assignee_changes: list[tuple[datetime, int | None, int | None]] = field(default_factory=list)
+    parent_key: str | None = None
+    events: list[Event] = field(default_factory=list)
+    reporter_id: int | None = None
 
 
 def pct(values: Sequence[float], p: float) -> float | None:

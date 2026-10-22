@@ -50,3 +50,9 @@ squads:
       - {ref: sara.vieira, name: Sara Vieira, skills: [ux, qa], weekly_hours: 32}
       - {ref: tiago.lopes, name: Tiago Lopes, skills: [mobile], weekly_hours: 40}
 # As ausências do demo são geradas em datas relativas a hoje (ver jiradash/demo.py).
+
+# Tipos para a análise checklist x review (pai e tarefa filha)
+checklist_types: ["Checklist"]
+review_types: ["Review"]
+# Metas de prazo (em %), usadas na tela "Metas e prazos"
+goals: {on_time_pct: 85, early_pct: 30}

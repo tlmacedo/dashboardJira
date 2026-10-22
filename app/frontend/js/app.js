@@ -1,7 +1,8 @@
 const ROUTES = [
   ["grp", "Visão"], ["visao", "Visão geral", "◧"], ["meu", "Meu painel", "☺"],
-  ["grp", "Trabalho em curso"], ["aberta", "Abertas", "○"], ["negligenciadas", "Negligenciadas", "⚠"], ["riscos", "Riscos", "◆"], ["previsao", "Previsão", "◷"],
+  ["grp", "Trabalho em curso"], ["aberta", "Abertas", "○"], ["epicos", "Épicos", "◈"], ["negligenciadas", "Negligenciadas", "⚠"], ["riscos", "Riscos", "◆"], ["previsao", "Previsão", "◷"],
   ["grp", "Resultados"], ["fechadas", "Fechadas", "✓"], ["negativas", "Negativas", "✕"], ["tempo", "Tempo em status", "⏱"],
+  ["grp", "Prazos e qualidade"], ["metas", "Metas e prazos", "◎"], ["review", "Checklist × Review", "⇋"], ["integridade", "Integridade", "⚖"],
   ["grp", "Pessoas e capacidade"], ["pessoas", "Carga por pessoa", "▤"], ["capacidade", "Capacidade e ausências", "▦"], ["gargalos", "Gargalos e fluxo", "≋"],
   ["grp", "Ação"], ["distribuicao", "Distribuição", "⇉"], ["rebalanceamento", "Rebalanceamento", "⇄"],
   ["grp", "Governança"], ["qualidade", "Qualidade dos dados", "☑"], ["auditoria", "Auditoria", "☰"], ["sync", "Sincronização", "⟳"],
@@ -9,7 +10,7 @@ const ROUTES = [
 const TITLES = Object.fromEntries(ROUTES.filter((r) => r[0] !== "grp").map((r) => [r[0], r[1]]));
 const FILTERS = [["squad", "Squad"], ["project", "Projeto"], ["person", "Pessoa"], ["type", "Tipo"], ["priority", "Prioridade"]];
 const NO_FILTER = new Set(["auditoria", "sync"]);
-const DATE_SCREENS = new Set(["fechadas", "negativas", "tempo"]);
+const DATE_SCREENS = new Set(["fechadas", "negativas", "tempo", "metas", "review", "integridade"]);
 
 function parseHash() {
   const [path, qs] = (location.hash.slice(2) || "visao").split("?");

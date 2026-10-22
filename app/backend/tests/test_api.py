@@ -4,17 +4,6 @@ from fastapi.testclient import TestClient
 from jiradash.main import app
 
 
-@pytest.fixture(scope="module")
-def client():
-    import os
-    from pathlib import Path
-    db = Path(__file__).parent / "test.db"
-    if db.exists():
-        db.unlink()
-    with TestClient(app) as c:
-        yield c
-
-
 @pytest.mark.parametrize("path", ["meta", "overview", "open", "neglected", "closed", "negative", "time-in-status", "people",
                                   "risks", "forecast", "bottlenecks", "capacity", "quality", "distribution/pending", "audit"])
 def test_endpoints_respondem(client, path):

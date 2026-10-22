@@ -15,6 +15,7 @@ from sqlalchemy.orm import Session
 from ..analytics import Analytics, Filters
 from ..config import settings
 from ..db import get_db
+from .. import cache, reports
 from ..models import AssignmentSuggestion, AuditLog, Issue, Person, SyncState
 
 router = APIRouter(prefix="/api")
@@ -57,9 +58,42 @@ for _name, _fn in [("overview", "overview"), ("open", "open_view"), ("neglected"
                    ("capacity", "capacity_view"), ("quality", "quality")]:
     def _make(fn):
         def handler(a: Analytics = Depends(A)):
-            return getattr(a, fn)()
+            return cache.get_or_compute((fn, tuple(vars(a.f).values())), lambda: getattr(a, fn)())
         return handler
     router.add_api_route(f"/{_name}", _make(_fn), methods=["GET"], dependencies=guard, name=_name)
+
+
+@router.get("/goals", dependencies=guard)
+def goals(granularity: str = "week", a: Analytics = Depends(A)):
+    g = granularity if granularity in ("day", "week", "month") else "week"
+    return cache.get_or_compute(("goals", g, tuple(vars(a.f).values())), lambda: reports.goals_view(a, g))
+
+
+@router.get("/review", dependencies=guard)
+def review(a: Analytics = Depends(A)):
+    return cache.get_or_compute(("review", tuple(vars(a.f).values())), lambda: reports.review_view(a))
+
+
+@router.get("/review/pair", dependencies=guard)
+def review_pair(key: str, a: Analytics = Depends(A)):
+    return reports.pair_detail(a, key)
+
+
+@router.get("/alerts", dependencies=guard)
+def alerts(a: Analytics = Depends(A)):
+    return cache.get_or_compute(("alerts", tuple(vars(a.f).values())), lambda: reports.alerts_view(a))
+
+
+@router.get("/epics", dependencies=guard)
+def epics(a: Analytics = Depends(A)):
+    return cache.get_or_compute(("epics", tuple(vars(a.f).values())), lambda: reports.epics_view(a))
+
+
+@router.get("/integrity", dependencies=guard)
+def integrity(a: Analytics = Depends(A), db: Session = Depends(get_db), who: str = Depends(actor)):
+    _log(db, who, "consultar_integridade", {"filtros": {k: v for k, v in vars(a.f).items() if v}})
+    db.commit()
+    return cache.get_or_compute(("integrity", tuple(vars(a.f).values())), lambda: reports.integrity_view(a))
 
 
 # ---------------------------------------------------------------- distribuição
@@ -99,6 +133,7 @@ def dist_suggest(body: SuggestIn, db: Session = Depends(get_db), who: str = Depe
                                         from_person_id=cur.assignee_id if cur else None, suggested_person_id=x["suggested"],
                                         candidates=x["ranking"], reason=x["reason"]))
             saved += 1
+    cache.invalidate()
     _log(db, who, "gerar_sugestoes", {"qtd": saved, "versao_motor": res["engine_version"]})
     db.commit()
     return {**res, "salvas": saved}
@@ -150,6 +185,7 @@ def dist_decide(sid: int, body: DecideIn, db: Session = Depends(get_db), who: st
         s.status, applied = "aplicada", "gravada no Jira"
     else:
         s.status = "aprovada"
+    cache.invalidate()
     _log(db, who, "aprovar_sugestao", {"id": sid, "issue": s.issue_key, "sugerido": s.suggested_person_id, "final": final,
                                        "override": body.override_reason, "efeito": applied})
     db.commit()
@@ -169,6 +205,7 @@ def rebalance(squad: str | None = None, db: Session = Depends(get_db), who: str 
                                         from_person_id=mv["from_person_id"], suggested_person_id=mv["to_person_id"],
                                         candidates=mv["ranking"], reason=mv["reason"]))
             n += 1
+    cache.invalidate()
     _log(db, who, "gerar_rebalanceamento", {"movimentos": n})
     db.commit()
     return {**res, "salvas": n}
@@ -195,6 +232,7 @@ def sync_now(full: bool = False, db: Session = Depends(get_db), who: str = Depen
         raise HTTPException(400, "modo demonstração: não há servidor Jira configurado")
     from ..jobs import run_sync
     out = run_sync(db, full)
+    cache.invalidate()
     _log(db, who, "sincronizar", out)
     db.commit()
     return out
@@ -217,6 +255,7 @@ async def webhook(request: Request, db: Session = Depends(get_db)):
     if key:
         from ..jobs import sync_keys
         sync_keys(db, [key])
+        cache.invalidate()
     return {"ok": True, "issue": key}
 
 

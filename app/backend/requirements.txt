@@ -1,8 +1,9 @@
+# Dependências de execução e de testes do Painel de Squads para Jira (Python 3.11+)
 fastapi>=0.115
 uvicorn>=0.30
 sqlalchemy>=2.0
 httpx>=0.27
 PyYAML>=6.0
 numpy>=1.26
+python-dotenv>=1.0
 pytest>=8.0
-psycopg[binary]>=3.1  # opcional: só para PostgreSQL
