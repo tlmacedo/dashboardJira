@@ -1,0 +1,58 @@
+# Configuração do MODO DEMONSTRAÇÃO (dados fictícios). Para uso real, copie equipes.exemplo.yaml.
+status_map:
+  "Backlog": todo
+  "A Fazer": todo
+  "Em Andamento": active
+  "Em Revisão": wait
+  "Em Teste": active
+  "Bloqueado": blocked
+  "Concluído": done
+  "Cancelado": done
+workflow_order: ["Backlog", "A Fazer", "Em Andamento", "Em Revisão", "Em Teste", "Concluído"]
+negative_resolutions: ["Cancelado", "Duplicado", "Não será feito"]
+status_wip_limits: {"Em Andamento": 36, "Em Revisão": 12, "Em Teste": 9}
+default_issue_hours: 6
+
+squads:
+  - key: pagamentos
+    name: Pagamentos
+    manager: {ref: marcos.lima, name: Marcos Lima}
+    projects: [PAY]
+    wip_limit_per_person: 3
+    members:
+      - {ref: ana.souza, name: Ana Souza, skills: [backend, pix], weekly_hours: 40}
+      - {ref: bruno.alves, name: Bruno Alves, skills: [backend, antifraude], weekly_hours: 40}
+      - {ref: carla.mendes, name: Carla Mendes, skills: [frontend, backend], weekly_hours: 40}
+      - {ref: diego.rocha, name: Diego Rocha, skills: [backend, dados], weekly_hours: 30}
+      - {ref: elisa.prado, name: Elisa Prado, skills: [qa, backend], weekly_hours: 40}
+      - {ref: fabio.nunes, name: Fábio Nunes, skills: [backend, pix], weekly_hours: 40}
+  - key: plataforma
+    name: Plataforma
+    manager: {ref: helena.costa, name: Helena Costa}
+    projects: [PLT]
+    wip_limit_per_person: 3
+    members:
+      - {ref: igor.martins, name: Igor Martins, skills: [infra, devops], weekly_hours: 40}
+      - {ref: julia.ramos, name: Júlia Ramos, skills: [infra, backend], weekly_hours: 40}
+      - {ref: kleber.dias, name: Kléber Dias, skills: [devops, seguranca], weekly_hours: 40}
+      - {ref: larissa.pinto, name: Larissa Pinto, skills: [backend, dados], weekly_hours: 40}
+      - {ref: mateus.farias, name: Mateus Farias, skills: [infra], weekly_hours: 40}
+  - key: experiencia
+    name: Experiência do Cliente
+    manager: {ref: patricia.gomes, name: Patrícia Gomes}
+    projects: [CX]
+    wip_limit_per_person: 3
+    members:
+      - {ref: nadia.cruz, name: Nádia Cruz, skills: [frontend, ux], weekly_hours: 40}
+      - {ref: otavio.braga, name: Otávio Braga, skills: [frontend], weekly_hours: 40}
+      - {ref: paula.teles, name: Paula Teles, skills: [frontend, qa], weekly_hours: 40}
+      - {ref: rafael.melo, name: Rafael Melo, skills: [mobile, frontend], weekly_hours: 40}
+      - {ref: sara.vieira, name: Sara Vieira, skills: [ux, qa], weekly_hours: 32}
+      - {ref: tiago.lopes, name: Tiago Lopes, skills: [mobile], weekly_hours: 40}
+# As ausências do demo são geradas em datas relativas a hoje (ver jiradash/demo.py).
+
+# Tipos para a análise checklist x review (pai e tarefa filha)
+checklist_types: ["Checklist"]
+review_types: ["Review"]
+# Metas de prazo (em %), usadas na tela "Metas e prazos"
+goals: {on_time_pct: 85, early_pct: 30}

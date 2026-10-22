@@ -1,0 +1,40 @@
+# Copie para config/equipes.yaml e ajuste. Referências de pessoa (ref):
+#   Jira Cloud -> accountId;  Jira Data Center -> username (name).
+# Status: use os nomes EXATOS do seu fluxo. Categorias: todo | active | wait | blocked | done.
+status_map:
+  "Backlog": todo
+  "A Fazer": todo
+  "Em Andamento": active
+  "Em Revisão": wait
+  "Bloqueado": blocked
+  "Concluído": done
+  "Cancelado": done
+workflow_order: ["Backlog", "A Fazer", "Em Andamento", "Em Revisão", "Concluído"]
+negative_resolutions: ["Cancelado", "Duplicado", "Won't Do", "Não será feito"]
+status_wip_limits: {"Em Andamento": 12, "Em Revisão": 5}
+default_issue_hours: 6        # usado quando a issue não tem estimativa
+jql_scope: "project in (ABC, DEF)"   # o que sincronizar do Jira
+
+squads:
+  - key: meu-squad
+    name: Meu Squad
+    manager: {ref: "ref-do-gerente", name: "Nome do Gerente"}
+    projects: [ABC]           # projetos Jira deste squad
+    components: []            # opcional: restringe por componente quando um projeto é dividido entre squads
+    wip_limit_per_person: 3
+    members:
+      - {ref: "ref-da-pessoa", name: "Nome da Pessoa", skills: [backend], weekly_hours: 40, focus_factor: 0.7, allocation: 1.0}
+
+# Férias/licenças (sem motivo detalhado, por privacidade). partial: 0.5 = meio período.
+absences:
+  - {person: "ref-da-pessoa", start: 2026-12-01, end: 2026-12-15, kind: ferias}
+
+# Feriados nacionais já vêm embutidos (2026-2027). Acrescente estaduais/municipais/facultativos:
+holidays:
+  - {date: 2027-02-09, name: Carnaval (ponto facultativo)}
+
+# Análise checklist x review: tipos de issue (nomes exatos no seu Jira). A review é subtarefa/filha do checklist.
+checklist_types: ["Checklist"]
+review_types: ["Review"]
+# Metas de prazo (%): resolvidas até o vencimento; resolvidas antecipadamente (D-1 ou antes)
+goals: {on_time_pct: 90, early_pct: 35}
