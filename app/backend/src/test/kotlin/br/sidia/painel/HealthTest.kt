@@ -1,5 +1,6 @@
 package br.sidia.painel
 
+import br.sidia.painel.config.Settings
 import io.ktor.client.request.get
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.HttpStatusCode
