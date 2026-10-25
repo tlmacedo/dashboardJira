@@ -84,8 +84,90 @@ class TimelineBuilderTest {
         )
     }
 
+    private fun aberta(
+        criada: String, transicoes: List<Transition> = emptyList(), trocas: List<AssigneeChange> = emptyList(),
+        resolvida: String? = null,
+    ) = IssueTimeline(
+        key = "TG-9", summary = "s", issueType = "Task", created = i(criada),
+        initialStatus = "A Fazer", initialAssignee = "ana",
+        transitions = transicoes, assigneeChanges = trocas,
+        resolved = resolvida?.let(::i), resolution = resolvida?.let { "Done" },
+        currentStatus = if (resolvida != null) "Concluído" else "A Fazer", currentAssignee = "ana",
+    )
+
     @Test
-    fun empateDeTimestampAplicaStatusAntes() {
+    fun ordenaTransicoesDesordenadasNaEntrada() {
+        val t = aberta(
+            "2026-10-05T12:00:00Z",
+            transicoes = listOf(
+                Transition(i("2026-10-09T12:00:00Z"), "Em andamento", "Em revisão", null),
+                Transition(i("2026-10-06T12:00:00Z"), "A Fazer", "Em andamento", null),
+            ),
+        )
+        val r = TimelineBuilder.intervals(t, i("2026-10-10T12:00:00Z"), mapa)
+        assertEquals(listOf("A Fazer", "Em andamento", "Em revisão"), r.map { it.status })
+    }
+
+    @Test
+    fun duasTransicoesNoMesmoInstanteSeguemAOrdemOriginal() {
+        val mesmo = i("2026-10-06T12:00:00Z")
+        val a = aberta(
+            "2026-10-05T12:00:00Z",
+            transicoes = listOf(Transition(mesmo, "A Fazer", "Em andamento", null), Transition(mesmo, "Em andamento", "Em revisão", null)),
+        )
+        // O último da lista vence: a issue fica em "Em revisão" e o "Em andamento" tem duração zero (some).
+        assertEquals(listOf("A Fazer", "Em revisão"), TimelineBuilder.intervals(a, i("2026-10-10T12:00:00Z"), mapa).map { it.status })
+        // Invertendo a ordem da lista, o estado final muda: a ordem do empate é de fato respeitada.
+        val b = aberta(
+            "2026-10-05T12:00:00Z",
+            transicoes = listOf(Transition(mesmo, "Em andamento", "Em revisão", null), Transition(mesmo, "A Fazer", "Em andamento", null)),
+        )
+        assertEquals(listOf("A Fazer", "Em andamento"), TimelineBuilder.intervals(b, i("2026-10-10T12:00:00Z"), mapa).map { it.status })
+    }
+
+    @Test
+    fun eventosDepoisDeResolvedNaoGeramIntervalo() {
+        val t = aberta(
+            "2026-10-05T12:00:00Z",
+            transicoes = listOf(
+                Transition(i("2026-10-06T12:00:00Z"), "A Fazer", "Em andamento", null),
+                Transition(i("2026-10-12T12:00:00Z"), "Em andamento", "Em revisão", null),
+            ),
+            trocas = listOf(AssigneeChange(i("2026-10-13T12:00:00Z"), "bruno")),
+            resolvida = "2026-10-08T12:00:00Z",
+        )
+        val r = TimelineBuilder.intervals(t, i("2026-10-20T12:00:00Z"), mapa)
+        assertEquals(listOf("A Fazer", "Em andamento"), r.map { it.status })
+        assertEquals(i("2026-10-08T12:00:00Z"), r.last().end)
+        assertEquals("ana", r.last().assignee)
+    }
+
+    @Test
+    fun eventosAntesDeCreatedColapsamNoInicio() {
+        // Transição anterior à criação: o intervalo inicial tem duração zero e some; nada começa antes de created.
+        val t = aberta(
+            "2026-10-05T12:00:00Z",
+            transicoes = listOf(Transition(i("2026-10-01T12:00:00Z"), "A Fazer", "Em andamento", null)),
+        )
+        val r = TimelineBuilder.intervals(t, i("2026-10-10T12:00:00Z"), mapa)
+        assertEquals(listOf("Em andamento"), r.map { it.status })
+        assertEquals(i("2026-10-05T12:00:00Z"), r.single().start)
+    }
+
+    @Test
+    fun agoraAntesDeCreatedNaoGeraIntervalos() {
+        val t = aberta("2026-10-05T12:00:00Z", transicoes = listOf(Transition(i("2026-10-06T12:00:00Z"), "A Fazer", "Em andamento", null)))
+        assertEquals(emptyList(), TimelineBuilder.intervals(t, i("2026-10-01T12:00:00Z"), mapa))
+    }
+
+    @Test
+    fun statusInicialForaDoMapaLanca() {
+        val t = aberta("2026-10-05T12:00:00Z").copy(initialStatus = "Inexistente")
+        assertFailsWith<UnmappedStatusException> { TimelineBuilder.intervals(t, i("2026-10-10T12:00:00Z"), mapa) }
+    }
+
+    @Test
+    fun empateDeStatusEResponsavelNaoGeraIntervaloVazio() {
         val t = tg1().copy(
             transitions = listOf(Transition(i("2026-10-06T12:00:00Z"), "A Fazer", "Em andamento", "ana")),
             assigneeChanges = listOf(AssigneeChange(i("2026-10-06T12:00:00Z"), "bruno")),

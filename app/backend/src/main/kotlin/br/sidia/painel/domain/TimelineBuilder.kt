@@ -12,9 +12,13 @@ object TimelineBuilder {
      */
     fun intervals(t: IssueTimeline, now: Instant, map: StatusMap): List<StatusInterval> {
         val fim = t.resolved ?: now
+        // Ordena já na entrada (não depende de quem chama): por instante, mantendo a ordem original da lista
+        // nos empates (sortedBy é estável). Depois junta as duas listas; no mesmo instante o status vem antes.
+        val transicoes = t.transitions.sortedBy { it.at }
+        val trocas = t.assigneeChanges.sortedBy { it.at }
         // tipo 0 = status, 1 = responsável; sortedWith é estável.
         val eventos: List<Pair<Instant, Any>> =
-            (t.transitions.map { it.at to (it as Any) } + t.assigneeChanges.map { it.at to (it as Any) })
+            (transicoes.map { it.at to (it as Any) } + trocas.map { it.at to (it as Any) })
                 .sortedWith(compareBy({ it.first }, { if (it.second is Transition) 0 else 1 }))
 
         val resultado = mutableListOf<StatusInterval>()

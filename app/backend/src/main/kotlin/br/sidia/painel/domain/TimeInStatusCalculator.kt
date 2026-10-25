@@ -26,6 +26,8 @@ data class TimeInStatusResult(
     val perPersonStatus: List<PersonStatus>,
     val stuck: List<StuckIssue>,
     val unit: TimeUnitMode,
+    /** Issues descartadas por datas inconsistentes (ver [TimeInStatusCalculator.datasInconsistentes]). */
+    val ignoredInconsistent: Int = 0,
 )
 
 /**
@@ -44,7 +46,11 @@ class TimeInStatusCalculator(private val calendar: BusinessCalendar, private val
         stuckFactor: Double = 1.5,
         stuckMinDays: Double = 2.0,
     ): TimeInStatusResult {
-        val analisadas = closed.filter { concluida(it) && !outlier(it, excludeOutlierDays) }
+        // Dado inconsistente não derruba o cálculo: a issue é ignorada e contada no resultado.
+        val ruins = (closed + open).count { datasInconsistentes(it, now) }
+        val fechadasOk = closed.filterNot { datasInconsistentes(it, now) }
+        val abertasOk = open.filterNot { datasInconsistentes(it, now) }
+        val analisadas = fechadasOk.filter { concluida(it) && !outlier(it, excludeOutlierDays) }
 
         // Por task: tempo total por status e por (pessoa, status), sem a categoria DONE.
         val porStatus = HashMap<String, MutableList<Double>>()
@@ -80,8 +86,8 @@ class TimeInStatusCalculator(private val calendar: BusinessCalendar, private val
         }.sortedWith(compareBy({ it.person }, { it.status }))
 
         val medianaPorStatus = perStatus.associate { it.status to it.median }
-        val paradas = open.mapNotNull { parada(it, now, unit, medianaPorStatus, stuckFactor, stuckMinDays) }
-            .sortedBy { it.key }
+        val paradas = abertasOk.mapNotNull { parada(it, now, unit, medianaPorStatus, stuckFactor, stuckMinDays) }
+            .sortedWith(compareBy(ORDEM_NATURAL_DE_CHAVES) { it.key })
 
         return TimeInStatusResult(
             analyzed = analisadas.map { it.key },
@@ -90,8 +96,13 @@ class TimeInStatusCalculator(private val calendar: BusinessCalendar, private val
             perPersonStatus = perPersonStatus,
             stuck = paradas,
             unit = unit,
+            ignoredInconsistent = ruins,
         )
     }
+
+    /** Resolução antes da criação, ou criação no futuro em relação a [now]: o tempo não tem como ser medido. */
+    fun datasInconsistentes(t: IssueTimeline, now: Instant): Boolean =
+        (t.resolved?.let { it < t.created } ?: false) || t.created > now
 
     /** Concluída = categoria DONE no status atual e resolution preenchida (e data de resolução). */
     private fun concluida(t: IssueTimeline): Boolean =

@@ -34,6 +34,30 @@ data class StatusInterval(
     val assignee: String?,
 )
 
+private val CHAVE_DE_ISSUE = Regex("(.*?)-(\\d+)")
+
+/**
+ * Ordem natural das chaves de issue: projeto (texto) e depois o número (TG-2 antes de TG-10).
+ * Chave fora do padrão `PROJ-N` cai para a ordem de texto, depois das que seguem o padrão do mesmo prefixo.
+ */
+val ORDEM_NATURAL_DE_CHAVES: Comparator<String> = Comparator { a, b ->
+    val ma = CHAVE_DE_ISSUE.matchEntire(a)
+    val mb = CHAVE_DE_ISSUE.matchEntire(b)
+    if (ma == null || mb == null) {
+        if (ma == null && mb == null) a.compareTo(b) else if (ma == null) 1 else -1
+    } else {
+        val porProjeto = ma.groupValues[1].compareTo(mb.groupValues[1])
+        if (porProjeto != 0) {
+            porProjeto
+        } else {
+            val na = ma.groupValues[2].trimStart('0')
+            val nb = mb.groupValues[2].trimStart('0')
+            // Comparação numérica sem estouro: primeiro o tamanho, depois o texto.
+            if (na.length != nb.length) na.length.compareTo(nb.length) else na.compareTo(nb)
+        }
+    }
+}
+
 /** Primeira vez em que a issue entrou em [status] (transição), ou null se nunca entrou. */
 fun IssueTimeline.firstEntered(status: String): Instant? =
     transitions.filter { it.to == status }.minOfOrNull { it.at }

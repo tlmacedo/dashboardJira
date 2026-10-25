@@ -200,6 +200,28 @@ class TimeInStatusCalculatorTest {
     }
 
     @Test
+    fun issueComResolucaoAntesDaCriacaoEhIgnoradaSemDerrubarAsOutras() {
+        val ruim = tg1().copy(key = "TG-99", resolved = i("2026-10-01T12:00:00Z"))
+        val futura = aberta("TG-98", "2026-10-06T12:00:00Z").copy(created = i("2026-10-30T12:00:00Z"))
+        val r = calc.compute(listOf(tg1(), ruim), listOf(futura), agora)
+        assertEquals(listOf("TG-1"), r.analyzed)
+        assertEquals(2, r.ignoredInconsistent)
+        assertTrue(r.stuck.isEmpty())
+        assertEquals(0, calc.compute(listOf(tg1()), emptyList(), agora).ignoredInconsistent)
+        assertTrue(calc.datasInconsistentes(ruim, agora))
+        assertTrue(!calc.datasInconsistentes(tg1(), agora))
+    }
+
+    @Test
+    fun ordemNaturalDeChaves() {
+        val chaves = listOf("TG-10", "TG-2", "AB-3", "TG-1", "TG-010x", "TG-9")
+        assertEquals(
+            listOf("AB-3", "TG-1", "TG-2", "TG-9", "TG-10", "TG-010x"),
+            chaves.sortedWith(ORDEM_NATURAL_DE_CHAVES),
+        )
+    }
+
+    @Test
     fun transicoesForaDeOrdemSaoOrdenadas() {
         val t = tg1().copy(transitions = tg1().transitions.reversed())
         val r = calc.compute(listOf(t), emptyList(), agora)
