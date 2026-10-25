@@ -4,24 +4,25 @@ Para continuar: abrir a sessão com `claude --advisor opus --subagents haiku` na
 
 ## Onde paramos
 
-Branch de trabalho: `feat/fundacao` (criada a partir de `docs/planejamento-novo-app`). **O Plano 1 (Fundação) está executado e revisado.** Nada foi mesclado em `main` ainda.
+Branches empilhadas (nada foi mesclado em `main` nem publicado): `docs/planejamento-novo-app` → `feat/fundacao` (Plano 1) → **`feat/dicionario-jql` (Plano 2, branch atual)**. **Os Planos 1 e 2 estão executados e revisados.**
 
 | Entrega | Estado |
 |---|---|
 | Spec (`docs/superpowers/specs/2026-10-24-painel-squads-kotlin-react-design.md`) | Aprovada pelo usuário |
 | Planos 1 a 3 e índice (`docs/superpowers/plans/2026-10-24-*.md`) | Escritos; usuário aprovou e escolheu execução **subagent-driven** |
 | **Plano 1: Fundação (10 tarefas + ajustes 3b e 4b)** | **Executado**: backend Ktor (flags, calendário de Manaus, papéis com vigência, controle de acesso, banco PostgreSQL + retenção de 24 meses, cliente Jira com trava `LiveGuard`, paginação), frontend React (3 temas, pt/en, menu por papel), SPA servida pelo Ktor, Dockerfile e compose. Backend: **91 testes, 0 falhas** (execução real, com PostgreSQL via Testcontainers); frontend: 16 testes, build ok. Revisão por tarefa, revisão final da branch (opus) e re-revisão da correção final, todas aprovadas |
-| Planos 2 e 3 | **Não iniciados** (o Plano 3 ganhou uma **Tarefa 0** de inicialização da aplicação) |
-| Ledger e relatórios por tarefa | `.superpowers/sdd/2026-10-24-plano-01-fundacao/` (git-ignorado; contém todos os rulings, achados Minor e relatórios) |
+| **Plano 2: Dicionário de campos e construtor de JQL (5 tarefas + onda final)** | **Executado**: `FieldDictionary` por instância (`forInstance`), `JqlValues` (validadores que REJEITAM, nunca escapam), `JqlBuilder` (única forma de gerar JQL; usernames entre aspas; fim do período exclusivo `resolved < dia seguinte`), ficha de card em YAML com ensaio na carga, `jira_campos.exemplo.yaml`, `docs/jira/matriz-compatibilidade.md` e `docs/jira/checklist-primeira-conexao.md`. Backend: **185 testes, 0 falhas**. Revisão por tarefa, revisão final (opus), onda única de correção e re-revisão, todas aprovadas |
+| Plano 3 | **Não iniciado** (ganhou uma **Tarefa 0** de inicialização da aplicação) |
+| Ledgers e relatórios por tarefa | `.superpowers/sdd/2026-10-24-plano-01-fundacao/` e `.../2026-10-24-plano-02-dicionario-e-jql/` (git-ignorados; contêm todos os rulings, achados Minor e relatórios; NÃO apagar enquanto houver Minor pendente) |
 
-Commits principais da branch `feat/fundacao`: `87a12db` (move o app Python para `legacy/`) até `8202fcb` (correção final) e `d386f03` (planos atualizados).
+Commits principais: Plano 1 `87a12db` até `8202fcb`, `d386f03` (planos) e `5b6f9e7` (HANDOFF/decisões); Plano 2 `b734dea` até `9fceb8b` (onda final em `0a6023f`).
 
 ## Próximos passos, em ordem
 
 1. ~~Integração da branch~~: decidido em 25/10, seguir empilhando (próxima branch a partir de `feat/fundacao`) e abrir o PR só quando os Planos 2 e 3 estiverem prontos. Não mesclar nem publicar sem o usuário decidir.
 2. ~~Gerente em `isReporterAuthorized`~~: decidido em 25/10, o gerente é autorizado como o coordenador (spec, CLAUDE.md e PRODUCT.md atualizados).
-3. Executar o **Plano 2** (dicionário de campos e construtor de JQL) pelo mesmo fluxo subagent-driven (`superpowers:subagent-driven-development`). O plano já descreve `JqlValues.safeText`.
-4. Antes do **Plano 3**, detalhar e executar a **Tarefa 0 de inicialização** (ver o topo do Plano 3): carregar calendário e papéis, abrir o banco e migrar, `DATABASE_USER/PASSWORD` no `Settings`, fábrica única do cliente Jira que valida `https`/token e liga o `LiveGuard` ao `Settings`, correções do cliente (total ausente = erro etc.), `logback.xml`.
+3. ~~Plano 2~~: executado e revisado (25/10).
+4. Antes do **Plano 3** (a branch seguinte nasce de `feat/dicionario-jql`), detalhar e executar a **Tarefa 0 de inicialização** (ver o topo do Plano 3): carregar calendário e papéis, abrir o banco e migrar, `DATABASE_USER/PASSWORD` no `Settings`, fábrica única do cliente Jira que valida `https`/token e liga o `LiveGuard` ao `Settings`, correções do cliente (total ausente = erro etc.), `logback.xml`.
 5. Depois, Plano 3 (card Tempo em status) e detalhar os planos 4 a 8 só ao iniciar cada fase.
 
 ## Regras que não podem ser esquecidas
@@ -45,6 +46,9 @@ Commits principais da branch `feat/fundacao`: `87a12db` (move o app Python para 
 - Ausências e feriados em YAML, somente leitura.
 
 ## Pendências abertas
+
+- **Rulings do Plano 2 a conferir** (tomados sem parar a execução; reversíveis): (1) usernames saem entre aspas duplas no JQL (`assignee in ("x")`), para fechar palavras reservadas; confirmar na 1ª conexão autorizada que o Jira DC aceita; (2) fim do período exclusivo no dia seguinte (`resolved < "aaaa-mm-dd"` com `ate + 1`) para não perder o último dia; o comportamento de data sem hora do Jira também está por validar; (3) `InvalidJqlValueException` herda de `IllegalArgumentException` (toda entrada inválida vira 400 numa rota futura); (4) `issuetype` e `status` têm `valores` iniciais no dicionário (ampliar depois de `/status`).
+- **Minor do Plano 2 para o início do Plano 3:** comentário velho na ficha `app/config/cards/tempo-em-status.card.yaml` (diz `resolved <= ate`; agora é `< dia seguinte`); `JqlBuilder.valor()` devolve username sem aspas em `inList`/`notInList`/`equalsTo` de campo USER; testes de tipo de campo para `os` e `tipo`; `fields` por id (`customfield_N`, normalizar `cf[N]`); JQL tipado em `SearchRequest` (só `JqlQuery` chega ao cliente); `orderBy` repetido; `PreparacaoDocsTest` por seção; nomes de pessoas reais ainda no texto histórico de `docs/superpowers/plans/2026-10-24-plano-02-dicionario-e-jql.md` (trocar por fictícios).
 
 - **Minor adiados** (lista completa no ledger e no relatório da revisão final): endurecer `exigeAutenticacao` invertendo a regra (aceitar como público só `/` seguido de caractere diferente de `/` e `\`) e testes de `/\h/api/x` e `/api%2fx`; validar `https` e token no cliente; retry em falha de rede; `total` ausente como erro; teste unitário de `resolverDentro` com symlink; acessibilidade da casca (contraste de borda `--line`, piscada do tema, `#1329A0` do protótipo × `#0023A4` do plano); CSP e X-Frame-Options; imagens por digest; imagem Docker com `DASHBOARD_DEV_MODE=true` por padrão.
 - `RetentionTest` falhou uma vez com "Could not connect to Ryuk" (Testcontainers) e passou na repetição: possível intermitência.
