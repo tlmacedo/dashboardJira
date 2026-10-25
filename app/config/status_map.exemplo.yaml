@@ -1,0 +1,9 @@
+# Modelo do mapa de status -> categoria (copie para status_map.yaml e ajuste ao seu workflow).
+# Categorias: todo, active, wait, blocked, done.
+status_map:
+  "A Fazer": todo
+  "Em andamento": active
+  "Em revisão": wait
+  "Aguardando": wait
+  "Bloqueado": blocked
+  "Concluído": done
