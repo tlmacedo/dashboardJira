@@ -10,8 +10,9 @@ import kotlin.test.assertEquals
 class MetaTest {
     private fun meta(env: Map<String, String>): String {
         var corpo = ""
+        val s = Settings.fromEnv(env)
         testApplication {
-            application { module(Settings.fromEnv(env)) }
+            application { module(s, testContext(s)) }
             corpo = client.get("/api/meta").bodyAsText()
         }
         return corpo

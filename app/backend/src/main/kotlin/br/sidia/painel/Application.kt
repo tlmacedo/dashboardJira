@@ -8,6 +8,8 @@ import br.sidia.painel.security.installAccessControl
 import io.ktor.http.HttpStatusCode
 import io.ktor.serialization.kotlinx.json.json
 import io.ktor.server.application.Application
+import io.ktor.server.application.ApplicationStopped
+import java.time.Clock
 import io.ktor.server.application.install
 import io.ktor.server.engine.embeddedServer
 import io.ktor.server.netty.Netty
@@ -29,13 +31,25 @@ data class MetaResposta(val devMode: Boolean, val liveEnabled: Boolean, val zone
 private val log = LoggerFactory.getLogger("br.sidia.painel")
 
 fun main() {
-    embeddedServer(Netty, port = 8080) { module() }.start(wait = true)
+    val settings = Settings.fromEnv()
+    // Falhas de configuração, papéis ou banco acontecem aqui, na subida, e não na primeira requisição.
+    val context = AppContext.load(settings)
+    Runtime.getRuntime().addShutdownHook(Thread { context.close() })
+    embeddedServer(Netty, port = 8080) {
+        module(settings, context)
+        monitor.subscribe(ApplicationStopped) { context.close() }
+    }.start(wait = true)
 }
 
 /** Módulo Ktor do painel: JSON, controle de acesso, rota de saúde e metadados do ambiente. */
 fun Application.module(
-    settings: Settings = Settings.fromEnv(),
-    authenticator: Authenticator = if (settings.dashboardDevMode) DevAuthenticator() else OidcAuthenticator(),
+    settings: Settings,
+    context: AppContext,
+    authenticator: Authenticator = if (settings.dashboardDevMode) {
+        DevAuthenticator(context.roles, Clock.system(settings.zone))
+    } else {
+        OidcAuthenticator()
+    },
 ) {
     install(ContentNegotiation) { json() }
     installAccessControl(settings, authenticator)

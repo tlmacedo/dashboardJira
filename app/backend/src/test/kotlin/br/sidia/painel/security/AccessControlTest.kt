@@ -2,6 +2,7 @@ package br.sidia.painel.security
 
 import br.sidia.painel.config.Settings
 import br.sidia.painel.module
+import br.sidia.painel.testContext
 import io.ktor.client.request.get
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.ApplicationCall
@@ -40,7 +41,7 @@ class AccessControlTest {
         var resultado = HttpStatusCode.InternalServerError
         testApplication {
             application {
-                module(settings, autenticador)
+                module(settings, testContext(settings), autenticador)
                 routing {
                     get("/api/ping-protegido") { call.respondText("pong") }
                     requireRole(Role.GERENTE) {
@@ -115,7 +116,8 @@ class AccessControlTest {
         var resultado = HttpStatusCode.InternalServerError
         try {
             testApplication {
-                application { module(Settings(dashboardDevMode = false, staticDir = dist), autenticador) }
+                val s = Settings(dashboardDevMode = false, staticDir = dist)
+                application { module(s, testContext(s), autenticador) }
                 resultado = client.get(caminho).status
             }
         } finally {
@@ -167,7 +169,7 @@ class AccessControlTest {
     @Test
     fun devAuthenticatorForaDoDevModeLanca() {
         assertFailsWith<IllegalArgumentException> {
-            testApplication { application { module(producao, DevAuthenticator()) }; client.get("/api/health") }
+            testApplication { application { module(producao, testContext(producao), DevAuthenticator()) }; client.get("/api/health") }
         }
     }
 
@@ -177,7 +179,7 @@ class AccessControlTest {
         var codigo = HttpStatusCode.OK
         testApplication {
             application {
-                module(producao, autenticadorFixo(Principal("ana", setOf(Role.USUARIO))))
+                module(producao, testContext(producao), autenticadorFixo(Principal("ana", setOf(Role.USUARIO))))
                 routing { requireRole(Role.GERENTE) { get("/api/efeito") { executou = true; call.respondText("x") } } }
             }
             codigo = client.get("/api/efeito").status
@@ -192,7 +194,7 @@ class AccessControlTest {
         var codigo = HttpStatusCode.OK
         testApplication {
             application {
-                module(producao, OidcAuthenticator())
+                module(producao, testContext(producao), OidcAuthenticator())
                 routing { requireRole(Role.GERENTE) { get("/api/efeito") { executou = true; call.respondText("x") } } }
             }
             codigo = client.get("/api/efeito").status
@@ -206,7 +208,7 @@ class AccessControlTest {
         var executou = false
         testApplication {
             application {
-                module(producao, autenticadorFixo(Principal("gil", setOf(Role.GERENTE))))
+                module(producao, testContext(producao), autenticadorFixo(Principal("gil", setOf(Role.GERENTE))))
                 routing { requireRole(Role.GERENTE) { get("/api/efeito") { executou = true; call.respondText("x") } } }
             }
             client.get("/api/efeito")

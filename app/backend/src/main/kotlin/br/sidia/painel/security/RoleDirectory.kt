@@ -60,20 +60,53 @@ class RoleDirectory(pessoas: List<Pessoa>) {
         /** Lê `pessoas: [{id, nome, papeis: [{papel, de?, ate?, squad?}]}]` de um YAML. */
         fun fromYaml(path: Path): RoleDirectory {
             val arquivo = Yaml.default.decodeFromString(ArquivoPapeis.serializer(), Files.readString(path))
-            return RoleDirectory(
-                arquivo.pessoas.map { p ->
-                    Pessoa(
-                        p.id,
-                        p.nome,
-                        p.papeis.map {
-                            val papel = Role.entries.firstOrNull { r -> r.name == it.papel.uppercase() }
-                                ?: throw IllegalArgumentException("Papel desconhecido '${it.papel}' em ${p.id}")
-                            AtribuicaoPapel(papel, Vigencia(it.de?.let(LocalDate::parse), it.ate?.let(LocalDate::parse)), it.squad)
-                        },
-                    )
-                },
-            )
+            val pessoas = arquivo.pessoas.map { p ->
+                Pessoa(
+                    p.id,
+                    p.nome,
+                    p.papeis.map {
+                        val papel = Role.entries.firstOrNull { r -> r.name == it.papel.uppercase() }
+                            ?: throw IllegalArgumentException("Papel desconhecido '${it.papel}' em ${p.id}")
+                        AtribuicaoPapel(papel, Vigencia(it.de?.let(LocalDate::parse), it.ate?.let(LocalDate::parse)), it.squad)
+                    },
+                )
+            }
+            pessoas.forEach(::validar)
+            return RoleDirectory(pessoas)
         }
+
+        private val PADRAO_ID = Regex("^(ge|co|sl|us)-\\d{3}$")
+
+        /** Validações do arquivo carregado: padrão do id, squad obrigatório e vigências de USUARIO sem sobreposição. */
+        private fun validar(p: Pessoa) {
+            require(PADRAO_ID.matches(p.id)) {
+                "Id de pessoa fora do padrão (ge|co|sl|us)-NNN: '${p.id}'"
+            }
+            p.papeis.forEach {
+                require(it.papel !in PAPEIS_COM_SQUAD || !it.squad.isNullOrBlank()) {
+                    "${it.papel} sem squad: ${p.id}"
+                }
+            }
+            // Um usuário não pode estar em dois squads no mesmo dia (pontas inclusivas).
+            val usuario = p.papeis.filter { it.papel == Role.USUARIO }
+            for (i in usuario.indices) {
+                for (j in i + 1 until usuario.size) {
+                    val a = usuario[i]
+                    val b = usuario[j]
+                    if (a.squad == b.squad) continue
+                    val inicio = listOfNotNull(a.vigencia.de, b.vigencia.de).maxOrNull()
+                    val fim = listOfNotNull(a.vigencia.ate, b.vigencia.ate).minOrNull()
+                    if (inicio == null || fim == null || !inicio.isAfter(fim)) {
+                        throw IllegalArgumentException(
+                            "Vigências de USUARIO em squads diferentes (${a.squad} e ${b.squad}) se sobrepõem " +
+                                "para ${p.id}: ${inicio ?: "início aberto"} a ${fim ?: "fim aberto"}",
+                        )
+                    }
+                }
+            }
+        }
+
+        private val PAPEIS_COM_SQUAD = setOf(Role.USUARIO, Role.SQUAD_LEADER)
     }
 }
 

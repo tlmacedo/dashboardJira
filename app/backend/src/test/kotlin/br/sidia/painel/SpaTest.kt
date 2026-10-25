@@ -41,7 +41,8 @@ class SpaTest {
         val dir = dist()
         try {
             testApplication {
-                application { module(Settings.fromEnv(mapOf("PAINEL_STATIC_DIR" to dir.toString()))) }
+                val s = Settings.fromEnv(mapOf("PAINEL_STATIC_DIR" to dir.toString()))
+                application { module(s, testContext(s)) }
                 bloco()
             }
         } finally {
@@ -142,7 +143,8 @@ class SpaTest {
     @Test
     fun semDistNaoQuebra() {
         testApplication {
-            application { module(Settings.fromEnv(mapOf("PAINEL_STATIC_DIR" to "/nao/existe/dist"))) }
+            val s = Settings.fromEnv(mapOf("PAINEL_STATIC_DIR" to "/nao/existe/dist"))
+            application { module(s, testContext(s)) }
             assertEquals(HttpStatusCode.NotFound, client.get("/").status)
             assertEquals("""{"ok":true}""", client.get("/api/health").bodyAsText())
         }
