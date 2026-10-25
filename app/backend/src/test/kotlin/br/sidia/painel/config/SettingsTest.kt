@@ -1,5 +1,6 @@
 package br.sidia.painel.config
 
+import java.nio.file.Path
 import java.time.ZoneId
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -29,6 +30,23 @@ class SettingsTest {
         assertTrue(s.jiraLiveEnabled)
         assertFalse(s.dashboardDevMode)
         assertEquals(12, s.retentionMonths)
+    }
+
+    @Test
+    fun diretorioEstaticoTemPadraoELeVariavel() {
+        assertEquals(Path.of("frontend/dist"), Settings.fromEnv(emptyMap()).staticDir)
+        assertEquals(
+            Path.of("/app/static"),
+            Settings.fromEnv(mapOf("PAINEL_STATIC_DIR" to " /app/static ")).staticDir,
+        )
+    }
+
+    @Test
+    fun diretorioEstaticoVazioFalha() {
+        val e = assertFailsWith<IllegalArgumentException> {
+            Settings.fromEnv(mapOf("PAINEL_STATIC_DIR" to "  "))
+        }
+        assertTrue(e.message!!.contains("PAINEL_STATIC_DIR"))
     }
 
     @Test

@@ -1,5 +1,6 @@
 package br.sidia.painel.config
 
+import java.nio.file.InvalidPathException
 import java.nio.file.Path
 import java.time.DateTimeException
 import java.time.ZoneId
@@ -15,6 +16,8 @@ data class Settings(
     val zone: ZoneId = ZoneId.of("America/Manaus"),
     val configDir: Path = Path.of("config"),
     val databaseUrl: String = "jdbc:postgresql://localhost:5432/painel",
+    /** Diretório do build do frontend (`dist`) servido em `/`. */
+    val staticDir: Path = Path.of("frontend/dist"),
 ) {
     companion object {
         /** Lê as variáveis de ambiente; valor inválido lança IllegalArgumentException citando a variável. */
@@ -36,6 +39,14 @@ data class Settings(
                 } ?: padrao.zone,
                 configDir = env["PAINEL_CONFIG_DIR"]?.let { Path.of(it) } ?: padrao.configDir,
                 databaseUrl = env["DATABASE_URL"] ?: padrao.databaseUrl,
+                staticDir = env["PAINEL_STATIC_DIR"]?.let {
+                    if (it.isBlank()) throw IllegalArgumentException("PAINEL_STATIC_DIR inválido: vazio")
+                    try {
+                        Path.of(it.trim())
+                    } catch (e: InvalidPathException) {
+                        throw IllegalArgumentException("PAINEL_STATIC_DIR inválido: '$it'", e)
+                    }
+                } ?: padrao.staticDir,
             )
         }
 

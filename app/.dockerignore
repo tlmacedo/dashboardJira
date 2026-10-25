@@ -1,0 +1,12 @@
+# Fora do contexto de build: artefatos locais e qualquer segredo.
+.env
+.env.*
+**/node_modules
+**/dist
+**/build
+**/.gradle
+**/.kotlin
+**/.git
+config/equipes.yaml
+config/ausencias.yaml
+config/papeis.yaml
