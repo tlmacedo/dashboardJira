@@ -24,7 +24,11 @@ RUN groupadd --system --gid 10001 painel \
 WORKDIR /app
 COPY --from=backend /build/build/install/painel/ /app/
 COPY --from=frontend /build/dist/ /app/static/
+# Configuração: entram só os modelos (.exemplo/.demo) e cards/, porque o .dockerignore filtra os arquivos
+# reais com pessoas (papeis, equipes, ausencias, squads). Em produção os YAML reais entram por volume somente leitura.
+COPY config/ /app/config/
 ENV PAINEL_STATIC_DIR=/app/static \
+    PAINEL_CONFIG_DIR=/app/config \
     JIRA_LIVE_ENABLED=false \
     DASHBOARD_DEV_MODE=true
 USER painel
