@@ -13,7 +13,7 @@ Branch `docs/planejamento-novo-app`. Estamos na etapa **planejamento**; nenhum c
 | `PRODUCT.md`, `CLAUDE.md`, travas do Jira e de segredos (`.claude/`) | Prontos e commitados; hooks testados (20 casos) |
 | Design / spec (`docs/superpowers/specs/2026-10-24-painel-squads-kotlin-react-design.md`) | **Aprovado pelo usuário**, commitado |
 | Planos 1 a 3 e índice (`docs/superpowers/plans/2026-10-24-*.md`) | Commitados (`e312ab4`); autoavaliação feita em 25/10 (ajuste no Plano 2: `safeText`); **aguardam revisão do usuário** |
-| Execução | **Não iniciada** |
+| Execução | Método escolhido: subagent-driven. Plano 1 prestes a iniciar (ver lista de tarefas do projeto) |
 
 Commits na branch: `c3fe40c` (planejamento), `67d4208` (trava reforçada), `b815aa7` (spec).
 
@@ -21,8 +21,8 @@ Commits na branch: `c3fe40c` (planejamento), `67d4208` (trava reforçada), `b815
 
 1. ~~Commitar planos e HANDOFF~~ (feito).
 2. ~~Autoavaliação dos planos 1 a 3~~ (feita em 25/10).
-3. Entregar os planos ao usuário e pedir revisão. **Perguntar o método de execução** (opções: *subagent-driven* ou *nativo*, com recomendação e motivo). Não executar antes da resposta.
-4. Com a aprovação, executar o **Plano 1 (Fundação)** tarefa por tarefa (a Tarefa 1 move o app Python para `legacy/` com `git mv`).
+3. ~~Revisão dos planos e método de execução~~: usuário aprovou em 25/10 e escolheu **subagent-driven**, começando pelo Plano 1.
+4. Executar o **Plano 1 (Fundação)** tarefa por tarefa (a Tarefa 1 move o app Python para `legacy/` com `git mv`).
 5. Depois, Planos 2 e 3. Detalhar os planos 4 a 8 só ao iniciar cada fase.
 
 ## Regras que não podem ser esquecidas
@@ -43,8 +43,7 @@ Commits na branch: `c3fe40c` (planejamento), `67d4208` (trava reforçada), `b815
 
 ## Pendências abertas (não bloqueiam o próximo passo)
 
-- `AGENTS.md` e `.agents/` apareceram sem commit em 25/10 e não foram criados por esta sessão (`AGENTS.md` só tem um fragmento JSON solto). Decidir com o usuário: apagar, ignorar ou manter.
-
+- `AGENTS.md` e `.agents/` (cópias do CLAUDE.md e do /continuar geradas por outra ferramenta, com caminhos trocados por `Codex`) foram apagados em 25/10 a pedido do usuário; não tinham informação única.
 - Logo limpo (SVG ou PNG transparente) e manual de marca da Sidia: hoje há só um recorte de baixa resolução e as cores públicas do site.
 - Provedor SSO/OIDC real e infraestrutura de implantação.
 - Validação com o DPO (Integridade, auditoria, retenção).
