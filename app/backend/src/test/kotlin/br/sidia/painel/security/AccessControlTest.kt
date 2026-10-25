@@ -5,12 +5,17 @@ import br.sidia.painel.module
 import io.ktor.client.request.get
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.ApplicationCall
+import io.ktor.server.application.call
 import io.ktor.server.response.respondText
 import io.ktor.server.routing.get
 import io.ktor.server.routing.routing
 import io.ktor.server.testing.testApplication
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
+import kotlin.test.assertNotEquals
+import kotlin.test.assertTrue
 
 class AccessControlTest {
     private fun autenticadorFixo(principal: Principal?) = object : Authenticator {
@@ -64,5 +69,92 @@ class AccessControlTest {
         val s = Settings(dashboardDevMode = false)
         val gerente = autenticadorFixo(Principal("gil", setOf(Role.GERENTE)))
         assertEquals(HttpStatusCode.OK, status(s, gerente, "/api/so-gerente"))
+    }
+
+    private val producao = Settings(dashboardDevMode = false)
+
+    @Test
+    fun caminhosCamufladosNaoContornamAutenticacao() {
+        listOf("/%61pi/ping-protegido", "/API/ping-protegido", "/api//ping-protegido").forEach {
+            assertEquals(HttpStatusCode.Unauthorized, status(producao, OidcAuthenticator(), it), it)
+        }
+    }
+
+    @Test
+    fun caminhoCodificadoQueViraHealthEPublico() {
+        // /api/%68ealth normaliza para /api/health, que é público por definição.
+        assertEquals(HttpStatusCode.OK, status(producao, OidcAuthenticator(), "/api/%68ealth"))
+    }
+
+    @Test
+    fun publicoSomenteHealthEMetaExatos() {
+        // Barra final: o caminho é público (não exige login); o roteador pode responder 404, nunca 401.
+        assertNotEquals(HttpStatusCode.Unauthorized, status(producao, OidcAuthenticator(), "/api/health/"))
+        assertEquals(HttpStatusCode.Unauthorized, status(producao, OidcAuthenticator(), "/api/meta/x"))
+        assertEquals(HttpStatusCode.Unauthorized, status(producao, OidcAuthenticator(), "/api/healthXYZ"))
+        assertEquals(HttpStatusCode.Unauthorized, status(producao, OidcAuthenticator(), "/fora-da-api"))
+    }
+
+    @Test
+    fun devModeComRequireRoleGerenteLibera() {
+        assertEquals(HttpStatusCode.OK, status(Settings(dashboardDevMode = true), DevAuthenticator(), "/api/so-gerente"))
+    }
+
+    @Test
+    fun devAuthenticatorForaDoDevModeLanca() {
+        assertFailsWith<IllegalArgumentException> {
+            testApplication { application { module(producao, DevAuthenticator()) }; client.get("/api/health") }
+        }
+    }
+
+    @Test
+    fun negacaoDeRequireRoleNaoExecutaHandler() {
+        var executou = false
+        var codigo = HttpStatusCode.OK
+        testApplication {
+            application {
+                module(producao, autenticadorFixo(Principal("ana", setOf(Role.USUARIO))))
+                routing { requireRole(Role.GERENTE) { get("/api/efeito") { executou = true; call.respondText("x") } } }
+            }
+            codigo = client.get("/api/efeito").status
+        }
+        assertEquals(HttpStatusCode.Forbidden, codigo)
+        assertFalse(executou)
+    }
+
+    @Test
+    fun principalAusenteEmRequireRoleRetorna401SemExecutar() {
+        var executou = false
+        var codigo = HttpStatusCode.OK
+        testApplication {
+            application {
+                module(producao, OidcAuthenticator())
+                routing { requireRole(Role.GERENTE) { get("/api/efeito") { executou = true; call.respondText("x") } } }
+            }
+            codigo = client.get("/api/efeito").status
+        }
+        assertEquals(HttpStatusCode.Unauthorized, codigo)
+        assertFalse(executou)
+    }
+
+    @Test
+    fun gerenteExecutaHandler() {
+        var executou = false
+        testApplication {
+            application {
+                module(producao, autenticadorFixo(Principal("gil", setOf(Role.GERENTE))))
+                routing { requireRole(Role.GERENTE) { get("/api/efeito") { executou = true; call.respondText("x") } } }
+            }
+            client.get("/api/efeito")
+        }
+        assertTrue(executou)
+    }
+
+    @Test
+    fun normalizacaoDoCaminhoCobreFormasCamufladas() {
+        assertEquals(listOf("api", "ping"), segmentosNormalizados("//api/ping"))
+        assertEquals(listOf("api", "ping"), segmentosNormalizados("/%61pi/./x/../ping?q=1"))
+        assertEquals(listOf("api", "health"), segmentosNormalizados("/api/%68ealth/"))
+        assertEquals(null, segmentosNormalizados("/api/%zz"))
     }
 }
