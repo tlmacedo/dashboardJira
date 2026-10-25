@@ -27,8 +27,8 @@ class PostgresIssueStore(private val ds: DataSource) : IssueStore {
 
     override fun upsert(issue: JsonObject, events: List<ChangeEventRecord>, instance: String) {
         val c = CamposDaIssue.de(issue)
-        // O changelog fica nas linhas de change_event; o raw guarda só a issue.
-        val raw = JsonObject(issue.filterKeys { it != "changelog" }).toString()
+        // O changelog fica nas linhas de change_event; o raw guarda só a issue, sem dados pessoais.
+        val raw = SanitizadorRaw.sanitizar(JsonObject(issue.filterKeys { it != "changelog" })).toString()
         ds.connection.use { con ->
             val autoCommit = con.autoCommit
             con.autoCommit = false
@@ -50,8 +50,8 @@ class PostgresIssueStore(private val ds: DataSource) : IssueStore {
             INSERT INTO issue (key, instance, project, issue_type, status, resolution, assignee_ref, reporter_ref,
                                created, updated, resolved, duedate, labels, parent_key, estimate_s, spent_s, raw)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CAST(? AS jsonb))
-            ON CONFLICT (key) DO UPDATE SET
-                instance = EXCLUDED.instance, project = EXCLUDED.project, issue_type = EXCLUDED.issue_type,
+            ON CONFLICT (instance, key) DO UPDATE SET
+                project = EXCLUDED.project, issue_type = EXCLUDED.issue_type,
                 status = EXCLUDED.status, resolution = EXCLUDED.resolution, assignee_ref = EXCLUDED.assignee_ref,
                 reporter_ref = EXCLUDED.reporter_ref, created = EXCLUDED.created, updated = EXCLUDED.updated,
                 resolved = EXCLUDED.resolved, duedate = EXCLUDED.duedate, labels = EXCLUDED.labels,
@@ -89,7 +89,7 @@ class PostgresIssueStore(private val ds: DataSource) : IssueStore {
         val sql = """
             INSERT INTO change_event (changelog_id, issue_id, field, from_value, to_value, at, author_ref)
             VALUES (?, ?, ?, ?, ?, ?, ?)
-            ON CONFLICT (changelog_id) DO NOTHING
+            ON CONFLICT (issue_id, changelog_id) DO NOTHING
         """.trimIndent()
         con.prepareStatement(sql).use { ps ->
             for (e in events) {
