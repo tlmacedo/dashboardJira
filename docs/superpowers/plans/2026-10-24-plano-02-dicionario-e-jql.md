@@ -133,7 +133,7 @@ docs/jira/checklist-primeira-conexao.md
       fun build(): String                                                  // cláusulas ligadas por " AND "
   }
   ```
-  `inList`/`notInList` com lista vazia lançam `IllegalArgumentException("lista vazia para <campo>")`. Valores de campos `SELECT` com `knownValues` só aceitam o que está na lista; campos sem lista aceitam o texto apenas se passar em `JqlValues.literal` contra a lista do chamador (status e tipos de issue vêm do mapa de status e do dicionário).
+  `inList`/`notInList` com lista vazia lançam `IllegalArgumentException("lista vazia para <campo>")`. Valores de campos `SELECT` com `knownValues` só aceitam o que está na lista; campos sem lista (`project`, `status`, `issuetype`, `Model Name`) aceitam texto livre **somente** via `JqlValues.safeText(value)`, que rejeita `"`, `\`, quebra de linha e caracteres de controle e limita a 120 caracteres (os valores saem sempre entre aspas duplas, então aspas e barra são o único jeito de escapar do literal; parênteses como em `Android 17.0 (OneUI_9.0)` são válidos). Acrescentar a `JqlValues` (Tarefa 2) a função `safeText` e o teste `safeTextRejeitaAspasEBarra` (`x") OR project is not EMPTY OR ("` lança; `Android 17.0 (OneUI_9.0)` passa).
 
 - [ ] **Passo 1: Testes que falham** (strings esperadas exatas):
   - `jqlDoSquadAbertas`: `JqlBuilder(dict,"samsung").inList("project",listOf("TG-Basic")).users("assignee",listOf("thiago.macedo","wendell.marques")).notInList("status",listOf("Resolved","Closed","Cancelled")).relativeDaysAtLeast("created",100).build()` → `project in ("TG-Basic") AND assignee in (thiago.macedo, wendell.marques) AND status not in ("Resolved", "Closed", "Cancelled") AND created >= startOfDay(-100)`.

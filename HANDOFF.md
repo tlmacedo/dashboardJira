@@ -12,15 +12,15 @@ Branch `docs/planejamento-novo-app`. Estamos na etapa **planejamento**; nenhum c
 | Plano visual, temas e dois protótipos (`docs/design/`) | Pronto, commitado. Direção escolhida: **híbrida** (densa nas telas de trabalho, editorial nas de leitura) |
 | `PRODUCT.md`, `CLAUDE.md`, travas do Jira e de segredos (`.claude/`) | Prontos e commitados; hooks testados (20 casos) |
 | Design / spec (`docs/superpowers/specs/2026-10-24-painel-squads-kotlin-react-design.md`) | **Aprovado pelo usuário**, commitado |
-| Planos 1 a 3 e índice (`docs/superpowers/plans/2026-10-24-*.md`) | **Escritos, ainda NÃO commitados e NÃO revisados pelo usuário** |
+| Planos 1 a 3 e índice (`docs/superpowers/plans/2026-10-24-*.md`) | Commitados (`e312ab4`); autoavaliação feita em 25/10 (ajuste no Plano 2: `safeText`); **aguardam revisão do usuário** |
 | Execução | **Não iniciada** |
 
 Commits na branch: `c3fe40c` (planejamento), `67d4208` (trava reforçada), `b815aa7` (spec).
 
 ## Próximos passos, em ordem
 
-1. Rodar `git status` (planos e este arquivo estão sem commit) e commitar os planos e o `HANDOFF.md`.
-2. Autoavaliação final dos planos 1 a 3 contra a spec (cobertura, tipos consistentes, proporção) e corrigir o que achar.
+1. ~~Commitar planos e HANDOFF~~ (feito).
+2. ~~Autoavaliação dos planos 1 a 3~~ (feita em 25/10).
 3. Entregar os planos ao usuário e pedir revisão. **Perguntar o método de execução** (opções: *subagent-driven* ou *nativo*, com recomendação e motivo). Não executar antes da resposta.
 4. Com a aprovação, executar o **Plano 1 (Fundação)** tarefa por tarefa (a Tarefa 1 move o app Python para `legacy/` com `git mv`).
 5. Depois, Planos 2 e 3. Detalhar os planos 4 a 8 só ao iniciar cada fase.
@@ -42,6 +42,8 @@ Commits na branch: `c3fe40c` (planejamento), `67d4208` (trava reforçada), `b815
 - Ausências e feriados em YAML, somente leitura.
 
 ## Pendências abertas (não bloqueiam o próximo passo)
+
+- `AGENTS.md` e `.agents/` apareceram sem commit em 25/10 e não foram criados por esta sessão (`AGENTS.md` só tem um fragmento JSON solto). Decidir com o usuário: apagar, ignorar ou manter.
 
 - Logo limpo (SVG ou PNG transparente) e manual de marca da Sidia: hoje há só um recorte de baixa resolução e as cores públicas do site.
 - Provedor SSO/OIDC real e infraestrutura de implantação.
