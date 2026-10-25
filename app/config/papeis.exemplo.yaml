@@ -44,6 +44,8 @@
 #   COORDENADOR    Todos.
 #   GERENTE        Todos. É o único que acessa a Integridade (todo acesso é auditado).
 #
+#   Issues cujo responsável NÃO está neste arquivo aparecem só para coordenação e gerente.
+#
 #   Quem pode trocar responsável, vencimento e labels de atraso de uma task (auditoria):
 #     - o Reporter (PL) da task;
 #     - qualquer COORDENADOR ou o GERENTE;
@@ -74,11 +76,21 @@
 #     - papel encerrado: SQUAD_LEADER com "ate" preenchido; depois dessa data a pessoa
 #       segue só com os papéis que não têm fim.
 #
+# ONDE ACHAR O USERNAME NO JIRA
+#   No perfil da pessoa, campo "Nome de usuário"; ou na URL do perfil:
+#   ...ViewProfile.jspa?name=<username>. É o mesmo texto que aparece em "Responsável"
+#   nas issues quando se filtra por assignee. Copie exatamente, sem adaptar.
+#
 # ERROS COMUNS
-#   Um rascunho antigo dizia que o id era "duas letras do cargo + contador" (ge-001, co-001,
-#   sl-001, us-001). Isso foi um mal-entendido: o id é o username da PESSOA no Jira, igual ao
-#   "assignee" das issues; o cargo vai só em "papel". Esse padrão NÃO vale mais.
-#   Se o id não for o username real, as issues da pessoa não são ligadas a ela e ela não as vê.
+#   - Usar no "id" o nome de exibição ("Maria Silva"), o e-mail ou um código de cargo.
+#     O id é só o username do Jira da pessoa.
+#   - Copiar o username com letra maiúscula. O painel só aceita minúsculas; se o username
+#     real tiver maiúsculas, @, + ou acentos, avise o responsável pelo painel (não adapte).
+#   - Reutilizar o id de outra pessoa (cada id é de uma pessoa só, para sempre).
+#   - Esquecer o "squad" de um USUARIO ou SQUAD_LEADER (o painel recusa o arquivo).
+#   - Deixar uma pessoa só com papéis já encerrados ("ate" no passado): ela some do painel.
+#     Mantenha ao menos um papel sem "ate" para quem continua no time.
+#   Se o id não for o username real, as issues da pessoa não são ligadas a ela.
 #
 # VALIDAÇÃO (o leitor é ESTRITO)
 #   Chaves desconhecidas são rejeitadas e o painel não sobe. Use só os campos

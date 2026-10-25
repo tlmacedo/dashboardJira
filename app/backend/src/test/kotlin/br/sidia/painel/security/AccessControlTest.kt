@@ -206,7 +206,7 @@ class AccessControlTest {
 
     @Test
     fun principalSemPapeisEhNegadoEmRotasProtegidas() {
-        val vazio = autenticadorFixo(Principal("us-999", emptySet()))
+        val vazio = autenticadorFixo(Principal("fantasma.teste", emptySet()))
         // sem requireRole e com requireRole(GERENTE): ambas negam com 403
         assertEquals(HttpStatusCode.Forbidden, status(producao, vazio, "/api/ping-protegido"))
         assertEquals(HttpStatusCode.Forbidden, status(producao, vazio, "/api/so-gerente"))

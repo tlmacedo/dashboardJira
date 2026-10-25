@@ -53,9 +53,20 @@ class RoleDirectoryValidacaoTest {
         listOf("dev", "system", "admin", "root", "anonymous").forEach { id ->
             val e = assertFailsWith<IllegalArgumentException>(id) { pessoaComId(id) }
             val msg = e.message.orEmpty()
-            assertTrue(id in msg, msg)
-            assertTrue("reservado" in msg, msg)
+            assertTrue(msg.startsWith("Id de pessoa reservado"), msg)
+            // o id testado aparece entre aspas (a lista de reservados não tem aspas)
+            assertTrue("'$id'" in msg, msg)
         }
+    }
+
+    @Test
+    fun idComSessentaECincoCaracteresCitaPrefixoERegra() {
+        val longo = "a".repeat(65)
+        val e = assertFailsWith<IllegalArgumentException> { pessoaComId("\"$longo\"") }
+        val msg = e.message.orEmpty()
+        assertTrue("'$longo'" in msg, "cita o id saneado (prefixo): $msg")
+        assertTrue("1 a 64 caracteres" in msg, msg)
+        assertTrue("não adapte o id" in msg, msg)
     }
 
     @Test

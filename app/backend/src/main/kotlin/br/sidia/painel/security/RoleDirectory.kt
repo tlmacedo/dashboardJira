@@ -78,7 +78,7 @@ class RoleDirectory(pessoas: List<Pessoa>) {
                     p.nome,
                     p.papeis.map {
                         val papel = Role.entries.firstOrNull { r -> r.name == it.papel.uppercase() }
-                            ?: throw IllegalArgumentException("Papel desconhecido '${it.papel}' em ${p.id}")
+                            ?: throw IllegalArgumentException("Papel desconhecido '${amostra(it.papel)}' em ${amostra(p.id)}")
                         AtribuicaoPapel(papel, Vigencia(it.de?.let(LocalDate::parse), it.ate?.let(LocalDate::parse)), it.squad)
                     },
                 )
@@ -97,7 +97,9 @@ class RoleDirectory(pessoas: List<Pessoa>) {
             } catch (e: InvalidJqlValueException) {
                 throw IllegalArgumentException(
                     "Id de pessoa fora da regra de username do Jira ([a-z0-9._-], 1 a 64 caracteres, " +
-                        "sem começar com hífen): '${amostra(p.id)}'",
+                        "sem começar com hífen): '${amostra(p.id)}'. Copie o username exatamente como aparece no " +
+                        "perfil do Jira; se ele tiver maiúsculas, @, + ou acentos, o painel ainda não o suporta: " +
+                        "relate ao responsável pelo painel, não adapte o id",
                 )
             }
             require(p.id !in IDS_RESERVADOS) {
