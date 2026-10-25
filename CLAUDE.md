@@ -4,7 +4,7 @@ Dashboard de gestão do time TG-Basic sobre tasks do Jira Data Center: fluxo, pr
 
 ## Regras que valem sempre
 
-1. **Nenhuma consulta ao Jira da empresa sem autorização expressa do usuário, por pesquisa.** Hoje nenhuma está autorizada. Vale também para o MCP da Atlassian e para `curl`. Trava técnica: `.claude/hooks/guard.sh` (bloqueia MCP Atlassian e comandos de rede para o Jira). A regra é temporária; só o usuário a remove.
+1. **Nenhuma consulta nem acesso a servidor Jira com `JIRA_LIVE_ENABLED=false`, em nenhuma hipótese.** Só o usuário liga essa flag (`true`); enquanto estiver `false` (o padrão), é proibido acessar o Jira por qualquer caminho: cliente do app, MCP da Atlassian, `curl`, navegador ou script. Com a flag `true`, cada consulta ainda exige autorização expressa do usuário, por pesquisa, enquanto esta regra temporária valer; hoje nenhuma está autorizada. Até lá o trabalho se apoia em pesquisa na web (documentação pública do Jira), nos arquivos de filtro (`Filtros_Status_tool.txt`, só vocabulário) e no projeto irmão bscbi-web, que já funciona, e é validado só contra fixtures. Trava técnica: `LiveGuard` no código e `.claude/hooks/guard.sh` (bloqueia MCP Atlassian e comandos de rede para o Jira). Só o usuário remove a regra.
 2. Trabalhar offline: fixtures, mocks e documentos. Flags de ambiente: `JIRA_LIVE_ENABLED=false` e `DASHBOARD_DEV_MODE=true` por padrão.
 3. Nunca editar nem commitar `.env` ou configs com dados pessoais reais (`config/equipes.yaml`, `ausencias.yaml`, `papeis.yaml`). Usar os modelos `.exemplo`/`.demo`.
 4. Toda aprovação do usuário vem como **pergunta com opções**, a recomendada primeiro e marcada "(Recomendada)".
