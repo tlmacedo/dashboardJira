@@ -1,38 +1,13 @@
 <!doctype html>
 <html lang="pt-BR">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Painel de Squads Jira</title>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 rx=%276%27 fill=%27%232457d6%27/%3E%3Crect x=%277%27 y=%277%27 width=%2711%27 height=%2718%27 fill=%27white%27/%3E%3C/svg%3E">
-<link rel="stylesheet" href="/static/css/app.css">
-</head>
-<body>
-<a class="skip" href="#main">Pular para o conteúdo</a>
-<div class="shell">
-  <aside class="side" id="side" aria-label="Navegação">
-    <div class="brand"><span class="logo" aria-hidden="true">◧</span><div><strong>Painel de Squads</strong><small id="modo"></small></div></div>
-    <nav id="nav"></nav>
-    <div class="side-foot">
-      <button id="theme" class="ghost" aria-label="Alternar tema">Tema</button>
-      <small>Métricas de fluxo para equipes, não para ranking de pessoas.</small>
-    </div>
-  </aside>
-  <div class="content">
-    <header class="top">
-      <button id="menu" class="ghost only-mobile" aria-label="Menu">☰</button>
-      <h1 id="title">Visão geral</h1>
-      <div class="filters" id="filters" role="search" aria-label="Filtros"></div>
-    </header>
-    <div id="banner" class="banner" hidden></div>
-    <main id="main" tabindex="-1"></main>
-  </div>
-</div>
-<script src="/static/js/charts.js"></script>
-<script src="/static/js/ui.js"></script>
-<script src="/static/js/screens.js"></script>
-<script src="/static/js/screens2.js"></script>
-<script src="/static/js/drill.js"></script>
-<script src="/static/js/app.js"></script>
-</body>
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Painel de Squads</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
 </html>

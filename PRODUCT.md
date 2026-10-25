@@ -37,7 +37,7 @@ Une gestão de fluxo (tempo em status, previsão, capacidade) a auditoria de int
 
 - Cards pré-definidos, cada um com sua busca própria; relatório do inventário em `docs/analise/relatorio-cards-app-atual.md`.
 - Cards novos aprovados: calendário do time, cobertura por ausência, plano de 4 a 8 semanas, vencimentos da semana com folga real, posse da task por pessoa, simulador de ausência, matriz de competências, revisões pendentes por revisor, carga por tipo/OS, tendência de ocupação, esforço por task fechada (tipo + labels TEST-* + horas do worklog).
-- Auditoria: apenas Reporter (PL), coordenadores ou Squad Leader do responsável podem trocar responsável, vencimento e labels de atraso.
+- Auditoria: apenas Reporter (PL), coordenadores e gerente, ou Squad Leader do responsável podem trocar responsável, vencimento e labels de atraso.
 - Interface em pt-BR e inglês com escolha do usuário.
 - Sem ranking individual de pessoas; tabelas de pessoas em ordem alfabética. Integridade restrita ao gerente e auditada.
 - A tela Integridade e a auditoria tratam dados pessoais: validar base legal com o DPO antes do uso real.

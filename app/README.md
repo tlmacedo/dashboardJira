@@ -1,97 +1,57 @@
-# Painel de Squads para Jira
+# Painel de Squads (app)
 
-Painel web (FastAPI + SQLAlchemy + front sem build) que lê o Jira (Cloud ou Data Center), guarda o histórico num banco próprio e mostra, por **squad, projeto e pessoa**: o que está aberto, o que está parado, o que foi fechado e como, previsões, capacidade com férias/licenças, e sugestões de **distribuição e rebalanceamento** que o gerente aprova.
+Backend Kotlin/Ktor em `backend/`, frontend React + TypeScript (Vite) em `frontend/`. O app Python anterior fica em `../legacy/` apenas como referência. Desenho completo: [spec](../docs/superpowers/specs/2026-10-24-painel-squads-kotlin-react-design.md).
 
-Fundamentação (métricas, fórmulas, limites e o que não foi confirmado): [`reports/Dashboard Jira gestão por squad.md`](../reports/Dashboard%20Jira%20gestão%20por%20squad.md). Capturas de tela com dados fictícios: [`docs/manual/`](docs/manual/MANUAL_DO_USUARIO.md).
+## Como subir (Docker)
 
-## Documentação
-
-| Documento | Para quê |
-|---|---|
-| [`INICIO_RAPIDO.md`](INICIO_RAPIDO.md) | do `git clone` ao painel com o seu Jira: URL, login/token, equipes e pessoas |
-| [`INTEGRACAO_PARA_IA.md`](INTEGRACAO_PARA_IA.md) | procedimento passo a passo para uma IA (ou pessoa técnica) integrar e rodar sozinha |
-| [`docs/manual/MANUAL_DO_USUARIO.md`](docs/manual/MANUAL_DO_USUARIO.md) | manual com capturas: cada tela, cada card, filtros e períodos |
-| [`docs-testes/RELATORIO_TESTES.md`](docs-testes/RELATORIO_TESTES.md) | testes simulados da API do Jira, filtros e carga, com resultados e lacunas |
-
-## Começar em 1 minuto (demonstração, dados fictícios)
-
-```bash
-cd app && ./start.sh demo        # Windows: start.bat demo   (cria o ambiente, instala e abre em http://localhost:8000)
+```sh
+cp .env.example .env          # o .env é ignorado pelo git
+# edite o .env e defina POSTGRES_PASSWORD (ex.: openssl rand -hex 16)
+docker compose up --build -d
 ```
 
-Manualmente:
+- Painel: <http://127.0.0.1:8080> (serve a SPA; a API fica em `/api/*`, por exemplo `/api/health` e `/api/meta`).
+- `POSTGRES_PASSWORD` é obrigatória e não tem valor padrão: sem ela o compose se recusa a iniciar.
+- Para derrubar e apagar os dados locais: `docker compose down -v`.
 
-```bash
-cd app/backend
-pip install -r requirements.txt
-JIRADASH_MODE=demo python -m uvicorn jiradash.main:app      # http://localhost:8000
-python -m pytest -q                                          # ~600 testes (leva alguns minutos: inclui matriz de filtros)
-```
+## Flags
 
-O modo demonstração gera ~900 issues, histórico de status, horas, férias e licenças relativas a hoje. Há um aviso fixo na tela; nenhum número vem do seu Jira.
-
-## Ligar ao seu Jira (uso real)
-
-1. `cp config/equipes.exemplo.yaml config/equipes.yaml` e preencha: squads, gerente, membros (`ref` = accountId no Cloud, username no Data Center), projetos de cada squad, **nomes exatos dos status** e sua categoria (`todo|active|wait|blocked|done`), ordem do fluxo, resoluções negativas, férias/licenças e feriados extras.
-2. Crie uma conta de serviço com *Browse Projects* e *View Worklogs* (e *Assign Issues* só se for ligar a escrita). Cloud: API token. Data Center: Personal Access Token.
-3. Configure as variáveis (`.env.example`): `JIRADASH_MODE=jira`, `JIRA_FLAVOR`, `JIRA_BASE_URL`, `JIRA_TOKEN` (+ `JIRA_EMAIL` no Cloud).
-4. Valide e sincronize:
-   ```bash
-   python -m jiradash check          # credenciais, campos (Story Points, Sprint, Flagged) e status sem mapeamento
-   python -m jiradash sync --full    # carga inicial com histórico
-   python -m jiradash serve
-   ```
-   Depois disso o processo mantém a sincronização incremental a cada `JIRADASH_SYNC_MIN` minutos (marca d'água − 5 min, idempotente por id de changelog) e uma reconciliação completa por dia.
-5. Produção: PostgreSQL (`DATABASE_URL`), `JIRADASH_API_KEY` ou SSO no proxy reverso, HTTPS, `docker compose up --build`.
-
-**A escrita no Jira vem desligada.** Em modo sombra a aprovação de uma sugestão fica registrada na auditoria sem alterar o Jira. Compare por algumas semanas as sugestões com o que o gerente faria e só então defina `JIRADASH_ALLOW_WRITE=1`.
-
-## Telas
-
-| Grupo | Tela | Responde |
+| Variável | Padrão | Efeito |
 |---|---|---|
-| Visão | Visão geral (com Central de atenção) · Meu painel | saúde dos squads e o que pede ação; fila e capacidade de uma pessoa |
-| Em curso | Abertas · Épicos · Negligenciadas · Riscos · Previsão | idade vs. percentis, vencimento; sem atualização/sem responsável/bloqueadas/paradas; risco explicável 0–100; Monte Carlo e data por issue |
-| Resultados | Fechadas · Negativas · Tempo em status | entregas, ciclo/lead P50/P85/P95, por pessoa (alfabético); reabertas, devolvidas, canceladas, atrasadas, estouro de estimativa, com tempo por status; onde o tempo é gasto |
-| Prazos e qualidade | Metas e prazos · Checklist × Review · Integridade | % no prazo e entregas em D, D-1, D-2 por período, tipo e pessoa (e pela data original); comparação de datas, labels e responsáveis entre a tarefa checklist e sua review filha; indícios de adulteração de resultados |
-| Capacidade | Carga por pessoa · Capacidade e ausências · Gargalos | ocupação, equidade de Jain; mapa semanal com férias/feriados e atrasos previstos; fluxo cumulativo e etapas gargalo |
-| Ação | Distribuição · Rebalanceamento | sugerir/aprovar/trocar com motivo/rejeitar, ranking com os fatores |
-| Governança | Qualidade dos dados · Auditoria · Sincronização | dados faltantes que enfraquecem as previsões; quem decidiu o quê |
+| `JIRA_LIVE_ENABLED` | `false` | Jira real desligado. Só altere com autorização expressa. |
+| `DASHBOARD_DEV_MODE` | `true` | Modo desenvolvimento: **sem login**, todos os dados, faixa vermelha. |
+| `PAINEL_STATIC_DIR` | `frontend/dist` (`/app/static` na imagem) | Pasta do build do frontend servida em `/`. |
 
-**Detalhamento:** cartões, barras, colunas, células de mapas de calor e números de tabelas são clicáveis e abrem a lista de tasks que compõem aquele número (janela, nova aba por link `#/tarefas?...` e CSV). Endpoint: `GET /api/drill?kind=...&v1=...&v2=...`.
+## Aviso de segurança
 
-Os filtros (squad, projeto, pessoa, tipo, prioridade, período; cada tela mostra só os que alteram os números) ficam na URL. Listas exportam CSV com os filtros no cabeçalho.
+O modo desenvolvimento **não tem login**. Nunca o exponha em rede com dados reais. Por isso o compose publica a porta só em `127.0.0.1:8080`.
 
-## Como a distribuição decide
+**A imagem Docker nasce com `DASHBOARD_DEV_MODE=true` (sem login).** NUNCA a publique com `docker run -p` nem em rede alguma sem antes desligar esse modo (`DASHBOARD_DEV_MODE=false`).
 
-Motor puro em `backend/jiradash/distribution/engine.py` (determinístico, versionado, testado). Para cada issue nova: `score = carga projetada ÷ capacidade líquida` (4 semanas, já sem férias, licenças e feriados) `+ penalidade de WIP + competência faltante − bônus de afinidade`. Menor score vence; empate vai para quem recebeu há mais tempo. **Produtividade entra só como peso de capacidade, suavizado e limitado a ±15%**, para não punir quem entrega mais nem premiar quem entrega menos. O índice de Jain mostra a equidade antes e depois. Rebalanceamento move o mínimo de issues **não iniciadas** quando a ocupação projetada passa de 110%, com histerese. Os pesos são heurísticos e estão no topo do arquivo, ajuste-os com o histórico do seu time.
+Para produção: defina `DASHBOARD_DEV_MODE=false` (exige o login SSO/OIDC, previsto em plano posterior), e só então troque a publicação no `docker-compose.yml` (por exemplo `"8080:8080"` ou, melhor, um proxy reverso com TLS na frente). Não faça isso enquanto o login não existir.
 
-## Integridade dos resultados (metas)
+## Estado desta fundação
 
-A tela **Integridade** procura padrões que melhoram o placar sem melhorar o trabalho: vencimento prorrogado perto do prazo ou "resgatando" um atraso, fechamento instantâneo ou em lote, reabrir e fechar em minutos, assumir a issue de outra pessoa minutos antes de concluir, estimativa aumentada durante o trabalho, label de criticidade removida. Cada indício vem com evidência verificável no histórico da issue, e o acesso à tela é registrado na auditoria. São **indícios para revisão humana, não prova**: confira no Jira e converse antes de qualquer conclusão.
+Este plano prova que o serviço `painel` sobe, serve a SPA e responde `/api/health` e `/api/meta`, e que o `postgres` fica saudável. A ligação do Ktor ao banco (abrir o pool e chamar `Database.migrate`) **ainda não existe**: é objeto de plano posterior, então as migrações não são aplicadas na subida. As variáveis `DATABASE_URL`, `DATABASE_USER` e `DATABASE_PASSWORD` já são entregues ao contêiner para esse momento.
 
-## Decisões de privacidade (LGPD)
+## Desenvolvimento sem Docker
 
-Tabelas de desempenho não têm ranking; a exceção é a tela Integridade (pedida para identificar adulteração), que ordena por pontos de atenção e registra cada acesso. Tabelas de pessoas saem em ordem alfabética; os "sinais" servem a conversas de apoio. Ausências são guardadas sem motivo detalhado. Há trilha de auditoria de toda decisão. Antes de usar com dados reais, valide a base legal e a comunicação à equipe com o DPO: a análise jurídica da pesquisa usou só fontes secundárias.
-
-## Limites conhecidos (leia antes de confiar nos números)
-
-- **O cliente Jira não foi testado contra um servidor real.** Foi escrito conforme a documentação pública (Cloud `/search/jql` + `changelog/bulkfetch`; DC `/search` com `expand=changelog`) e coberto por testes com respostas simuladas. Rode `python -m jiradash check` e confira uma amostra de issues contra o Jira antes de usar. O formato do bulk fetch do Cloud e o campo de/para de assignee no DC são os pontos a verificar primeiro.
-- PostgreSQL, Docker e o agendador não foram exercitados aqui (os testes e a demonstração usam SQLite).
-- Desempenho: com ~900 issues as telas respondem em centenas de ms; com ~22 mil issues o tempo é de segundos (veja `docs-testes/resultados_carga.md`). Use vários workers (`uvicorn --workers 4`) e PostgreSQL para equipes grandes; a janela de histórico é `history_days` (padrão 270) no YAML.
-- Tempos são em horas corridas, não em horário útil. Histórico de mudança de responsável no DC pode vir por nome de exibição; o casamento com a pessoa é por referência ou nome.
-- Sem estimativa, o sistema usa `default_issue_hours` e a previsão perde confiança; a tela de qualidade mostra o quanto.
-- Previsão Monte Carlo assume o ritmo recente e backlog fechado; com menos de 8 semanas de histórico recebe selo de baixa confiança.
-- Autenticação do painel é só chave de API; para papéis (gerente, leitor) por squad use SSO no proxy reverso e propague `X-User`.
-- Pesos do score de risco e do motor de distribuição são propostas, sem fonte normativa.
-
-## Estrutura
-
+```sh
+cd backend && ./gradlew test        # testes do backend (veja a nota sobre Docker abaixo)
+cd frontend && pnpm install && pnpm test && pnpm dev   # frontend em http://localhost:5173 (proxy de /api para :8080)
 ```
-app/
-  backend/jiradash/   config, models, jira/ (client, sync), metrics/ (core, forecast, capacity, risk),
-                      distribution/engine.py, analytics.py (payloads das telas), api/routes.py, demo.py, cli.py
-  backend/tests/      métricas, motor, cliente Jira (simulado), API ponta a ponta
-  frontend/           index.html, css, js (gráficos SVG próprios, sem dependências)
-  config/             equipes.exemplo.yaml (copie), equipes.demo.yaml
+
+### O que precisa de Docker nos testes
+
+- **Exigem Docker em execução:** os testes de banco (`RetentionTest`, em `backend/src/test/kotlin/br/sidia/painel/db/`), que sobem um PostgreSQL real via Testcontainers. Sem Docker eles **falham** (não são ignorados).
+- **Rodam sem Docker:** todos os demais testes do backend (configuração, cliente Jira com mock, calendário, papéis, controle de acesso, SPA, health e meta) e todos os testes do frontend (`pnpm test`).
+- Para rodar só o que dispensa Docker: `./gradlew test --tests 'br.sidia.painel.security.*' --tests 'br.sidia.painel.time.*' --tests 'br.sidia.painel.jira.*' --tests 'br.sidia.painel.config.*' --tests 'br.sidia.painel.SpaTest' --tests 'br.sidia.painel.HealthTest' --tests 'br.sidia.painel.MetaTest'`.
+
+### Rodar o backend fora do Docker
+
+A partir de `app/backend`, os padrões `frontend/dist` (`PAINEL_STATIC_DIR`) e `config` (`PAINEL_CONFIG_DIR`) apontam para o lugar errado (relativos a `backend/`). Indique os caminhos:
+
+```sh
+cd frontend && pnpm build && cd ../backend
+PAINEL_STATIC_DIR=../frontend/dist PAINEL_CONFIG_DIR=../config ./gradlew run
 ```

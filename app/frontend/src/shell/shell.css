@@ -1,0 +1,274 @@
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+}
+body {
+  font-family: var(--font);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.45;
+}
+button {
+  font: inherit;
+  color: inherit;
+}
+:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+/* No menu azul do tema Sidia o foco precisa contrastar com o fundo do menu. */
+[data-theme='sidia'] .menu :focus-visible {
+  outline-color: #77ff94;
+}
+
+.pular {
+  position: absolute;
+  left: 8px;
+  top: -48px;
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--line);
+  padding: 8px 12px;
+  border-radius: 6px;
+  z-index: 50;
+}
+.pular:focus {
+  top: 8px;
+}
+
+/* Faixa de desenvolvimento: vermelho fixo com texto branco (AA) em todos os temas. */
+.devbar {
+  background: #b3261e;
+  color: #fff;
+  font-weight: 600;
+  font-size: 12px;
+  height: var(--dev-altura);
+  line-height: 18px;
+  padding: 5px 16px;
+  text-align: center;
+  letter-spacing: 0.2px;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+/* Faixa fina com as cores da moldura do logo; só aparece no tema Sidia. */
+.frame {
+  height: var(--frame-altura);
+  background: var(--frame);
+  position: sticky;
+  top: var(--dev);
+  z-index: 10;
+}
+/* --dev: altura da faixa vermelha (0 sem faixa); --faixas: tudo que fica fixo acima do menu. */
+.shell {
+  --dev-altura: 28px;
+  --dev: 0px;
+  --faixas: calc(var(--dev) + var(--frame-altura));
+}
+.shell--dev {
+  --dev: var(--dev-altura);
+}
+
+.app {
+  display: grid;
+  grid-template-columns: 240px minmax(0, 1fr);
+  min-height: 100vh;
+}
+
+/* Menu lateral */
+.menu {
+  background: var(--menu);
+  color: var(--menu-text);
+  border-right: 1px solid var(--menu-line);
+  display: flex;
+  flex-direction: column;
+  padding: 16px 12px;
+  gap: 4px;
+  position: sticky;
+  top: var(--faixas);
+  height: calc(100vh - var(--faixas));
+  overflow: hidden;
+}
+/* Só a lista rola; tema, idioma e papel ficam sempre visíveis no rodapé do menu. */
+.menu-nav {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+}
+.menu .logo {
+  padding: 4px 8px 14px;
+}
+.menu .logo img {
+  height: 34px;
+  display: block;
+}
+.menu .prod {
+  font-size: 12px;
+  color: var(--menu-text2);
+  padding: 0 8px 12px;
+}
+.grp {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--menu-text2);
+  padding: 14px 8px 4px;
+}
+.menu-nav a {
+  display: block;
+  padding: 7px 10px;
+  border-radius: 6px;
+  color: var(--menu-text);
+  text-decoration: none;
+  font-size: 13.5px;
+}
+.menu-nav a:hover {
+  background: var(--menu-active);
+}
+/* Item atual: fundo + negrito + barra lateral (a cor não é o único sinal). */
+.menu-nav a[aria-current='page'] {
+  background: var(--menu-active);
+  font-weight: 650;
+  box-shadow: inset 3px 0 0 var(--menu-marca);
+}
+.foot {
+  flex: none;
+  margin-top: auto;
+  padding-top: 14px;
+  border-top: 1px solid var(--menu-line);
+  display: grid;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--menu-text2);
+}
+.seg-bloco {
+  display: grid;
+  gap: 3px;
+}
+.seg {
+  display: flex;
+  flex-wrap: wrap;
+  border: 1px solid var(--menu-line);
+  border-radius: 7px;
+  overflow: hidden;
+}
+.seg button {
+  flex: 1;
+  background: transparent;
+  border: 0;
+  padding: 6px 4px;
+  cursor: pointer;
+  color: var(--menu-text2);
+  font-size: 12px;
+}
+.seg button[aria-pressed='true'] {
+  background: var(--menu-active);
+  color: var(--menu-text);
+  font-weight: 650;
+}
+
+/* Conteúdo */
+main {
+  padding: 22px 28px 48px;
+  min-width: 0;
+}
+main:focus {
+  outline: none;
+}
+.top {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: flex-end;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+h1 {
+  font-size: 22px;
+  margin: 0;
+  letter-spacing: -0.2px;
+}
+.sub {
+  color: var(--text2);
+  margin: 2px 0 0;
+  max-width: 62ch;
+}
+.btn {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  padding: 6px 10px;
+  cursor: pointer;
+}
+.notice {
+  border: 1px solid var(--line);
+  background: var(--soft);
+  padding: 8px 12px;
+  border-radius: 8px;
+  color: var(--text2);
+  font-size: 12.5px;
+  margin: 0 0 14px;
+}
+
+.burger {
+  display: none;
+}
+
+/* Celular: o menu vira botão e a lista abre sob demanda. */
+@media (max-width: 820px) {
+  .app {
+    grid-template-columns: minmax(0, 1fr);
+    min-height: 0;
+  }
+  .menu {
+    position: relative;
+    top: auto;
+    height: auto;
+    padding: 10px 16px;
+    overflow: visible;
+  }
+  .menu .logo {
+    padding-bottom: 4px;
+  }
+  .burger {
+    display: inline-block;
+    position: absolute;
+    right: 16px;
+    top: 12px;
+    background: transparent;
+    color: var(--menu-text);
+    border-color: var(--menu-line);
+  }
+  .menu-nav {
+    overflow: visible;
+  }
+  .menu .prod,
+  .menu-nav,
+  .menu .foot {
+    display: none;
+  }
+  .menu--aberto .prod,
+  .menu--aberto .menu-nav {
+    display: block;
+  }
+  .menu--aberto .foot {
+    display: grid;
+  }
+  main {
+    padding: 16px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition: none !important;
+    animation: none !important;
+  }
+}

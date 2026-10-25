@@ -1,0 +1,76 @@
+/* Tokens dos três temas (plano visual, seção 3), com os valores dos protótipos.
+   Todo componente usa só estes tokens; o tema é escolhido por data-theme na raiz. */
+:root {
+  --bg: #f7f7f7;
+  --surface: #ffffff;
+  --text: #181818;
+  --text2: #595959;
+  --line: #dadde6;
+  --soft: #eef0f6;
+  --primary: #1329a0;
+  --on-primary: #ffffff;
+  --accent: #772feb;
+  --ok: #0b7a3b;
+  --warn: #9a5b00;
+  --bad: #b3261e;
+  --menu: #ffffff;
+  --menu-text: #181818;
+  --menu-text2: #595959;
+  --menu-line: #dadde6;
+  --menu-active: #e8ecff;
+  --menu-marca: var(--primary);
+  --s1: #1329a0;
+  --s2: #772feb;
+  --s3: #b85a0b;
+  --s4: #0b7a3b;
+  --focus: #3333ff;
+  --frame: none;
+  --frame-altura: 0px;
+  --font: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  color-scheme: light;
+}
+
+[data-theme='dark'] {
+  --bg: #101521;
+  --surface: #171e2e;
+  --text: #eef1f8;
+  --text2: #b4bccf;
+  --line: #2a3449;
+  --soft: #1e2740;
+  --primary: #8fa8ff;
+  --on-primary: #0b1030;
+  --accent: #b9a0ff;
+  --ok: #77ff94;
+  --warn: #ffb74d;
+  --bad: #ff8a80;
+  --menu: #0d121c;
+  --menu-text: #eef1f8;
+  --menu-text2: #b4bccf;
+  --menu-line: #222b40;
+  --menu-active: #1e2740;
+  --s1: #8fa8ff;
+  --s2: #b9a0ff;
+  --s3: #f58634;
+  --s4: #77ff94;
+  --focus: #8fa8ff;
+  color-scheme: dark;
+}
+
+[data-theme='sidia'] {
+  --bg: #f4f6ff;
+  --surface: #ffffff;
+  --text: #10163a;
+  --text2: #4a5073;
+  --line: #d6dbf2;
+  --soft: #e9edff;
+  --primary: #1329a0;
+  --menu: #1329a0;
+  --menu-text: #ffffff;
+  --menu-text2: #c9d4ff;
+  --menu-line: #3a4db8;
+  --menu-active: #2438b0;
+  --menu-marca: #77ff94;
+  /* Moldura do logo: índigo (esquerda), verde (topo), laranja (direita e base). */
+  --frame: linear-gradient(90deg, #3e4095 0 25%, #00a85a 25% 50%, #f58634 50% 100%);
+  --frame-altura: 5px;
+}

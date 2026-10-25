@@ -1,22 +1,50 @@
-# Defina POSTGRES_PASSWORD no arquivo .env (ao lado deste arquivo) antes de subir; não há senha padrão.
-# Demonstração:      docker compose up --build            (http://localhost:8000, dados fictícios)
-# Produção (Jira):   JIRADASH_MODE=jira docker compose up --build
+# Painel de Squads: painel (Ktor + SPA) e postgres.
+# Uso: copie .env.example para .env, defina POSTGRES_PASSWORD e rode `docker compose up --build -d`.
+name: painel  # evita colisão com outros projetos compose chamados "app"
+
 services:
   painel:
-    build: .
-    ports: ["8000:8000"]
-    env_file: [{path: .env, required: false}]
+    build:
+      context: .
+      dockerfile: Dockerfile
+    depends_on:
+      postgres:
+        condition: service_healthy
     environment:
-      JIRADASH_MODE: ${JIRADASH_MODE:-demo}
-      DATABASE_URL: postgresql+psycopg://jiradash:${POSTGRES_PASSWORD:?defina POSTGRES_PASSWORD no .env}@db/jiradash
-    depends_on: [db]
-    volumes: ["./config:/app/config:ro"]
-  db:
-    image: postgres:16-alpine
+      # Padrões seguros: Jira real desligado e modo desenvolvimento (sem login).
+      JIRA_LIVE_ENABLED: ${JIRA_LIVE_ENABLED:-false}
+      DASHBOARD_DEV_MODE: ${DASHBOARD_DEV_MODE:-true}
+      # Conexão com o banco vem do ambiente; a senha não tem valor padrão.
+      DATABASE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-painel}
+      DATABASE_USER: ${POSTGRES_USER:-painel}
+      DATABASE_PASSWORD: ${POSTGRES_PASSWORD:?defina POSTGRES_PASSWORD}
+    ports:
+      # Só localhost: o modo desenvolvimento não exige login. Para produção, veja o README.
+      - "127.0.0.1:8080:8080"
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    read_only: true
+    tmpfs:
+      - /tmp
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:16
     environment:
-      POSTGRES_USER: jiradash
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?defina POSTGRES_PASSWORD no .env}
-      POSTGRES_DB: jiradash
-    volumes: ["pgdata:/var/lib/postgresql/data"]
+      POSTGRES_DB: ${POSTGRES_DB:-painel}
+      POSTGRES_USER: ${POSTGRES_USER:-painel}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?defina POSTGRES_PASSWORD}
+    # Sem "ports": o banco só é alcançável pela rede interna do compose.
+    volumes:
+      - painel-pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
 volumes:
-  pgdata:
+  painel-pg:
