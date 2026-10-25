@@ -18,8 +18,8 @@ Commits principais da branch `feat/fundacao`: `87a12db` (move o app Python para 
 
 ## Próximos passos, em ordem
 
-1. **Decidir como integrar a branch `feat/fundacao`** (mesclar em `main`, abrir PR, ou seguir empilhando). Não mesclar nem publicar sem o usuário decidir.
-2. **Decisão pendente do usuário:** `isReporterAuthorized` hoje autoriza também o GERENTE (spec e CLAUDE.md citam só coordenadores). Confirmar.
+1. ~~Integração da branch~~: decidido em 25/10, seguir empilhando (próxima branch a partir de `feat/fundacao`) e abrir o PR só quando os Planos 2 e 3 estiverem prontos. Não mesclar nem publicar sem o usuário decidir.
+2. ~~Gerente em `isReporterAuthorized`~~: decidido em 25/10, o gerente é autorizado como o coordenador (spec, CLAUDE.md e PRODUCT.md atualizados).
 3. Executar o **Plano 2** (dicionário de campos e construtor de JQL) pelo mesmo fluxo subagent-driven (`superpowers:subagent-driven-development`). O plano já descreve `JqlValues.safeText`.
 4. Antes do **Plano 3**, detalhar e executar a **Tarefa 0 de inicialização** (ver o topo do Plano 3): carregar calendário e papéis, abrir o banco e migrar, `DATABASE_USER/PASSWORD` no `Settings`, fábrica única do cliente Jira que valida `https`/token e liga o `LiveGuard` ao `Settings`, correções do cliente (total ausente = erro etc.), `logback.xml`.
 5. Depois, Plano 3 (card Tempo em status) e detalhar os planos 4 a 8 só ao iniciar cada fase.

@@ -136,7 +136,7 @@ O tempo que cada pessoa ficou com a task, incluindo transferências, é calculad
 ## 7. Auditoria de datas, dono e labels
 
 ### 7.1 Quem pode alterar
-Apenas o **Reporter da task (o PL)**, os **coordenadores** ou o **Squad Leader do responsável** podem trocar **responsável**, **data de vencimento** e **labels que evitam atraso**. As listas de coordenadores e Squad Leaders vêm de YAML **com vigência por datas** (cada pessoa, papel e squad tem "de" e "até"). A auditoria é retroativa: "autorizado" é avaliado com os papéis e o squad **vigentes na data de cada alteração**, não os de hoje. Qualquer outra pessoa que altere esses campos gera **alerta e auditoria**.
+Apenas o **Reporter da task (o PL)**, os **coordenadores e o gerente** ou o **Squad Leader do responsável** podem trocar **responsável**, **data de vencimento** e **labels que evitam atraso**. As listas de coordenadores e Squad Leaders vêm de YAML **com vigência por datas** (cada pessoa, papel e squad tem "de" e "até"). A auditoria é retroativa: "autorizado" é avaliado com os papéis e o squad **vigentes na data de cada alteração**, não os de hoje. Qualquer outra pessoa que altere esses campos gera **alerta e auditoria**.
 
 ### 7.2 Sinais
 Cada sinal cita campo, valor de/para, data, autor e se o autor era autorizado, e abre a gaveta com o histórico campo a campo.
