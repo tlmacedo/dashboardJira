@@ -18,6 +18,16 @@ import kotlin.test.assertNotEquals
 import kotlin.test.assertTrue
 
 class AccessControlTest {
+    @Test
+    fun uriQueNaoComecaComBarraExigeAutenticacao() {
+        // URI absoluta ou relativa: o primeiro segmento não pode virar "público" por normalização.
+        listOf("http://h/api/x", "https://h/api/health", "//h/api/x", "api/x", "")
+            .forEach { assertTrue(exigeAutenticacao(it), "deveria exigir: '$it'") }
+        listOf("/", "/assets/x.js", "/api/health", "/api/meta").forEach {
+            assertFalse(exigeAutenticacao(it), it)
+        }
+    }
+
     private fun autenticadorFixo(principal: Principal?) = object : Authenticator {
         override suspend fun authenticate(call: ApplicationCall): Principal? = principal
     }

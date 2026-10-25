@@ -1,7 +1,7 @@
 package br.sidia.painel.security
 
+import br.sidia.painel.TestPaths
 import java.nio.file.Files
-import java.nio.file.Path
 import java.time.LocalDate
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -83,7 +83,7 @@ class RoleDirectoryTest {
 
     @Test
     fun yamlDemoCarrega() {
-        val dir = RoleDirectory.fromYaml(Path.of("../config/papeis.exemplo.yaml"))
+        val dir = RoleDirectory.fromYaml(TestPaths.configDir.resolve("papeis.exemplo.yaml"))
         assertTrue(Role.GERENTE in dir.rolesOf("ge-001", d("2026-10-25")))
         // pessoa que mudou de squad em 01/07/2026
         assertEquals("Alfa", dir.squadOf("us-001", d("2026-06-30")))
@@ -95,7 +95,7 @@ class RoleDirectoryTest {
 
     @Test
     fun exemploTemIdsNoPadraoPorCargo() {
-        val caminho = Path.of("../config/papeis.exemplo.yaml")
+        val caminho = TestPaths.configDir.resolve("papeis.exemplo.yaml")
         val dir = RoleDirectory.fromYaml(caminho)
         val hoje = d("2026-10-25")
         // ids lidos das linhas "- id: xx-000" (o diretório não expõe a lista de pessoas)

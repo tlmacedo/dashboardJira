@@ -17,5 +17,6 @@ app/config/equipes.yaml
 legacy/data/
 **/build/
 **/.gradle/
+**/.kotlin/
 **/node_modules/
 **/dist/

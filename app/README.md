@@ -37,6 +37,21 @@ Este plano prova que o serviço `painel` sobe, serve a SPA e responde `/api/heal
 ## Desenvolvimento sem Docker
 
 ```sh
-cd backend && ./gradlew test        # testes do backend
+cd backend && ./gradlew test        # testes do backend (veja a nota sobre Docker abaixo)
 cd frontend && pnpm install && pnpm test && pnpm dev   # frontend em http://localhost:5173 (proxy de /api para :8080)
+```
+
+### O que precisa de Docker nos testes
+
+- **Exigem Docker em execução:** os testes de banco (`RetentionTest`, em `backend/src/test/kotlin/br/sidia/painel/db/`), que sobem um PostgreSQL real via Testcontainers. Sem Docker eles **falham** (não são ignorados).
+- **Rodam sem Docker:** todos os demais testes do backend (configuração, cliente Jira com mock, calendário, papéis, controle de acesso, SPA, health e meta) e todos os testes do frontend (`pnpm test`).
+- Para rodar só o que dispensa Docker: `./gradlew test --tests 'br.sidia.painel.security.*' --tests 'br.sidia.painel.time.*' --tests 'br.sidia.painel.jira.*' --tests 'br.sidia.painel.config.*' --tests 'br.sidia.painel.SpaTest' --tests 'br.sidia.painel.HealthTest' --tests 'br.sidia.painel.MetaTest'`.
+
+### Rodar o backend fora do Docker
+
+A partir de `app/backend`, os padrões `frontend/dist` (`PAINEL_STATIC_DIR`) e `config` (`PAINEL_CONFIG_DIR`) apontam para o lugar errado (relativos a `backend/`). Indique os caminhos:
+
+```sh
+cd frontend && pnpm build && cd ../backend
+PAINEL_STATIC_DIR=../frontend/dist PAINEL_CONFIG_DIR=../config ./gradlew run
 ```

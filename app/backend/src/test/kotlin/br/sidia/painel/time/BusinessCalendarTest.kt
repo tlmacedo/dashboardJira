@@ -1,5 +1,7 @@
 package br.sidia.painel.time
 
+import br.sidia.painel.TestPaths
+import org.junit.jupiter.api.io.TempDir
 import java.nio.file.Files
 import java.nio.file.Path
 import java.time.Instant
@@ -15,11 +17,15 @@ import kotlin.test.assertTrue
 class BusinessCalendarTest {
     private val manaus = ZoneId.of("America/Manaus")
     private val cal = BusinessCalendar(manaus, fixedHolidays = setOf(MonthDay.of(10, 12)))
-    private val exemplo = Path.of("../config/calendario.exemplo.yaml")
+    private val exemplo = TestPaths.configDir.resolve("calendario.exemplo.yaml")
+
+    /** Pasta temporária por teste; o JUnit a apaga ao final. */
+    @TempDir
+    lateinit var pastaTemp: Path
 
     /** Grava um YAML temporário com o conteúdo informado e devolve o caminho. */
     private fun yamlTemp(conteudo: String): Path =
-        Files.createTempFile("calendario", ".yaml").also { Files.writeString(it, conteudo) }
+        Files.createTempFile(pastaTemp, "calendario", ".yaml").also { Files.writeString(it, conteudo) }
 
     @Test
     fun viradaDeDia() {

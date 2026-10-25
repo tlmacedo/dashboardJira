@@ -43,4 +43,6 @@ application {
 
 tasks.test {
     useJUnitPlatform()
+    // Pasta dos YAML de exemplo, por caminho absoluto (não depende do diretório de trabalho).
+    systemProperty("painel.configDir", rootProject.layout.projectDirectory.dir("../config").asFile.canonicalPath)
 }

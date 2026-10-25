@@ -54,6 +54,10 @@ internal fun segmentosNormalizados(uri: String): List<String>? {
  * (`/%61pi/x`, `//api/x`, `/API/x`, `/api/x/../health`) continuam exigindo principal.
  */
 internal fun exigeAutenticacao(uri: String): Boolean {
+    // URI absoluta (`http://h/api/x`) ou relativa: o roteador pode normalizá-la para um caminho
+    // diferente do que se analisa aqui, então exige login antes de qualquer outra regra.
+    // Também cobre `//h/api/x` (autoridade sem esquema).
+    if (!uri.startsWith("/") || uri.startsWith("//")) return true
     val segmentos = segmentosNormalizados(uri) ?: return true
     if (segmentos.any { it == "." || it == ".." }) return true
     if (segmentos in rotasPublicas) return false
