@@ -601,6 +601,25 @@ class TempoEmStatusRoutesTest {
         assertTrue("\"pessoa\":\"bruno\"" in linhas[3].third && "403" in linhas[3].third, linhas[3].third)
     }
 
+    private fun executarSql(sql: String) {
+        requireNotNull(ctx.dataSource).connection.use { c -> c.createStatement().use { it.execute(sql) } }
+    }
+
+    @Test
+    fun falhaDeAuditoriaFazARotaResponder503SemDados() = rodar {
+        // Sem a tabela a gravação falha; o banco de issues segue funcionando.
+        executarSql("ALTER TABLE access_log RENAME TO access_log_fora")
+        try {
+            for (caminho in listOf("/api/cards/tempo-em-status", "/api/drill/tempo-em-status?kind=analisadas", "/api/me")) {
+                val r = get("gerente.exemplo", caminho)
+                assertEquals(HttpStatusCode.ServiceUnavailable, r.status, caminho)
+                assertEquals("", r.corpo, caminho)
+            }
+        } finally {
+            executarSql("ALTER TABLE access_log_fora RENAME TO access_log")
+        }
+    }
+
     @Test
     fun chamadasPublicasNaoGravam() = rodar {
         assertEquals(HttpStatusCode.OK, get(null, "/api/health").status)
@@ -615,6 +634,122 @@ class TempoEmStatusRoutesTest {
         val dto = Json.decodeFromString<TempoEmStatusDto>(get(null, "/api/cards/tempo-em-status").corpo)
         assertEquals(6, dto.analisadas)
         assertEquals("dev", linhasDoAccessLog().single().first)
+    }
+
+    // ---- Robustez, ordenação e visibilidade (onda final) ----
+
+    @Test
+    fun datasExtremasRetornam400SemCorpo() = rodar {
+        for (consulta in listOf(
+            "?de=-999999999-01-01", "?ate=+999999999-12-31", "?de=+999999999-01-01&ate=+999999999-12-31",
+            "?de=1900-01-01", "?ate=9999-12-31", "?de=0000-01-01&ate=2026-01-01",
+        )) {
+            val card = get("gerente.exemplo", "/api/cards/tempo-em-status$consulta")
+            assertEquals(HttpStatusCode.BadRequest, card.status, consulta)
+            assertEquals("", card.corpo, consulta)
+            val drill = get("gerente.exemplo", "/api/drill/tempo-em-status?kind=analisadas&${consulta.drop(1)}")
+            assertEquals(HttpStatusCode.BadRequest, drill.status, consulta)
+            assertEquals("", drill.corpo, consulta)
+        }
+    }
+
+    @Test
+    fun drillOrdenaChavesDeFormaNatural() = rodar {
+        // Abertas paradas: TG-6, TG-7 e TG-10; como texto o TG-10 viria primeiro.
+        assertEquals(listOf("TG-6", "TG-7", "TG-10"), drill("gerente.exemplo", "paradas").map { it.key })
+        assertEquals(listOf("TG-6", "TG-7", "TG-10"), card("gerente.exemplo").abertasParadas.map { it.key })
+    }
+
+    @Test
+    fun issueComDatasInconsistentesEhIgnoradaEAvisada() = rodar {
+        // Resolvida antes de ser criada.
+        issue(
+            "TG-20", "Task", "ana", "Concluído", "Done", t("10-10 09:00"), t("10-05 09:00"),
+            listOf(resp("10-10 09:00", null, "ana"), st("10-10 10:00", "A Fazer", "Em andamento")),
+        )
+        for (usuario in listOf("gerente.exemplo", "ana")) {
+            val dto = card(usuario)
+            assertTrue("1 issue(s) com datas inconsistentes ignoradas" in dto.avisos, "$usuario ${dto.avisos}")
+            assertTrue(dto.avisos.none { "TG-20" in it }, dto.avisos.toString())
+            assertTrue(dto.eficienciaFluxo != null && dto.porStatus.isNotEmpty(), "o card não pode zerar")
+            assertFalse("TG-20" in drill(usuario, "analisadas").map { it.key })
+        }
+        assertEquals(6, card("gerente.exemplo").analisadas)
+        // Quem não tem posse da issue não recebe o aviso (nem sabe que ela existe).
+        assertTrue(card("carla").avisos.none { "inconsistentes" in it }, card("carla").avisos.toString())
+    }
+
+    @Test
+    fun taskQueMudouDeSquadNaoExpoeOColegaDoOutroSquad() = rodar {
+        // Da ana (Alfa) para a carla (Beta).
+        issue(
+            "TG-12", "Task", "carla", "Concluído", "Done", t("10-01 09:00"), t("10-10 09:00"),
+            listOf(
+                resp("10-01 09:00", null, "ana"), st("10-01 10:00", "A Fazer", "Em andamento"),
+                resp("10-05 09:00", "ana", "carla"), st("10-10 09:00", "Em andamento", "Concluído"),
+            ),
+        )
+        for (lider in listOf("lider.alfa", "ana")) {
+            val dto = card(lider)
+            assertTrue(dto.pessoaStatus.none { it.person == "carla" }, "$lider ${dto.pessoaStatus}")
+            val linha = drill(lider, "analisadas").single { it.key == "TG-12" }
+            assertEquals(null, linha.responsavel,"o responsável atual (outro squad) não pode aparecer para $lider")
+            assertFalse("carla" in linha.toString(), linha.toString())
+            assertEquals(HttpStatusCode.Forbidden, get(lider, "/api/drill/tempo-em-status?kind=${enc("pessoa:carla:status:Em andamento")}").status)
+        }
+        // O gerente vê a carla normalmente.
+        assertTrue(drill("gerente.exemplo", "pessoa:carla:status:Em andamento").any { it.key == "TG-12" })
+        // A carla (Beta) vê a task, mas não a ana.
+        assertTrue(card("carla").pessoaStatus.none { it.person == "ana" })
+    }
+
+    @Test
+    fun pessoaEmMaiusculasSeguePossibilidadesDeVisibilidade() = rodar {
+        // Mesma regra com a caixa trocada: o usuário comum não vê o colega; o gerente vê, igual a minúsculas.
+        assertEquals(HttpStatusCode.Forbidden, get("ana", "/api/cards/tempo-em-status?pessoa=BRUNO").status)
+        assertEquals(HttpStatusCode.Forbidden, get("carla", "/api/cards/tempo-em-status?pessoa=Bruno").status)
+        assertEquals(card("gerente.exemplo", "?pessoa=bruno"), card("gerente.exemplo", "?pessoa=BRUNO"))
+        assertTrue(card("gerente.exemplo", "?pessoa=BRUNO").pessoaStatus.all { it.person == "bruno" })
+        // O líder do Alfa vê o bruno em maiúsculas; o líder não vê a carla.
+        assertTrue(card("lider.alfa", "?pessoa=BRUNO").analisadas > 0)
+        assertEquals(HttpStatusCode.Forbidden, get("lider.alfa", "/api/cards/tempo-em-status?pessoa=CARLA").status)
+    }
+
+    @Test
+    fun drillPorPessoaForaDoSquadDoLider() = rodar {
+        val kind = "pessoa:carla:status:Em andamento"
+        // Pessoa fora da visibilidade: 403 sem corpo.
+        val r = get("lider.alfa", "/api/drill/tempo-em-status?kind=${enc(kind)}")
+        assertEquals(HttpStatusCode.Forbidden, r.status)
+        assertEquals("", r.corpo)
+        // Pessoa visível, mas fora do filtro atual (squad Beta): lista vazia.
+        assertEquals(HttpStatusCode.OK, get("gerente.exemplo", "/api/drill/tempo-em-status?kind=${enc("pessoa:ana:status:Em andamento")}&squad=Beta").status)
+        assertEquals(emptyList(), drill("gerente.exemplo", "pessoa:ana:status:Em andamento", "&squad=Beta"))
+        // O usuário comum não vê o colega.
+        assertEquals(HttpStatusCode.Forbidden, get("ana", "/api/drill/tempo-em-status?kind=${enc("pessoa:bruno:status:Em andamento")}").status)
+    }
+
+    @Test
+    fun meIgnoraPapeisForjadosEmClaims() {
+        // Autenticador que entrega um principal com papel falso (como se viesse numa claim do token).
+        val forjado = object : Authenticator {
+            override suspend fun authenticate(call: ApplicationCall): Principal? =
+                call.request.headers["X-Teste-Usuario"]?.let { Principal(it, setOf(Role.GERENTE, Role.COORDENADOR)) }
+        }
+        rodar(forjado) {
+            val me = Json.decodeFromString<MeDto>(get("ana", "/api/me").corpo)
+            assertEquals(MeDto("ana", listOf("USUARIO")), me)
+            // Quem não tem papel no diretório não ganha papel por claim: 403.
+            assertEquals(HttpStatusCode.Forbidden, get("estranho", "/api/me").status)
+        }
+    }
+
+    @Test
+    fun negadoSemPapelComIdVazioTambemEhRegistrado() = rodar {
+        assertEquals(HttpStatusCode.Forbidden, get("   ", "/api/cards/tempo-em-status?squad=Alfa").status)
+        val linha = linhasDoAccessLog().single()
+        assertEquals("(sem-id)", linha.first)
+        assertTrue("403" in linha.third, linha.third)
     }
 
     @Test

@@ -3,6 +3,7 @@ package br.sidia.painel.cards
 import br.sidia.painel.AppContext
 import br.sidia.painel.db.AccessLog
 import br.sidia.painel.domain.IssueTimeline
+import br.sidia.painel.domain.ORDEM_NATURAL_DE_CHAVES
 import br.sidia.painel.domain.StatusCategory
 import br.sidia.painel.domain.TimeInStatusCalculator
 import br.sidia.painel.domain.TimeInStatusResult
@@ -41,6 +42,13 @@ private const val PERIODO_MAXIMO_DIAS = 3660L
 
 /** Com `semOutliers=true`, tasks com ciclo maior que isso (dias corridos) ficam fora. */
 private const val OUTLIER_DIAS = 30
+
+/** Faixa de anos aceita em `de`/`ate`. */
+private const val ANO_MINIMO = 1970
+private const val ANO_MAXIMO = 2200
+
+/** Id gravado no `access_log` quando o id do principal negado é vazio (não há usuário a registrar). */
+private const val ID_NEUTRO = "(sem-id)"
 
 /** Tamanho máximo de qualquer filtro textual. */
 private const val MAX_FILTRO = 100
@@ -142,7 +150,7 @@ suspend fun registrarNegacaoSemPapel(auditoria: AccessLog, ctx: AppContext, call
     try {
         withContext(Dispatchers.IO) {
             auditoria.record(
-                principal.userId, call.request.path(),
+                principal.userId.ifBlank { ID_NEUTRO }, call.request.path(),
                 filtrosAuditados(call) + ("resultado" to HttpStatusCode.Forbidden.value.toString()),
                 ctx.clock.instant(),
             )
@@ -213,11 +221,14 @@ private fun texto(params: Parameters, nome: String): String? {
 
 private fun data(params: Parameters, nome: String): LocalDate? =
     texto(params, nome)?.let {
-        try {
+        val d = try {
             LocalDate.parse(it)
         } catch (e: java.time.format.DateTimeParseException) {
             throw ErroHttp(HttpStatusCode.BadRequest)
         }
+        // Datas extremas (ex.: +999999999-12-31) estourariam as contas de período: 400, nunca 500.
+        if (d.year !in ANO_MINIMO..ANO_MAXIMO) throw ErroHttp(HttpStatusCode.BadRequest)
+        d
     }
 
 private fun lerFiltros(params: Parameters, hoje: LocalDate): Filtros {
@@ -323,13 +334,20 @@ private fun calcular(ctx: AppContext, store: IssueStore, principal: Principal, f
     fun candidata(t: IssueTimeline) =
         pessoasDe(t).any { it in permitidos } && (f.tipo == null || t.issueType.equals(f.tipo, ignoreCase = true))
 
+    // Issue com datas inconsistentes (ex.: resolução antes da criação) não derruba o card: é ignorada e só
+    // o total (das que o usuário poderia ver) é avisado, nunca as chaves.
+    val inconsistentes = (fechadas + abertas).count { candidata(it) && calculador.datasInconsistentes(it, agora) }
+    if (inconsistentes > 0) avisos += "$inconsistentes issue(s) com datas inconsistentes ignoradas"
+    val fechadasOk = fechadas.filterNot { calculador.datasInconsistentes(it, agora) }
+    val abertasOk = abertas.filterNot { calculador.datasInconsistentes(it, agora) }
+
     var resultado: TimeInStatusResult? = null
     var concluidas = emptyMap<String, IssueTimeline>()
     try {
         // Só entram issues em que alguém visível teve posse (algum intervalo de responsável permitido).
         fun comPosse(t: IssueTimeline) = calculador.intervalos(t, agora).any { it.assignee != null && it.assignee in permitidos }
-        val fechadasDoUsuario = fechadas.filter(::candidata).filter(::comPosse)
-        val abertasDoUsuario = abertas.filter(::candidata).filter(::comPosse)
+        val fechadasDoUsuario = fechadasOk.filter(::candidata).filter(::comPosse)
+        val abertasDoUsuario = abertasOk.filter(::candidata).filter(::comPosse)
         resultado = calculador.compute(
             fechadasDoUsuario, abertasDoUsuario, agora, f.unit, if (f.semOutliers) OUTLIER_DIAS else null,
         )
@@ -415,7 +433,7 @@ private fun linhasDoDetalhe(c: Calculado, detalhe: Detalhe): List<DrillRow> {
             }
         }
     }
-    return linhas.sortedBy { it.key }
+    return linhas.sortedWith(compareBy(ORDEM_NATURAL_DE_CHAVES) { it.key })
 }
 
 /** Intervalo criação → resolução, só para medir o ciclo com a mesma régua do calculador. */
