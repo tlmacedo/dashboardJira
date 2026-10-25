@@ -16,6 +16,9 @@ dependencies {
     implementation(libs.ktor.server.netty)
     implementation(libs.ktor.server.content.negotiation)
     implementation(libs.ktor.serialization.json)
+    implementation(libs.ktor.client.core)
+    implementation(libs.ktor.client.cio)
+    implementation(libs.ktor.client.content.negotiation)
     implementation(libs.kaml)
     implementation(libs.logback.classic)
     implementation(libs.hikari)
@@ -24,6 +27,7 @@ dependencies {
     implementation(libs.postgresql)
 
     testImplementation(libs.ktor.server.test.host)
+    testImplementation(libs.ktor.client.mock)
     testImplementation(libs.kotlin.test.junit5)
     testImplementation(libs.testcontainers.postgresql)
     testImplementation(libs.testcontainers.junit)
