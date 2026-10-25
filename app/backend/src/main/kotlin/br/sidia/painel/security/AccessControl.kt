@@ -41,11 +41,25 @@ internal fun segmentosNormalizados(uri: String): List<String>? {
     return saida
 }
 
-/** Exige autenticação a menos que o caminho normalizado seja exatamente uma rota pública. */
+/**
+ * Decide se o caminho exige autenticação. Negar por padrão DENTRO da API.
+ *
+ * É público somente se:
+ * 1. normaliza exatamente para `/api/health` ou `/api/meta`; ou
+ * 2. é a casca estática da SPA (HTML, JS e CSS sem dados): o primeiro segmento decodificado NÃO é
+ *    `api` (sem diferenciar maiúsculas), nenhum segmento é `.` ou `..` e a decodificação não falhou.
+ *
+ * Todos os dados ficam atrás de `/api/` (qualquer subcaminho), que continua protegida; assim a SPA e a futura tela de
+ * login carregam mesmo em produção com autenticador que nega. Variantes camufladas da API
+ * (`/%61pi/x`, `//api/x`, `/API/x`, `/api/x/../health`) continuam exigindo principal.
+ */
 internal fun exigeAutenticacao(uri: String): Boolean {
     val segmentos = segmentosNormalizados(uri) ?: return true
     if (segmentos.any { it == "." || it == ".." }) return true
-    return segmentos !in rotasPublicas
+    if (segmentos in rotasPublicas) return false
+    // Casca estática: fora da API e sem NUL em nenhum segmento.
+    val primeiro = segmentos.firstOrNull() ?: return false // "/" é a página inicial da SPA
+    return primeiro.equals("api", ignoreCase = true) || segmentos.any { '\u0000' in it }
 }
 
 /**

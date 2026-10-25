@@ -13,8 +13,6 @@ import io.ktor.server.engine.embeddedServer
 import io.ktor.server.netty.Netty
 import io.ktor.server.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.server.response.respond
-import io.ktor.server.http.content.default
-import io.ktor.server.http.content.staticFiles
 import io.ktor.server.routing.get
 import io.ktor.server.routing.route
 import io.ktor.server.routing.routing
@@ -57,8 +55,8 @@ fun Application.module(
         // As rotas explícitas abaixo têm precedência por serem mais específicas.
         route("/api/{...}") { handle { call.respond(HttpStatusCode.NotFound) } }
         route("/api") { handle { call.respond(HttpStatusCode.NotFound) } }
-        // Arquivos do build do frontend; rota de página desconhecida cai no index.html (roteamento no cliente).
-        staticFiles("/", settings.staticDir.toFile()) { default("index.html") }
+        // Build do frontend: arquivos reais, e index.html só para rotas de página (ver StaticSpa.kt).
+        spaEstatica(settings.staticDir)
         get("/api/health") { call.respond(HealthResposta(ok = true)) }
         get("/api/meta") {
             call.respond(

@@ -26,6 +26,8 @@ docker compose up --build -d
 
 O modo desenvolvimento **não tem login**. Nunca o exponha em rede com dados reais. Por isso o compose publica a porta só em `127.0.0.1:8080`.
 
+**A imagem Docker nasce com `DASHBOARD_DEV_MODE=true` (sem login).** NUNCA a publique com `docker run -p` nem em rede alguma sem antes desligar esse modo (`DASHBOARD_DEV_MODE=false`).
+
 Para produção: defina `DASHBOARD_DEV_MODE=false` (exige o login SSO/OIDC, previsto em plano posterior), e só então troque a publicação no `docker-compose.yml` (por exemplo `"8080:8080"` ou, melhor, um proxy reverso com TLS na frente). Não faça isso enquanto o login não existir.
 
 ## Estado desta fundação

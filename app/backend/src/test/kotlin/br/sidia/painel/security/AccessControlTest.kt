@@ -92,7 +92,61 @@ class AccessControlTest {
         assertNotEquals(HttpStatusCode.Unauthorized, status(producao, OidcAuthenticator(), "/api/health/"))
         assertEquals(HttpStatusCode.Unauthorized, status(producao, OidcAuthenticator(), "/api/meta/x"))
         assertEquals(HttpStatusCode.Unauthorized, status(producao, OidcAuthenticator(), "/api/healthXYZ"))
-        assertEquals(HttpStatusCode.Unauthorized, status(producao, OidcAuthenticator(), "/fora-da-api"))
+        // Mudança: fora de /api é a casca estática (sem dados) e deixou de exigir login; ver SPA abaixo.
+        assertNotEquals(HttpStatusCode.Unauthorized, status(producao, OidcAuthenticator(), "/fora-da-api"))
+    }
+
+    /** Executa [caminho] em produção (dashboardDevMode=false) com um `dist` de teste. */
+    private fun statusComDist(autenticador: Authenticator, caminho: String): HttpStatusCode {
+        val pai = java.nio.file.Files.createTempDirectory("painel-ac")
+        val dist = pai.resolve("dist").also { java.nio.file.Files.createDirectories(it.resolve("assets")) }
+        dist.resolve("index.html").toFile().writeText("<html>spa</html>")
+        dist.resolve("assets/app.js").toFile().writeText("x")
+        var resultado = HttpStatusCode.InternalServerError
+        try {
+            testApplication {
+                application { module(Settings(dashboardDevMode = false, staticDir = dist), autenticador) }
+                resultado = client.get(caminho).status
+            }
+        } finally {
+            pai.toFile().deleteRecursively()
+        }
+        return resultado
+    }
+
+    @Test
+    fun cascaEstaticaEPublicaEmProducao() {
+        listOf("/", "/assets/app.js", "/rota-de-pagina", "/squads/x", "/api/health", "/api/meta").forEach {
+            assertEquals(HttpStatusCode.OK, statusComDist(OidcAuthenticator(), it), it)
+        }
+        // Arquivo estático ausente: 404 (nunca 401, a casca é pública).
+        assertEquals(HttpStatusCode.NotFound, statusComDist(OidcAuthenticator(), "/favicon.ico"))
+    }
+
+    @Test
+    fun apiContinuaNegadaPorPadraoEmProducao() {
+        listOf(
+            // "//api/x" só é testável na regra pura (cliente de teste lê "//api" como host).
+            "/api/qualquer", "/api/x/../health", "/api/%2e%2e/meta", "/%61pi/x", "/api//x", "/API/x",
+            "/api/health;x", "/api/meta%00", "/api",
+        ).forEach {
+            assertEquals(HttpStatusCode.Unauthorized, statusComDist(OidcAuthenticator(), it), it)
+        }
+    }
+
+    @Test
+    fun apiInexistenteAutenticadaDa404ENaoHtml() {
+        val gerente = autenticadorFixo(Principal("gil", setOf(Role.GERENTE)))
+        assertEquals(HttpStatusCode.NotFound, statusComDist(gerente, "/api/inexistente"))
+        assertEquals(HttpStatusCode.NotFound, statusComDist(gerente, "/API/inexistente"))
+        assertEquals(HttpStatusCode.NotFound, statusComDist(gerente, "/%61pi/inexistente"))
+    }
+
+    @Test
+    fun regraDeCaminhoPublicoForaDaApi() {
+        listOf("/", "/assets/x.js", "/squads/x", "/favicon.ico").forEach { assertFalse(exigeAutenticacao(it), it) }
+        listOf("/%61pi/x", "//api/x", "/API/x", "/api/x", "/api/x/../health", "/api/%2e%2e/meta", "/x/../y", "/%zz")
+            .forEach { assertTrue(exigeAutenticacao(it), it) }
     }
 
     @Test
