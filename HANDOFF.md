@@ -4,7 +4,9 @@ Para continuar: abrir a sessão com `claude --advisor opus --subagents haiku` na
 
 ## Onde paramos
 
-Branches empilhadas (nada foi mesclado em `main` nem publicado): `docs/planejamento-novo-app` → `feat/fundacao` (Plano 1) → `feat/dicionario-jql` (Plano 2) → **`feat/inicializacao` (Plano 3A, branch atual)**. **Os Planos 1, 2 e 3A estão executados e revisados.**
+Branches empilhadas, **publicadas no GitHub em 25/10 com 4 PRs encadeadas e ainda NÃO mescladas** (o repositório `tlmacedo/dashboardJira` foi tornado PRIVADO antes do push, porque o histórico tem usernames reais): `docs/planejamento-novo-app` (PR #5, base `main`) → `feat/fundacao` (#6) → `feat/dicionario-jql` (#7) → `feat/inicializacao` (#8). Mesclar na ordem #5, #6, #7, #8 (cada base muda para `main` ao mesclar a anterior); só quando o usuário mandar; depois `git checkout main && git pull` e apagar as branches locais mescladas. **Em andamento: `feat/tempo-em-status` (Plano 3), só local, a partir de `feat/inicializacao`.** Os Planos 1, 2 e 3A estão executados e revisados.
+
+**Regra de fim de branch (usuário, 25/10):** revisão, commit, push, PR, voltar a `main` e `pull`, sempre. Antes do push, checar dados pessoais no histórico a publicar (usernames reais, nomes, segredos, informação interna) e a visibilidade do repositório.
 
 | Entrega | Estado |
 |---|---|
@@ -12,7 +14,7 @@ Branches empilhadas (nada foi mesclado em `main` nem publicado): `docs/planejame
 | **Plano 1: Fundação** | Executado: Ktor, calendário de Manaus (feriados fixos mês/dia e móveis 2026–2030), papéis com vigência, controle de acesso (nega por padrão), banco PostgreSQL + retenção, cliente Jira com trava `LiveGuard`, frontend React (3 temas, pt/en), Dockerfile e compose |
 | **Plano 2: Dicionário de campos e construtor de JQL** | Executado: `FieldDictionary` por instância, `JqlValues` (rejeita, nunca escapa), `JqlBuilder` (única forma de gerar JQL; usernames entre aspas; `resolved < dia seguinte`), ficha de card em YAML, `docs/jira/` (matriz e checklist da 1ª conexão) |
 | **Plano 3A: Inicialização da aplicação** (`docs/superpowers/plans/2026-10-25-plano-03a-inicializacao.md`) | **Executado**: `Settings` (banco, instâncias do Jira, "vazio = padrão", `toString` sem segredos, `DATABASE_POOL_SIZE`), fábrica única do cliente Jira (https, token, sem credencial na URL; timeouts; sem vazamento por exceção; cancelamento propagado; `LiveGuard` final), `AppContext` (carrega calendário e papéis, abre o banco e migra; produção falha na subida sem papéis, calendário, gerente vigente ou senha; dev cai nos modelos), papéis só do diretório, **identidade: o `id` da pessoa é o username do Jira (`assignee`)**, Dockerfile com `config/`, hook com mais cobertura. Backend: **290 testes, 0 falhas** (execução real, PostgreSQL via Testcontainers). Revisão por tarefa, revisão final (opus), onda única e re-revisão, todas aprovadas |
-| Plano 3: Tempo em status | **Não iniciado** (primeiro card, fatia vertical) |
+| Plano 3: Tempo em status | **Plano ajustado e commitado** (`9ffe3f0`: Tarefas 0A e 0B novas, `/api/me`, fábrica com cache, `access_log`, identidade); **execução ainda não iniciada** (branch `feat/tempo-em-status`) |
 | Ledgers e relatórios por tarefa | `.superpowers/sdd/2026-10-24-plano-01-fundacao/`, `.../2026-10-24-plano-02-dicionario-e-jql/`, `.../2026-10-25-plano-03a-inicializacao/` (git-ignorados; contêm rulings, achados Minor e relatórios; NÃO apagar enquanto houver Minor pendente) |
 
 Commits do Plano 3A: `9cd22aa` (plano) até `8e84a31` (ajustes de identidade). Plano 2: `b734dea` até `9fceb8b`. Plano 1: `87a12db` até `8202fcb`.
