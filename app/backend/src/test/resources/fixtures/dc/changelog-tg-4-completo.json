@@ -1,0 +1,32 @@
+{
+  "startAt": 0,
+  "maxResults": 100,
+  "total": 3,
+  "isLast": true,
+  "values": [
+    {
+      "id": "10006",
+      "created": "2026-09-29T09:00:00.000-0400",
+      "author": {"name": "bruno"},
+      "items": [
+        {"field": "status", "from": "1", "to": "3", "fromString": "To Do", "toString": "In Progress"}
+      ]
+    },
+    {
+      "id": "10007",
+      "created": "2026-10-03T09:00:00.000-0400",
+      "author": {"name": "bruno"},
+      "items": [
+        {"field": "status", "from": "3", "to": "4", "fromString": "In Progress", "toString": "In Review"}
+      ]
+    },
+    {
+      "id": "10008",
+      "created": "2026-10-08T09:00:00.000-0400",
+      "author": {"name": "carla.souza"},
+      "items": [
+        {"field": "labels", "from": null, "to": null, "fromString": "", "toString": "revisao"}
+      ]
+    }
+  ]
+}
