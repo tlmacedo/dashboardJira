@@ -1,6 +1,10 @@
 package br.sidia.painel
 
 import br.sidia.painel.config.Settings
+import br.sidia.painel.security.Authenticator
+import br.sidia.painel.security.DevAuthenticator
+import br.sidia.painel.security.OidcAuthenticator
+import br.sidia.painel.security.installAccessControl
 import io.ktor.serialization.kotlinx.json.json
 import io.ktor.server.application.Application
 import io.ktor.server.application.install
@@ -25,9 +29,13 @@ fun main() {
     embeddedServer(Netty, port = 8080) { module() }.start(wait = true)
 }
 
-/** Módulo Ktor do painel: JSON, rota de saúde e metadados do ambiente. */
-fun Application.module(settings: Settings = Settings.fromEnv()) {
+/** Módulo Ktor do painel: JSON, controle de acesso, rota de saúde e metadados do ambiente. */
+fun Application.module(
+    settings: Settings = Settings.fromEnv(),
+    authenticator: Authenticator = if (settings.dashboardDevMode) DevAuthenticator() else OidcAuthenticator(),
+) {
     install(ContentNegotiation) { json() }
+    installAccessControl(settings, authenticator)
     if (settings.dashboardDevMode && settings.jiraLiveEnabled) {
         log.warn("ATENÇÃO: modo de desenvolvimento (sem login) com Jira real ligado: dados reais ficam expostos sem autenticação.")
     }
