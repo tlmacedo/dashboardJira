@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
 import { Outlet } from 'react-router-dom'
-import { fetchMeta } from '../api/client'
+import { fetchMe, fetchMeta, type Me } from '../api/client'
 import { useLang } from '../i18n/LangProvider'
 import { ROLES, type Role } from '../nav/nav'
 import { gravarPreferencia, lerPreferencia } from '../storage'
@@ -16,6 +16,14 @@ function papelSimuladoInicial(): Role {
   return ROLES.find((r) => r === salvo) ?? 'GERENTE' // padrão em desenvolvimento
 }
 
+/** Papel mais alto entre os informados por /api/me; qualquer coisa inesperada vira USUARIO. */
+function papelDeMe(me: Me | undefined): Role {
+  const roles: unknown = me?.roles
+  if (!Array.isArray(roles)) return 'USUARIO'
+  const validos = ROLES.filter((r) => roles.includes(r))
+  return validos.length > 0 ? validos[validos.length - 1] : 'USUARIO'
+}
+
 export function Shell() {
   const { t } = useLang()
   const meta = useQuery({ queryKey: ['meta'], queryFn: fetchMeta, staleTime: 60_000 })
@@ -23,13 +31,22 @@ export function Shell() {
 
   const dev = meta.data?.devMode === true
 
+  // Só fora do modo desenvolvimento o papel vem do backend (/api/me).
+  const me = useQuery({
+    queryKey: ['me'],
+    queryFn: fetchMe,
+    enabled: meta.data !== undefined && !dev,
+    retry: false,
+    staleTime: 60_000,
+  })
+
   // ATENÇÃO: filtrar o menu por papel é só conveniência de interface. A autorização
   // de verdade é imposta pelo backend; nunca confiar neste filtro para proteger dados.
   // Em desenvolvimento (devMode) o papel exibido vem do seletor de simulação.
-  // Em produção o papel virá do backend (SSO/OIDC, endpoint de sessão), ainda não
-  // implementado nesta tarefa: até lá vale o menor privilégio (USUARIO), inclusive
-  // enquanto /api/meta carrega ou se falhar.
-  const papel: Role = dev ? simulado : 'USUARIO'
+  // Em produção o papel efetivo vem só de /api/me; o localStorage não conta. Enquanto
+  // /api/me carrega ou se falhar (403, 500, resposta estranha) vale o menor
+  // privilégio (USUARIO), inclusive se /api/meta falhar.
+  const papel: Role = dev ? simulado : papelDeMe(me.data)
 
   function trocarPapel(r: Role) {
     setSimulado(r)
