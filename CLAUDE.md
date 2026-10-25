@@ -9,6 +9,7 @@ Dashboard de gestão do time TG-Basic sobre tasks do Jira Data Center: fluxo, pr
 3. Nunca editar nem commitar `.env` ou configs com dados pessoais reais (`config/equipes.yaml`, `ausencias.yaml`, `papeis.yaml`). Usar os modelos `.exemplo`/`.demo`.
 4. Toda aprovação do usuário vem como **pergunta com opções**, a recomendada primeiro e marcada "(Recomendada)".
 5. Idioma: conversar em pt-BR; comentários de código em pt-BR.
+6. **Docker sempre ativo.** O projeto depende de contêineres (PostgreSQL e testes com Testcontainers). Antes de testes, build ou qualquer trabalho que use banco, confira `docker info`; se estiver parado, **inicie em segundo plano** com `sh .claude/hooks/ensure-docker.sh` (abre o Docker Desktop, espera o daemon e sobe o `postgres` do `app/docker-compose.yml`). Hooks já fazem isso ao abrir a sessão e antes de `gradlew`/`docker`. Nunca trocar o banco real por H2 ou mock porque o Docker estava desligado: inicie-o ou relate.
 
 ## Decisões de produto (resumo)
 

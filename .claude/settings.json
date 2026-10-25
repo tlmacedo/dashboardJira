@@ -1,6 +1,38 @@
 {
   "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/ensure-docker.sh",
+            "timeout": 150,
+            "async": true,
+            "statusMessage": "Garantindo o Docker do projeto..."
+          }
+        ]
+      }
+    ],
     "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "if": "Bash(*gradlew*)",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/ensure-docker.sh",
+            "timeout": 150,
+            "statusMessage": "Garantindo o Docker antes dos testes..."
+          },
+          {
+            "type": "command",
+            "if": "Bash(docker *)",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/ensure-docker.sh",
+            "timeout": 150,
+            "statusMessage": "Garantindo o Docker..."
+          }
+        ]
+      },
       {
         "matcher": "mcp__.*tlassian.*|Bash",
         "hooks": [
