@@ -129,10 +129,12 @@ class TempoEmStatusRoutesTest {
         PostgresIssueStore(requireNotNull(ctx.dataSource)).upsert(json, registros, "samsung", ID_OS)
     }
 
-    // OS Version por issue: A em TG-1, TG-3, TG-5 e TG-9; B em TG-2 e TG-4; as demais sem valor.
+    // OS Version por issue: A em TG-1, TG-3, TG-5, TG-9 e TG-6 (aberta); B em TG-2 e TG-4; as demais sem valor.
     private val osA = "Android 17.0 (OneUI_9.0)"
     private val osB = "Android 16.0 (16)"
-    private val osPorChave = mapOf("TG-1" to osA, "TG-2" to osB, "TG-3" to osA, "TG-4" to osB, "TG-5" to osA, "TG-9" to osA)
+    private val osPorChave = mapOf(
+        "TG-1" to osA, "TG-2" to osB, "TG-3" to osA, "TG-4" to osB, "TG-5" to osA, "TG-9" to osA, "TG-6" to osA,
+    )
 
     private fun semear() {
         // Concluídas dentro dos 90 dias até 25/10/2026.
@@ -305,6 +307,29 @@ class TempoEmStatusRoutesTest {
         val b = card("gerente.exemplo", "?os=${enc(osB)}")
         assertEquals(listOf("TG-2", "TG-4"), chaves(drill("gerente.exemplo", "analisadas", osNaUrl(osB))))
         assertEquals(2, b.analisadas)
+    }
+
+    @Test
+    fun filtroOsTambemFiltraAsAbertas() = rodar {
+        // Sem filtro: TG-6, TG-7 e TG-10 paradas. Com A só TG-6; com B nenhuma aberta.
+        assertEquals(3, card("gerente.exemplo").paradas)
+        val a = card("gerente.exemplo", "?os=${enc(osA)}")
+        assertEquals(listOf("TG-6"), a.abertasParadas.map { it.key })
+        assertEquals(1, a.paradas)
+        val drillA = drill("gerente.exemplo", "paradas", osNaUrl(osA))
+        assertEquals(listOf("TG-6"), chaves(drillA))
+        assertEquals(a.paradas, drillA.size)
+        val b = card("gerente.exemplo", "?os=${enc(osB)}")
+        assertEquals(0, b.paradas)
+        assertEquals(emptyList(), drill("gerente.exemplo", "paradas", osNaUrl(osB)))
+    }
+
+    @Test
+    fun filtroOsNormalizaEspacosComoOValorGravado() = rodar {
+        // Dois espaços internos e espaços nas pontas casam com o valor gravado normalizado.
+        val digitado = "  Android  17.0   (OneUI_9.0) "
+        assertEquals(4, card("gerente.exemplo", "?os=${enc(digitado)}").analisadas)
+        assertEquals(4, drill("gerente.exemplo", "analisadas", osNaUrl(digitado)).size)
     }
 
     @Test

@@ -12,7 +12,11 @@ import javax.sql.DataSource
 
 /** Persistência das issues e do changelog. */
 interface IssueStore {
-    /** Grava a issue (atualiza se já existir) e os eventos novos; repetir a chamada não duplica nada. */
+    /**
+     * Grava a issue (atualiza se já existir) e os eventos novos; repetir a chamada não duplica nada.
+     * `os_version` sempre é regravado a partir de [osVersionCustomId]: ressincronizar sem customId (nulo)
+     * zera o valor existente, por desenho (o valor segue o dicionário atual).
+     */
     fun upsert(issue: JsonObject, events: List<ChangeEventRecord>, instance: String, osVersionCustomId: String? = null)
 
     /**
@@ -31,6 +35,8 @@ interface IssueStore {
 /**
  * Extrai o valor do campo "OS Version" (SELECT do Jira: objeto `{value}` ou texto) do JSON da issue.
  * Espaços são normalizados; texto vazio, campo ausente ou [customId] nulo/inválido resultam em nulo.
+ * Valor de outro tipo (array, número, booleano, nulo JSON, objeto sem `value` textual) também vira nulo, em
+ * silêncio: um campo multisseleção, por exemplo, ficaria sempre nulo.
  * O valor não é dado pessoal.
  */
 internal object OsVersionExtrator {
@@ -51,9 +57,15 @@ internal object OsVersionExtrator {
             is JsonObject -> (campo["value"] as? JsonPrimitive)?.takeIf { it.isString }?.content
             else -> null
         } ?: return null
-        return bruto.trim().replace(Regex("\\s+"), " ").ifEmpty { null }
+        return normalizarOsVersion(bruto).ifEmpty { null }
     }
 }
+
+/** Uma ou mais sequências de espaço (inclusive Unicode, como NBSP); definição única do valor gravado e do filtro. */
+private val ESPACOS_OS_VERSION = Regex("[\\s\\p{Z}]+")
+
+/** Forma normalizada de um OS Version: sem espaços nas pontas e com os internos colapsados em um só. */
+fun normalizarOsVersion(valor: String): String = valor.trim().replace(ESPACOS_OS_VERSION, " ")
 
 /** Implementação sobre PostgreSQL (JDBC). Todas as consultas são parametrizadas. */
 class PostgresIssueStore(private val ds: DataSource) : IssueStore {

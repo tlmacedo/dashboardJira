@@ -2,9 +2,9 @@ package br.sidia.painel.sync
 
 import br.sidia.painel.db.Retention
 import br.sidia.painel.jira.JiraClient
-import java.time.LocalDate
 import br.sidia.painel.jql.FieldDictionary
 import br.sidia.painel.jql.JqlQuery
+import java.time.LocalDate
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.withContext
@@ -23,6 +23,9 @@ data class SyncSummary(val issues: Int, val events: Int)
  * Sincroniza issues e changelog de uma instância do Jira para o banco. Idempotente:
  * rodar de novo não duplica issues nem eventos. Quando o changelog embutido na busca vem
  * truncado (ou ausente), busca o histórico completo da issue.
+ *
+ * O `os_version` de cada issue vem do customId de "OS Version" em [campos]; sem dicionário ou sem customId
+ * ele é gravado nulo, e ressincronizar assim zera o valor já existente (por desenho).
  */
 class Syncer(
     private val client: JiraClient,

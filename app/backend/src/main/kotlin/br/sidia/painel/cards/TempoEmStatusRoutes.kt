@@ -13,6 +13,7 @@ import br.sidia.painel.security.Visibility
 import br.sidia.painel.security.normalizarUsername
 import br.sidia.painel.security.principal
 import br.sidia.painel.sync.IssueStore
+import br.sidia.painel.sync.normalizarOsVersion
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.Parameters
 import io.ktor.server.application.ApplicationCall
@@ -237,7 +238,8 @@ private fun lerFiltros(params: Parameters, hoje: LocalDate): Filtros {
         squad = texto(params, "squad"),
         pessoa = texto(params, "pessoa")?.let(::usernameValido),
         tipo = texto(params, "tipo"),
-        os = texto(params, "os"),
+        // Mesma normalização do valor gravado (espaços internos colapsados); só espaços vira "sem filtro".
+        os = texto(params, "os")?.let(::normalizarOsVersion)?.ifEmpty { null },
         de = de,
         ate = ate,
         unit = unit,
