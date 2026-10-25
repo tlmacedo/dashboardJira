@@ -5,3 +5,16 @@ app/.env
 app/config/equipes.yaml
 *.db
 .pytest_cache/
+
+# Segredos e configs com dados pessoais reais (nunca versionar; usar os modelos .exemplo/.demo)
+.env
+.env.*
+!.env.example
+**/config/equipes.yaml
+**/config/ausencias.yaml
+**/config/papeis.yaml
+**/config/squads.yaml
+legacy/data/
+**/build/
+**/.gradle/
+**/node_modules/
