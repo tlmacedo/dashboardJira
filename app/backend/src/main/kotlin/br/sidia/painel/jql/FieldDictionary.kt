@@ -13,41 +13,80 @@ enum class FieldType { SELECT, TEXT, DATE, USER, LABELS, NUMBER }
  * Definição de um campo do Jira: só vocabulário e classificação, sem consulta ao Jira.
  * [customId] (ex.: `customfield_12345`) fica nulo até ser descoberto por nome numa conexão autorizada.
  */
-data class FieldDef(
+class FieldDef(
     val name: String,
     val type: FieldType,
     val instance: String,
     val purpose: String,
-    val knownValues: List<String> = emptyList(),
+    knownValues: List<String> = emptyList(),
     val customId: String? = null,
-)
+) {
+    /** Valores conhecidos (vocabulário). Lista vazia significa texto livre, sem vocabulário fechado. */
+    val knownValues: List<String> = java.util.List.copyOf(knownValues)
+
+    init {
+        require(name.isNotBlank()) { "Campo sem nome" }
+        require(instance.isNotBlank()) { "Campo '$name' sem instância" }
+        require(purpose.isNotBlank()) { "Campo '$name' sem finalidade" }
+        require(customId == null || FORMATO_ID.matches(customId)) {
+            "Campo '$name': customId '$customId' fora do formato customfield_NNNNN ou cf[NNNNN]"
+        }
+        require(this.knownValues.none { it.isBlank() }) { "Campo '$name' com valor conhecido em branco" }
+        require(this.knownValues.toSet().size == this.knownValues.size) { "Campo '$name' com valores conhecidos repetidos" }
+    }
+
+    override fun equals(other: Any?): Boolean =
+        other is FieldDef && name == other.name && type == other.type && instance == other.instance &&
+            purpose == other.purpose && knownValues == other.knownValues && customId == other.customId
+
+    override fun hashCode(): Int = listOf(name, type, instance, purpose, knownValues, customId).hashCode()
+
+    override fun toString(): String = "FieldDef(name=$name, type=$type, instance=$instance, customId=$customId)"
+
+    private companion object {
+        val FORMATO_ID = Regex("""customfield_\d+|cf\[\d+]""")
+    }
+}
 
 /** Campo pedido que não consta no dicionário. */
 class UnknownFieldException(val name: String) : RuntimeException("Campo fora do dicionário: $name")
 
 /**
- * Dicionário de campos do Jira. Nomes são únicos por instância; o mesmo nome pode existir em
- * instâncias diferentes (a busca por nome devolve a primeira definição declarada).
+ * Dicionário de campos do Jira. Nomes são únicos por instância, sem diferenciar maiúsculas
+ * (como no JQL); o mesmo nome pode existir em instâncias diferentes. Nesse caso a API de um
+ * argumento recusa a consulta ambígua: use [forInstance] antes.
  */
 class FieldDictionary(fields: List<FieldDef>) {
-    private val porNome: Map<String, FieldDef>
+    private val campos: List<FieldDef> = fields.toList()
+    private val porNome: Map<String, List<FieldDef>>
 
     init {
         val vistos = mutableSetOf<Pair<String, String>>()
-        fields.forEach { f ->
-            require(vistos.add(f.instance to f.name)) {
+        campos.forEach { f ->
+            require(vistos.add(f.instance to f.name.lowercase())) {
                 "Campo duplicado no dicionário: '${f.name}' na instância '${f.instance}'"
             }
         }
-        porNome = fields.groupBy { it.name }.mapValues { it.value.first() }
+        porNome = campos.groupBy { it.name.lowercase() }
     }
 
-    /** Definição do campo; lança [UnknownFieldException] se não existir. */
-    fun get(name: String): FieldDef = porNome[name] ?: throw UnknownFieldException(name)
+    /** Dicionário só com os campos da instância (vazio se ela não tiver campos). */
+    fun forInstance(instance: String): FieldDictionary = FieldDictionary(campos.filter { it.instance == instance })
 
-    fun has(name: String): Boolean = name in porNome
+    private fun achar(name: String): FieldDef? {
+        val achados = porNome[name.lowercase()] ?: return null
+        check(achados.size == 1) {
+            "Campo '$name' existe em mais de uma instância (${achados.joinToString { it.instance }}); use forInstance"
+        }
+        return achados.single()
+    }
 
-    /** Valores conhecidos do campo (vazio se for de texto livre); lança se o campo não existir. */
+    /** Definição do campo; lança [UnknownFieldException] se não existir e [IllegalStateException] se for ambíguo. */
+    fun get(name: String): FieldDef = achar(name) ?: throw UnknownFieldException(name)
+
+    fun has(name: String): Boolean = achar(name) != null
+
+    /** Valores conhecidos do campo; lista vazia significa texto livre. Lança se o campo não existir. */
     fun allowedValues(name: String): List<String> = get(name).knownValues
 
     companion object {
@@ -66,7 +105,11 @@ class FieldDictionary(fields: List<FieldDef>) {
                     ?: throw IllegalArgumentException(
                         "$path: tipo desconhecido '${c.tipo}' no campo '${c.nome}' (esperado: ${FieldType.entries.joinToString()})",
                     )
-                FieldDef(c.nome, tipo, c.instancia, c.finalidade, c.valores, c.customId)
+                try {
+                    FieldDef(c.nome, tipo, c.instancia, c.finalidade, c.valores, c.customId)
+                } catch (e: IllegalArgumentException) {
+                    throw IllegalArgumentException("$path: ${e.message}", e)
+                }
             }
             try {
                 return FieldDictionary(campos)

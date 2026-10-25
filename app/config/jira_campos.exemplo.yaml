@@ -8,6 +8,7 @@
 #   instancia   instância do Jira a que o campo pertence (obrigatório).
 #   finalidade  para que o campo serve no painel (obrigatório). "a confirmar" marca campo ainda não validado.
 #   valores     lista de valores conhecidos (opcional; vocabulário dos filtros do TG-Basic).
+#               Lista vazia ou ausente significa texto livre (sem vocabulário fechado).
 #   customId    id técnico, ex.: customfield_NNNNN (opcional). Desconhecido por ora: será
 #               descoberto pelo nome na primeira conexão autorizada.
 
@@ -48,7 +49,27 @@ campos:
   - nome: Reporter
     tipo: USER
     instancia: samsung
-    finalidade: Quem abriu a task (PL); base da regra de auditoria
+    finalidade: Quem abriu a task (PL); base da regra de auditoria (tipo a confirmar)
+  - nome: resolution
+    tipo: SELECT
+    instancia: samsung
+    finalidade: Resolução (com a categoria de status, define task concluída)
+  - nome: summary
+    tipo: TEXT
+    instancia: samsung
+    finalidade: Título da task
+  - nome: updated
+    tipo: DATE
+    instancia: samsung
+    finalidade: Data da última atualização
+  - nome: parent
+    tipo: TEXT
+    instancia: samsung
+    finalidade: Chave da issue pai
+  - nome: resolutiondate
+    tipo: DATE
+    instancia: samsung
+    finalidade: Data em que a resolução foi registrada
 
   # Campos customizados do TG-Basic
   - nome: OS Version
@@ -71,23 +92,23 @@ campos:
   - nome: Checklist Type
     tipo: SELECT
     instancia: samsung
-    finalidade: Tipo de checklist
+    finalidade: Tipo de checklist (tipo a confirmar)
   - nome: Model Name
     tipo: TEXT
     instancia: samsung
-    finalidade: Nome do modelo
+    finalidade: Nome do modelo (tipo a confirmar)
   - nome: Model Category
     tipo: SELECT
     instancia: samsung
-    finalidade: Categoria do modelo
+    finalidade: Categoria do modelo (tipo a confirmar)
   - nome: TG Request Type
     tipo: SELECT
     instancia: samsung
-    finalidade: Tipo de solicitação do TG
+    finalidade: Tipo de solicitação do TG (tipo a confirmar)
   - nome: Carrier Code
     tipo: TEXT
     instancia: samsung
-    finalidade: Código da operadora
+    finalidade: Código da operadora (tipo a confirmar)
 
   # Campos referidos só por número, ainda sem finalidade confirmada
   - nome: "cf[12416]"
