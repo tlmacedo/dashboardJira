@@ -169,6 +169,7 @@ class JiraClientFactoryCacheTest {
         roles = RoleDirectory.fromYaml(TestPaths.configDir.resolve("papeis.exemplo.yaml")),
         dataSource = pool,
         jira = jira,
+        statusMap = br.sidia.painel.domain.StatusMap.fromYaml(TestPaths.configDir.resolve("status_map.exemplo.yaml")),
     )
 
     @Test

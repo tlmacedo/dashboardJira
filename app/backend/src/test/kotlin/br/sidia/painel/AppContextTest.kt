@@ -84,6 +84,11 @@ class AppContextTest {
     private fun escreverArquivosReais() {
         Files.writeString(pasta.resolve("calendario.yaml"), calendarioTeste)
         Files.writeString(pasta.resolve("papeis.yaml"), papeisTeste)
+        escreverMapaDeStatus()
+    }
+
+    private fun escreverMapaDeStatus() {
+        Files.copy(TestPaths.configDir.resolve("status_map.exemplo.yaml"), pasta.resolve("status_map.yaml"))
     }
 
     private fun producao(senha: String = SENHA, url: String = pg.jdbcUrl) = Settings(
@@ -115,6 +120,7 @@ class AppContextTest {
         // pasta com os modelos de exemplo copiados, sem os arquivos reais
         Files.copy(TestPaths.configDir.resolve("papeis.exemplo.yaml"), pasta.resolve("papeis.exemplo.yaml"))
         Files.copy(TestPaths.configDir.resolve("calendario.exemplo.yaml"), pasta.resolve("calendario.exemplo.yaml"))
+        Files.copy(TestPaths.configDir.resolve("status_map.exemplo.yaml"), pasta.resolve("status_map.exemplo.yaml"))
         val s = Settings(
             dashboardDevMode = true,
             configDir = pasta,
@@ -128,6 +134,17 @@ class AppContextTest {
         val av = avisos()
         assertTrue(av.any { "papeis.exemplo.yaml" in it }, av.toString())
         assertTrue(av.any { "calendario.exemplo.yaml" in it }, av.toString())
+        assertTrue(av.any { "status_map.exemplo.yaml" in it }, av.toString())
+    }
+
+    @Test
+    fun producaoSemMapaDeStatusFalhaSemInventarPadrao() {
+        Files.writeString(pasta.resolve("calendario.yaml"), calendarioTeste)
+        Files.writeString(pasta.resolve("papeis.yaml"), papeisTeste)
+        // O modelo existe, mas em produção só o arquivo real vale.
+        Files.copy(TestPaths.configDir.resolve("status_map.exemplo.yaml"), pasta.resolve("status_map.exemplo.yaml"))
+        val e = assertFailsWith<IllegalStateException> { AppContext.load(producao()) }
+        assertTrue(pasta.resolve("status_map.yaml").toString() in e.message.orEmpty(), e.message)
     }
 
     @Test

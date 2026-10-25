@@ -1,15 +1,19 @@
 package br.sidia.painel.domain
 
 import br.sidia.painel.time.BusinessCalendar
+import kotlinx.serialization.Serializable
 import java.time.Instant
 
 /** Unidade do tempo: dias úteis (padrão) ou dias corridos. */
 enum class TimeUnitMode { UTIL, CORRIDO }
 
+@Serializable
 data class StatusStat(val status: String, val category: StatusCategory, val median: Double, val p85: Double, val n: Int)
 
+@Serializable
 data class PersonStatus(val person: String, val status: String, val median: Double, val n: Int)
 
+@Serializable
 data class StuckIssue(
     val key: String, val summary: String, val assignee: String?, val status: String,
     val daysInStatus: Double, val median: Double,
@@ -99,7 +103,7 @@ class TimeInStatusCalculator(private val calendar: BusinessCalendar, private val
         limite != null && calendar.calendarDays(t.created, t.resolved!!) > limite
 
     /** Não assume transições ordenadas: ordena antes de chamar o builder. */
-    private fun intervalos(t: IssueTimeline, now: Instant): List<StatusInterval> =
+    internal fun intervalos(t: IssueTimeline, now: Instant): List<StatusInterval> =
         TimelineBuilder.intervals(
             t.copy(
                 transitions = t.transitions.sortedBy { it.at },
@@ -108,7 +112,7 @@ class TimeInStatusCalculator(private val calendar: BusinessCalendar, private val
             now, map,
         )
 
-    private fun duracao(iv: StatusInterval, unit: TimeUnitMode): Double = when (unit) {
+    internal fun duracao(iv: StatusInterval, unit: TimeUnitMode): Double = when (unit) {
         TimeUnitMode.UTIL -> calendar.businessDays(iv.start, iv.end)
         TimeUnitMode.CORRIDO -> calendar.calendarDays(iv.start, iv.end)
     }
