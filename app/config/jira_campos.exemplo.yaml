@@ -1,0 +1,143 @@
+# Dicionário de campos do Jira (modelo versionado, sem dados reais de pessoas, hosts ou tokens).
+# Serve só de vocabulário e classificação para o construtor de JQL; não consulta o Jira.
+# O arquivo é estrito: chave desconhecida, tipo inválido ou nome repetido na mesma instância falham ao carregar.
+#
+# Cada item de `campos` tem:
+#   nome        nome do campo como aparece no Jira (obrigatório). Único por instância.
+#   tipo        SELECT, TEXT, DATE, USER, LABELS ou NUMBER (obrigatório).
+#   instancia   instância do Jira a que o campo pertence (obrigatório).
+#   finalidade  para que o campo serve no painel (obrigatório). "a confirmar" marca campo ainda não validado.
+#   valores     lista de valores conhecidos (opcional; vocabulário dos filtros do TG-Basic).
+#               Lista vazia ou ausente significa texto livre (sem vocabulário fechado).
+#   customId    id técnico, ex.: customfield_NNNNN (opcional). Desconhecido por ora: será
+#               descoberto pelo nome na primeira conexão autorizada.
+
+campos:
+  # Campos nativos do Jira
+  - nome: project
+    tipo: SELECT
+    instancia: samsung
+    finalidade: Projeto da task
+  # Os `valores` de status e issuetype são vocabulário INICIAL, vindo da documentação do TG-Basic.
+  # Devem ser ampliados depois de ler `/status` (e os tipos de issue) na primeira conexão autorizada.
+  - nome: status
+    tipo: SELECT
+    instancia: samsung
+    finalidade: Status atual e categoria (base do fluxo)
+    valores:
+      - "Open"
+      - "In Progress"
+      - "Submitted"
+      - "On Hold"
+      - "Resolved"
+      - "Closed"
+      - "Cancelled"
+      - "Canceled"
+      - "Dropped"
+  - nome: issuetype
+    tipo: SELECT
+    instancia: samsung
+    finalidade: Tipo da task
+    valores:
+      - "Checklist"
+      - "Checklist TG"
+      - "Checklist Review"
+      - "Feature check"
+      - "TG Feature check"
+      - "Task"
+      - "Propagation Issue"
+      - "Propagation List"
+      - "Epic"
+  - nome: created
+    tipo: DATE
+    instancia: samsung
+    finalidade: Data de criação
+  - nome: resolved
+    tipo: DATE
+    instancia: samsung
+    finalidade: Data de resolução (conclusão exige também resolution)
+  - nome: duedate
+    tipo: DATE
+    instancia: samsung
+    finalidade: Vencimento (prazo)
+  - nome: assignee
+    tipo: USER
+    instancia: samsung
+    finalidade: Responsável
+  - nome: labels
+    tipo: LABELS
+    instancia: samsung
+    finalidade: Labels, inclusive as de atraso justificado
+  - nome: Reporter
+    tipo: USER
+    instancia: samsung
+    finalidade: Quem abriu a task (PL); base da regra de auditoria (tipo a confirmar)
+  - nome: resolution
+    tipo: SELECT
+    instancia: samsung
+    finalidade: Resolução (com a categoria de status, define task concluída)
+  - nome: summary
+    tipo: TEXT
+    instancia: samsung
+    finalidade: Título da task
+  - nome: updated
+    tipo: DATE
+    instancia: samsung
+    finalidade: Data da última atualização
+  - nome: parent
+    tipo: TEXT
+    instancia: samsung
+    finalidade: Chave da issue pai
+  - nome: resolutiondate
+    tipo: DATE
+    instancia: samsung
+    finalidade: Data em que a resolução foi registrada
+
+  # Campos customizados do TG-Basic
+  - nome: OS Version
+    tipo: SELECT
+    instancia: samsung
+    finalidade: Versão do sistema operacional
+    valores:
+      - "Android 16.0 (16)"
+      - "Android 16.0 (OneUI_8.5)"
+      - "Android 17.0 (OneUI_9.0)"
+      - "Android 17.0 (OneUI_9.5)"
+  - nome: SKU Type
+    tipo: SELECT
+    instancia: samsung
+    finalidade: Tipo de SKU
+    valores:
+      - "1st carrier (Latin)"
+      - "1st Carrier (Global)"
+      - "MR"
+  - nome: Checklist Type
+    tipo: SELECT
+    instancia: samsung
+    finalidade: Tipo de checklist (tipo a confirmar)
+  - nome: Model Name
+    tipo: TEXT
+    instancia: samsung
+    finalidade: Nome do modelo (tipo a confirmar)
+  - nome: Model Category
+    tipo: SELECT
+    instancia: samsung
+    finalidade: Categoria do modelo (tipo a confirmar)
+  - nome: TG Request Type
+    tipo: SELECT
+    instancia: samsung
+    finalidade: Tipo de solicitação do TG (tipo a confirmar)
+  - nome: Carrier Code
+    tipo: TEXT
+    instancia: samsung
+    finalidade: Código da operadora (tipo a confirmar)
+
+  # Campos referidos só por número, ainda sem finalidade confirmada
+  - nome: "cf[12416]"
+    tipo: TEXT
+    instancia: samsung
+    finalidade: a confirmar
+  - nome: "cf[11412]"
+    tipo: TEXT
+    instancia: samsung
+    finalidade: a confirmar
