@@ -84,14 +84,41 @@ class RoleDirectoryTest {
     @Test
     fun yamlDemoCarrega() {
         val dir = RoleDirectory.fromYaml(Path.of("../config/papeis.exemplo.yaml"))
-        assertTrue(Role.GERENTE in dir.rolesOf("g-001", d("2026-10-25")))
+        assertTrue(Role.GERENTE in dir.rolesOf("ge-001", d("2026-10-25")))
         // pessoa que mudou de squad em 01/07/2026
-        assertEquals("Alfa", dir.squadOf("u-003", d("2026-06-30")))
-        assertEquals("Beta", dir.squadOf("u-003", d("2026-07-01")))
+        assertEquals("Alfa", dir.squadOf("us-001", d("2026-06-30")))
+        assertEquals("Beta", dir.squadOf("us-001", d("2026-07-01")))
         // papel encerrado
-        assertTrue(Role.SQUAD_LEADER in dir.rolesOf("u-005", d("2026-03-31")))
-        assertFalse(Role.SQUAD_LEADER in dir.rolesOf("u-005", d("2026-04-01")))
+        assertTrue(Role.SQUAD_LEADER in dir.rolesOf("us-003", d("2026-03-31")))
+        assertFalse(Role.SQUAD_LEADER in dir.rolesOf("us-003", d("2026-04-01")))
     }
+
+    @Test
+    fun exemploTemIdsNoPadraoPorCargo() {
+        val caminho = Path.of("../config/papeis.exemplo.yaml")
+        val dir = RoleDirectory.fromYaml(caminho)
+        val hoje = d("2026-10-25")
+        // ids lidos das linhas "- id: xx-000" (o diretório não expõe a lista de pessoas)
+        val ids = Files.readAllLines(caminho)
+            .mapNotNull { Regex("""^\s*-\s+id:\s*(\S+)\s*$""").find(it)?.groupValues?.get(1) }
+        assertTrue(ids.isNotEmpty())
+        assertEquals(ids.size, ids.toSet().size, "ids repetidos")
+        val prefixoPorPapel = mapOf(
+            Role.GERENTE to "ge",
+            Role.COORDENADOR to "co",
+            Role.SQUAD_LEADER to "sl",
+            Role.USUARIO to "us",
+        )
+        ids.forEach { id ->
+            val m = Regex("""^(ge|co|sl|us)-\d{3}$""").matchEntire(id)
+            assertTrue(m != null, "id fora do padrão: $id")
+            // cargo principal = o mais abrangente vigente hoje
+            val principal = rolesOf(dir, id, hoje).maxByOrNull { it.ordinal }
+            assertEquals(prefixoPorPapel[principal], m!!.groupValues[1], "prefixo incoerente em $id")
+        }
+    }
+
+    private fun rolesOf(dir: RoleDirectory, id: String, data: LocalDate) = dir.rolesOf(id, data)
 
     @Test
     fun yamlComVigenciaInvertidaLancaErro() {

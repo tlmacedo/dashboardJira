@@ -1,19 +1,117 @@
-# Modelo FICTÍCIO de papéis e squads. Copie para papeis.yaml (ignorado pelo git) e ajuste.
-# Esquema: pessoas: [{id, nome, papeis: [{papel, de?, ate?, squad?}]}]
-# papel: USUARIO | SQUAD_LEADER | COORDENADOR | GERENTE
-# de/ate: datas ISO, ambas inclusivas e opcionais (sem limite quando ausentes).
+# =====================================================================================
+# MODELO DE PAPÉIS E SQUADS  (arquivo de exemplo, 100% FICTÍCIO, versionado no git)
+# =====================================================================================
+#
+# PARA QUE SERVE
+#   Diz ao painel QUEM é cada pessoa, QUE PAPEL ela tem e EM QUAL SQUAD ela está.
+#   Com isso o painel decide o que cada pessoa pode ver e quem pode alterar
+#   responsável, vencimento e labels de atraso (a "auditoria").
+#   O painel só LÊ este arquivo; ele nunca é editado pela tela.
+#
+# COMO USAR
+#   1. Copie este modelo para o arquivo real (que o git ignora e nunca é commitado):
+#        cp app/config/papeis.exemplo.yaml app/config/papeis.yaml
+#   2. Abra o papeis.yaml e troque os nomes inventados pelos nomes reais do time,
+#      ajuste squads, papéis e datas.
+#   3. NUNCA coloque nomes reais neste arquivo de exemplo.
+#
+# ESTRUTURA (cada pessoa é um item da lista "pessoas")
+#
+#   - id: us-001            # identificador curto e único da pessoa (veja "CONVENÇÃO DE IDS")
+#     nome: Fulano          # nome para exibição
+#     papeis:               # lista de papéis; uma pessoa pode ter VÁRIOS
+#       - papel: USUARIO    # obrigatório: um dos valores da seção abaixo
+#         squad: Alfa       # nome do grupo de pessoas (veja "SQUAD")
+#         de: 2026-01-01    # opcional: início da vigência (veja "DE E ATE")
+#         ate: 2026-06-30   # opcional: fim da vigência
+#
+# VALORES POSSÍVEIS DE "papel" (escreva exatamente assim, em maiúsculas)
+#
+#   USUARIO       Enxerga SOMENTE os próprios dados.
+#   SQUAD_LEADER  Enxerga os próprios dados e os do seu squad. EXIGE o campo "squad".
+#   COORDENADOR   Enxerga os dados de todos.
+#   GERENTE       Enxerga os dados de todos. É o único que acessa a Integridade
+#                 (e todo acesso a ela é auditado).
+#
+#   Quem pode trocar responsável, vencimento e labels de atraso de uma task (auditoria):
+#     - o Reporter (PL) da task;
+#     - qualquer COORDENADOR (ou GERENTE);
+#     - o SQUAD_LEADER do squad em que o responsável estava naquela data.
+#   Qualquer outra pessoa que altere esses campos gera alerta ou registro de auditoria.
+#
+# SQUAD
+#   "squad" é só o NOME de um grupo de pessoas, escolhido por vocês. Não existe lista
+#   fixa nem cadastro em outro lugar: o que vale é o texto escrito aqui, e duas pessoas
+#   estão no mesmo squad quando o texto é idêntico (maiúsculas e minúsculas contam).
+#   "Alfa" e "Beta" abaixo são nomes INVENTADOS de squads de exemplo; troque pelos
+#   squads reais do time.
+#   Uma pessoa pode ter vários papéis. Por exemplo, quem lidera o Alfa e também
+#   trabalha nele tem DUAS entradas: USUARIO com squad Alfa e SQUAD_LEADER com squad Alfa.
+#   Coordenador e gerente não precisam de squad (veem todos).
+#
+# DE E ATE (vigência, opcionais)
+#   Datas no formato ISO aaaa-mm-dd, ambas INCLUSIVAS (o dia indicado ainda vale).
+#   Sem "de" = vale desde sempre; sem "ate" = vale até hoje e adiante.
+#   Servem para guardar o HISTÓRICO: quem mudou de squad e quem deixou um papel.
+#   A auditoria retroativa usa a data da alteração para saber qual papel e qual squad
+#   valiam naquele dia. "de" não pode ser depois de "ate" (o painel recusa o arquivo).
+#   Exemplos neste arquivo:
+#     - mudança de squad: uma entrada com "ate" no dia final do squad antigo e outra
+#       com "de" no dia inicial do novo;
+#     - papel encerrado: SQUAD_LEADER com "ate" preenchido; depois dessa data a pessoa
+#       segue só com os papéis que não têm fim.
+#
+# CONVENÇÃO DE IDS
+#   Duas letras do cargo + hífen + contador de 3 dígitos, sem repetir:
+#     ge-001  gerente          co-001  coordenador
+#     sl-001  Squad Leader     us-001  usuário
+#   A pessoa recebe o prefixo do seu CARGO PRINCIPAL ATUAL (o mais abrangente que ela
+#   tem hoje). Quem foi Squad Leader mas já não é, fica com "us". O contador é por
+#   prefixo e nunca é reaproveitado, mesmo se a pessoa sair.
+#
+# VALIDAÇÃO (o leitor é ESTRITO)
+#   Chaves desconhecidas são rejeitadas e o painel não sobe. Use só os campos
+#   id, nome, papeis, papel, de, ate e squad. Papel desconhecido, Squad Leader sem
+#   squad, ids repetidos e vigência invertida também são recusados.
+#
+# CAMPOS QUE PODERÃO EXISTIR DEPOIS (ainda NÃO lidos pelo app; NÃO preencher)
+#   Ideias para versões futuras. Estão só em comentário: se você os escrever de verdade
+#   no arquivo, o painel vai recusá-lo.
+#     email:           e-mail corporativo da pessoa
+#     usuario_jira:    username ou key da pessoa no Jira Data Center (liga a pessoa
+#                      ao responsável das tasks)
+#     ativo:           true/false, para desligar sem apagar o histórico
+#     observacao:      texto livre
+#     instancia:       samsung ou sidia (de qual Jira a pessoa vem)
+#     competencias:    lista, por exemplo [android-17]
+#     horas_semanais:  carga contratual, por exemplo 40
+#     alocacao:        percentual alocado ao squad, por exemplo 100
+# =====================================================================================
 pessoas:
-  - id: g-001
+  # --- Gerente (vê todos) ---
+  - id: ge-001
     nome: Gerente Ficticia
     papeis:
       - papel: GERENTE
 
-  - id: c-001
-    nome: Coordenadora Ficticia
+  # --- Coordenadores (veem todos) ---
+  - id: co-001
+    nome: Coordenador Ficticio Um
     papeis:
       - papel: COORDENADOR
 
-  - id: u-001
+  - id: co-002
+    nome: Coordenador Ficticio Dois
+    papeis:
+      - papel: COORDENADOR
+
+  - id: co-003
+    nome: Coordenador Ficticio Tres
+    papeis:
+      - papel: COORDENADOR
+
+  # --- Squad Leaders: cada um tem USUARIO (é membro) e SQUAD_LEADER (lidera) no mesmo squad ---
+  - id: sl-001
     nome: Lider Alfa Ficticio
     papeis:
       - papel: USUARIO
@@ -21,7 +119,7 @@ pessoas:
       - papel: SQUAD_LEADER
         squad: Alfa
 
-  - id: u-002
+  - id: sl-002
     nome: Lider Beta Ficticia
     papeis:
       - papel: USUARIO
@@ -29,8 +127,9 @@ pessoas:
       - papel: SQUAD_LEADER
         squad: Beta
 
+  # --- Usuários ---
   # Mudou de squad em 01/07/2026: Alfa até 30/06, Beta a partir de 01/07.
-  - id: u-003
+  - id: us-001
     nome: Pessoa Mudou de Squad
     papeis:
       - papel: USUARIO
@@ -40,14 +139,15 @@ pessoas:
         de: 2026-07-01
         squad: Beta
 
-  - id: u-004
+  # Usuária comum, sempre no Alfa.
+  - id: us-002
     nome: Pessoa Alfa Ficticia
     papeis:
       - papel: USUARIO
         squad: Alfa
 
-  # Foi Squad Leader do Alfa até 31/03/2026 (papel encerrado); depois segue como usuária.
-  - id: u-005
+  # Foi Squad Leader do Alfa até 31/03/2026 (papel encerrado); depois segue como usuário.
+  - id: us-003
     nome: Ex-Lider Ficticio
     papeis:
       - papel: USUARIO
