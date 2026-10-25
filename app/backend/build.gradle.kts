@@ -18,7 +18,6 @@ dependencies {
     implementation(libs.ktor.serialization.json)
     implementation(libs.ktor.client.core)
     implementation(libs.ktor.client.cio)
-    implementation(libs.ktor.client.content.negotiation)
     implementation(libs.kaml)
     implementation(libs.logback.classic)
     implementation(libs.hikari)
