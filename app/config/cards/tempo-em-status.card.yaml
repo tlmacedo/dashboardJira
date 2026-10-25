@@ -44,7 +44,7 @@ formula: >-
 
 # Exemplo de uso, para documentação.
 exemplo: >-
-  squad=[thiago.macedo, wendell.marques], periodo=2026-07-26 a 2026-10-24, os não informado.
+  squad=[dev.alfa, dev.beta], periodo=2026-07-26 a 2026-10-24, os não informado.
 
 # Critérios de aceite verificáveis.
 aceite:

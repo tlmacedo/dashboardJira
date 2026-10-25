@@ -19,13 +19,13 @@ class CardQueryFactoryTest {
     private val spec get() = CardSpecs.fromYaml(fichaPath, dict)
     private val fabrica = CardQueryFactory(dict)
 
-    private val squad = listOf("thiago.macedo", "wendell.marques")
+    private val squad = listOf("dev.alfa", "dev.beta")
     private val periodo = mapOf("de" to "2026-07-26", "ate" to "2026-10-24")
     private val base: Map<String, Any> = mapOf("squad" to squad, "periodo" to periodo)
 
     private val jqlBase = "project in (\"TG-Basic\") AND issuetype in (\"Checklist\", \"Checklist TG\", \"Checklist Review\") " +
-        "AND assignee in (thiago.macedo, wendell.marques) AND status not in (\"Cancelled\", \"Canceled\", \"Dropped\") " +
-        "AND resolved >= \"2026-07-26\" AND resolved <= \"2026-10-24\""
+        "AND assignee in (\"dev.alfa\", \"dev.beta\") AND status not in (\"Cancelled\", \"Canceled\", \"Dropped\") " +
+        "AND resolved >= \"2026-07-26\" AND resolved < \"2026-10-25\""
 
     private fun fichaTemp(campos: String = "[OS Version]", filtros: String = "project: [\"TG-Basic\"]", extra: String = ""): Path {
         val f = tmp.resolve("x.card.yaml")
@@ -133,7 +133,7 @@ class CardQueryFactoryTest {
 
     @Test
     fun squadComoTextoSoltoERecusado() {
-        assertFailsWith<IllegalArgumentException> { fabrica.build(spec, base + ("squad" to "thiago.macedo")) }
+        assertFailsWith<IllegalArgumentException> { fabrica.build(spec, base + ("squad" to "dev.alfa")) }
     }
 
     @Test
@@ -185,8 +185,8 @@ class CardQueryFactoryTest {
     @Test
     fun pessoaETipoCaminhoFeliz() {
         val s = CardSpecs.fromYaml(fichaTemp(extra = parametrosPessoaETipo), dict)
-        val q = fabrica.build(s, mapOf("p" to "thiago.macedo", "t" to listOf("Checklist")))
-        assertEquals("project in (\"TG-Basic\") AND assignee in (thiago.macedo) AND issuetype in (\"Checklist\")", q.jql)
+        val q = fabrica.build(s, mapOf("p" to "dev.alfa", "t" to listOf("Checklist")))
+        assertEquals("project in (\"TG-Basic\") AND assignee in (\"dev.alfa\") AND issuetype in (\"Checklist\")", q.jql)
     }
 
     @Test
@@ -233,6 +233,69 @@ class CardQueryFactoryTest {
             CardSpecs.fromYaml(fichaTemp(filtros = "Inventado: [a]"), dict)
         }
         assertTrue(e2.message!!.contains("filtrosFixos"), e2.message)
+    }
+
+    @Test
+    fun ultimoDiaDoPeriodoEntraComoDiaSeguinteExclusivo() {
+        fun jqlAte(ate: String) =
+            fabrica.build(spec, mapOf("squad" to squad, "periodo" to mapOf("de" to "2026-07-26", "ate" to ate))).jql
+        assertTrue(jqlAte("2026-12-31").endsWith("AND resolved < \"2027-01-01\""))
+        assertFailsWith<IllegalArgumentException> { jqlAte("9999-12-31") }
+    }
+
+    @Test
+    fun fichaSemFiltroFixoFalhaNaCargaCitandoArquivo() {
+        val f = tmp.resolve("x.card.yaml")
+        Files.writeString(f, "id: x\ntitulo: X\ninstancia: samsung\ncampos: []\nfiltrosFixos: {}\n")
+        val e = assertFailsWith<IllegalArgumentException> { CardSpecs.fromYaml(f, dict) }
+        assertTrue(e.message!!.contains("x.card.yaml"), e.message)
+    }
+
+    @Test
+    fun periodoApontandoParaCampoTextFalhaNaCarga() {
+        val d = FieldDictionary(
+            listOf(
+                FieldDef("project", FieldType.SELECT, "samsung", "x"),
+                FieldDef("resolved", FieldType.TEXT, "samsung", "x"),
+            ),
+        )
+        val f = fichaTemp("[]", extra = "parametros:\n  - nome: periodo\n    tipo: periodo\n")
+        val e = assertFailsWith<IllegalArgumentException> { CardSpecs.fromYaml(f, d) }
+        assertTrue(e.message!!.contains("x.card.yaml") && e.message!!.contains("resolved"), e.message)
+    }
+
+    @Test
+    fun squadApontandoParaCampoNaoUserNaoExiste() {
+        // assignee é USER no exemplo; aqui um dicionário com assignee TEXT deve falhar na carga
+        val d = FieldDictionary(
+            listOf(
+                FieldDef("project", FieldType.SELECT, "samsung", "x"),
+                FieldDef("assignee", FieldType.TEXT, "samsung", "x"),
+            ),
+        )
+        val f = fichaTemp("[]", extra = "parametros:\n  - nome: s\n    tipo: squad\n")
+        assertFailsWith<IllegalArgumentException> { CardSpecs.fromYaml(f, d) }
+    }
+
+    @Test
+    fun valorDeFiltroFixoForaDosConhecidosFalhaNaCarga() {
+        val e = assertFailsWith<IllegalArgumentException> {
+            CardSpecs.fromYaml(fichaTemp(filtros = "issuetype: [\"Inventado\"]"), dict)
+        }
+        assertTrue(e.message!!.contains("x.card.yaml"), e.message)
+    }
+
+    @Test
+    fun valorDeFiltroExcluidoForaDosConhecidosFalhaNaCarga() {
+        assertFailsWith<IllegalArgumentException> {
+            CardSpecs.fromYaml(fichaTemp(extra = "filtrosExcluidos:\n  status: [\"Inventado\"]\n"), dict)
+        }
+    }
+
+    @Test
+    fun tipoEValidadoContraOsTiposDoDicionario() {
+        val s = CardSpecs.fromYaml(fichaTemp(extra = parametrosPessoaETipo), dict)
+        assertFailsWith<InvalidJqlValueException> { fabrica.build(s, mapOf("p" to "dev.alfa", "t" to listOf("Inventado"))) }
     }
 
     @Test

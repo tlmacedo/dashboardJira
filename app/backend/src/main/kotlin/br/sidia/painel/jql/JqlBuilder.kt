@@ -4,7 +4,7 @@ package br.sidia.painel.jql
  * Construtor de JQL: a ÚNICA forma de gerar texto JQL no projeto.
  *
  * Só compõe blocos já validados ([FieldDictionary] e [JqlValues]); nunca concatena texto de entrada.
- * Operadores permitidos: `=`, `!=`, `in`, `not in`, `>=`, `<=` e `ORDER BY`. Não há busca de texto (`~`).
+ * Operadores permitidos: `=`, `!=`, `in`, `not in`, `>=`, `<=`, `<` e `ORDER BY`. Não há busca de texto (`~`).
  * Os campos vêm só da instância informada, para não haver ambiguidade entre instâncias.
  */
 class JqlBuilder(dict: FieldDictionary, instance: String) {
@@ -25,12 +25,15 @@ class JqlBuilder(dict: FieldDictionary, instance: String) {
         return this
     }
 
-    /** `assignee in (a, b)`: usernames puros, sem aspas. Só em campo do tipo USER. */
+    /**
+     * `assignee in ("a", "b")`: usernames validados e SEMPRE entre aspas duplas, o que neutraliza
+     * palavras reservadas do JQL (`empty`, `null`, `or`, `order`...). Só em campo do tipo USER.
+     */
     fun users(field: String, usernames: List<String>): JqlBuilder {
         val def = dict.get(field)
         exigirTipo(def, "users", FieldType.USER)
         exigirNaoVazia(def, usernames)
-        val itens = usernames.joinToString(", ") { JqlValues.username(it) }
+        val itens = usernames.joinToString(", ") { "\"${JqlValues.username(it)}\"" }
         clausulas += "${JqlValues.quotedField(def.name)} in ($itens)"
         return this
     }
@@ -40,6 +43,9 @@ class JqlBuilder(dict: FieldDictionary, instance: String) {
 
     /** `campo <= "aaaa-mm-dd"`. Só em campo do tipo DATE. */
     fun dateAtMost(field: String, isoDate: String): JqlBuilder = data(field, isoDate, "<=", "dateAtMost")
+
+    /** `campo < "aaaa-mm-dd"` (exclusivo). Só em campo do tipo DATE. */
+    fun dateBefore(field: String, isoDate: String): JqlBuilder = data(field, isoDate, "<", "dateBefore")
 
     /** `campo >= startOfDay(-N)`. Só em campo do tipo DATE. */
     fun relativeDaysAtLeast(field: String, days: Int): JqlBuilder {

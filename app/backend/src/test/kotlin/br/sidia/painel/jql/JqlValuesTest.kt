@@ -36,13 +36,13 @@ class JqlValuesTest {
 
     @Test
     fun usernameValido() {
-        assertEquals("thiago.macedo", JqlValues.username("thiago.macedo"))
-        assertEquals("pedro.almeida-e", JqlValues.username("pedro.almeida-e"))
+        assertEquals("dev.alfa", JqlValues.username("dev.alfa"))
+        assertEquals("dev.gama", JqlValues.username("dev.gama"))
     }
 
     @Test
     fun usernameComEspaco() {
-        assertFailsWith<InvalidJqlValueException> { JqlValues.username("thiago macedo") }
+        assertFailsWith<InvalidJqlValueException> { JqlValues.username("dev alfa") }
     }
 
     @Test
@@ -191,6 +191,27 @@ class JqlValuesTest {
         val e = assertFailsWith<InvalidJqlValueException> { JqlValues.username("a\nb\r\tc\u0000d") }
         assertEquals("Valor inválido para username: a?b??c?d", e.message)
         assertEquals("a\nb\r\tc\u0000d", e.value)
+    }
+
+    @Test
+    fun aspasTipograficasECrasesSaoRecusadas() {
+        listOf("“", "”", "‘", "’", "＂", "＇", "`", "´").forEach { q ->
+            assertFailsWith<InvalidJqlValueException>("U+%04X".format(q[0].code)) { JqlValues.safeText("a${q}b") }
+            assertFailsWith<InvalidJqlValueException> { JqlValues.literal("a${q}b", listOf("a${q}b")) }
+            assertFailsWith<InvalidJqlValueException> { JqlValues.quotedField("Campo ${q}x") }
+        }
+    }
+
+    @Test
+    fun amostraNaoCortaParSubstituto() {
+        val emoji = "😀"
+        val v = "a".repeat(79) + emoji + "zzz"
+        val a = amostra(v)
+        assertEquals(79, a.length)
+        assertTrue(a.none { it.isSurrogate() })
+        // emoji inteiro dentro do limite continua inteiro
+        assertEquals("a".repeat(78) + emoji, amostra("a".repeat(78) + emoji + "zzz"))
+        assertEquals("a?b", amostra("a\nb"))
     }
 
     @Test

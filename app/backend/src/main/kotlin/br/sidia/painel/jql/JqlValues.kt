@@ -11,10 +11,16 @@ import java.time.format.ResolverStyle
  * com caracteres de controle trocados por `?`.
  */
 class InvalidJqlValueException(val kind: String, val value: String) :
-    IllegalArgumentException("Valor inválido para $kind: ${amostra(value)}") {
-    private companion object {
-        fun amostra(v: String): String = v.take(80).map { if (Character.isISOControl(it)) '?' else it }.joinToString("")
-    }
+    IllegalArgumentException("Valor inválido para $kind: ${amostra(value)}")
+
+/**
+ * Trecho seguro de um valor do usuário para mensagens e logs: no máximo [max] caracteres,
+ * sem cortar um par substituto (emoji) ao meio, e com caracteres de controle trocados por `?`.
+ */
+internal fun amostra(v: String, max: Int = 80): String {
+    var fim = minOf(v.length, max)
+    if (fim in 1 until v.length && Character.isHighSurrogate(v[fim - 1]) && Character.isLowSurrogate(v[fim])) fim--
+    return v.substring(0, fim).map { if (Character.isISOControl(it)) '?' else it }.joinToString("")
 }
 
 /**
@@ -27,6 +33,13 @@ object JqlValues {
     private const val MAX_USERNAME = 64
     private const val MIN_DIAS = 1
     private const val MAX_DIAS = 3650
+
+    /**
+     * Aspas tipográficas e largas (U+201C, U+201D, U+2018, U+2019, U+FF02, U+FF07), crase (U+0060)
+     * e acento agudo (U+00B4): o Jira pode tratá-las como aspas, então são recusadas nos valores.
+     */
+    private val ASPAS_PARECIDAS: Set<Int> =
+        setOf(0x201C, 0x201D, 0x2018, 0x2019, 0xFF02, 0xFF07, 0x0060, 0x00B4)
 
     // uuuu (ano proleptico) com STRICT: 2026-02-30 é recusado em vez de ajustado.
     private val formatoData: DateTimeFormatter =
@@ -114,7 +127,7 @@ object JqlValues {
         var i = 0
         while (i < value.length) {
             val cp = value.codePointAt(i)
-            if (cp == '"'.code || cp == '\\'.code || !isAllowedChar(cp)) {
+            if (cp == '"'.code || cp == '\\'.code || cp in ASPAS_PARECIDAS || !isAllowedChar(cp)) {
                 throw InvalidJqlValueException(kind, value)
             }
             i += Character.charCount(cp)

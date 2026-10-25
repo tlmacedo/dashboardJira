@@ -18,14 +18,36 @@ campos:
     tipo: SELECT
     instancia: samsung
     finalidade: Projeto da task
+  # Os `valores` de status e issuetype são vocabulário INICIAL, vindo da documentação do TG-Basic.
+  # Devem ser ampliados depois de ler `/status` (e os tipos de issue) na primeira conexão autorizada.
   - nome: status
     tipo: SELECT
     instancia: samsung
     finalidade: Status atual e categoria (base do fluxo)
+    valores:
+      - "Open"
+      - "In Progress"
+      - "Submitted"
+      - "On Hold"
+      - "Resolved"
+      - "Closed"
+      - "Cancelled"
+      - "Canceled"
+      - "Dropped"
   - nome: issuetype
     tipo: SELECT
     instancia: samsung
     finalidade: Tipo da task
+    valores:
+      - "Checklist"
+      - "Checklist TG"
+      - "Checklist Review"
+      - "Feature check"
+      - "TG Feature check"
+      - "Task"
+      - "Propagation Issue"
+      - "Propagation List"
+      - "Epic"
   - nome: created
     tipo: DATE
     instancia: samsung

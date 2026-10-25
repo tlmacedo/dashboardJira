@@ -32,15 +32,29 @@ class JqlBuilderTest {
     fun jqlDoSquadAbertas() {
         val jql = builder()
             .inList("project", listOf("TG-Basic"))
-            .users("assignee", listOf("thiago.macedo", "wendell.marques"))
+            .users("assignee", listOf("dev.alfa", "dev.beta"))
             .notInList("status", listOf("Resolved", "Closed", "Cancelled"))
             .relativeDaysAtLeast("created", 100)
             .build()
         assertEquals(
-            "project in (\"TG-Basic\") AND assignee in (thiago.macedo, wendell.marques) AND " +
+            "project in (\"TG-Basic\") AND assignee in (\"dev.alfa\", \"dev.beta\") AND " +
                 "status not in (\"Resolved\", \"Closed\", \"Cancelled\") AND created >= startOfDay(-100)",
             jql,
         )
+    }
+
+    @Test
+    fun usernamesReservadosSaemEntreAspas() {
+        assertEquals("assignee in (\"empty\")", builder().users("assignee", listOf("empty")).build())
+        assertEquals("assignee in (\"or\")", builder().users("assignee", listOf("or")).build())
+    }
+
+    @Test
+    fun dateBeforeUsaMenorQueEExigeCampoDate() {
+        assertEquals("resolved < \"2026-10-25\"", builder().dateBefore("resolved", "2026-10-25").build())
+        assertFailsWith<IllegalArgumentException> { builder().dateBefore("project", "2026-10-25") }
+        assertFailsWith<InvalidJqlValueException> { builder().dateBefore("resolved", "x\") OR (\"") }
+        assertFailsWith<UnknownFieldException> { builder().dateBefore("nada", "2026-10-25") }
     }
 
     @Test
@@ -174,34 +188,44 @@ class JqlBuilderTest {
     @Test
     fun propriedadeCaracteresPerigososNuncaQuebramAsAspas() {
         val rnd = Random(42)
-        val alfabeto = "\")(\\ORorAND~* \n\t'x0".toList()
-        repeat(200) {
-            val valor = (1..rnd.nextInt(1, 30)).map { alfabeto[rnd.nextInt(alfabeto.size)] }.joinToString("")
-            val tentativas = listOf<() -> String>(
-                { builder().inList("project", listOf(valor)).build() },
-                { builder().notInList("status", listOf(valor, "ok")).build() },
-                { builder().equalsTo("summary", valor).build() },
-                { builder().users("assignee", listOf(valor)).build() },
-                { builder().labelsNotIn(listOf(valor)).build() },
-                { builder().dateAtLeast("created", valor).build() },
+        val pedacos = listOf(
+            "\"", ")", "(", "\\", "~", "*", " ", "\n", "\t", "'", "x", "0", "a", ".", "-", "_",
+            "“", "”", "‘", "’", "＂", "＇", "`", "´",
+            "or", "empty", "null", "order", "in", "OR", "AND",
+        )
+        val tipograficas = "“”‘’＂＇`´"
+        val aceitos = mutableMapOf<String, Int>()
+        repeat(600) {
+            val valor = (1..rnd.nextInt(1, 4)).joinToString("") { pedacos[rnd.nextInt(pedacos.size)] }
+            // Para a data, metade dos casos usa uma data válida, senão nenhum seria aceito.
+            val data = if (rnd.nextBoolean()) "2026-01-%02d".format(rnd.nextInt(1, 29)) else valor
+            val tentativas = mapOf<String, () -> String>(
+                "inList" to { builder().inList("project", listOf(valor)).build() },
+                "notInList" to { builder().notInList("status", listOf(valor, "ok")).build() },
+                "equalsTo" to { builder().equalsTo("summary", valor).build() },
+                "users" to { builder().users("assignee", listOf(valor)).build() },
+                "labelsNotIn" to { builder().labelsNotIn(listOf(valor)).build() },
+                "dateAtLeast" to { builder().dateAtLeast("created", data).build() },
+                "dateBefore" to { builder().dateBefore("created", data).build() },
             )
-            for (gerar in tentativas) {
+            for ((nome, gerar) in tentativas) {
                 val saida = try {
                     gerar()
                 } catch (e: InvalidJqlValueException) {
                     continue
                 }
-                val aspas = saida.count { it == '"' }
-                assertTrue(aspas % 2 == 0, "aspas ímpares: $saida")
+                aceitos.merge(nome, 1, Int::plus)
+                assertTrue(saida.count { it == '"' } % 2 == 0, "aspas ímpares: $saida")
                 assertTrue(!saida.contains('\\'), "barra na saída: $saida")
                 // '~' só pode aparecer como dado dentro de aspas, nunca como operador (partes pares ficam fora das aspas).
                 val fora = saida.split('"').filterIndexed { i, _ -> i % 2 == 0 }.joinToString("")
                 assertTrue(!fora.contains('~'), "operador ~ na saída: $saida")
-                // O trecho entre aspas nunca contém aspas internas (a divisão por '"' tem sempre partes ímpares).
-                assertTrue(saida.split('"').size % 2 == 1, saida)
-                // Nenhum caractere de controle chega ao texto final.
                 assertTrue(saida.none { it.isISOControl() }, saida)
+                assertTrue(saida.none { it in tipograficas }, "aspa tipográfica na saída: $saida")
             }
+        }
+        listOf("inList", "notInList", "equalsTo", "users", "labelsNotIn", "dateAtLeast", "dateBefore").forEach {
+            assertTrue((aceitos[it] ?: 0) > 0, "gerador $it nunca teve caso aceito")
         }
     }
 }

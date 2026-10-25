@@ -2,11 +2,24 @@ package br.sidia.painel.jql
 
 import java.time.LocalDate
 
-/** Período fechado [de, ate]; `de <= ate`. */
+/**
+ * Período fechado [de, ate]; `de <= ate`.
+ *
+ * `ate` é INCLUSIVO: a tela e o usuário falam em "até 24/10" querendo dizer o dia 24 inteiro.
+ * No Jira, `campo <= "2026-10-24"` compara com 2026-10-24 00:00 e deixaria de fora tudo o que
+ * foi resolvido durante o dia 24. Por isso a fábrica gera `campo < "2026-10-25"` (dia seguinte,
+ * exclusivo). O último dia do calendário aceito (9999-12-31) é recusado, pois não tem dia seguinte válido.
+ */
 data class Periodo(val de: LocalDate, val ate: LocalDate) {
     init {
         require(!de.isAfter(ate)) { "periodo invertido: de=$de é depois de ate=$ate" }
+        require(ate.isBefore(LocalDate.of(9999, 12, 31))) {
+            "periodo: 'ate' não pode ser o último dia do calendário (9999-12-31)"
+        }
     }
+
+    /** Primeiro dia fora do período (limite exclusivo usado no JQL). */
+    val limiteExclusivo: LocalDate get() = ate.plusDays(1)
 }
 
 /**
@@ -43,7 +56,7 @@ class CardQueryFactory(private val dict: FieldDictionary) {
         valorDe("periodo")?.let { (p, v) ->
             val periodo = periodoDe(p, v)
             val campo = CAMPO_DO_PARAMETRO.getValue("periodo")
-            b.dateAtLeast(campo, periodo.de.toString()).dateAtMost(campo, periodo.ate.toString())
+            b.dateAtLeast(campo, periodo.de.toString()).dateBefore(campo, periodo.limiteExclusivo.toString())
         }
         valorDe("os")?.let { (p, v) -> b.inList(CAMPO_DO_PARAMETRO.getValue("os"), listaDeTexto(p, v)) }
 
@@ -79,7 +92,7 @@ class CardQueryFactory(private val dict: FieldDictionary) {
         is String -> try {
             LocalDate.parse(JqlValues.isoDate(v))
         } catch (e: InvalidJqlValueException) {
-            throw IllegalArgumentException("parâmetro '${p.name}': data inválida '${v.take(20)}'", e)
+            throw IllegalArgumentException("parâmetro '${p.name}': data inválida '${amostra(v)}'", e)
         }
         else -> throw IllegalArgumentException("parâmetro '${p.name}': data deve ser LocalDate ou aaaa-mm-dd")
     }

@@ -87,11 +87,44 @@ object CardSpecs {
                 }
             }
         }
+        ensaiar(path, spec, doDicionario)
         return spec
+    }
+
+    /** Tipos de campo aceitos por tipo de parâmetro. */
+    private val TIPOS_DO_CAMPO: Map<String, Set<FieldType>> = mapOf(
+        "periodo" to setOf(FieldType.DATE),
+        "squad" to setOf(FieldType.USER),
+        "pessoa" to setOf(FieldType.USER),
+        "os" to setOf(FieldType.SELECT, FieldType.TEXT),
+        "tipo" to setOf(FieldType.SELECT, FieldType.TEXT),
+    )
+
+    /**
+     * Ensaio na carga (sem Jira): confere o tipo do campo de cada parâmetro e monta os filtros fixos
+     * e excluídos num [JqlBuilder], para que valor fora de `knownValues`, texto inseguro ou lista vazia
+     * falhem aqui e não na hora da busca.
+     */
+    private fun ensaiar(path: Path, spec: CardSpec, dict: FieldDictionary) {
+        try {
+            spec.parametros.forEach { p ->
+                val campo = dict.get(CAMPO_DO_PARAMETRO.getValue(p.type))
+                val aceitos = TIPOS_DO_CAMPO.getValue(p.type)
+                require(campo.type in aceitos) {
+                    "parâmetro '${p.name}' (${p.type}) aponta para o campo '${campo.name}' do tipo ${campo.type}; esperado ${aceitos.joinToString("/")}"
+                }
+            }
+            val b = JqlBuilder(dict, spec.instancia)
+            spec.filtrosFixos.forEach { (campo, valores) -> b.inList(campo, valores) }
+            spec.filtrosExcluidos.forEach { (campo, valores) -> b.notInList(campo, valores) }
+        } catch (e: IllegalArgumentException) {
+            throw IllegalArgumentException("$path: ${e.message}", e)
+        }
     }
 
     private fun validar(spec: CardSpec) {
         require(spec.id.isNotBlank()) { "ficha sem id" }
+        require(spec.filtrosFixos.isNotEmpty()) { "ficha '${spec.id}' sem nenhum filtro fixo (filtrosFixos)" }
         require(spec.titulo.isNotBlank()) { "ficha '${spec.id}' sem titulo" }
         require(spec.instancia.isNotBlank()) { "ficha '${spec.id}' sem instancia" }
         spec.parametros.forEach {
