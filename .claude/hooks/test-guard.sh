@@ -25,6 +25,9 @@ a 'echo x > .env' 2
 a 'git add .env' 2
 a 'git add -f .env.example' 2
 a 'git add .env.example' 0
+a 'git add docs/superpowers/plans/plano-01-fundacao.md' 0
+a 'git add --force x' 2
+a 'git add x -f' 2
 a 'git add .env.example .env.production' 2
 a 'cp .env.example .env' 2
 a 'sed -i s/a/b/ config/equipes.yaml' 2

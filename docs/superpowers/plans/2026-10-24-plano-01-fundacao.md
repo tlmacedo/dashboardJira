@@ -19,6 +19,14 @@
 - Datas e dias: dia civil no fuso de Manaus em qualquer cálculo; dias úteis por padrão.
 - Sem ranking de pessoas; listas de pessoas em ordem alfabética.
 
+## Regras para implementadores e revisores (copiar em todo prompt de subagente)
+
+- Um `BLOQUEADO` vindo de `.claude/hooks/guard.sh` é sinal de **parar e relatar**; nunca reescrever o comando para passar.
+- Arquivos que citam `JIRA_TOKEN`, `JIRA_BASE_URL` e afins (`.env.example`, classes de configuração) são criados com Write/Edit, nunca com heredoc no Bash. Nunca prefixar comandos com `JIRA_LIVE_ENABLED=true`.
+- Se o Docker ou o Testcontainers estiver indisponível na Tarefa 6, **parar e perguntar**; não trocar por H2 nem por mock. Conferir `docker info` antes de começar a Fase 1.
+- Cada subagente recebe: as Restrições globais e o Foco da revisão deste plano, o caminho da spec e o texto da sua tarefa.
+- Implementar em branch própria a partir de `docs/planejamento-novo-app` (ou worktree), não nela.
+
 ## Foco da revisão
 
 - Resolução às 23:59 e às 00:00 de Manaus (virada de dia) cai no dia civil correto.
@@ -66,7 +74,7 @@ app/Dockerfile, app/docker-compose.yml
 - [ ] **Passo 2: Gerar o wrapper Gradle.** Se `gradle` não existir: `brew install gradle`. Em `app/backend`: `gradle wrapper`. Escrever `settings.gradle.kts` (nome `painel`) e `build.gradle.kts` com os plugins Kotlin JVM, serialization e application; JVM toolchain 21.
 - [ ] **Passo 3: Teste que falha.** `HealthTest.healthRetornaOk`: `testApplication { application { module(Settings.fromEnv(emptyMap())) }; val r = client.get("/api/health"); assertEquals(HttpStatusCode.OK, r.status); assertEquals("""{"ok":true}""", r.bodyAsText()) }`.
 - [ ] **Passo 4: Rodar e ver falhar.** `cd app/backend && ./gradlew test --tests '*HealthTest*'` → FALHA (módulo não existe).
-- [ ] **Passo 5: Implementar** `Application.module` com `ContentNegotiation` (JSON) e a rota. `Settings` ainda não existe: criar a classe mínima na Tarefa 2; aqui usar um `Settings` vazio de uma linha só para compilar.
+- [ ] **Passo 5: Implementar** `Application.module` com `ContentNegotiation` (JSON) e a rota. `Settings` ainda não existe: criar aqui uma versão mínima `data class Settings(val zone: ZoneId = ZoneId.of("America/Manaus"))` com `companion object { fun fromEnv(env: Map<String, String> = System.getenv()): Settings }` (o teste chama `Settings.fromEnv(emptyMap())`); a Tarefa 2 a estende com as flags.
 - [ ] **Passo 6: Rodar e ver passar.** `./gradlew test --tests '*HealthTest*'` → PASSA.
 - [ ] **Passo 7: Commit.** `git add app/backend && git commit -m "Esqueleto Gradle/Ktor com /api/health"`.
 
