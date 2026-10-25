@@ -33,7 +33,9 @@ class JiraClientFactory internal constructor(
     private val retry: RetryPolicy = RetryPolicy(),
     /** Só para testes: avisa se o motor "desligado" chegou a ser alcançado (deve ser 0 vezes). */
     private val aoAlcancarMotorDesligado: () -> Unit = {},
-) {
+    /** Só para testes: chamado após o fechamento de cada cliente (registra a ordem do fechamento). */
+    private val aoFecharCliente: () -> Unit = {},
+) : AutoCloseable {
     /** Construtor público: cliente HTTP real (CIO) e política de novas tentativas padrão. */
     constructor(settings: Settings) : this(settings, { createJiraHttpClient() })
 
@@ -46,11 +48,50 @@ class JiraClientFactory internal constructor(
         settings.jiraInstances.forEach { (id, s) -> validar(id, s) }
     }
 
-    /** Cria o cliente da instância (`samsung`, `sidia`...). Id desconhecido: [IllegalArgumentException]. */
+    // Cache por instância: o mesmo id devolve sempre o mesmo cliente. Acesso sempre sob `trava`
+    // (criação e fechamento não podem se cruzar).
+    private val trava = Any()
+    private val clientes = HashMap<String, JiraClient>()
+    private var fechada = false
+
+    /**
+     * Devolve o cliente da instância (`samsung`, `sidia`...), SEMPRE o mesmo objeto para o mesmo id
+     * (com a consulta real desligada, o cliente "desligado" também é um só por id).
+     * Id desconhecido: [IllegalArgumentException]. Depois do [close]: [IllegalStateException].
+     */
     fun create(instanceId: String): JiraClient {
         require(instanceId in INSTANCIAS_CONHECIDAS || instanceId in settings.jiraInstances) {
             "Instância Jira desconhecida: '$instanceId'"
         }
+        synchronized(trava) {
+            check(!fechada) { "Fábrica do cliente Jira já foi fechada" }
+            return clientes.getOrPut(instanceId) { construir(instanceId) }
+        }
+    }
+
+    /**
+     * Fecha os `HttpClient` de todos os clientes criados. Idempotente. Se algum falhar ao fechar, os demais
+     * são fechados mesmo assim e o primeiro erro é relançado no fim (os outros vão como suprimidos).
+     */
+    override fun close() {
+        val abertos = synchronized(trava) {
+            if (fechada) return
+            fechada = true
+            clientes.values.toList().also { clientes.clear() }
+        }
+        var erro: Throwable? = null
+        for (c in abertos) {
+            try {
+                c.close()
+                aoFecharCliente()
+            } catch (e: Throwable) {
+                if (erro == null) erro = e else erro.addSuppressed(e)
+            }
+        }
+        erro?.let { throw it }
+    }
+
+    private fun construir(instanceId: String): JiraClient {
         if (!settings.jiraLiveEnabled) {
             // Sem credencial, sem rede: o guard barra antes de qualquer requisição.
             val vazio = JiraInstanceConfig(instanceId, "https://desligado.invalid", JiraAuthKind.BEARER, "-")

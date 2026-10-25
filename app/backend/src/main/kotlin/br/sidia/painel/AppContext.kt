@@ -25,9 +25,13 @@ class AppContext(
     val dataSource: DataSource?,
     val jira: JiraClientFactory,
 ) : AutoCloseable {
-    /** Fecha o pool de conexões (se houver). */
+    /** Fecha os clientes Jira e, SEMPRE depois (mesmo se isso falhar), o pool de conexões (se houver). */
     override fun close() {
-        (dataSource as? AutoCloseable)?.close()
+        try {
+            jira.close()
+        } finally {
+            (dataSource as? AutoCloseable)?.close()
+        }
     }
 
     companion object {
