@@ -21,8 +21,10 @@ private val chavePrincipal = AttributeKey<Principal>("painel.principal")
 private val rotasPublicas = setOf(listOf("api", "health"), listOf("api", "meta"))
 
 /**
- * Normaliza o caminho como o roteador do Ktor: divide por `/`, descarta segmentos vazios,
- * decodifica cada segmento e resolve `.` e `..`. Devolve `null` se a decodificação falhar.
+ * Normaliza o caminho como o roteador do Ktor: divide por `/`, descarta segmentos vazios e
+ * decodifica cada segmento. NÃO resolve `.` nem `..` (o roteador também não resolve): eles
+ * ficam na lista e fazem [exigeAutenticacao] negar o acesso público. Devolve `null` se a
+ * decodificação falhar.
  */
 internal fun segmentosNormalizados(uri: String): List<String>? {
     val caminho = uri.substringBefore('?').substringBefore('#')
@@ -34,17 +36,17 @@ internal fun segmentosNormalizados(uri: String): List<String>? {
         } catch (e: Exception) {
             return null
         }
-        when (segmento) {
-            "." -> Unit
-            ".." -> if (saida.isNotEmpty()) saida.removeAt(saida.lastIndex)
-            else -> saida.add(segmento)
-        }
+        saida.add(segmento)
     }
     return saida
 }
 
 /** Exige autenticação a menos que o caminho normalizado seja exatamente uma rota pública. */
-private fun exigeAutenticacao(uri: String): Boolean = segmentosNormalizados(uri) !in rotasPublicas
+internal fun exigeAutenticacao(uri: String): Boolean {
+    val segmentos = segmentosNormalizados(uri) ?: return true
+    if (segmentos.any { it == "." || it == ".." }) return true
+    return segmentos !in rotasPublicas
+}
 
 /**
  * Principal da chamada. Fora de rota protegida ela lança: isso é erro de programação,

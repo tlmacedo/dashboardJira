@@ -153,8 +153,25 @@ class AccessControlTest {
     @Test
     fun normalizacaoDoCaminhoCobreFormasCamufladas() {
         assertEquals(listOf("api", "ping"), segmentosNormalizados("//api/ping"))
-        assertEquals(listOf("api", "ping"), segmentosNormalizados("/%61pi/./x/../ping?q=1"))
+        assertEquals(listOf("api", ".", "x", "..", "ping"), segmentosNormalizados("/%61pi/./x/../ping?q=1"))
         assertEquals(listOf("api", "health"), segmentosNormalizados("/api/%68ealth/"))
         assertEquals(null, segmentosNormalizados("/api/%zz"))
+    }
+
+    @Test
+    fun segmentosDeNavegacaoEMalformadosNuncaSaoPublicos() {
+        listOf(
+            "/api/x/../health", "/api/x/%2e%2e/meta", "/api/%2e/health", "/api/meta/..%2fsecreto",
+            "/api/health;x", "/api/health%2f", "/api/meta%00", "/api/%zz", "/api/health/..", "/api/./meta",
+        ).forEach { assertTrue(exigeAutenticacao(it), it) }
+        assertFalse(exigeAutenticacao("/api/health"))
+        assertFalse(exigeAutenticacao("/api/meta?x=1"))
+    }
+
+    @Test
+    fun navegacaoViaClienteRetorna401() {
+        listOf("/api/x/../health", "/api/x/%2e%2e/meta", "/api/%2e/health").forEach {
+            assertEquals(HttpStatusCode.Unauthorized, status(producao, OidcAuthenticator(), it), it)
+        }
     }
 }
