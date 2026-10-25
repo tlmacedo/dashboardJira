@@ -3,12 +3,14 @@ package br.sidia.painel
 import br.sidia.painel.config.Settings
 import br.sidia.painel.db.Database
 import br.sidia.painel.jira.JiraClientFactory
+import br.sidia.painel.security.Role
 import br.sidia.painel.security.RoleDirectory
 import br.sidia.painel.time.BusinessCalendar
 import org.slf4j.LoggerFactory
 import java.nio.file.Files
 import java.nio.file.Path
 import java.time.Clock
+import java.time.LocalDate
 import javax.sql.DataSource
 
 /**
@@ -35,14 +37,14 @@ class AppContext(
          * Carrega arquivos de configuração, valida a senha do banco, abre o pool e migra o schema.
          * Falhas de configuração e de banco viram [IllegalStateException] sem segredos.
          */
-        @Suppress("UNUSED_PARAMETER")
         fun load(settings: Settings, clock: Clock = Clock.system(settings.zone)): AppContext {
             val arquivoCalendario = resolver(settings, "calendario")
             val arquivoPapeis = resolver(settings, "papeis")
             val calendario = BusinessCalendar.fromYaml(arquivoCalendario, settings.zone)
             val papeis = RoleDirectory.fromYaml(arquivoPapeis)
+            exigirGerenteVigente(settings, papeis, arquivoPapeis, LocalDate.now(clock))
 
-            if (settings.databasePassword.isEmpty()) {
+            if (settings.databasePassword.isBlank()) {
                 if (!settings.dashboardDevMode) {
                     throw IllegalStateException("DATABASE_PASSWORD obrigatório em produção")
                 }
@@ -51,6 +53,15 @@ class AppContext(
 
             val ds = abrirBanco(settings)
             return AppContext(settings, calendario, papeis, ds, JiraClientFactory(settings))
+        }
+
+        /** Sem nenhum GERENTE vigente hoje ninguém acessaria a Integridade: falha em produção, só avisa em dev. */
+        private fun exigirGerenteVigente(settings: Settings, papeis: RoleDirectory, arquivo: Path, hoje: LocalDate) {
+            if (papeis.hasRoleOn(Role.GERENTE, hoje)) return
+            if (!settings.dashboardDevMode) {
+                throw IllegalStateException("Nenhum GERENTE vigente em $arquivo")
+            }
+            log.warn("Nenhum GERENTE vigente em $arquivo (aceito apenas em modo desenvolvimento).")
         }
 
         /**

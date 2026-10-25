@@ -8,6 +8,7 @@ import kotlin.test.assertTrue
 class PrincipalTest {
     private val hoje = LocalDate.parse("2026-10-25")
 
+    // ids us-009/us-010 são válidos; o diretório é validado no construtor.
     private val diretorio = RoleDirectory(
         listOf(
             Pessoa("co-001", "Coordenador Ficticio", listOf(AtribuicaoPapel(Role.COORDENADOR, Vigencia(null, null)))),

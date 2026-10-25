@@ -32,13 +32,13 @@ class RoleDirectoryTest {
         val hoje = d("2026-10-25")
         val dir = RoleDirectory(
             listOf(
-                Pessoa("p1", "Pessoa Um", listOf(AtribuicaoPapel(Role.SQUAD_LEADER, Vigencia(null, hoje.minusDays(1)), "A"))),
+                Pessoa("sl-001", "Pessoa Um", listOf(AtribuicaoPapel(Role.SQUAD_LEADER, Vigencia(null, hoje.minusDays(1)), "A"))),
             ),
         )
-        assertFalse(Role.SQUAD_LEADER in dir.rolesOf("p1", hoje))
-        assertTrue(Role.SQUAD_LEADER in dir.rolesOf("p1", hoje.minusDays(1)))
-        assertEquals(emptySet(), dir.squadsLedBy("p1", hoje))
-        assertEquals(setOf("A"), dir.squadsLedBy("p1", hoje.minusDays(1)))
+        assertFalse(Role.SQUAD_LEADER in dir.rolesOf("sl-001", hoje))
+        assertTrue(Role.SQUAD_LEADER in dir.rolesOf("sl-001", hoje.minusDays(1)))
+        assertEquals(emptySet(), dir.squadsLedBy("sl-001", hoje))
+        assertEquals(setOf("A"), dir.squadsLedBy("sl-001", hoje.minusDays(1)))
     }
 
     @Test
@@ -46,7 +46,7 @@ class RoleDirectoryTest {
         val dir = RoleDirectory(
             listOf(
                 Pessoa(
-                    "p1", "Pessoa Um",
+                    "us-001", "Pessoa Um",
                     listOf(
                         AtribuicaoPapel(Role.USUARIO, Vigencia(null, d("2026-06-30")), "A"),
                         AtribuicaoPapel(Role.USUARIO, Vigencia(d("2026-07-01"), null), "B"),
@@ -54,11 +54,32 @@ class RoleDirectoryTest {
                 ),
             ),
         )
-        assertEquals(setOf("p1"), dir.membersOf("A", d("2026-06-30")))
+        assertEquals(setOf("us-001"), dir.membersOf("A", d("2026-06-30")))
         assertEquals(emptySet(), dir.membersOf("A", d("2026-07-01")))
-        assertEquals(setOf("p1"), dir.membersOf("B", d("2026-07-01")))
-        assertEquals("A", dir.squadOf("p1", d("2026-06-30")))
-        assertEquals("B", dir.squadOf("p1", d("2026-07-01")))
+        assertEquals(setOf("us-001"), dir.membersOf("B", d("2026-07-01")))
+        assertEquals("A", dir.squadOf("us-001", d("2026-06-30")))
+        assertEquals("B", dir.squadOf("us-001", d("2026-07-01")))
+    }
+
+    @Test
+    fun usuarioEmUmSquadELiderEmOutroPrevaleceOUsuario() {
+        // Documenta a precedência de squadOf: o squad de membro (USUARIO) vence o de liderança.
+        val dir = RoleDirectory(
+            listOf(
+                Pessoa(
+                    "sl-001", "Pessoa Um",
+                    listOf(
+                        AtribuicaoPapel(Role.USUARIO, Vigencia(null, null), "A"),
+                        AtribuicaoPapel(Role.SQUAD_LEADER, Vigencia(null, null), "B"),
+                    ),
+                ),
+            ),
+        )
+        val hoje = d("2026-10-25")
+        assertEquals("A", dir.squadOf("sl-001", hoje))
+        assertEquals(setOf("B"), dir.squadsLedBy("sl-001", hoje))
+        assertEquals(setOf("sl-001"), dir.membersOf("A", hoje))
+        assertEquals(emptySet(), dir.membersOf("B", hoje))
     }
 
     @Test
@@ -66,19 +87,19 @@ class RoleDirectoryTest {
         val hoje = d("2026-10-25")
         val dir = RoleDirectory(
             listOf(
-                Pessoa("lider-a", "Lider A", listOf(AtribuicaoPapel(Role.SQUAD_LEADER, Vigencia(null, null), "A"))),
-                Pessoa("lider-b", "Lider B", listOf(AtribuicaoPapel(Role.SQUAD_LEADER, Vigencia(null, null), "B"))),
-                Pessoa("resp", "Responsavel", listOf(AtribuicaoPapel(Role.USUARIO, Vigencia(null, null), "A"))),
-                Pessoa("coord", "Coord", listOf(AtribuicaoPapel(Role.COORDENADOR, Vigencia(null, null), null))),
-                Pessoa("rep", "Reporter", listOf(AtribuicaoPapel(Role.USUARIO, Vigencia(null, null), "B"))),
+                Pessoa("sl-001", "Lider A", listOf(AtribuicaoPapel(Role.SQUAD_LEADER, Vigencia(null, null), "A"))),
+                Pessoa("sl-002", "Lider B", listOf(AtribuicaoPapel(Role.SQUAD_LEADER, Vigencia(null, null), "B"))),
+                Pessoa("us-001", "Responsavel", listOf(AtribuicaoPapel(Role.USUARIO, Vigencia(null, null), "A"))),
+                Pessoa("co-001", "Coord", listOf(AtribuicaoPapel(Role.COORDENADOR, Vigencia(null, null), null))),
+                Pessoa("us-002", "Reporter", listOf(AtribuicaoPapel(Role.USUARIO, Vigencia(null, null), "B"))),
             ),
         )
-        assertTrue(dir.isReporterAuthorized("rep", "rep", "resp", hoje))
-        assertTrue(dir.isReporterAuthorized("rep", "coord", "resp", hoje))
-        assertTrue(dir.isReporterAuthorized("rep", "lider-a", "resp", hoje))
-        assertFalse(dir.isReporterAuthorized("rep", "lider-b", "resp", hoje))
-        assertFalse(dir.isReporterAuthorized("rep", "resp", "resp", hoje))
-        assertFalse(dir.isReporterAuthorized("rep", "lider-a", null, hoje))
+        assertTrue(dir.isReporterAuthorized("us-002", "us-002", "us-001", hoje))
+        assertTrue(dir.isReporterAuthorized("us-002", "co-001", "us-001", hoje))
+        assertTrue(dir.isReporterAuthorized("us-002", "sl-001", "us-001", hoje))
+        assertFalse(dir.isReporterAuthorized("us-002", "sl-002", "us-001", hoje))
+        assertFalse(dir.isReporterAuthorized("us-002", "us-001", "us-001", hoje))
+        assertFalse(dir.isReporterAuthorized("us-002", "sl-001", null, hoje))
     }
 
     @Test
@@ -128,10 +149,11 @@ class RoleDirectoryTest {
                 arq,
                 """
                 pessoas:
-                  - id: x-1
+                  - id: us-001
                     nome: Fulano Ficticio
                     papeis:
                       - papel: USUARIO
+                        squad: Alfa
                         de: 2026-10-02
                         ate: 2026-10-01
                 """.trimIndent(),

@@ -15,13 +15,8 @@ class RoleDirectory(pessoas: List<Pessoa>) {
 
     init {
         require(this.pessoas.size == pessoas.size) { "Ids de pessoa duplicados" }
-        pessoas.forEach { p ->
-            p.papeis.forEach {
-                require(it.papel != Role.SQUAD_LEADER || !it.squad.isNullOrBlank()) {
-                    "Squad Leader sem squad: ${p.id}"
-                }
-            }
-        }
+        // Validação sempre no construtor: nenhum diretório inválido chega a existir.
+        pessoas.forEach(::validar)
     }
 
     private fun ativos(userId: String, date: LocalDate): List<AtribuicaoPapel> =
@@ -29,6 +24,10 @@ class RoleDirectory(pessoas: List<Pessoa>) {
 
     /** Papéis da pessoa na data (vazio se desconhecida). */
     fun rolesOf(userId: String, date: LocalDate): Set<Role> = ativos(userId, date).map { it.papel }.toSet()
+
+    /** Há ao menos uma pessoa com o [papel] vigente na data. */
+    fun hasRoleOn(papel: Role, date: LocalDate): Boolean =
+        pessoas.keys.any { papel in rolesOf(it, date) }
 
     /** Squad de que a pessoa é membro na data; o papel USUARIO tem precedência sobre o de líder. */
     fun squadOf(userId: String, date: LocalDate): String? {
@@ -57,6 +56,9 @@ class RoleDirectory(pessoas: List<Pessoa>) {
     }
 
     companion object {
+        private val PADRAO_ID = Regex("^(ge|co|sl|us)-\\d{3}$")
+        private val PAPEIS_COM_SQUAD = setOf(Role.USUARIO, Role.SQUAD_LEADER)
+
         /** Lê `pessoas: [{id, nome, papeis: [{papel, de?, ate?, squad?}]}]` de um YAML. */
         fun fromYaml(path: Path): RoleDirectory {
             val arquivo = Yaml.default.decodeFromString(ArquivoPapeis.serializer(), Files.readString(path))
@@ -71,13 +73,10 @@ class RoleDirectory(pessoas: List<Pessoa>) {
                     },
                 )
             }
-            pessoas.forEach(::validar)
             return RoleDirectory(pessoas)
         }
 
-        private val PADRAO_ID = Regex("^(ge|co|sl|us)-\\d{3}$")
-
-        /** Validações do arquivo carregado: padrão do id, squad obrigatório e vigências de USUARIO sem sobreposição. */
+        /** Validações de cada pessoa: padrão do id, squad obrigatório e vigências de USUARIO sem sobreposição. */
         private fun validar(p: Pessoa) {
             require(PADRAO_ID.matches(p.id)) {
                 "Id de pessoa fora do padrão (ge|co|sl|us)-NNN: '${p.id}'"
@@ -105,8 +104,6 @@ class RoleDirectory(pessoas: List<Pessoa>) {
                 }
             }
         }
-
-        private val PAPEIS_COM_SQUAD = setOf(Role.USUARIO, Role.SQUAD_LEADER)
     }
 }
 

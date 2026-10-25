@@ -9,7 +9,6 @@ import io.ktor.http.HttpStatusCode
 import io.ktor.serialization.kotlinx.json.json
 import io.ktor.server.application.Application
 import io.ktor.server.application.ApplicationStopped
-import java.time.Clock
 import io.ktor.server.application.install
 import io.ktor.server.engine.embeddedServer
 import io.ktor.server.netty.Netty
@@ -45,11 +44,7 @@ fun main() {
 fun Application.module(
     settings: Settings,
     context: AppContext,
-    authenticator: Authenticator = if (settings.dashboardDevMode) {
-        DevAuthenticator(context.roles, Clock.system(settings.zone))
-    } else {
-        OidcAuthenticator()
-    },
+    authenticator: Authenticator = if (settings.dashboardDevMode) DevAuthenticator() else OidcAuthenticator(),
 ) {
     install(ContentNegotiation) { json() }
     installAccessControl(settings, authenticator)

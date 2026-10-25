@@ -204,6 +204,40 @@ class AccessControlTest {
     }
 
     @Test
+    fun principalSemPapeisEhNegadoEmRotasProtegidas() {
+        val vazio = autenticadorFixo(Principal("us-999", emptySet()))
+        // sem requireRole e com requireRole(GERENTE): ambas negam com 403
+        assertEquals(HttpStatusCode.Forbidden, status(producao, vazio, "/api/ping-protegido"))
+        assertEquals(HttpStatusCode.Forbidden, status(producao, vazio, "/api/so-gerente"))
+        // rotas públicas continuam públicas
+        assertEquals(HttpStatusCode.OK, status(producao, vazio, "/api/health"))
+        assertEquals(HttpStatusCode.OK, status(producao, vazio, "/api/meta"))
+        // rota de API inexistente também exige papel: 403, não 404
+        assertEquals(HttpStatusCode.Forbidden, status(producao, vazio, "/api/inexistente"))
+    }
+
+    @Test
+    fun principalComPapelVigenteEhLiberado() {
+        val usuario = autenticadorFixo(Principal("us-001", setOf(Role.USUARIO)))
+        assertEquals(HttpStatusCode.OK, status(producao, usuario, "/api/ping-protegido"))
+    }
+
+    @Test
+    fun papelEncerradoOntemEhNegadoHoje() {
+        val hoje = java.time.LocalDate.now()
+        val diretorio = RoleDirectory(
+            listOf(
+                Pessoa(
+                    "us-001", "Ex-Usuario",
+                    listOf(AtribuicaoPapel(Role.USUARIO, Vigencia(null, hoje.minusDays(1)), "Alfa")),
+                ),
+            ),
+        )
+        val ex = autenticadorFixo(principalFor("us-001", diretorio, hoje))
+        assertEquals(HttpStatusCode.Forbidden, status(producao, ex, "/api/ping-protegido"))
+    }
+
+    @Test
     fun gerenteExecutaHandler() {
         var executou = false
         testApplication {

@@ -17,9 +17,12 @@ fun principalFor(userId: String, directory: RoleDirectory, today: LocalDate): Pr
     Principal(userId, directory.rolesOf(userId, today))
 
 /**
- * Modo de desenvolvimento: sem login. Se o id [devUserId] existir no diretório, os papéis vêm dele;
- * senão devolve o `Principal("dev", {GERENTE})` de desenvolvimento. Esse gerente implícito vale
- * SOMENTE em modo desenvolvimento: `installAccessControl` recusa este autenticador fora dele.
+ * Modo de desenvolvimento: sem login, sempre o `Principal("dev", {GERENTE})`. Esse gerente implícito
+ * vale SOMENTE em modo desenvolvimento: `installAccessControl` recusa este autenticador fora dele.
+ *
+ * Os parâmetros [directory], [clock] e [devUserId] existem só para testes com diretório próprio: se o
+ * id [devUserId] tiver papel vigente no diretório, os papéis vêm dele. O app real não passa diretório
+ * (os ids reais seguem o padrão `xx-000`, então o id "dev" nunca existe no arquivo de papéis).
  */
 class DevAuthenticator(
     private val directory: RoleDirectory? = null,

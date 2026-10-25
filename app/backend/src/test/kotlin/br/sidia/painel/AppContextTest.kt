@@ -3,6 +3,7 @@ package br.sidia.painel
 import ch.qos.logback.classic.Level
 import ch.qos.logback.classic.Logger
 import ch.qos.logback.classic.spi.ILoggingEvent
+import ch.qos.logback.classic.spi.ThrowableProxyUtil
 import ch.qos.logback.core.read.ListAppender
 import br.sidia.painel.config.Settings
 import br.sidia.painel.security.Role
@@ -15,6 +16,9 @@ import org.slf4j.LoggerFactory
 import org.testcontainers.postgresql.PostgreSQLContainer
 import java.nio.file.Files
 import java.nio.file.Path
+import java.time.Clock
+import java.time.Instant
+import java.time.ZoneId
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
@@ -35,7 +39,8 @@ class AppContextTest {
     lateinit var pasta: Path
 
     private val appender = ListAppender<ILoggingEvent>()
-    private val logger = LoggerFactory.getLogger(AppContext::class.java) as Logger
+    // Logger RAIZ: captura também o que as bibliotecas (Hikari, driver) registram.
+    private val logger = LoggerFactory.getLogger(Logger.ROOT_LOGGER_NAME) as Logger
 
     @BeforeTest
     fun anexarLog() {
@@ -139,15 +144,64 @@ class AppContextTest {
     @Test
     fun bancoIndisponivelFalhaSemSenhaNaMensagem() {
         escreverArquivosReais()
-        val url = "jdbc:postgresql://usuario:$SENHA@127.0.0.1:1/painel?password=$SENHA"
+        // URL jdbc válida, porta fechada de localhost, senha no parâmetro e como senha do usuário.
+        val url = "jdbc:postgresql://127.0.0.1:1/painel?user=painel&password=$SENHA"
         val e = assertFailsWith<IllegalStateException> { AppContext.load(producao(url = url)) }
         var t: Throwable? = e
         while (t != null) {
             assertFalse(SENHA in t.message.orEmpty(), "senha vazou na mensagem: ${t.javaClass}")
+            assertFalse(SENHA in t.stackTraceToString(), "senha vazou no stack trace: ${t.javaClass}")
             t = t.cause
         }
-        assertFalse(SENHA in avisos().joinToString(), "senha vazou no log")
-        assertFalse(SENHA in appender.list.joinToString { it.formattedMessage + it.throwableProxy?.message })
+        // Nenhuma linha capturada (mensagem, stack trace impresso, causa), de qualquer logger.
+        appender.list.forEach {
+            val texto = it.formattedMessage + "\n" + (it.throwableProxy?.let(ThrowableProxyUtil::asString) ?: "")
+            assertFalse(SENHA in texto, "senha vazou no log de ${it.loggerName}: ${it.formattedMessage}")
+        }
+    }
+
+    @Test
+    fun producaoSemGerenteVigenteFalha() {
+        Files.writeString(pasta.resolve("calendario.yaml"), calendarioTeste)
+        Files.writeString(
+            pasta.resolve("papeis.yaml"),
+            """
+            pessoas:
+              - id: co-001
+                nome: Coordenador Ficticio
+                papeis:
+                  - papel: COORDENADOR
+              - id: ge-001
+                nome: Gerente Encerrada
+                papeis:
+                  - papel: GERENTE
+                    ate: 2026-01-31
+            """.trimIndent(),
+        )
+        val relogio = Clock.fixed(Instant.parse("2026-10-25T12:00:00Z"), ZoneId.of("America/Manaus"))
+        val e = assertFailsWith<IllegalStateException> { AppContext.load(producao(), relogio) }
+        assertTrue(pasta.resolve("papeis.yaml").toString() in e.message.orEmpty(), e.message)
+        assertFalse(SENHA in e.message.orEmpty())
+    }
+
+    @Test
+    fun devSemGerenteApenasAvisa() {
+        Files.writeString(pasta.resolve("calendario.yaml"), calendarioTeste)
+        Files.writeString(
+            pasta.resolve("papeis.yaml"),
+            """
+            pessoas:
+              - id: co-001
+                nome: Coordenador Ficticio
+                papeis:
+                  - papel: COORDENADOR
+            """.trimIndent(),
+        )
+        val s = Settings(dashboardDevMode = true, configDir = pasta, databaseUrl = urlFechada)
+        // chega até o banco (inalcançável): a falha é de conexão, não de gerente
+        val e = assertFailsWith<IllegalStateException> { AppContext.load(s) }
+        assertFalse("GERENTE" in e.message.orEmpty(), e.message)
+        assertTrue(avisos().any { "GERENTE" in it }, avisos().toString())
     }
 
     @Test
