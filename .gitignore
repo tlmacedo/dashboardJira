@@ -15,6 +15,9 @@ app/config/equipes.yaml
 **/config/papeis.yaml
 **/config/squads.yaml
 legacy/data/
+# Catálogo de filtros do Jira com usernames reais do time (vocabulário de consulta; nunca versionar)
+Filtros_Status_tool.txt
+Filtros_Status_tool.txt.bak
 **/build/
 **/.gradle/
 **/.kotlin/
