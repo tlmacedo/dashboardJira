@@ -1,7 +1,10 @@
 package br.sidia.painel.time
 
+import java.nio.file.Files
+import java.nio.file.Path
 import java.time.Instant
 import java.time.LocalDate
+import java.time.MonthDay
 import java.time.ZoneId
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -11,8 +14,12 @@ import kotlin.test.assertTrue
 
 class BusinessCalendarTest {
     private val manaus = ZoneId.of("America/Manaus")
-    private val feriado = LocalDate.of(2026, 10, 12)
-    private val cal = BusinessCalendar(manaus, setOf(feriado))
+    private val cal = BusinessCalendar(manaus, fixedHolidays = setOf(MonthDay.of(10, 12)))
+    private val exemplo = Path.of("../config/calendario.exemplo.yaml")
+
+    /** Grava um YAML temporário com o conteúdo informado e devolve o caminho. */
+    private fun yamlTemp(conteudo: String): Path =
+        Files.createTempFile("calendario", ".yaml").also { Files.writeString(it, conteudo) }
 
     @Test
     fun viradaDeDia() {
@@ -46,8 +53,8 @@ class BusinessCalendarTest {
     fun feriadoNoFimDeSemanaNaoDuplica() {
         val de = Instant.parse("2026-10-09T12:00:00Z")
         val ate = Instant.parse("2026-10-12T12:00:00Z")
-        val comFeriadoNoSabado = BusinessCalendar(manaus, setOf(LocalDate.of(2026, 10, 10)))
-        val semFeriado = BusinessCalendar(manaus, emptySet())
+        val comFeriadoNoSabado = BusinessCalendar(manaus, movableHolidays = setOf(LocalDate.of(2026, 10, 10)))
+        val semFeriado = BusinessCalendar(manaus)
         assertEquals(semFeriado.businessDays(de, ate), comFeriadoNoSabado.businessDays(de, ate), 1e-9)
     }
 
@@ -60,9 +67,71 @@ class BusinessCalendarTest {
 
     @Test
     fun carregaYamlDeExemplo() {
-        val c = BusinessCalendar.fromYaml(java.nio.file.Path.of("../config/calendario.exemplo.yaml"), manaus)
+        val c = BusinessCalendar.fromYaml(exemplo, manaus)
         assertFalse(c.isBusinessDay(LocalDate.of(2026, 10, 12)))
         assertFalse(c.isBusinessDay(LocalDate.of(2026, 10, 24)))
         assertTrue(c.isBusinessDay(LocalDate.of(2026, 10, 13)))
+    }
+
+    @Test
+    fun feriadoFixoValeEmQualquerAno() {
+        for (ano in listOf(2027, 2030, 2040)) assertTrue(cal.isHoliday(LocalDate.of(ano, 10, 12)), "ano $ano")
+        // 12/10/2028 cai numa quinta e deixa de ser dia útil
+        val quinta = LocalDate.of(2028, 10, 12)
+        assertEquals(java.time.DayOfWeek.THURSDAY, quinta.dayOfWeek)
+        assertTrue(cal.isHoliday(quinta))
+        assertFalse(cal.isBusinessDay(quinta))
+    }
+
+    @Test
+    fun feriadoMovelSoValeNaDataCompleta() {
+        val c = BusinessCalendar(manaus, movableHolidays = setOf(LocalDate.of(2026, 2, 16)))
+        assertTrue(c.isHoliday(LocalDate.of(2026, 2, 16)))
+        assertFalse(c.isHoliday(LocalDate.of(2027, 2, 16)))
+    }
+
+    @Test
+    fun movelDe2030() {
+        val c = BusinessCalendar.fromYaml(exemplo, manaus)
+        assertTrue(c.isHoliday(LocalDate.of(2030, 3, 4)))
+        assertTrue(c.isHoliday(LocalDate.of(2030, 4, 19)))
+    }
+
+    @Test
+    fun mesDiaInvalidoFalha() {
+        for (invalido in listOf("13-40", "2-30")) {
+            val arq = yamlTemp("feriados_fixos:\n  - {mes_dia: \"$invalido\", nome: X}\n")
+            val e = assertFailsWith<IllegalArgumentException> { BusinessCalendar.fromYaml(arq, manaus) }
+            assertTrue(e.message!!.contains(arq.toString()), "deve citar o caminho: ${e.message}")
+            assertTrue(e.message!!.contains(invalido), "deve citar o item: ${e.message}")
+        }
+    }
+
+    @Test
+    fun duplicataFalha() {
+        val fixos = yamlTemp("feriados_fixos:\n  - {mes_dia: \"10-12\", nome: A}\n  - {mes_dia: \"10-12\", nome: B}\n")
+        val e1 = assertFailsWith<IllegalArgumentException> { BusinessCalendar.fromYaml(fixos, manaus) }
+        assertTrue(e1.message!!.contains("10-12"))
+        val moveis = yamlTemp("feriados_moveis:\n  - {data: 2026-02-16, nome: A}\n  - {data: 2026-02-16, nome: B}\n")
+        val e2 = assertFailsWith<IllegalArgumentException> { BusinessCalendar.fromYaml(moveis, manaus) }
+        assertTrue(e2.message!!.contains("2026-02-16"))
+    }
+
+    @Test
+    fun vinteENoveFevereiroSoEmAnoBissexto() {
+        val c = BusinessCalendar.fromYaml(yamlTemp("feriados_fixos:\n  - {mes_dia: \"02-29\", nome: Bissexto}\n"), manaus)
+        assertTrue(c.isHoliday(LocalDate.of(2028, 2, 29)))
+        assertFalse(c.isHoliday(LocalDate.of(2027, 2, 28)))
+        assertFalse(c.isHoliday(LocalDate.of(2027, 3, 1)))
+    }
+
+    @Test
+    fun exemploCarregaTodosOsFeriadosEsperados() {
+        val c = BusinessCalendar.fromYaml(exemplo, manaus)
+        assertEquals(12, c.fixedHolidays.size)
+        assertEquals(20, c.movableHolidays.size)
+        val carnaval = LocalDate.of(2028, 2, 29)
+        assertEquals(java.time.DayOfWeek.TUESDAY, carnaval.dayOfWeek)
+        assertTrue(c.isHoliday(carnaval))
     }
 }

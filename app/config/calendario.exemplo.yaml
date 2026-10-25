@@ -1,19 +1,46 @@
-# Feriados nacionais de 2026 e feriados de Manaus (modelo; copie para calendario.yaml).
-feriados:
+# Calendário de feriados (modelo; copie para calendario.yaml).
+#
+# feriados_fixos: data fixa (nacional, estadual, municipal); só mês e dia, valem todo ano.
+# feriados_moveis: data móvel (Carnaval, Sexta-feira Santa, Corpus Christi); data completa,
+#   incluídos de 2026 a 2030. Depois de 2030 é preciso estender esta lista.
+# Pontos facultativos (Quarta-feira de Cinzas, 24 e 31/12) NÃO estão incluídos; adicione-os
+#   se a empresa os adotar.
+
+feriados_fixos:
   # Nacionais
-  - {data: 2026-01-01, nome: Confraternização Universal}
-  - {data: 2026-02-16, nome: Carnaval (segunda-feira)}
-  - {data: 2026-02-17, nome: Carnaval (terça-feira)}
-  - {data: 2026-04-03, nome: Sexta-feira Santa}
-  - {data: 2026-04-21, nome: Tiradentes}
-  - {data: 2026-05-01, nome: Dia do Trabalho}
-  - {data: 2026-06-04, nome: Corpus Christi}
-  - {data: 2026-09-07, nome: Independência do Brasil}
-  - {data: 2026-10-12, nome: Nossa Senhora Aparecida}
-  - {data: 2026-11-02, nome: Finados}
-  - {data: 2026-11-15, nome: Proclamação da República}
-  - {data: 2026-11-20, nome: Consciência Negra}
-  - {data: 2026-12-25, nome: Natal}
-  # Manaus
-  - {data: 2026-09-05, nome: Elevação do Amazonas à categoria de província}
-  - {data: 2026-10-24, nome: Aniversário de Manaus}
+  - {mes_dia: "01-01", nome: "Confraternização Universal"}
+  - {mes_dia: "04-21", nome: "Tiradentes"}
+  - {mes_dia: "05-01", nome: "Dia do Trabalho"}
+  - {mes_dia: "09-07", nome: "Independência do Brasil"}
+  - {mes_dia: "10-12", nome: "Nossa Senhora Aparecida"}
+  - {mes_dia: "11-02", nome: "Finados"}
+  - {mes_dia: "11-15", nome: "Proclamação da República"}
+  - {mes_dia: "11-20", nome: "Dia Nacional de Zumbi e da Consciência Negra"}
+  - {mes_dia: "12-25", nome: "Natal"}
+  # Estadual (Amazonas)
+  - {mes_dia: "09-05", nome: "Elevação do Amazonas à categoria de província"}
+  # Municipais (Manaus)
+  - {mes_dia: "10-24", nome: "Aniversário de Manaus"}
+  - {mes_dia: "12-08", nome: "Nossa Senhora da Conceição (padroeira de Manaus)"}
+
+feriados_moveis:
+  - {data: 2026-02-16, nome: "Carnaval (segunda)"}
+  - {data: 2026-02-17, nome: "Carnaval (terça)"}
+  - {data: 2026-04-03, nome: "Sexta-feira Santa"}
+  - {data: 2026-06-04, nome: "Corpus Christi"}
+  - {data: 2027-02-08, nome: "Carnaval (segunda)"}
+  - {data: 2027-02-09, nome: "Carnaval (terça)"}
+  - {data: 2027-03-26, nome: "Sexta-feira Santa"}
+  - {data: 2027-05-27, nome: "Corpus Christi"}
+  - {data: 2028-02-28, nome: "Carnaval (segunda)"}
+  - {data: 2028-02-29, nome: "Carnaval (terça)"}
+  - {data: 2028-04-14, nome: "Sexta-feira Santa"}
+  - {data: 2028-06-15, nome: "Corpus Christi"}
+  - {data: 2029-02-12, nome: "Carnaval (segunda)"}
+  - {data: 2029-02-13, nome: "Carnaval (terça)"}
+  - {data: 2029-03-30, nome: "Sexta-feira Santa"}
+  - {data: 2029-05-31, nome: "Corpus Christi"}
+  - {data: 2030-03-04, nome: "Carnaval (segunda)"}
+  - {data: 2030-03-05, nome: "Carnaval (terça)"}
+  - {data: 2030-04-19, nome: "Sexta-feira Santa"}
+  - {data: 2030-06-20, nome: "Corpus Christi"}
