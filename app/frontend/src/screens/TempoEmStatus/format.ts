@@ -32,3 +32,21 @@ export function faixaDe(dias: number): Faixa {
 }
 
 export const SIMBOLO: Record<Faixa, string> = { ok: '✓', atencao: '●', alto: '▲' }
+
+/** Linha "# filtros: ... (unidade)" usada nos dois CSV, com o que o usuário vê na tela. */
+export function linhaFiltrosCsv(
+  f: import('./api').Filtros,
+  t: (k: string) => string,
+  lang: Lang,
+): string {
+  const partes: string[] = []
+  for (const k of ['squad', 'pessoa', 'tipo', 'os'] as const) {
+    if (f[k]) partes.push(`${t(`tempo.filtro.${k}`)}: ${f[k]}`)
+  }
+  if (f.de || f.ate) {
+    partes.push(`${t('tempo.filtro.periodo')}: ${f.de ? dataCurta(f.de, lang) : '…'} – ${f.ate ? dataCurta(f.ate, lang) : '…'}`)
+  }
+  if (f.semOutliers) partes.push(t('tempo.filtro.semOutliers'))
+  const unidade = t(f.unit === 'util' ? 'tempo.unidade.util' : 'tempo.unidade.corrido').toLowerCase()
+  return `# ${t('tempo.csv.filtros')}: ${partes.join(' | ') || t('tempo.csv.nenhum')} (${unidade})`
+}

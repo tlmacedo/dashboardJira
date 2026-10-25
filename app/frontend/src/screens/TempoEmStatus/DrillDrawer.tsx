@@ -1,9 +1,10 @@
 import { useQuery } from '@tanstack/react-query'
-import { useEffect, useRef, type KeyboardEvent } from 'react'
+import { useEffect, useRef, useState, type KeyboardEvent } from 'react'
+import { createPortal } from 'react-dom'
 import { useLang } from '../../i18n/LangProvider'
 import { ApiError, fetchDrill, type Filtros } from './api'
 import { baixarCsv } from './csv'
-import { inteiro } from './format'
+import { inteiro, linhaFiltrosCsv } from './format'
 
 /**
  * Gaveta com as tasks que compõem um número. Foco vai para o botão Fechar ao abrir,
@@ -27,11 +28,22 @@ export function DrillDrawer(props: {
     retry: false,
   })
 
+  // A gaveta vive num portal no body; o resto da página fica inerte enquanto ela está aberta.
+  const [portal] = useState(() => document.createElement('div'))
   useEffect(() => {
     const anterior = document.activeElement as HTMLElement | null
+    document.body.appendChild(portal)
+    const inertes = [...document.body.children].filter(
+      (el) => el !== portal && !el.hasAttribute('inert'),
+    )
+    inertes.forEach((el) => el.setAttribute('inert', ''))
     fechar.current?.focus()
-    return () => anterior?.focus()
-  }, [])
+    return () => {
+      inertes.forEach((el) => el.removeAttribute('inert'))
+      portal.remove()
+      anterior?.focus()
+    }
+  }, [portal])
 
   function aoTeclar(e: KeyboardEvent) {
     if (e.key === 'Escape') {
@@ -59,12 +71,13 @@ export function DrillDrawer(props: {
   function exportar() {
     baixarCsv('tempo-em-status-detalhe.csv', [
       [`# ${titulo}`],
+      [linhaFiltrosCsv(filtros, t, lang)],
       [t('tempo.col.task'), t('tempo.col.resumo'), t('tempo.col.responsavel'), t('tempo.col.status'), t('tempo.col.detalhe')],
       ...linhas.map((r) => [r.key, r.resumo, r.responsavel ?? '', r.status, r.detalhe]),
     ])
   }
 
-  return (
+  return createPortal(
     <div className="gaveta-fundo" onClick={aoFechar}>
       <div
         ref={raiz}
@@ -132,6 +145,7 @@ export function DrillDrawer(props: {
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    portal,
   )
 }

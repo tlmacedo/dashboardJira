@@ -199,6 +199,64 @@ describe('CSV', () => {
   it('escapaAspasESeparador', () => {
     expect(paraCsv([['a;b', 'c"d']])).toBe('"a;b";"c""d"')
   })
+
+  it('neutralizaAposEspacosEAspas', () => {
+    for (const perigo of [' =HYPERLINK("x")', '"=cmd"', "'+1", '\t=1', ' =1', '​@x', '  \t-1']) {
+      expect(neutralizarCelulaCsv(perigo).startsWith("'")).toBe(true)
+    }
+    expect(neutralizarCelulaCsv('TG-1 resumo normal')).toBe('TG-1 resumo normal')
+    expect(neutralizarCelulaCsv('1,5 dias')).toBe('1,5 dias')
+  })
+
+  it('escapeContinuaCorretoDepoisDaNeutralizacao', () => {
+    expect(paraCsv([['="a";b']])).toBe('"\'=""a"";b"')
+  })
+})
+
+describe('gaveta', () => {
+  it('csvDaGavetaLevaFiltrosEUnidade', async () => {
+    simular({ [CARD]: { status: 200, corpo: DTO }, [DRILL]: { status: 200, corpo: linhas(3) } })
+    let blobGerado: Blob | null = null
+    URL.createObjectURL = (b: Blob | MediaSource) => {
+      blobGerado = b as Blob
+      return 'blob:x'
+    }
+    URL.revokeObjectURL = () => {}
+    renderizar('/tempo?squad=Alfa&unit=corrido')
+    await userEvent.click(await screen.findByRole('button', { name: /Paradas além do normal/ }))
+    const gaveta = await screen.findByRole('dialog')
+    await within(gaveta).findByText('TG-1')
+    await userEvent.click(within(gaveta).getByRole('button', { name: 'Exportar CSV' }))
+    const texto = await new Promise<string>((ok) => {
+      const leitor = new FileReader()
+      leitor.onload = () => ok(String(leitor.result))
+      leitor.readAsText(blobGerado as unknown as Blob)
+    })
+    expect(texto).toContain('# filtros: Squad: Alfa')
+    expect(texto).toContain('dias corridos')
+  })
+
+  it('fundoFicaInertEFocoVolta', async () => {
+    simular({ [CARD]: { status: 200, corpo: DTO }, [DRILL]: { status: 200, corpo: linhas(2) } })
+    const { container } = renderizar()
+    const kpi = await screen.findByRole('button', { name: /Paradas além do normal/ })
+    await userEvent.click(kpi)
+    const gaveta = await screen.findByRole('dialog')
+    expect(container).toHaveAttribute('inert')
+    expect(gaveta.closest('[inert]')).toBeNull()
+    expect(within(gaveta).getByRole('button', { name: 'Fechar' })).toHaveFocus()
+    await userEvent.keyboard('{Escape}')
+    expect(container).not.toHaveAttribute('inert')
+    expect(kpi).toHaveFocus()
+  })
+
+  it('kpiParadasNaoUsaOSimboloDaFaixaAtencao', async () => {
+    simular({ [CARD]: { status: 200, corpo: DTO } })
+    renderizar()
+    const kpi = await screen.findByRole('button', { name: /Paradas além do normal/ })
+    expect(kpi.textContent).toContain('⏸')
+    expect(kpi.textContent).not.toContain('●')
+  })
 })
 
 describe('menu usa o papel de /api/me', () => {

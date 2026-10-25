@@ -13,7 +13,7 @@ import {
 } from './api'
 import { baixarCsv } from './csv'
 import { DrillDrawer } from './DrillDrawer'
-import { dataCurta, faixaDe, inteiro, numero, percentual, SIMBOLO, type Faixa } from './format'
+import { dataCurta, faixaDe, inteiro, linhaFiltrosCsv, numero, percentual, SIMBOLO, type Faixa } from './format'
 import './tempo.css'
 
 const MAX_PARADAS = 50
@@ -90,7 +90,7 @@ export function TempoEmStatus() {
     if (!dto) return
     baixarCsv('tempo-em-status.csv', [
       [`# ${t('nav.tempo')} (${unidadeTxt})`],
-      [`# ${t('tempo.csv.filtros')}: ${chips.map((c) => c.texto).join(' | ') || t('tempo.csv.nenhum')}`],
+      [linhaFiltrosCsv(filtros, t, lang)],
       [],
       [t('tempo.csv.indicador'), t('tempo.csv.valor')],
       [t('tempo.kpi.analisadas'), String(dto.analisadas)],
@@ -276,7 +276,7 @@ function Kpis(props: { dto: TempoEmStatusDto; aoAbrir: (g: Gaveta) => void }) {
       <KpiBotao
         rotulo={t('tempo.kpi.paradas')}
         valor={paradas}
-        simbolo={!indisponivel && dto.paradas > 0 ? '●' : undefined}
+        simbolo={!indisponivel && dto.paradas > 0 ? '⏸' : undefined}
         dica={t('tempo.kpi.paradas.dica')}
         clicavel={!indisponivel && dto.paradas > 0}
         aoClicar={() => aoAbrir({ kind: 'paradas', titulo: t('tempo.kpi.paradas') })}
@@ -347,7 +347,7 @@ function PorStatus(props: { dto: TempoEmStatusDto; unidadeTxt: string; aoAbrir: 
                 </span>
                 <span className="barra-trilho" aria-hidden="true">
                   <span className="barra-mediana" style={{ width: `${(s.median / maximo) * 100}%` }} />
-                  <span className="barra-p85" style={{ left: `${(s.p85 / maximo) * 100}%` }} />
+                  <span className="barra-p85" style={{ left: `min(${(s.p85 / maximo) * 100}%, calc(100% - 2px))` }} />
                 </span>
                 <span className="barra-valores">
                   <span>{numero(s.median, lang)}</span>

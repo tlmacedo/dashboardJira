@@ -2,7 +2,7 @@
 
 /** Prefixa com apóstrofo valores que planilhas interpretariam como fórmula (= + - @ tab CR). */
 export function neutralizarCelulaCsv(valor: string): string {
-  return /^[=+\-@\t\r]/.test(valor) ? `'${valor}` : valor
+  return /^[\s\u200b-\u200f\u2060\ufeff\p{Cc}"']*[=+\-@\t\r]/u.test(valor) ? `'${valor}` : valor
 }
 
 function celula(valor: string): string {
