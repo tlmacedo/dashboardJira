@@ -7,12 +7,14 @@ import kotlinx.serialization.json.JsonPrimitive
 import java.sql.SQLException
 import java.sql.Timestamp
 import java.time.Instant
+import org.slf4j.LoggerFactory
 import java.util.Locale
 import javax.sql.DataSource
 
 /**
  * Falha ao gravar em `access_log`. Não carrega usuário, rota, filtros nem a causa original (o driver
- * pode ecoar valores). Quem chama decide: a consulta auditada não deve cair por causa do registro.
+ * pode ecoar valores). Quem chama decide: nas rotas de dados, falha de auditoria faz a rota responder
+ * 503 sem dados (sem registro não há resposta). O log do servidor guarda só o SQLState.
  */
 class AccessLogException : RuntimeException("falha ao gravar access_log")
 
@@ -29,7 +31,7 @@ class AccessLog(private val ds: DataSource) {
      * Falha de gravação lança [AccessLogException] (sem dados).
      */
     fun record(userId: String, route: String, filters: Map<String, String>, at: Instant) {
-        val usuario = normalizarUsername(userId)
+        val usuario = sanearUsuario(normalizarUsername(userId))
         val rota = route.substringBefore('?').let { amostra(it, MAX_VALOR) }
         val json = montarFiltros(filters)
         try {
@@ -43,16 +45,23 @@ class AccessLog(private val ds: DataSource) {
                 }
             }
         } catch (e: SQLException) {
+            // Só o SQLState (código padrão, sem dados) vai para o log do servidor; a mensagem do driver pode ecoar valores.
+            log.error("Falha ao gravar access_log (SQLState={})", e.sqlState)
             throw AccessLogException()
         } catch (e: RuntimeException) {
             // pool fechado ou indisponível (ex.: SQLTransientConnectionException vira SQLException; o resto chega aqui)
+            log.error("Falha ao gravar access_log ({})", e.javaClass.simpleName)
             throw AccessLogException()
         }
     }
 
+    /** Controle vira `?` e o id é limitado a [MAX_USUARIO] caracteres (o username real tem no máximo 64). */
+    private fun sanearUsuario(id: String): String =
+        id.map { if (it.isISOControl()) '?' else it }.joinToString("").take(MAX_USUARIO)
+
     private fun montarFiltros(filters: Map<String, String>): String {
         val aceitos = filters.entries
-            .filter { it.key.lowercase(Locale.ROOT) !in CHAVES_SECRETAS }
+            .filter { !chaveSecreta(it.key) }
             .take(MAX_FILTROS)
             .associate { amostra(it.key, MAX_VALOR) to JsonPrimitive(amostra(it.value, MAX_VALOR)) }
         return JsonObject(aceitos).toString()
@@ -61,6 +70,24 @@ class AccessLog(private val ds: DataSource) {
     private companion object {
         const val MAX_VALOR = 200
         const val MAX_FILTROS = 50
-        val CHAVES_SECRETAS = setOf("token", "password", "senha", "secret", "authorization", "cookie", "key")
+        const val MAX_USUARIO = 64
+        val log = LoggerFactory.getLogger(AccessLog::class.java)
+
+        /** Fragmentos que, em qualquer posição da chave normalizada, marcam um segredo. */
+        val FRAGMENTOS_SECRETOS = listOf(
+            "token", "secret", "password", "passwd", "senha", "authorization", "cookie", "jwt",
+            "apikey", "bearer", "credential", "session", "assertion",
+        )
+
+        private val SEPARADORES = Regex("[_\\-\\s.]")
+
+        /**
+         * Normaliza (minúsculas, sem `_`, `-`, `.` nem espaço) e casa por fragmento: `access_token`,
+         * `Api-Key`, `client_secret`, `" token"` e `jwt` são segredos. `key` sozinho também.
+         */
+        fun chaveSecreta(chave: String): Boolean {
+            val n = chave.lowercase(Locale.ROOT).replace(SEPARADORES, "")
+            return n == "key" || FRAGMENTOS_SECRETOS.any { it in n }
+        }
     }
 }

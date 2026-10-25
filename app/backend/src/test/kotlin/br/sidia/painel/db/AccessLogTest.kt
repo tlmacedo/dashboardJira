@@ -101,6 +101,27 @@ class AccessLogTest {
     }
 
     @Test
+    fun naoGravaSegredosComVariacoesDeNome() {
+        val segredos = listOf(
+            "access_token", "api_key", "API-KEY", "apiKey", "client_secret", " token", "jwt", "id_token",
+            "X-Session-Id", "Set-Cookie", "passwd", "user_password", "Bearer", "credentials", "SAMLAssertion",
+        )
+        log.record("ana", "/r", segredos.associateWith { "valor-secreto" } + mapOf("squad" to "Alfa", "kind" to "paradas"), agora)
+        val l = linhas().single()
+        assertEquals(setOf("squad", "kind"), filtros(l).keys)
+        assertFalse("valor-secreto" in assertNotNull(l.filters))
+    }
+
+    @Test
+    fun usuarioTemTetoESaneamento() {
+        log.record("a".repeat(500), "/r", emptyMap(), agora)
+        log.record("ana\u0000\nx", "/r", emptyMap(), agora)
+        val ls = linhas()
+        assertEquals(64, ls[0].userId.length)
+        assertEquals("ana??x", ls[1].userId)
+    }
+
+    @Test
     fun routeSemQueryStringETruncada() {
         log.record("ana", "/api/x?token=segredo&a=1", emptyMap(), agora)
         log.record("ana", "/" + "r".repeat(500), emptyMap(), agora)

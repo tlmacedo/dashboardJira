@@ -3,7 +3,6 @@ package br.sidia.painel.security
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
-import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class UsernamesTest {
@@ -41,6 +40,6 @@ class UsernamesTest {
         // id vazio: papéis vazios (fail-closed), sem exceção
         val vazio = principalFor("   ", diretorio, hoje)
         assertTrue(vazio.roles.isEmpty())
-        assertFalse(vazio.userId.contains(" ") && vazio.userId.isNotEmpty())
+        assertEquals("", vazio.userId)
     }
 }
