@@ -102,6 +102,66 @@ class SettingsTest {
     }
 
     @Test
+    fun toStringMascaraSenhaComCaracteresEspeciais() {
+        listOf(
+            "jdbc:postgresql://u:p/x@h/db",
+            "jdbc:postgresql://u:p?x@h/db",
+            "jdbc:postgresql://u:p@w@h/db",
+            "jdbc:postgresql://u:p:q@h/db",
+        ).forEach { url ->
+            val texto = Settings(databaseUrl = url).toString()
+            assertTrue(texto.contains("jdbc:postgresql://***@h/db"), "não mascarou $url: $texto")
+            assertFalse(texto.contains("u:p"), "vazou em $url")
+        }
+    }
+
+    @Test
+    fun toStringMascaraParametrosSecretosNaQuery() {
+        listOf(
+            "jdbc:postgresql://h/db?PASSWORD=sg1",
+            "jdbc:postgresql://h/db?user=u;password=sg1",
+            "jdbc:postgresql://h/db?sslpassword=sg1&ssl=true",
+            "jdbc:postgresql://h/db?pwd=sg1",
+            "jdbc:postgresql://h/db?a=1&pass=sg1",
+            "jdbc:postgresql://h/db?passwd=sg1",
+            "jdbc:postgresql://h/db?secret=sg1",
+            "jdbc:postgresql://h/db?Token=sg1",
+        ).forEach { url ->
+            val texto = Settings(databaseUrl = url).toString()
+            assertFalse(texto.contains("sg1"), "vazou em $url: $texto")
+            assertTrue(texto.contains("=***"), "sem máscara em $url")
+        }
+        assertTrue(Settings(databaseUrl = "jdbc:postgresql://h/db?user=u&ssl=true").toString().contains("user=u&ssl=true"))
+    }
+
+    @Test
+    fun toStringDaInstanciaMascaraCredenciaisNaUrl() {
+        val i = JiraInstanceSettings("https://usuarioX:tokenY@host.exemplo.com", JiraAuthKind.BEARER, null, "t")
+        val texto = i.toString()
+        assertFalse(texto.contains("usuarioX"))
+        assertFalse(texto.contains("tokenY"))
+        assertTrue(texto.contains("https://***@host.exemplo.com"))
+    }
+
+    @Test
+    fun tokenRecebeTrim() {
+        val s = Settings.fromEnv(
+            mapOf("JIRA_SAMSUNG_URL" to " https://s.exemplo.com ", "JIRA_SAMSUNG_TOKEN" to "  tok \n"),
+        )
+        assertEquals("tok", s.jiraInstances.getValue("samsung").token)
+        assertEquals("https://s.exemplo.com", s.jiraInstances.getValue("samsung").baseUrl)
+    }
+
+    @Test
+    fun booleanoInvalidoFalhaCitandoAVariavel() {
+        val e = assertFailsWith<IllegalArgumentException> {
+            Settings.fromEnv(mapOf("JIRA_LIVE_ENABLED" to "yes", "DATABASE_PASSWORD" to "segredoK"))
+        }
+        assertTrue(e.message!!.contains("JIRA_LIVE_ENABLED"))
+        assertFalse(e.message!!.contains("segredoK"))
+    }
+
+    @Test
     fun instanciaSamsungCompleta() {
         val s = Settings.fromEnv(
             mapOf("JIRA_SAMSUNG_URL" to "https://s.exemplo.com", "JIRA_SAMSUNG_TOKEN" to "t"),

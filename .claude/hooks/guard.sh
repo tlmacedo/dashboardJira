@@ -35,7 +35,7 @@ jira)
     negar "comando de rede para o Jira. Regra do projeto: nenhuma consulta ao Jira sem autorização expressa."
   fi
   # 4) comandos do app que conectam ao Jira real
-  if printf '%s' "$cmd" | grep -Eiq 'jiradash[[:space:]]+(check|sync|serve)|JIRA_LIVE_ENABLED=(1|true)'; then
+  if printf '%s' "$cmd" | grep -Eiq 'jiradash[[:space:]]+(check|sync|serve)|JIRA_LIVE_ENABLED[[:space:]]*=[[:space:]]*["'"'"']?[[:space:]]*(1|true)'; then
     negar "comando que conecta ao Jira real. Peça autorização expressa ao usuário para essa pesquisa."
   fi
   ;;

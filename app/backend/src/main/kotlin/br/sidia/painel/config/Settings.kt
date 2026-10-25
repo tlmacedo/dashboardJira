@@ -13,7 +13,8 @@ data class JiraInstanceSettings(
     val username: String?,
     val token: String,
 ) {
-    override fun toString() = "JiraInstanceSettings(baseUrl=$baseUrl, auth=$auth, username=$username, token=***)"
+    override fun toString() =
+        "JiraInstanceSettings(baseUrl=${Settings.mascararUrl(baseUrl)}, auth=$auth, username=$username, token=***)"
 }
 
 /**
@@ -113,14 +114,16 @@ data class Settings(
                 baseUrl = valores.getValue("${prefixo}_URL")!!.trim(),
                 auth = auth,
                 username = valores["${prefixo}_USER"]?.trim(),
-                token = valores.getValue("${prefixo}_TOKEN")!!,
+                token = valores.getValue("${prefixo}_TOKEN")!!.trim(),
             )
         }
 
-        private val USUARIO_SENHA_NA_URL = Regex("(?<=://)[^/?\\s]*@")
-        private val SENHA_NA_QUERY = Regex("(?i)([?&;]password=)[^&;\\s]*")
+        // Seguro por excesso: tudo entre "://" e o ÚLTIMO "@" é tratado como credencial (senha pode ter "/" ou "?").
+        private val USUARIO_SENHA_NA_URL = Regex("(?<=://)[^\\s]*@")
+        private val SENHA_NA_QUERY =
+            Regex("(?i)([?&;](?:sslpassword|password|passwd|pass|pwd|secret|token)=)[^&;\\s]*")
 
-        /** Troca `usuario:senha@` e `password=...` da URL por `***`. */
+        /** Troca `usuario:senha@` e parâmetros secretos (`password=`, `pwd=`, `token=`...) da URL por `***`. */
         internal fun mascararUrl(url: String): String =
             url.replace(USUARIO_SENHA_NA_URL, "***@").replace(SENHA_NA_QUERY, "$1***")
 

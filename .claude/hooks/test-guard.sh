@@ -20,6 +20,14 @@ j 'printenv JIRA_SIDIA_URL' 2
 j 'JIRA_LIVE_ENABLED=false ./gradlew test' 0
 j 'JIRA_LIVE_ENABLED=true ./gradlew test' 2
 j 'JIRA_LIVE_ENABLED=1 ./gradlew test' 2
+j 'JIRA_LIVE_ENABLED="true" ./gradlew test' 2
+j "JIRA_LIVE_ENABLED='true' ./gradlew test" 2
+j 'JIRA_LIVE_ENABLED = true ./gradlew test' 2
+j 'export JIRA_LIVE_ENABLED=" true"' 2
+j 'JIRA_LIVE_ENABLED=TRUE ./gradlew test' 2
+j 'env JIRA_LIVE_ENABLED=true ./gradlew test' 2
+j 'JIRA_LIVE_ENABLED_X=1 ./gradlew test' 2
+j 'JIRA_LIVE_ENABLED="false" ./gradlew test' 0
 j 'python -m jiradash serve' 2
 j 'ls -la' 0
 j 'curl -s https://example.com/x.png' 0
