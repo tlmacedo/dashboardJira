@@ -18,7 +18,10 @@ import io.ktor.http.HttpMethod
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.content.TextContent
 import io.ktor.http.encodeURLPathPart
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.TimeoutCancellationException
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.withTimeout
@@ -49,9 +52,9 @@ class RetryPolicy(
 
 /**
  * Cria o cliente HTTP real (CIO). Nunca é usado nos testes, que injetam o MockEngine.
- * Só a [JiraClientFactory] deve chamá-la.
+ * `internal`: só a [JiraClientFactory] a usa.
  */
-fun createJiraHttpClient(): HttpClient = HttpClient(CIO) {
+internal fun createJiraHttpClient(): HttpClient = HttpClient(CIO) {
     install(HttpTimeout) {
         connectTimeoutMillis = 10_000
         requestTimeoutMillis = 30_000
@@ -63,8 +66,11 @@ fun createJiraHttpClient(): HttpClient = HttpClient(CIO) {
 
 /**
  * Cliente de leitura do Jira Data Center. Toda requisição passa antes por `LiveGuard.check()`.
+ *
+ * O construtor é `internal`: em produção só a [JiraClientFactory] cria clientes, e o compilador
+ * impõe isso porque o backend é um módulo Gradle único.
  */
-class JiraClient(
+class JiraClient internal constructor(
     private val config: JiraInstanceConfig,
     http: HttpClient,
     private val guard: LiveGuard,
@@ -106,8 +112,8 @@ class JiraClient(
 
     /** O `total` é obrigatório: sem ele não dá para saber se a lista está completa (nunca assume 0). */
     private fun exigirTotal(resposta: RespostaJson): Int =
-        (resposta.raiz["total"] as? JsonPrimitive)?.intOrNull
-            ?: throw JiraException(resposta.status, "Resposta do Jira sem o campo 'total' numérico", null)
+        (resposta.raiz["total"] as? JsonPrimitive)?.intOrNull?.takeIf { it >= 0 }
+            ?: throw JiraException(resposta.status, "Resposta do Jira sem o campo 'total' numérico e não negativo", null)
 
     private fun respostaInesperada(status: Int) =
         JiraException(status, "Resposta do Jira com formato inesperado", null)
@@ -153,6 +159,9 @@ class JiraClient(
         val segmento = issueKey.encodeURLPathPart()
         val historicos = mutableListOf<JsonObject>()
         var inicio = 0
+        var paginas = 0
+        // Mesmo teto do searchAll: MAX_ITENS / tamanho da página, no mínimo 1.
+        val maxPaginas = maxOf(1, (MAX_ITENS + CHANGELOG_PAGINA - 1) / CHANGELOG_PAGINA)
         while (true) {
             val url = "$baseUrl/rest/api/2/issue/$segmento/changelog?startAt=$inicio&maxResults=$CHANGELOG_PAGINA"
             val resposta = requisitarJson(HttpMethod.Get, url, null)
@@ -162,7 +171,11 @@ class JiraClient(
             historicos += valores
             if (valores.isEmpty()) break
             inicio += valores.size
+            paginas++
             if (inicio >= total) break
+            if (paginas >= maxPaginas) {
+                throw JiraException(0, "Changelog excedeu o teto de $maxPaginas páginas", null)
+            }
         }
         return historicos
     }
@@ -171,7 +184,12 @@ class JiraClient(
     private suspend fun requisitarJson(metodo: HttpMethod, url: String, corpo: String?): RespostaJson {
         val resposta = executarComRetry { enviar(metodo, url, corpo) }
         val status = resposta.status.value
-        val texto = resposta.bodyAsText()
+        val texto = try {
+            resposta.bodyAsText()
+        } catch (e: Exception) {
+            repassarOuEmbrulhar(e)
+            throw JiraException(0, "Falha de rede ao ler a resposta do Jira (${e::class.simpleName})", null)
+        }
         if (!resposta.status.isSuccess2xx()) throw erro(status, texto)
         val raiz = try {
             json.parseToJsonElement(texto).jsonObject
@@ -202,9 +220,24 @@ class JiraClient(
                 }
             }
         } catch (e: TimeoutCancellationException) {
-            // Tratado como falha de rede: repetido pelo retry (mensagem sem URL nem token).
+            // Se o cancelamento veio de um escopo externo (inclusive withTimeout do chamador), propaga.
+            currentCoroutineContext().ensureActive()
+            // Só o timeout PRÓPRIO chega aqui: tratado como falha de rede (mensagem sem URL nem token).
             throw IOException("Tempo esgotado (${TIMEOUT.inWholeSeconds}s) ao consultar o Jira")
         }
+
+    /**
+     * Cancelamento do chamador e exceções do próprio cliente passam intactos. Falha de rede retorna
+     * normalmente (o retry decide). Qualquer outra exceção vira `JiraException(0)` SEM causa e SEM a
+     * mensagem original: o Ktor pode incluir o cabeçalho Authorization ou a URL completa nela.
+     */
+    private suspend fun repassarOuEmbrulhar(e: Exception) {
+        if (e is CancellationException) throw e
+        currentCoroutineContext().ensureActive()
+        if (e is JiraException || e is JiraLiveDisabledException) throw e
+        if (ehFalhaDeRede(e)) return
+        throw JiraException(0, "Falha inesperada (${e::class.simpleName ?: "desconhecido"})", null)
+    }
 
     private fun ehFalhaDeRede(e: Throwable) =
         e is IOException || e is HttpRequestTimeoutException ||
@@ -221,7 +254,7 @@ class JiraClient(
             val resposta = try {
                 chamada()
             } catch (e: Exception) {
-                if (!ehFalhaDeRede(e)) throw e
+                repassarOuEmbrulhar(e)
                 if (tentativa >= retry.maxRetries) {
                     // Só o tipo da falha: a mensagem original pode conter a URL ou o token.
                     throw JiraException(

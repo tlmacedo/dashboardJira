@@ -12,7 +12,8 @@ import java.net.URI
 import java.net.URISyntaxException
 
 /**
- * Fábrica ÚNICA de [JiraClient]: nenhum outro ponto do código de produção pode construir o cliente.
+ * Fábrica ÚNICA de [JiraClient]: nenhum outro ponto do código de produção pode construir o cliente
+ * (o construtor do cliente é `internal`; o compilador impõe isso porque o backend é um módulo único).
  *
  * - Com `jiraLiveEnabled=false`: não exige credencial e devolve um cliente com `LiveGuard(false)`;
  *   qualquer chamada lança [JiraLiveDisabledException]. O `HttpClient` real NÃO é criado
@@ -26,6 +27,8 @@ class JiraClientFactory(
     private val settings: Settings,
     private val http: (JiraInstanceConfig) -> HttpClient = { createJiraHttpClient() },
     private val retry: RetryPolicy = RetryPolicy(),
+    /** Só para testes: avisa se o motor "desligado" chegou a ser alcançado (deve ser 0 vezes). */
+    private val aoAlcancarMotorDesligado: () -> Unit = {},
 ) {
     /** Cria o cliente da instância (`samsung`, `sidia`...). Id desconhecido: [IllegalArgumentException]. */
     fun create(instanceId: String): JiraClient {
@@ -35,7 +38,7 @@ class JiraClientFactory(
         if (!settings.jiraLiveEnabled) {
             // Sem credencial, sem rede: o guard barra antes de qualquer requisição.
             val vazio = JiraInstanceConfig(instanceId, "https://desligado.invalid", JiraAuthKind.BEARER, "-")
-            return JiraClient(vazio, HttpClient(EngineDesligado()), LiveGuard(false), retry)
+            return JiraClient(vazio, HttpClient(EngineDesligado(aoAlcancarMotorDesligado)), LiveGuard(false), retry)
         }
         val s = settings.jiraInstances[instanceId]
             ?: throw IllegalStateException("Instância Jira '$instanceId' não está configurada")
@@ -56,6 +59,7 @@ class JiraClientFactory(
             falha("url-valida")
         }
         if (uri.rawFragment != null || url.contains('#')) falha("url-sem-fragmento")
+        if (uri.rawQuery != null || url.contains('?')) falha("url-sem-query")
         val host = uri.host ?: falha("url-com-host")
         if (uri.rawUserInfo != null || uri.rawAuthority?.contains('@') == true) falha("url-sem-credenciais")
         when (uri.scheme?.lowercase()) {
@@ -64,20 +68,29 @@ class JiraClientFactory(
             else -> falha("https-obrigatorio")
         }
         if (s.token.isBlank()) falha("token-nao-vazio")
+        // Só ASCII imprimível sem espaço (0x21-0x7E): o valor vai num cabeçalho e o Ktor o repetiria em erros.
+        if (s.token.any { it.code !in 0x21..0x7E }) falha("token-sem-controle")
         if (s.auth == JiraAuthKind.BASIC) {
             val usuario = s.username
             if (usuario.isNullOrBlank()) falha("usuario-obrigatorio-no-basic")
+            if (usuario.any { it.isISOControl() }) falha("usuario-sem-controle")
             if (':' in usuario) falha("usuario-sem-dois-pontos")
         }
     }
 
-    /** Motor que recusa toda requisição: usado quando a consulta real está desligada. */
+    /**
+     * Motor que recusa toda requisição: usado quando a consulta real está desligada.
+     * O `@OptIn(InternalAPI)` usa API interna do Ktor: se uma atualização a mudar, o BUILD quebra
+     * (falha fechada), nunca o comportamento em silêncio.
+     */
     @OptIn(InternalAPI::class)
-    private class EngineDesligado : HttpClientEngineBase("jira-desligado") {
+    private class EngineDesligado(private val aoExecutar: () -> Unit) : HttpClientEngineBase("jira-desligado") {
         override val config = HttpClientEngineConfig()
 
-        override suspend fun execute(data: HttpRequestData): HttpResponseData =
+        override suspend fun execute(data: HttpRequestData): HttpResponseData {
+            aoExecutar()
             throw JiraLiveDisabledException("Consulta ao Jira bloqueada: JIRA_LIVE_ENABLED não está ativo")
+        }
     }
 
     private companion object {

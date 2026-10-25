@@ -46,14 +46,56 @@ class JiraClientFactoryTest {
     @Test
     fun liveDesligadoNaoExigeCredencialENaoEnvia() = runBlocking {
         var criacoesDoHttpReal = 0
+        var motorAlcancado = 0
         // Sem nenhuma instância configurada e com o provedor de HttpClient proibido.
-        val f = JiraClientFactory(Settings(jiraLiveEnabled = false), { criacoesDoHttpReal++; error("não deve criar HttpClient") })
+        val f = JiraClientFactory(
+            Settings(jiraLiveEnabled = false),
+            { criacoesDoHttpReal++; error("não deve criar HttpClient") },
+            aoAlcancarMotorDesligado = { motorAlcancado++ },
+        )
         val c = f.create("samsung")
         assertFailsWith<JiraLiveDisabledException> { c.search(SearchRequest("x", listOf("summary"))) }
         assertFailsWith<JiraLiveDisabledException> { c.searchAll(SearchRequest("x", listOf("summary"))).toList() }
         assertFailsWith<JiraLiveDisabledException> { c.count("x") }
         assertFailsWith<JiraLiveDisabledException> { c.fullChangelog("TG-1") }
         assertEquals(0, criacoesDoHttpReal)
+        // O guard barra antes: o motor "desligado" nunca chega a ser alcançado.
+        assertEquals(0, motorAlcancado)
+    }
+
+    @Test
+    fun hostsLocaisParecidosOuZeroSaoRecusadosComHttp() {
+        for (url in listOf("http://127.0.0.1.evil.invalid", "http://0.0.0.0", "http://0.0.0.0:8080")) {
+            falhaDeConfiguracao(settings(url = url))
+        }
+    }
+
+    @Test
+    fun urlComHostNoLugarDeUsuarioEPortaInvalidaFalham() {
+        falhaDeConfiguracao(settings(url = "https://host@evil.invalid/"))
+        falhaDeConfiguracao(settings(url = "https://host:abc"))
+    }
+
+    @Test
+    fun urlComQueryFalha() {
+        falhaDeConfiguracao(settings(url = "https://jira.exemplo.invalid/?a=1"))
+        falhaDeConfiguracao(settings(url = "https://jira.exemplo.invalid/jira?token=x"))
+    }
+
+    @Test
+    fun tokenComEspacoControleOuNaoAsciiFalha() {
+        for (t in listOf("ab\ncd", "ab cd", "ab\tcd", "ab\r", " abc", "abc ", "açaí", "ab\u0000cd", "ab\u007Fcd")) {
+            val e = falhaDeConfiguracao(settings(tokenInstancia = t))
+            assertTrue("token-sem-controle" in e.message!!, "regra ausente para token com caractere inválido")
+        }
+        fabrica(settings(tokenInstancia = "AbC-123_.~+/=")).create("samsung")
+    }
+
+    @Test
+    fun usernameComControleFalha() {
+        for (u in listOf("ma\nria", "ma\tria", "ma\u0000ria")) {
+            falhaDeConfiguracao(settings(id = "sidia", auth = JiraAuthKind.BASIC, usuario = u), "sidia")
+        }
     }
 
     @Test

@@ -9,13 +9,19 @@ import io.ktor.client.request.HttpRequestData
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.headersOf
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.TimeoutCancellationException
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import java.io.IOException
+import java.io.PrintWriter
+import java.io.StringWriter
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -166,31 +172,93 @@ class JiraClientRobustezTest {
         Unit
     }
 
-    /** Guard de teste que pode ser desligado no meio do retry. */
-    private class GuardMutavel : LiveGuard(true) {
-        var ligado = true
-        override fun check() {
-            if (!ligado) throw JiraLiveDisabledException("desligado no meio do retry")
-            super.check()
-        }
-    }
-
     @Test
     fun guardDesligadoNoMeioDoRetryNaoEnviaMais() = runBlocking {
-        val guard = GuardMutavel()
+        var ligado = true
+        val guard = LiveGuard { ligado }
         val engine = MockEngine { respond("", HttpStatusCode.ServiceUnavailable) }
-        val r = RetryPolicy(maxRetries = 5, backoff = { 1.seconds }, delay = { guard.ligado = false })
+        val r = RetryPolicy(maxRetries = 5, backoff = { 1.seconds }, delay = { ligado = false })
         assertFailsWith<JiraLiveDisabledException> { cliente(engine, guard, r).search(req) }
         assertEquals(1, engine.requestHistory.size)
     }
 
     @Test
     fun guardDesligadoNoMeioDeRetryDeRedeNaoEnviaMais() = runBlocking {
-        val guard = GuardMutavel()
+        var ligado = true
+        val guard = LiveGuard { ligado }
         var n = 0
         val engine = MockEngine { n++; throw IOException("caiu") }
-        val r = RetryPolicy(maxRetries = 5, backoff = { 1.seconds }, delay = { guard.ligado = false })
+        val r = RetryPolicy(maxRetries = 5, backoff = { 1.seconds }, delay = { ligado = false })
         assertFailsWith<JiraLiveDisabledException> { cliente(engine, guard, r).search(req) }
         assertEquals(1, n)
+    }
+
+    /** Texto de tudo o que a exceção expõe: mensagem, detalhes, causas, toString e stack trace impresso. */
+    private fun tudoDe(e: Throwable): String {
+        val sw = StringWriter()
+        e.printStackTrace(PrintWriter(sw))
+        val partes = mutableListOf(e.toString(), e.message.orEmpty(), sw.toString())
+        if (e is JiraException) partes += e.details.orEmpty()
+        return partes.joinToString("\n")
+    }
+
+    @Test
+    fun excecaoInesperadaNaoVazaTokenNemUrl() = runBlocking {
+        val urlComToken = "https://alvo.invalid/x?token=$token"
+        val lancadas = listOf<() -> Throwable>(
+            { IllegalArgumentException("Authorization: Bearer $token") },
+            { RuntimeException(urlComToken) },
+        )
+        for (nova in lancadas) {
+            var n = 0
+            val engine = MockEngine { n++; throw nova() }
+            val e = assertFailsWith<JiraException> { cliente(engine).search(req) }
+            assertEquals(0, e.status)
+            assertEquals(null, e.cause)
+            assertEquals(null, e.details)
+            assertEquals(1, n, "falha inesperada não deve ser repetida")
+            val texto = tudoDe(e)
+            assertFalse(token in texto, "vazou o token")
+            assertFalse("alvo.invalid" in texto, "vazou a URL")
+            assertTrue("Falha inesperada" in e.message!!)
+        }
+    }
+
+    @Test
+    fun cancellationExceptionNaoEhRepetidaNemConvertida() = runBlocking {
+        var n = 0
+        val engine = MockEngine { n++; throw CancellationException("cancelado") }
+        assertFailsWith<CancellationException> { cliente(engine).search(req) }
+        assertEquals(1, n)
+    }
+
+    @Test
+    fun timeoutExternoPropagaTimeoutCancellationException() = runBlocking {
+        val engine = MockEngine { delay(10_000); respond("{}", HttpStatusCode.OK, json) }
+        assertFailsWith<TimeoutCancellationException> {
+            withTimeout(100) { cliente(engine).search(req) }
+        }
+        Unit
+    }
+
+    @Test
+    fun changelogComTotalNegativoViraErro() = runBlocking {
+        val engine = MockEngine { respond("""{"total":-1,"values":[{"id":"1"}]}""", HttpStatusCode.OK, json) }
+        assertFailsWith<JiraException> { cliente(engine).fullChangelog("TG-1") }
+        Unit
+    }
+
+    @Test
+    fun changelogComTetoDePaginas() = runBlocking {
+        // Sempre páginas cheias (100) e total gigante: 10_000 / 100 = 100 páginas no máximo.
+        var n = 0
+        val engine = MockEngine { r ->
+            n++
+            val inicio = r.url.parameters["startAt"]!!.toInt()
+            val valores = (0 until 100).joinToString(",") { """{"id":"${inicio + it}"}""" }
+            respond("""{"total":1000000,"values":[$valores]}""", HttpStatusCode.OK, json)
+        }
+        assertFailsWith<JiraException> { cliente(engine).fullChangelog("TG-1") }
+        assertEquals(100, n)
     }
 }
