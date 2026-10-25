@@ -299,8 +299,9 @@ private fun calcular(ctx: AppContext, store: IssueStore, principal: Principal, f
         f.de.atStartOfDay(zona).toInstant(),
         f.ate.plusDays(1).atStartOfDay(zona).toInstant(),
         false,
+        f.os,
     )
-    val abertas = store.timelines(INSTANCIA_TEMPO_EM_STATUS, null, null, true)
+    val abertas = store.timelines(INSTANCIA_TEMPO_EM_STATUS, null, null, true, f.os)
 
     val existentes = (fechadas + abertas).flatMapTo(mutableSetOf()) { pessoasDe(it) }
     val visiveis = Visibility.visibleUserIds(principal, ctx.roles, hoje, existentes + listOfNotNull(f.pessoa))
@@ -311,8 +312,10 @@ private fun calcular(ctx: AppContext, store: IssueStore, principal: Principal, f
     if (f.pessoa != null) permitidos = permitidos intersect setOf(f.pessoa)
 
     val avisos = mutableListOf<String>()
-    // O dado de OS Version ainda não é sincronizado: não finge que filtrou.
-    if (f.os != null) avisos += "filtro de OS Version ainda não aplicado: o dado não é sincronizado"
+    // Sem nenhuma issue com OS Version (customId ainda não descoberto), o filtro não tem o que casar: avisa.
+    if (f.os != null && !store.temOsVersion(INSTANCIA_TEMPO_EM_STATUS)) {
+        avisos += "OS Version não disponível nos dados sincronizados"
+    }
 
     val calculador = TimeInStatusCalculator(ctx.calendar, ctx.statusMap)
     fun candidata(t: IssueTimeline) =

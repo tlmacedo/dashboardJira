@@ -18,7 +18,8 @@
         "updated": "2026-10-05T08:00:00.000-0400",
         "resolutiondate": "2026-10-05T08:00:00.000-0400",
         "duedate": "2026-10-09",
-        "labels": ["login"]
+        "labels": ["login"],
+        "customfield_12416": {"value": "Android 17.0 (OneUI_9.0)"}
       },
       "changelog": {
         "startAt": 0, "maxResults": 100, "total": 2,
@@ -56,7 +57,8 @@
         "created": "2026-10-01T10:30:00.000-0400",
         "updated": "2026-10-06T15:00:00.000-0400",
         "resolutiondate": "2026-10-06T15:00:00.000-0400",
-        "labels": []
+        "labels": [],
+        "customfield_12416": "  android   16.0 (16) "
       },
       "changelog": {
         "startAt": 0, "maxResults": 100, "total": 2,
@@ -95,7 +97,8 @@
         "updated": "2026-09-22T09:00:00.000-0400",
         "resolutiondate": null,
         "duedate": "2026-10-02",
-        "labels": ["acesso"]
+        "labels": ["acesso"],
+        "customfield_12416": {"value": "   "}
       },
       "changelog": {
         "startAt": 0, "maxResults": 100, "total": 1,

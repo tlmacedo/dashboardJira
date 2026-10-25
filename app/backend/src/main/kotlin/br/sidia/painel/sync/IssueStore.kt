@@ -2,6 +2,7 @@ package br.sidia.painel.sync
 
 import br.sidia.painel.domain.IssueTimeline
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import java.sql.Connection
 import java.sql.Date
 import java.sql.Timestamp
@@ -12,28 +13,61 @@ import javax.sql.DataSource
 /** Persistência das issues e do changelog. */
 interface IssueStore {
     /** Grava a issue (atualiza se já existir) e os eventos novos; repetir a chamada não duplica nada. */
-    fun upsert(issue: JsonObject, events: List<ChangeEventRecord>, instance: String)
+    fun upsert(issue: JsonObject, events: List<ChangeEventRecord>, instance: String, osVersionCustomId: String? = null)
 
     /**
      * Linhas do tempo da instância. `openOnly=true` devolve só as não resolvidas (os limites são ignorados).
      * Caso contrário, com [closedFrom] e/ou [closedTo], só as resolvidas em `[closedFrom, closedTo)`;
-     * sem nenhum limite, todas.
+     * sem nenhum limite, todas. Com [osVersion], só as issues cujo OS Version é igual (sem diferenciar maiúsculas).
      */
-    fun timelines(instance: String, closedFrom: Instant?, closedTo: Instant?, openOnly: Boolean): List<IssueTimeline>
+    fun timelines(
+        instance: String, closedFrom: Instant?, closedTo: Instant?, openOnly: Boolean, osVersion: String? = null,
+    ): List<IssueTimeline>
+
+    /** Se alguma issue da instância tem OS Version gravado (falso quando o campo ainda não é sincronizado). */
+    fun temOsVersion(instance: String): Boolean
+}
+
+/**
+ * Extrai o valor do campo "OS Version" (SELECT do Jira: objeto `{value}` ou texto) do JSON da issue.
+ * Espaços são normalizados; texto vazio, campo ausente ou [customId] nulo/inválido resultam em nulo.
+ * O valor não é dado pessoal.
+ */
+internal object OsVersionExtrator {
+    private val FORMATO_CF = Regex("""cf\[(\d+)]""")
+
+    /** `cf[123]` e `customfield_123` apontam para a chave `customfield_123` no JSON. */
+    fun chaveJson(customId: String?): String? {
+        if (customId == null) return null
+        FORMATO_CF.matchEntire(customId)?.let { return "customfield_${it.groupValues[1]}" }
+        return customId.takeIf { it.startsWith("customfield_") }
+    }
+
+    fun extrair(issue: JsonObject, customId: String?): String? {
+        val chave = chaveJson(customId) ?: return null
+        val campo = (issue["fields"] as? JsonObject)?.get(chave) ?: return null
+        val bruto = when (campo) {
+            is JsonPrimitive -> campo.takeIf { it.isString }?.content
+            is JsonObject -> (campo["value"] as? JsonPrimitive)?.takeIf { it.isString }?.content
+            else -> null
+        } ?: return null
+        return bruto.trim().replace(Regex("\\s+"), " ").ifEmpty { null }
+    }
 }
 
 /** Implementação sobre PostgreSQL (JDBC). Todas as consultas são parametrizadas. */
 class PostgresIssueStore(private val ds: DataSource) : IssueStore {
 
-    override fun upsert(issue: JsonObject, events: List<ChangeEventRecord>, instance: String) {
+    override fun upsert(issue: JsonObject, events: List<ChangeEventRecord>, instance: String, osVersionCustomId: String?) {
         val c = CamposDaIssue.de(issue)
+        val osVersion = OsVersionExtrator.extrair(issue, osVersionCustomId)
         // O changelog fica nas linhas de change_event; o raw guarda só a issue, sem dados pessoais.
         val raw = SanitizadorRaw.sanitizar(JsonObject(issue.filterKeys { it != "changelog" })).toString()
         ds.connection.use { con ->
             val autoCommit = con.autoCommit
             con.autoCommit = false
             try {
-                val issueId = gravarIssue(con, c, instance, raw)
+                val issueId = gravarIssue(con, c, instance, raw, osVersion)
                 gravarEventos(con, issueId, events)
                 con.commit()
             } catch (e: Throwable) {
@@ -45,18 +79,19 @@ class PostgresIssueStore(private val ds: DataSource) : IssueStore {
         }
     }
 
-    private fun gravarIssue(con: Connection, c: CamposDaIssue, instance: String, raw: String): Long {
+    private fun gravarIssue(con: Connection, c: CamposDaIssue, instance: String, raw: String, osVersion: String?): Long {
         val sql = """
             INSERT INTO issue (key, instance, project, issue_type, status, resolution, assignee_ref, reporter_ref,
-                               created, updated, resolved, duedate, labels, parent_key, estimate_s, spent_s, raw)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CAST(? AS jsonb))
+                               created, updated, resolved, duedate, labels, parent_key, estimate_s, spent_s, raw,
+                               os_version)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CAST(? AS jsonb), ?)
             ON CONFLICT (instance, key) DO UPDATE SET
                 project = EXCLUDED.project, issue_type = EXCLUDED.issue_type,
                 status = EXCLUDED.status, resolution = EXCLUDED.resolution, assignee_ref = EXCLUDED.assignee_ref,
                 reporter_ref = EXCLUDED.reporter_ref, created = EXCLUDED.created, updated = EXCLUDED.updated,
                 resolved = EXCLUDED.resolved, duedate = EXCLUDED.duedate, labels = EXCLUDED.labels,
                 parent_key = EXCLUDED.parent_key, estimate_s = EXCLUDED.estimate_s, spent_s = EXCLUDED.spent_s,
-                raw = EXCLUDED.raw
+                raw = EXCLUDED.raw, os_version = EXCLUDED.os_version
             RETURNING id
         """.trimIndent()
         con.prepareStatement(sql).use { ps ->
@@ -77,6 +112,7 @@ class PostgresIssueStore(private val ds: DataSource) : IssueStore {
             if (c.estimateS != null) ps.setLong(15, c.estimateS) else ps.setNull(15, java.sql.Types.BIGINT)
             if (c.spentS != null) ps.setLong(16, c.spentS) else ps.setNull(16, java.sql.Types.BIGINT)
             ps.setString(17, raw)
+            ps.setString(18, osVersion)
             ps.executeQuery().use { rs ->
                 check(rs.next()) { "upsert da issue não devolveu o id" }
                 return rs.getLong(1)
@@ -112,9 +148,24 @@ class PostgresIssueStore(private val ds: DataSource) : IssueStore {
         val labels: List<String>,
     )
 
-    override fun timelines(instance: String, closedFrom: Instant?, closedTo: Instant?, openOnly: Boolean): List<IssueTimeline> {
+    override fun temOsVersion(instance: String): Boolean =
+        ds.connection.use { con ->
+            con.prepareStatement("SELECT EXISTS (SELECT 1 FROM issue WHERE instance = ? AND os_version IS NOT NULL)").use { ps ->
+                ps.setString(1, instance)
+                ps.executeQuery().use { rs -> rs.next() && rs.getBoolean(1) }
+            }
+        }
+
+    override fun timelines(
+        instance: String, closedFrom: Instant?, closedTo: Instant?, openOnly: Boolean, osVersion: String?,
+    ): List<IssueTimeline> {
         val filtros = StringBuilder("instance = ? AND created IS NOT NULL")
         val params = mutableListOf<Any>(instance)
+        if (osVersion != null) {
+            // Comparação exata sem diferenciar maiúsculas; o valor entra só como parâmetro.
+            filtros.append(" AND lower(os_version) = lower(?)")
+            params += osVersion
+        }
         if (openOnly) {
             filtros.append(" AND resolved IS NULL")
         } else {

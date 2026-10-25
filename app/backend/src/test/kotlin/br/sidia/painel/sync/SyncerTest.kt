@@ -9,6 +9,9 @@ import br.sidia.painel.jira.JiraInstanceConfig
 import br.sidia.painel.jira.JiraLiveDisabledException
 import br.sidia.painel.jira.LiveGuard
 import br.sidia.painel.jira.RetryPolicy
+import br.sidia.painel.jql.FieldDef
+import br.sidia.painel.jql.FieldDictionary
+import br.sidia.painel.jql.FieldType
 import br.sidia.painel.jql.JqlQuery
 import br.sidia.painel.testContextComBanco
 import io.ktor.client.HttpClient
@@ -242,6 +245,47 @@ class SyncerTest {
             listOf("TG-3:10005:0", "TG-3:10009:0"),
             texto("SELECT changelog_id FROM change_event WHERE changelog_id LIKE 'TG-3:%' ORDER BY at"),
         )
+    }
+
+    private fun dicionarioComOs(customId: String?) = FieldDictionary(
+        listOf(FieldDef("OS Version", FieldType.SELECT, "samsung", "versão do SO", customId = customId)),
+    )
+
+    private fun osVersions() =
+        texto("SELECT key || '=' || coalesce(os_version, '<nulo>') FROM issue ORDER BY key").map { requireNotNull(it) }
+
+    @Test
+    fun gravaOsVersionDoCampoCustomizado() = runBlocking {
+        Syncer(cliente(jira()), store, "samsung", campos = dicionarioComOs("customfield_12416")).run(consulta)
+        // Objeto SELECT, string com espaços normalizados, texto vazio = nulo, campo ausente = nulo.
+        assertEquals(
+            listOf("TG-1=Android 17.0 (OneUI_9.0)", "TG-2=android 16.0 (16)", "TG-3=<nulo>", "TG-4=<nulo>"),
+            osVersions(),
+        )
+    }
+
+    @Test
+    fun aceitaCustomIdNoFormatoCf() = runBlocking {
+        Syncer(cliente(jira()), store, "samsung", campos = dicionarioComOs("cf[12416]")).run(consulta)
+        assertEquals("TG-1=Android 17.0 (OneUI_9.0)", osVersions().first())
+    }
+
+    @Test
+    fun semCustomIdOsVersionFicaNuloSemFalhar() = runBlocking {
+        Syncer(cliente(jira()), store, "samsung", campos = dicionarioComOs(null)).run(consulta)
+        assertEquals(4, contar("issue"))
+        assertTrue(osVersions().all { it.endsWith("=<nulo>") })
+        // Sem dicionário nenhum, o mesmo.
+        Syncer(cliente(jira()), store, "samsung").run(consulta)
+        assertTrue(osVersions().all { it.endsWith("=<nulo>") })
+    }
+
+    @Test
+    fun resincronizarAtualizaOsVersion() = runBlocking {
+        Syncer(cliente(jira()), store, "samsung").run(consulta)
+        Syncer(cliente(jira()), store, "samsung", campos = dicionarioComOs("customfield_12416")).run(consulta)
+        assertEquals("TG-1=Android 17.0 (OneUI_9.0)", osVersions().first())
+        assertEquals(4, contar("issue"))
     }
 
     @Test

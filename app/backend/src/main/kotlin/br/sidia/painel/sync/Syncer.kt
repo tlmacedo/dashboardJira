@@ -3,6 +3,7 @@ package br.sidia.painel.sync
 import br.sidia.painel.db.Retention
 import br.sidia.painel.jira.JiraClient
 import java.time.LocalDate
+import br.sidia.painel.jql.FieldDictionary
 import br.sidia.painel.jql.JqlQuery
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.toList
@@ -11,6 +12,9 @@ import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.intOrNull
+
+/** Nome do campo do Jira (no dicionário) com a versão do SO em que a task deve ser executada. */
+const val CAMPO_OS_VERSION = "OS Version"
 
 /** Resultado de uma sincronização: issues gravadas e eventos de changelog processados (já existentes contam). */
 data class SyncSummary(val issues: Int, val events: Int)
@@ -27,7 +31,12 @@ class Syncer(
     private val retentionMonths: Int = 24,
     private val clock: java.time.Clock = java.time.Clock.systemUTC(),
     private val zone: java.time.ZoneId = java.time.ZoneId.of("America/Manaus"),
+    /** Dicionário de campos; dele sai o customId do "OS Version" da instância (sem ele, o valor fica nulo). */
+    campos: FieldDictionary? = null,
 ) {
+    private val osVersionCustomId: String? = campos?.forInstance(instance)
+        ?.takeIf { it.has(CAMPO_OS_VERSION) }?.get(CAMPO_OS_VERSION)?.customId
+
     suspend fun run(query: JqlQuery): SyncSummary {
         // A trava do cliente (LiveGuard) falha aqui, na primeira requisição, se o Jira real estiver desligado.
         val issues = client.searchAll(query).toList()
@@ -47,7 +56,7 @@ class Syncer(
                 throw dadoMalformado(chave)
             }
             try {
-                withContext(Dispatchers.IO) { store.upsert(issue, registros, instance) }
+                withContext(Dispatchers.IO) { store.upsert(issue, registros, instance, osVersionCustomId) }
             } catch (e: IllegalArgumentException) {
                 throw dadoMalformado(chave)
             } catch (e: java.time.DateTimeException) {

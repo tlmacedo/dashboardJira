@@ -57,6 +57,8 @@ class TempoEmStatusRoutesTest {
         }
     }
 
+    private val ID_OS = "customfield_12416"
+
     private val zona = ZoneId.of("America/Manaus")
 
     // Domingo, 25/10/2026, 12:00 em Manaus.
@@ -118,13 +120,19 @@ class TempoEmStatusRoutesTest {
                 if (responsavel != null) putJsonObject("assignee") { put("name", responsavel) }
                 put("created", criada.toString())
                 if (resolvida != null) put("resolutiondate", resolvida.toString())
+                osPorChave[chave]?.let { putJsonObject(ID_OS) { put("value", it) } }
             }
         }
         val registros = eventos.mapIndexed { i, e ->
             ChangeEventRecord("$chave:h$i:0", chave, e.campo, e.de, e.para, t(e.quando).toInstant(), "autor")
         }
-        PostgresIssueStore(requireNotNull(ctx.dataSource)).upsert(json, registros, "samsung")
+        PostgresIssueStore(requireNotNull(ctx.dataSource)).upsert(json, registros, "samsung", ID_OS)
     }
+
+    // OS Version por issue: A em TG-1, TG-3, TG-5 e TG-9; B em TG-2 e TG-4; as demais sem valor.
+    private val osA = "Android 17.0 (OneUI_9.0)"
+    private val osB = "Android 16.0 (16)"
+    private val osPorChave = mapOf("TG-1" to osA, "TG-2" to osB, "TG-3" to osA, "TG-4" to osB, "TG-5" to osA, "TG-9" to osA)
 
     private fun semear() {
         // Concluídas dentro dos 90 dias até 25/10/2026.
@@ -277,6 +285,97 @@ class TempoEmStatusRoutesTest {
     }
 
     // ---- Filtro por papel ----
+
+    // ---- Filtro OS Version ----
+
+    private fun osNaUrl(os: String) = "&os=${enc(os)}"
+
+    @Test
+    fun filtroOsFiltraDeVerdadeNoCardENoDrill() = rodar {
+        val semFiltro = card("gerente.exemplo")
+        assertEquals(6, semFiltro.analisadas)
+        val a = card("gerente.exemplo", "?os=${enc(osA)}")
+        // Concluídas com A no período: TG-1, TG-3, TG-5, TG-9.
+        assertEquals(4, a.analisadas)
+        assertTrue(a.avisos.none { "OS Version" in it }, a.avisos.toString())
+        val drillA = chaves(drill("gerente.exemplo", "analisadas", osNaUrl(osA)))
+        assertEquals(listOf("TG-1", "TG-3", "TG-5", "TG-9"), drillA)
+        assertEquals(a.analisadas, drillA.size)
+        // B: TG-2 e TG-4.
+        val b = card("gerente.exemplo", "?os=${enc(osB)}")
+        assertEquals(listOf("TG-2", "TG-4"), chaves(drill("gerente.exemplo", "analisadas", osNaUrl(osB))))
+        assertEquals(2, b.analisadas)
+    }
+
+    @Test
+    fun filtroOsNaoDiferenciaMaiusculas() = rodar {
+        val minusculo = osA.lowercase()
+        assertEquals(4, card("gerente.exemplo", "?os=${enc(minusculo)}").analisadas)
+        assertEquals(4, chaves(drill("gerente.exemplo", "analisadas", osNaUrl(osA.uppercase()))).size)
+    }
+
+    @Test
+    fun filtroOsComparaValorExatoSemCasarPorTrecho() = rodar {
+        // "Android 17.0" é prefixo de A, mas não é igual: nada casa.
+        val dto = card("gerente.exemplo", "?os=${enc("Android 17.0")}")
+        assertEquals(0, dto.analisadas)
+        // Curingas do LIKE não funcionam como curinga.
+        assertEquals(0, card("gerente.exemplo", "?os=${enc("%")}").analisadas)
+    }
+
+    @Test
+    fun filtroOsInexistenteDevolveListaVaziaSemErro() = rodar {
+        val dto = card("gerente.exemplo", "?os=${enc("Android 99.0 (Inexistente)")}")
+        assertEquals(0, dto.analisadas)
+        assertEquals(0, dto.paradas)
+        assertTrue(dto.avisos.none { "OS Version" in it }, dto.avisos.toString())
+        assertEquals(emptyList(), drill("gerente.exemplo", "analisadas", osNaUrl("Android 99.0 (Inexistente)")))
+    }
+
+    @Test
+    fun filtroOsInvalidoRetorna400SemCorpo() = rodar {
+        val longo = get("gerente.exemplo", "/api/cards/tempo-em-status?os=${"x".repeat(101)}")
+        assertEquals(HttpStatusCode.BadRequest, longo.status)
+        assertEquals("", longo.corpo)
+        val controle = get("gerente.exemplo", "/api/cards/tempo-em-status?os=a%00b")
+        assertEquals(HttpStatusCode.BadRequest, controle.status)
+        assertEquals("", controle.corpo)
+        val drillRuim = get("gerente.exemplo", "/api/drill/tempo-em-status?kind=analisadas&os=a%0Ab")
+        assertEquals(HttpStatusCode.BadRequest, drillRuim.status)
+        assertEquals("", drillRuim.corpo)
+    }
+
+    @Test
+    fun filtroOsSemDadoSincronizadoAvisaSem500() = rodar {
+        // customId ainda não descoberto: nenhuma issue com os_version.
+        requireNotNull(ctx.dataSource).connection.use { it.createStatement().execute("UPDATE issue SET os_version = NULL") }
+        val dto = card("gerente.exemplo", "?os=${enc(osA)}")
+        assertEquals(0, dto.analisadas)
+        assertTrue("OS Version não disponível nos dados sincronizados" in dto.avisos, dto.avisos.toString())
+        assertEquals(emptyList(), drill("gerente.exemplo", "analisadas", osNaUrl(osA)))
+        // Sem o filtro, nenhum aviso de OS Version e os dados voltam.
+        val semFiltro = card("gerente.exemplo")
+        assertEquals(6, semFiltro.analisadas)
+        assertTrue(semFiltro.avisos.none { "OS Version" in it })
+    }
+
+    @Test
+    fun filtroOsNaoAmpliaAVisibilidade() = rodar {
+        // A ana só vê o que é dela: TG-1, TG-4 (B) e TG-9. Com os=A, só TG-1 e TG-9.
+        assertEquals(listOf("TG-1", "TG-9"), chaves(drill("ana", "analisadas", osNaUrl(osA))))
+        // TG-3 (carla) e TG-5 (externo) têm o OS A, mas a ana não os enxerga.
+        val dto = card("ana", "?os=${enc(osA)}")
+        assertEquals(2, dto.analisadas)
+        assertTrue(dto.pessoaStatus.all { it.person == "ana" })
+        // O filtro tampouco burla o 403 de pessoa fora da visibilidade.
+        assertEquals(HttpStatusCode.Forbidden, get("ana", "/api/cards/tempo-em-status?pessoa=carla&os=${enc(osA)}").status)
+    }
+
+    @Test
+    fun filtroOsVaiParaAAuditoria() = rodar {
+        card("gerente.exemplo", "?os=${enc(osA)}")
+        assertTrue(linhasDoAccessLog().any { "os" in it.third && "OneUI_9.0" in it.third }, linhasDoAccessLog().toString())
+    }
 
     @Test
     fun parametroSquadVemDoDiretorio() = rodar {
