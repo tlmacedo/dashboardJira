@@ -36,6 +36,19 @@ function renderizar() {
   )
 }
 
+// Sinal observável de que a query de /api/meta já terminou (sucesso ou erro).
+async function esperarMeta(container: HTMLElement, estado: 'success' | 'error' = 'success') {
+  await vi.waitFor(() =>
+    expect(container.querySelector('.shell')).toHaveAttribute('data-meta', estado),
+  )
+}
+
+const MANAUS = 'America/Manaus'
+const verLinks = () => ({
+  integridade: screen.queryByRole('link', { name: 'Integridade' }),
+  auditoria: screen.queryByRole('link', { name: 'Alterações de data, dono e label' }),
+})
+
 beforeEach(() => {
   localStorage.clear()
   delete document.documentElement.dataset.theme
@@ -43,6 +56,7 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup()
+  vi.restoreAllMocks()
   vi.unstubAllGlobals()
 })
 
@@ -55,13 +69,12 @@ describe('casca', () => {
   })
 
   it('bannerNaoApareceSemBanner', async () => {
-    simularMeta({ devMode: false, liveEnabled: false, zone: 'America/Manaus', banner: null })
-    renderizar()
-    // espera o menu da casca para garantir que a resposta já foi processada
-    await screen.findByRole('navigation')
-    await vi.waitFor(() => expect(globalThis.fetch).toHaveBeenCalled())
+    simularMeta({ devMode: true, liveEnabled: false, zone: MANAUS, banner: null })
+    const { container } = renderizar()
+    await esperarMeta(container)
+    // o seletor de papel só existe depois que a resposta (devMode:true) foi processada
+    expect(screen.getByRole('button', { name: 'Gerente' })).toBeInTheDocument()
     expect(screen.queryByRole('status')).toBeNull()
-    expect(screen.queryByText('MODO DESENVOLVIMENTO')).toBeNull()
   })
 
   it('trocaDeTemaGravaNaRaiz', async () => {
@@ -73,11 +86,11 @@ describe('casca', () => {
   })
 
   it('seletorDePapelSoEmDev', async () => {
-    simularMeta({ devMode: false, liveEnabled: false, zone: 'America/Manaus', banner: null })
-    renderizar()
-    await screen.findByRole('navigation')
-    await vi.waitFor(() => expect(globalThis.fetch).toHaveBeenCalled())
+    simularMeta({ devMode: false, liveEnabled: false, zone: MANAUS, banner: null })
+    const { container } = renderizar()
+    await esperarMeta(container) // resposta já processada
     expect(screen.queryByRole('button', { name: 'Gerente' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Usuário' })).toBeNull()
   })
 
   it('papelSimuladoMudaOMenu', async () => {
@@ -96,5 +109,60 @@ describe('casca', () => {
     await userEvent.click(await screen.findByRole('button', { name: 'EN' }))
     expect(document.documentElement.lang).toBe('en')
     expect(screen.getByRole('link', { name: 'My dashboard' })).toBeInTheDocument()
+  })
+
+  it('producaoIgnoraPapelSimuladoGravado', async () => {
+    localStorage.setItem('painel.papelSimulado', 'GERENTE')
+    simularMeta({ devMode: false, liveEnabled: false, zone: MANAUS, banner: null })
+    const { container } = renderizar()
+    await esperarMeta(container)
+    const { integridade, auditoria } = verLinks()
+    expect(integridade).toBeNull()
+    expect(auditoria).toBeNull()
+    expect(screen.getByRole('link', { name: 'Meu painel' })).toBeInTheDocument()
+  })
+
+  it.each([
+    ['rejeicao', () => vi.fn(async () => Promise.reject(new Error('rede fora')))],
+    ['500', () => vi.fn(async () => new Response('erro', { status: 500 }))],
+  ])('metaFalhaViraUsuario (%s)', async (_nome, fabrica) => {
+    localStorage.setItem('painel.papelSimulado', 'GERENTE')
+    vi.stubGlobal('fetch', fabrica())
+    const { container } = renderizar()
+    await esperarMeta(container, 'error')
+    const { integridade, auditoria } = verLinks()
+    expect(integridade).toBeNull()
+    expect(auditoria).toBeNull()
+    expect(screen.getByRole('link', { name: 'Meu painel' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Gerente' })).toBeNull()
+  })
+
+  it('temaEIdiomaInvalidosCaemNoPadrao', async () => {
+    localStorage.setItem('painel.tema', 'neon')
+    localStorage.setItem('painel.idioma', 'fr')
+    simularMeta({ devMode: false, liveEnabled: false, zone: MANAUS, banner: null })
+    const { container } = renderizar()
+    await esperarMeta(container)
+    expect(document.documentElement.dataset.theme).toBe('light') // jsdom sem matchMedia
+    expect(document.documentElement.lang).toBe('pt-BR')
+    expect(screen.getByRole('link', { name: 'Meu painel' })).toBeInTheDocument()
+  })
+
+  it('localStorageQueLancaNaoQuebra', async () => {
+    vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+      throw new Error('bloqueado')
+    })
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new Error('bloqueado')
+    })
+    simularMeta({ devMode: true, liveEnabled: false, zone: MANAUS, banner: 'MODO DESENVOLVIMENTO' })
+    const { container } = renderizar()
+    await esperarMeta(container)
+    await userEvent.click(screen.getByRole('button', { name: 'Sidia' }))
+    expect(document.documentElement.dataset.theme).toBe('sidia')
+    await userEvent.click(screen.getByRole('button', { name: 'EN' }))
+    expect(document.documentElement.lang).toBe('en')
+    await userEvent.click(screen.getByRole('button', { name: 'Coordinator' }))
+    expect(screen.getByRole('link', { name: 'Attention center' })).toBeInTheDocument()
   })
 })

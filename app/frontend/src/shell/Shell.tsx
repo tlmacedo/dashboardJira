@@ -23,6 +23,8 @@ export function Shell() {
 
   const dev = meta.data?.devMode === true
 
+  // ATENÇÃO: filtrar o menu por papel é só conveniência de interface. A autorização
+  // de verdade é imposta pelo backend; nunca confiar neste filtro para proteger dados.
   // Em desenvolvimento (devMode) o papel exibido vem do seletor de simulação.
   // Em produção o papel virá do backend (SSO/OIDC, endpoint de sessão), ainda não
   // implementado nesta tarefa: até lá vale o menor privilégio (USUARIO), inclusive
@@ -36,7 +38,10 @@ export function Shell() {
 
   return (
     <RoleContext.Provider value={papel}>
-      <div className={`shell${meta.data?.banner ? ' shell--dev' : ''}`}>
+      <div
+        className={`shell${meta.data?.banner ? ' shell--dev' : ''}`}
+        data-meta={meta.status}
+      >
         <a className="pular" href="#conteudo">
           {t('app.pular')}
         </a>
