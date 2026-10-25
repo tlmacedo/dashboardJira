@@ -63,7 +63,9 @@ arquivos)
       fi
     fi
     # git add forçado ignora o .gitignore
-    if printf '%s' "$cmd" | grep -Eq 'git[[:space:]]+add[[:space:]]([^;&|]*[[:space:]])?(-f|--force)([[:space:]]|$)'; then
+    # sem aspas; -f isolado ou agrupado (-fA, -Af) e --force/--fo/--forc, sempre no início de um argumento
+    sem_aspas=$(printf '%s' "$cmd" | tr -d "\"'")
+    if printf '%s' "$sem_aspas" | grep -Eq 'git[[:space:]]+add[[:space:]]([^;&|]*[[:space:]])?(-[A-Za-z]*f[A-Za-z]*|--fo[a-z]*)([[:space:]=]|$)'; then
       negar "git add forçado ignora o .gitignore (segredos e configs reais)."
     fi
   fi
