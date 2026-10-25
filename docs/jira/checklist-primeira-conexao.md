@@ -9,7 +9,7 @@ Regra de ouro do projeto: nenhuma consulta ao Jira da empresa sem **autorizaçã
 - [ ] **`JIRA_LIVE_ENABLED` só deve ser ligado pelo usuário.** O padrão é `false` (e `DASHBOARD_DEV_MODE=true`). Quem liga é o usuário, no ambiente dele; este checklist nunca liga a flag.
 - [ ] **O token fica em variável de ambiente.** Nunca em arquivo versionado, nunca em `.env` commitado, nunca colado em documento, relatório, log ou mensagem de commit. Se o token aparecer em algum arquivo do repositório, parar e avisar.
 - [ ] **Escolher a instância:** Samsung Data Center (`Bearer PAT`) ou Sidia (`Basic`, usuário e token). Uma instância por vez; cada uma repete os passos que precisar.
-- [ ] **Pare no primeiro erro 401, 403 ou CAPTCHA.** Não repetir, não tentar outra credencial, não contornar. Insistir pode bloquear a conta. Relatar ao usuário o código e a mensagem e esperar instrução.
+- [ ] **Pare no primeiro erro 401, 403, 429, qualquer 5xx ou CAPTCHA.** Não repetir, não tentar outra credencial, não contornar. Insistir pode bloquear a conta. Relatar ao usuário o código e a mensagem e esperar instrução.
 - [ ] Confirmar a lista de pesquisas que o usuário aceita rodar nesta sessão (os cinco passos abaixo) e a ordem. Qualquer chamada fora da lista é uma pesquisa nova e exige nova autorização.
 - [ ] Limites desta primeira rodada: uma issue no passo 4, `maxResults=1` no passo 3, sem escrita, sem busca ampla.
 
@@ -32,7 +32,7 @@ Regra de ouro do projeto: nenhuma consulta ao Jira da empresa sem **autorizaçã
   - `cf[12416]` (`customfield_12416`) e `cf[11412]` (`customfield_11412`): registrar nome e tipo, pois nenhum dos dois consta do bscbi-web;
   - nomes duplicados, que tornariam o JQL por nome ambíguo.
   - Preencher `customId` só na cópia local do dicionário, nunca no modelo `.exemplo` com dado interno.
-- **Quando parar:** campo do dicionário ausente ou duplicado; o tipo real contradiz o `tipo` do YAML (por exemplo, TEXT versus SELECT); 401, 403 ou CAPTCHA.
+- **Quando parar:** campo do dicionário ausente ou duplicado; o tipo real contradiz o `tipo` do YAML (por exemplo, TEXT versus SELECT); 401, 403, 429, 5xx ou CAPTCHA.
 
 ## Passo 3: `POST /rest/api/2/search` com `maxResults=1`, uma vez por ficha de card
 
@@ -40,10 +40,11 @@ Regra de ouro do projeto: nenhuma consulta ao Jira da empresa sem **autorizaçã
 
 - **O que conferir:**
   - O `total` bate com a contagem da mesma busca na tela do Jira (o usuário confere) e com a esperada pela ficha.
-  - O JQL é aceito sem erro: campo por nome, `=` versus `~` em campo TEXT, aspas, username com `.`, filtro salvo, `ORDER BY labels`.
+  - O JQL é aceito sem erro: campo por nome, aspas, username com `.` entre aspas e o fim do período (`resolved < dia seguinte`).
+  - Sondar `=` versus `~` em campo TEXT, ordenação (`ORDER BY labels`) e filtro salvo **não** faz parte deste passo: exige ficha ou pesquisa nova, com autorização própria.
   - Fichas com `total` acima de 5.000: anotar; a paginação exige outro pedido de autorização.
   - Contagens por tipo de issue do TG-Basic, para validar a lista de tipos.
-- **Quando parar:** contagem diferente da esperada (não ajustar o JQL em silêncio: relatar); erro 400 de JQL (relatar o JQL e a mensagem); 401, 403 ou CAPTCHA; qualquer resposta com mais de uma issue (o corpo deve vir com `maxResults=1`).
+- **Quando parar:** contagem diferente da esperada (não ajustar o JQL em silêncio: relatar); erro 400 de JQL (relatar o JQL e a mensagem); 401, 403, 429 ou CAPTCHA; qualquer resposta 5xx (não repetir); qualquer resposta com mais de uma issue (o corpo deve vir com `maxResults=1`).
 
 ## Passo 4: UMA issue com `expand=changelog`
 
@@ -54,7 +55,8 @@ Regra de ouro do projeto: nenhuma consulta ao Jira da empresa sem **autorizaçã
   - Itens de `duedate` e `labels`, base da regra de auditoria.
   - Changelog truncado: comparar `changelog.total` com `maxResults` e o número de `histories`. Se o histórico vier cortado, o plano B é `expand=changelog` paginado.
   - 4b: se o endpoint `/changelog` existe e pagina. Não verificado; não depender dele antes de testar.
-- **Quando parar:** a issue tem dados pessoais que não devem ir para o repositório (usar só para observar, não copiar); changelog truncado sem como paginar; 401, 403 ou CAPTCHA; 4b falhou (404): manter o plano B e não insistir.
+- **Regra:** não copiar dados pessoais das respostas para o repositório (observar e registrar só o formato).
+- **Quando parar:** changelog truncado sem como paginar; 401, 403, 429, 5xx ou CAPTCHA; 4b falhou (404): manter o plano B e não insistir.
 
 ## Passo 5: `GET /rest/api/2/status` (mapa de status)
 
@@ -64,7 +66,7 @@ Regra de ouro do projeto: nenhuma consulta ao Jira da empresa sem **autorizaçã
   - Cada status e a sua `statusCategory` (a task é concluída quando a categoria é `done` **e** há `resolution`).
   - Casar com o mapa de status do app (ativo, espera, bloqueado, concluído) e listar status desconhecidos.
   - Status cujo nome muda entre projetos do TG-Basic.
-- **Quando parar:** status sem categoria ou com categoria que contradiz o mapa; 401, 403 ou CAPTCHA.
+- **Quando parar:** status sem categoria ou com categoria que contradiz o mapa; 401, 403, 429, 5xx ou CAPTCHA.
 
 ## Depois dos cinco passos
 
