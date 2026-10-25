@@ -106,13 +106,15 @@ app/Dockerfile, app/docker-compose.yml
 ### Tarefa 3: Calendário de Manaus e dias úteis
 
 **Arquivos:**
-- Criar: `time/BusinessCalendar.kt`, `app/config/calendario.exemplo.yaml` (feriados nacionais 2026 e feriados de Manaus; formato `feriados: [{data: 2026-10-12, nome: ...}]`)
+- Criar: `time/BusinessCalendar.kt`, `app/config/calendario.exemplo.yaml`
 - Teste: `time/BusinessCalendarTest.kt`
+
+> **Ajuste posterior (pedido do usuário, commit `d730b50`):** feriados de data FIXA (nacionais, estaduais e municipais) são registrados só com mês e dia e valem todo ano; os de data MÓVEL entram com data completa de 2026 a 2030. Formato do YAML: `feriados_fixos: [{mes_dia: "10-12", nome: ...}]` e `feriados_moveis: [{data: 2026-02-16, nome: ...}]`. O construtor passou a ser `BusinessCalendar(zone, fixedHolidays: Set<MonthDay>, movableHolidays: Set<LocalDate>)`. `02-29` só vale em ano bissexto. Duplicatas dentro de cada lista são recusadas. As assinaturas dos métodos abaixo não mudaram. Os móveis acabam em 2030 e precisam ser estendidos depois.
 
 **Interfaces:**
 - Produz:
   ```kotlin
-  class BusinessCalendar(val zone: ZoneId, holidays: Set<LocalDate>) {
+  class BusinessCalendar(val zone: ZoneId, fixedHolidays: Set<MonthDay>, movableHolidays: Set<LocalDate>) {
       fun localDate(instant: Instant): LocalDate
       fun isBusinessDay(date: LocalDate): Boolean
       fun businessDays(from: Instant, to: Instant): Double   // soma da fração de cada dia útil local coberto
