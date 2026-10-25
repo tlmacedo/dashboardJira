@@ -10,7 +10,11 @@ app/config/equipes.yaml
 .env
 .env.*
 !.env.example
-config/equipes.yaml
-config/ausencias.yaml
-config/papeis.yaml
-config/squads.yaml
+**/config/equipes.yaml
+**/config/ausencias.yaml
+**/config/papeis.yaml
+**/config/squads.yaml
+legacy/data/
+**/build/
+**/.gradle/
+**/node_modules/
