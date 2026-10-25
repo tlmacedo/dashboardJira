@@ -1,0 +1,110 @@
+import { useState } from 'react'
+import { NavLink } from 'react-router-dom'
+import { useLang } from '../i18n/LangProvider'
+import { ROLES, visibleNav, type Role } from '../nav/nav'
+import { TEMAS, useTheme } from '../theme/ThemeProvider'
+
+type Opcao<T extends string> = { valor: T; rotulo: string }
+
+/** Botões segmentados com aria-pressed: o estado ativo tem negrito e fundo, não só cor. */
+function Segmentado<T extends string>(props: {
+  rotulo: string
+  opcoes: Opcao<T>[]
+  atual: T
+  aoEscolher: (v: T) => void
+}) {
+  return (
+    <div role="group" aria-label={props.rotulo} className="seg-bloco">
+      <span className="seg-rotulo">{props.rotulo}</span>
+      <div className="seg">
+        {props.opcoes.map((o) => (
+          <button
+            key={o.valor}
+            type="button"
+            aria-pressed={o.valor === props.atual}
+            onClick={() => props.aoEscolher(o.valor)}
+          >
+            {o.rotulo}
+          </button>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+export function Menu(props: {
+  role: Role
+  /** Só em desenvolvimento: permite simular outro papel. */
+  aoTrocarPapel?: (r: Role) => void
+}) {
+  const { lang, setLang, t } = useLang()
+  const { theme, setTheme } = useTheme()
+  const [aberto, setAberto] = useState(false)
+  const grupos = visibleNav([props.role])
+
+  return (
+    <aside className={`menu${aberto ? ' menu--aberto' : ''}`}>
+      <div className="logo">
+        <img
+          alt="Sidia"
+          src={theme === 'light' ? '/logo-sidia-azul.png' : '/logo-sidia-branco.png'}
+        />
+      </div>
+      <button
+        type="button"
+        className="btn burger"
+        aria-label={t('shell.menu')}
+        aria-expanded={aberto}
+        aria-controls="menu-principal"
+        onClick={() => setAberto((a) => !a)}
+      >
+        ☰
+      </button>
+      <div className="prod">{t('app.nome')}</div>
+
+      <nav id="menu-principal" aria-label={t('shell.menuPrincipal')} className="menu-nav">
+        {grupos.map((g) => (
+          <div key={g.id} role="group" aria-labelledby={`grp-${g.id}`}>
+            <div className="grp" id={`grp-${g.id}`}>
+              {t(g.labelKey)}
+            </div>
+            {g.items.map((i) => (
+              <NavLink key={i.id} to={i.route} onClick={() => setAberto(false)}>
+                {t(i.labelKey)}
+              </NavLink>
+            ))}
+          </div>
+        ))}
+      </nav>
+
+      <div className="foot">
+        {props.aoTrocarPapel && (
+          <Segmentado
+            rotulo={t('shell.papel')}
+            opcoes={ROLES.slice()
+              .reverse()
+              .map((r) => ({ valor: r, rotulo: t(`role.${r}`) }))}
+            atual={props.role}
+            aoEscolher={props.aoTrocarPapel}
+          />
+        )}
+        <Segmentado
+          rotulo={t('shell.tema')}
+          opcoes={TEMAS.map((v) => ({ valor: v, rotulo: t(`theme.${v}`) }))}
+          atual={theme}
+          aoEscolher={setTheme}
+        />
+        <Segmentado
+          rotulo={t('shell.idioma')}
+          opcoes={[
+            { valor: 'pt', rotulo: 'PT' },
+            { valor: 'en', rotulo: 'EN' },
+          ]}
+          atual={lang}
+          aoEscolher={setLang}
+        />
+        <div>{t('shell.fuso')}</div>
+      </div>
+    </aside>
+  )
+}
