@@ -1,0 +1,57 @@
+# Modelo FICTÍCIO de papéis e squads. Copie para papeis.yaml (ignorado pelo git) e ajuste.
+# Esquema: pessoas: [{id, nome, papeis: [{papel, de?, ate?, squad?}]}]
+# papel: USUARIO | SQUAD_LEADER | COORDENADOR | GERENTE
+# de/ate: datas ISO, ambas inclusivas e opcionais (sem limite quando ausentes).
+pessoas:
+  - id: g-001
+    nome: Gerente Ficticia
+    papeis:
+      - papel: GERENTE
+
+  - id: c-001
+    nome: Coordenadora Ficticia
+    papeis:
+      - papel: COORDENADOR
+
+  - id: u-001
+    nome: Lider Alfa Ficticio
+    papeis:
+      - papel: USUARIO
+        squad: Alfa
+      - papel: SQUAD_LEADER
+        squad: Alfa
+
+  - id: u-002
+    nome: Lider Beta Ficticia
+    papeis:
+      - papel: USUARIO
+        squad: Beta
+      - papel: SQUAD_LEADER
+        squad: Beta
+
+  # Mudou de squad em 01/07/2026: Alfa até 30/06, Beta a partir de 01/07.
+  - id: u-003
+    nome: Pessoa Mudou de Squad
+    papeis:
+      - papel: USUARIO
+        ate: 2026-06-30
+        squad: Alfa
+      - papel: USUARIO
+        de: 2026-07-01
+        squad: Beta
+
+  - id: u-004
+    nome: Pessoa Alfa Ficticia
+    papeis:
+      - papel: USUARIO
+        squad: Alfa
+
+  # Foi Squad Leader do Alfa até 31/03/2026 (papel encerrado); depois segue como usuária.
+  - id: u-005
+    nome: Ex-Lider Ficticio
+    papeis:
+      - papel: USUARIO
+        squad: Alfa
+      - papel: SQUAD_LEADER
+        ate: 2026-03-31
+        squad: Alfa
