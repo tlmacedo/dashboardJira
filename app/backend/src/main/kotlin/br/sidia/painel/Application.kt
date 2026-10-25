@@ -20,6 +20,7 @@ import io.ktor.server.routing.routing
 import kotlinx.serialization.Serializable
 import org.slf4j.LoggerFactory
 import java.nio.file.Files
+import java.time.Clock
 
 @Serializable
 data class HealthResposta(val ok: Boolean)
@@ -35,17 +36,27 @@ fun main() {
     val context = AppContext.load(settings)
     Runtime.getRuntime().addShutdownHook(Thread { context.close() })
     embeddedServer(Netty, port = 8080) {
-        module(settings, context)
+        module(context.settings, context)
         monitor.subscribe(ApplicationStopped) { context.close() }
     }.start(wait = true)
 }
 
-/** Módulo Ktor do painel: JSON, controle de acesso, rota de saúde e metadados do ambiente. */
+/** Em desenvolvimento, sem login (relógio na zona do painel); em produção, o SSO/OIDC. */
+private fun autenticadorPadrao(settings: Settings): Authenticator =
+    if (settings.dashboardDevMode) DevAuthenticator(clock = Clock.system(settings.zone)) else OidcAuthenticator()
+
+/**
+ * Módulo Ktor do painel: JSON, controle de acesso, rota de saúde e metadados do ambiente.
+ *
+ * A configuração efetiva é SEMPRE `context.settings`. O primeiro parâmetro existe só por
+ * compatibilidade de assinatura (posicional) e é ignorado, para que os dois nunca divirjam em silêncio.
+ */
 fun Application.module(
-    settings: Settings,
+    @Suppress("UNUSED_PARAMETER") settingsIgnorado: Settings,
     context: AppContext,
-    authenticator: Authenticator = if (settings.dashboardDevMode) DevAuthenticator() else OidcAuthenticator(),
+    authenticator: Authenticator = autenticadorPadrao(context.settings),
 ) {
+    val settings = context.settings
     install(ContentNegotiation) { json() }
     installAccessControl(settings, authenticator)
     if (settings.dashboardDevMode && settings.jiraLiveEnabled) {

@@ -10,15 +10,16 @@
 
 **Spec:** `docs/superpowers/specs/2026-10-24-painel-squads-kotlin-react-design.md` (seções 4.2, 5.4, 6.1, 6.3). Depende dos Planos 01 (calendário, papéis, cliente, banco) e 02 (`CardQueryFactory`, ficha `tempo-em-status.card.yaml`).
 
-## Pré-requisito: Tarefa 0 de inicialização da aplicação (definida pela revisão final do Plano 1)
+## Nota: Tarefa 0 (inicialização) já executada no Plano 3A
 
-O Plano 1 entregou as peças (banco, calendário, papéis, cliente Jira, controle de acesso), mas **nada as liga na subida do app**, e este plano consome todas elas. Antes da Tarefa 1 deste plano, detalhar e executar uma **Tarefa 0** com, no mínimo:
-- `Application.module` carrega `BusinessCalendar` (de `configDir/calendario*.yaml`) e `RoleDirectory` (de `configDir/papeis.yaml`, caindo em `papeis.exemplo.yaml` só em modo desenvolvimento), abre o `DataSource`, roda `Database.migrate` e fecha o pool ao encerrar (tamanho do pool configurável).
-- `Settings` passa a ler `DATABASE_USER` e `DATABASE_PASSWORD`; `toString` do `Settings` nunca expõe credenciais; decidir "variável vazia = padrão".
-- Fábrica única do cliente Jira: `JiraClientFactory.create(settings, instance)` valida `https` (ou `http` só em localhost), token não vazio e cria o `LiveGuard` a partir de `settings.jiraLiveEnabled`; o `Application` nunca monta um `JiraClient` por outro caminho. Corrigir também no cliente: `total` ausente na resposta é erro (não 0), teto de iterações em `searchAll`, `fields` vazio falha na chamada, falhas de rede viram `JiraException`.
-- `Principal.roles` sempre derivado do `RoleDirectory` na data de hoje; validação de vigências de `USUARIO` sobrepostas no carregamento; `isReporterAuthorized` e GERENTE: seguir a decisão do usuário registrada no ledger.
-- `logback.xml` com nível INFO.
-Cada item com teste, no mesmo formato das tarefas deste plano; só depois seguir para a Tarefa 1.
+A antiga "Tarefa 0" (ligar calendário, papéis, banco, fábrica única do cliente Jira e controle de acesso na subida do app) foi detalhada e **já executada** no plano [`2026-10-25-plano-03a-inicializacao.md`](2026-10-25-plano-03a-inicializacao.md). Ainda falta, antes ou durante este Plano 3:
+- Mapeamento de identidade entre os ids do diretório de papéis (`us-001`...) e os usernames do Jira (decisão do usuário pendente).
+- Cache e fechamento dos clientes HTTP criados pela fábrica (hoje cada `create` abre um `HttpClient` novo).
+- `testContext` com banco, para testar o `access_log`.
+- `SearchRequest` tipado (hoje a consulta é montada como texto).
+- Teto de itens contra a reconciliação (`total` do Jira versus itens recebidos).
+- Teste do atraso (`delay`) do retry com cancelamento.
+- Máscara do token escapado em mensagens de erro.
 
 ## Restrições globais
 

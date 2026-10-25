@@ -1,5 +1,6 @@
 package br.sidia.painel.security
 
+import br.sidia.painel.TestPaths
 import br.sidia.painel.config.Settings
 import br.sidia.painel.module
 import br.sidia.painel.testContext
@@ -218,7 +219,11 @@ class AccessControlTest {
 
     @Test
     fun principalComPapelVigenteEhLiberado() {
-        val usuario = autenticadorFixo(Principal("us-001", setOf(Role.USUARIO)))
+        // O principal vem do diretório de exemplo (us-002: USUARIO sem data de fim), não é montado à mão.
+        val diretorio = RoleDirectory.fromYaml(TestPaths.configDir.resolve("papeis.exemplo.yaml"))
+        val principal = principalFor("us-002", diretorio, java.time.LocalDate.now())
+        assertEquals(setOf(Role.USUARIO), principal.roles)
+        val usuario = autenticadorFixo(principal)
         assertEquals(HttpStatusCode.OK, status(producao, usuario, "/api/ping-protegido"))
     }
 

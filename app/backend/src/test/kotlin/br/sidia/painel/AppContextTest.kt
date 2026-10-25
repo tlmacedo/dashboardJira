@@ -5,12 +5,16 @@ import ch.qos.logback.classic.Logger
 import ch.qos.logback.classic.spi.ILoggingEvent
 import ch.qos.logback.classic.spi.ThrowableProxyUtil
 import ch.qos.logback.core.read.ListAppender
+import br.sidia.painel.config.JiraInstanceSettings
 import br.sidia.painel.config.Settings
+import br.sidia.painel.jira.JiraAuthKind
 import br.sidia.painel.security.Role
 import com.zaxxer.hikari.HikariDataSource
 import io.ktor.client.request.get
+import io.ktor.client.statement.bodyAsText
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.testing.testApplication
+import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.io.TempDir
 import org.slf4j.LoggerFactory
 import org.testcontainers.postgresql.PostgreSQLContainer
@@ -33,6 +37,13 @@ class AppContextTest {
     companion object {
         private val pg = PostgreSQLContainer("postgres:16").apply { start() }
         private const val SENHA = "segredo-super-123"
+
+        /** Para o contêiner explicitamente, sem depender do Ryuk. */
+        @JvmStatic
+        @AfterAll
+        fun pararContainer() {
+            pg.stop()
+        }
     }
 
     @TempDir
@@ -221,10 +232,95 @@ class AppContextTest {
     }
 
     @Test
+    fun poolUsaOTamanhoConfigurado() {
+        escreverArquivosReais()
+        AppContext.load(producao(senha = pg.password).copy(databasePoolSize = 3)).use { ctx ->
+            assertEquals(3, (assertNotNull(ctx.dataSource) as HikariDataSource).maximumPoolSize)
+        }
+    }
+
+    @Test
+    fun yamlDeCalendarioInvalidoCitaCaminhoESemConteudo() {
+        Files.writeString(pasta.resolve("papeis.yaml"), papeisTeste)
+        Files.writeString(pasta.resolve("calendario.yaml"), "feriados_fixos: [Fulano Secreto: {{{")
+        val e = assertFailsWith<IllegalStateException> { AppContext.load(producao()) }
+        assertTrue(e.message.orEmpty().startsWith("arquivo ${pasta.resolve("calendario.yaml")} inválido: "), e.message)
+        assertNull(e.cause)
+        assertFalse("Fulano" in e.message.orEmpty() || "Fulano" in e.stackTraceToString())
+    }
+
+    @Test
+    fun yamlDePapeisInvalidoCitaCaminhoESemConteudo() {
+        Files.writeString(pasta.resolve("calendario.yaml"), calendarioTeste)
+        Files.writeString(
+            pasta.resolve("papeis.yaml"),
+            """
+            pessoas:
+              - id: ge-001
+                nome: Fulano Secreto
+                papeis:
+                  - papel: PAPEL_INEXISTENTE
+            """.trimIndent(),
+        )
+        val e = assertFailsWith<IllegalStateException> { AppContext.load(producao()) }
+        assertEquals("arquivo ${pasta.resolve("papeis.yaml")} inválido: IllegalArgumentException", e.message)
+        assertNull(e.cause)
+        assertFalse("Fulano" in e.stackTraceToString())
+    }
+
+    @Test
+    fun jiraLigadoComInstanciaInvalidaFalhaNaSubidaSemVazarSegredo() {
+        escreverArquivosReais()
+        val token = "token-secreto-xyz"
+        val s = Settings(
+            jiraLiveEnabled = true,
+            dashboardDevMode = true,
+            configDir = pasta,
+            databaseUrl = urlFechada,
+            jiraInstances = mapOf(
+                "samsung" to JiraInstanceSettings("http://jira.exemplo.invalid/", JiraAuthKind.BEARER, null, token),
+            ),
+        )
+        val e = assertFailsWith<IllegalStateException> { AppContext.load(s) }
+        assertEquals("Instância Jira 'samsung' inválida: regra 'https-obrigatorio'", e.message)
+        assertFalse(token in e.stackTraceToString())
+    }
+
+    @Test
+    fun jiraLigadoComInstanciasValidasSobe() {
+        escreverArquivosReais()
+        val s = producao(senha = pg.password).copy(
+            jiraLiveEnabled = true,
+            jiraInstances = mapOf(
+                "samsung" to JiraInstanceSettings("https://jira.exemplo.invalid/", JiraAuthKind.BEARER, null, "tk"),
+            ),
+        )
+        AppContext.load(s).use { assertNotNull(it.dataSource) }
+    }
+
+    @Test
     fun moduloSobeComContextoDeTeste() = testApplication {
         val s = Settings.fromEnv(emptyMap())
         application { module(s, testContext(s)) }
-        assertEquals(HttpStatusCode.OK, client.get("/api/health").status)
-        assertNull(testContext(s).dataSource)
+        val saude = client.get("/api/health")
+        assertEquals(HttpStatusCode.OK, saude.status)
+        assertEquals("""{"ok":true}""", saude.bodyAsText())
+        val meta = client.get("/api/meta")
+        assertEquals(HttpStatusCode.OK, meta.status)
+        assertEquals(
+            """{"devMode":true,"liveEnabled":false,"zone":"America/Manaus","banner":"MODO DESENVOLVIMENTO"}""",
+            meta.bodyAsText(),
+        )
+    }
+
+    @Test
+    fun moduloUsaSempreAConfiguracaoDoContexto() = testApplication {
+        val divergente = Settings(dashboardDevMode = false)
+        val doContexto = Settings(dashboardDevMode = true, zone = ZoneId.of("America/Sao_Paulo"))
+        application { module(divergente, testContext(doContexto)) }
+        assertEquals(
+            """{"devMode":true,"liveEnabled":false,"zone":"America/Sao_Paulo","banner":"MODO DESENVOLVIMENTO"}""",
+            client.get("/api/meta").bodyAsText(),
+        )
     }
 }

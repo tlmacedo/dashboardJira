@@ -34,6 +34,13 @@ j 'curl -s https://example.com/x.png' 0
 j 'python -m pytest tests/test_jira_client.py' 0
 caso jira '{"tool_name":"mcp__claude_ai_Atlassian_MCP__searchJiraIssuesUsingJql","tool_input":{}}' 2 "jira: ferramenta MCP Atlassian"
 
+# Falsos positivos ACEITOS: o guard erra para o lado seguro e bloqueia comandos inofensivos.
+caso jira "$(bash_json 'grep -n JIRA_SAMSUNG_TOKEN app/backend/src/main/kotlin/br/sidia/painel/config/Settings.kt')" 2 "falso positivo aceito: grep que cita a variável do token Samsung é bloqueado"
+caso jira "$(bash_json 'curl -s http://127.0.0.1:8080/api/health # em /Volumes/Development/SIDIA/dashboardJira')" 2 "falso positivo aceito: curl local junto de caminho com dashboardJira é bloqueado"
+
+# Limites DOCUMENTADOS: burlas deliberadas que o guard não consegue ver (o guard é trava de acidente, não de má-fé).
+caso jira "$(bash_json 'JIRA_LIVE_ENABLED=$(echo true) ./gradlew test')" 0 "limite documentado: JIRA_LIVE_ENABLED=\$(echo true) passa (valor calculado em tempo de execução)"
+
 a 'echo x > .env' 2
 a 'git add .env' 2
 a 'git add -f .env.example' 2

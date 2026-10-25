@@ -30,9 +30,35 @@ O modo desenvolvimento **não tem login**. Nunca o exponha em rede com dados rea
 
 Para produção: defina `DASHBOARD_DEV_MODE=false` (exige o login SSO/OIDC, previsto em plano posterior), e só então troque a publicação no `docker-compose.yml` (por exemplo `"8080:8080"` ou, melhor, um proxy reverso com TLS na frente). Não faça isso enquanto o login não existir.
 
-## Estado desta fundação
+## Inicialização e configuração
 
-Este plano prova que o serviço `painel` sobe, serve a SPA e responde `/api/health` e `/api/meta`, e que o `postgres` fica saudável. A ligação do Ktor ao banco (abrir o pool e chamar `Database.migrate`) **ainda não existe**: é objeto de plano posterior, então as migrações não são aplicadas na subida. As variáveis `DATABASE_URL`, `DATABASE_USER` e `DATABASE_PASSWORD` já são entregues ao contêiner para esse momento.
+Na subida o painel carrega o calendário e o diretório de papéis, abre o pool do banco e aplica as migrações (Flyway). Falhas de configuração acontecem aí, não na primeira requisição, e nenhuma mensagem ou log carrega senha, token ou trechos dos YAML.
+
+| Variável | Padrão | Efeito |
+|---|---|---|
+| `PAINEL_CONFIG_DIR` | `config` (`/app/config` na imagem) | Pasta dos YAML (`papeis.yaml`, `calendario.yaml`, `cards/`). |
+| `DATABASE_POOL_SIZE` | `10` | Tamanho máximo do pool de conexões (1 a 100; vazio = padrão; inválido falha na subida). |
+| `DATABASE_URL`, `DATABASE_USER`, `DATABASE_PASSWORD` | ver `.env.example` | Conexão com o banco; a senha não tem padrão. |
+
+**Motivos de falha na subida em produção** (`DASHBOARD_DEV_MODE=false`):
+
+- `papeis.yaml` ausente em `PAINEL_CONFIG_DIR` (em dev o painel usa `papeis.exemplo.yaml` com aviso).
+- `calendario.yaml` ausente (idem: em dev usa `calendario.exemplo.yaml`).
+- YAML inválido: a mensagem cita só o caminho e o tipo do erro.
+- Nenhum **GERENTE** com papel vigente hoje no `papeis.yaml`.
+- `DATABASE_PASSWORD` vazia.
+- Banco indisponível ou migração que falha (a mensagem cita o destino sem credenciais).
+- Com `JIRA_LIVE_ENABLED=true`, instância do Jira mal configurada (a mensagem cita só o id e a regra).
+
+**YAML reais em produção.** A imagem leva apenas os modelos (`*.exemplo.yaml`, `*.demo.yaml`) e `cards/`; os arquivos com pessoas ficam fora dela (`.dockerignore`). Monte-os somente leitura, no `docker-compose.yml` (há um bloco comentado pronto):
+
+```yaml
+volumes:
+  - ./config/papeis.yaml:/app/config/papeis.yaml:ro
+  - ./config/calendario.yaml:/app/config/calendario.yaml:ro
+```
+
+O `docker compose` padrão roda com `DASHBOARD_DEV_MODE=true` e por isso usa os modelos de exemplo (dados fictícios) e basta para subir.
 
 ## Desenvolvimento sem Docker
 

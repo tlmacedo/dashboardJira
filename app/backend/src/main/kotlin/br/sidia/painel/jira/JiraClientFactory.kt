@@ -12,8 +12,9 @@ import java.net.URI
 import java.net.URISyntaxException
 
 /**
- * Fábrica ÚNICA de [JiraClient]: nenhum outro ponto do código de produção pode construir o cliente
- * (o construtor do cliente é `internal`; o compilador impõe isso porque o backend é um módulo único).
+ * Fábrica ÚNICA de [JiraClient]: nenhum outro ponto do código de produção deve construir o cliente.
+ * O `internal` só protege de OUTROS módulos; dentro deste módulo a garantia vem da fábrica única mais o
+ * teste `SomenteAFabricaCriaClientesJira`, que varre `src/main` e falha se `JiraClient(` aparecer fora daqui.
  *
  * - Com `jiraLiveEnabled=false`: não exige credencial e devolve um cliente com `LiveGuard(false)`;
  *   qualquer chamada lança [JiraLiveDisabledException]. O `HttpClient` real NÃO é criado
@@ -21,15 +22,30 @@ import java.net.URISyntaxException
  * - Com `jiraLiveEnabled=true`: valida a instância antes de criar o cliente. As mensagens citam só o
  *   id da instância e o NOME da regra violada, nunca o token nem a URL.
  *
+ * O construtor primário é `internal` (injeção de `HttpClient` e do gancho de teste); o código de produção
+ * usa apenas `JiraClientFactory(settings)`.
+ *
  * @param http provedor do `HttpClient` (injetável para os testes usarem MockEngine).
  */
-class JiraClientFactory(
+class JiraClientFactory internal constructor(
     private val settings: Settings,
-    private val http: (JiraInstanceConfig) -> HttpClient = { createJiraHttpClient() },
+    private val http: (JiraInstanceConfig) -> HttpClient,
     private val retry: RetryPolicy = RetryPolicy(),
     /** Só para testes: avisa se o motor "desligado" chegou a ser alcançado (deve ser 0 vezes). */
     private val aoAlcancarMotorDesligado: () -> Unit = {},
 ) {
+    /** Construtor público: cliente HTTP real (CIO) e política de novas tentativas padrão. */
+    constructor(settings: Settings) : this(settings, { createJiraHttpClient() })
+
+    /**
+     * Valida na subida todas as instâncias configuradas, sem criar cliente nem enviar nada.
+     * Com `jiraLiveEnabled=false` não faz nada. Falha com [IllegalStateException] citando só id e regra.
+     */
+    fun validarInstancias() {
+        if (!settings.jiraLiveEnabled) return
+        settings.jiraInstances.forEach { (id, s) -> validar(id, s) }
+    }
+
     /** Cria o cliente da instância (`samsung`, `sidia`...). Id desconhecido: [IllegalArgumentException]. */
     fun create(instanceId: String): JiraClient {
         require(instanceId in INSTANCIAS_CONHECIDAS || instanceId in settings.jiraInstances) {

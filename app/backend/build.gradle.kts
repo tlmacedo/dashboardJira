@@ -44,4 +44,6 @@ tasks.test {
     useJUnitPlatform()
     // Pasta dos YAML de exemplo, por caminho absoluto (não depende do diretório de trabalho).
     systemProperty("painel.configDir", rootProject.layout.projectDirectory.dir("../config").asFile.canonicalPath)
+    // Fontes de produção, por caminho absoluto: usado pelo teste que varre quem constrói o cliente Jira.
+    systemProperty("painel.mainSrcDir", rootProject.layout.projectDirectory.dir("src/main").asFile.canonicalPath)
 }

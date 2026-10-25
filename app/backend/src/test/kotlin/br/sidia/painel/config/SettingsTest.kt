@@ -67,6 +67,25 @@ class SettingsTest {
     }
 
     @Test
+    fun poolTemPadraoDezELeVariavel() {
+        assertEquals(10, Settings.fromEnv(emptyMap()).databasePoolSize)
+        assertEquals(10, Settings.fromEnv(mapOf("DATABASE_POOL_SIZE" to "  ")).databasePoolSize)
+        assertEquals(25, Settings.fromEnv(mapOf("DATABASE_POOL_SIZE" to " 25 ")).databasePoolSize)
+        assertEquals(1, Settings.fromEnv(mapOf("DATABASE_POOL_SIZE" to "1")).databasePoolSize)
+        assertEquals(100, Settings.fromEnv(mapOf("DATABASE_POOL_SIZE" to "100")).databasePoolSize)
+    }
+
+    @Test
+    fun poolInvalidoCitaAVariavel() {
+        listOf("0", "101", "-3", "abc", "2.5").forEach { v ->
+            val e = assertFailsWith<IllegalArgumentException>(v) {
+                Settings.fromEnv(mapOf("DATABASE_POOL_SIZE" to v))
+            }
+            assertTrue("DATABASE_POOL_SIZE" in e.message.orEmpty(), e.message)
+        }
+    }
+
+    @Test
     fun lePainelBanco() {
         val s = Settings.fromEnv(mapOf("DATABASE_USER" to "painel", "DATABASE_PASSWORD" to "segredo"))
         assertEquals("painel", s.databaseUser)

@@ -40,9 +40,13 @@ class AppContext(
         fun load(settings: Settings, clock: Clock = Clock.system(settings.zone)): AppContext {
             val arquivoCalendario = resolver(settings, "calendario")
             val arquivoPapeis = resolver(settings, "papeis")
-            val calendario = BusinessCalendar.fromYaml(arquivoCalendario, settings.zone)
-            val papeis = RoleDirectory.fromYaml(arquivoPapeis)
+            val calendario = lerYaml(arquivoCalendario) { BusinessCalendar.fromYaml(arquivoCalendario, settings.zone) }
+            val papeis = lerYaml(arquivoPapeis) { RoleDirectory.fromYaml(arquivoPapeis) }
             exigirGerenteVigente(settings, papeis, arquivoPapeis, LocalDate.now(clock))
+
+            // Valida na subida todas as instâncias do Jira configuradas (sem enviar nada); só id e regra na falha.
+            val jira = JiraClientFactory(settings)
+            jira.validarInstancias()
 
             if (settings.databasePassword.isBlank()) {
                 if (!settings.dashboardDevMode) {
@@ -52,8 +56,19 @@ class AppContext(
             }
 
             val ds = abrirBanco(settings)
-            return AppContext(settings, calendario, papeis, ds, JiraClientFactory(settings))
+            return AppContext(settings, calendario, papeis, ds, jira)
         }
+
+        /**
+         * Lê um YAML citando só o caminho e o TIPO da exceção, sem causa encadeada: as mensagens do
+         * parser trazem trechos do arquivo, e o arquivo de papéis tem nomes de pessoas.
+         */
+        private fun <T> lerYaml(arquivo: Path, leitura: () -> T): T =
+            try {
+                leitura()
+            } catch (e: Exception) {
+                throw IllegalStateException("arquivo $arquivo inválido: ${e.javaClass.simpleName}")
+            }
 
         /** Sem nenhum GERENTE vigente hoje ninguém acessaria a Integridade: falha em produção, só avisa em dev. */
         private fun exigirGerenteVigente(settings: Settings, papeis: RoleDirectory, arquivo: Path, hoje: LocalDate) {
@@ -86,7 +101,7 @@ class AppContext(
         private fun abrirBanco(settings: Settings): DataSource {
             val destino = Settings.mascararUrl(settings.databaseUrl)
             val ds = try {
-                Database.connect(settings.databaseUrl, settings.databaseUser, settings.databasePassword)
+                Database.connect(settings.databaseUrl, settings.databaseUser, settings.databasePassword, settings.databasePoolSize)
             } catch (e: Exception) {
                 throw IllegalStateException("Falha ao conectar ao banco em $destino (${e.javaClass.simpleName})")
             }

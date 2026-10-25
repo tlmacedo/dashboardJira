@@ -67,8 +67,8 @@ internal fun createJiraHttpClient(): HttpClient = HttpClient(CIO) {
 /**
  * Cliente de leitura do Jira Data Center. Toda requisição passa antes por `LiveGuard.check()`.
  *
- * O construtor é `internal`: em produção só a [JiraClientFactory] cria clientes, e o compilador
- * impõe isso porque o backend é um módulo Gradle único.
+ * O construtor é `internal`: em produção só a [JiraClientFactory] cria clientes. O `internal` só protege
+ * de outros módulos; dentro deste, o teste `SomenteAFabricaCriaClientesJira` varre `src/main` e garante isso.
  */
 class JiraClient internal constructor(
     private val config: JiraInstanceConfig,

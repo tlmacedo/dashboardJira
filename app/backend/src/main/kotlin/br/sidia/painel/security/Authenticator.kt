@@ -1,5 +1,6 @@
 package br.sidia.painel.security
 
+import br.sidia.painel.config.Settings
 import io.ktor.server.application.ApplicationCall
 import java.time.Clock
 import java.time.LocalDate
@@ -26,7 +27,8 @@ fun principalFor(userId: String, directory: RoleDirectory, today: LocalDate): Pr
  */
 class DevAuthenticator(
     private val directory: RoleDirectory? = null,
-    private val clock: Clock = Clock.systemDefaultZone(),
+    // Padrão: a zona do painel (America/Manaus), nunca a do servidor; o módulo passa a zona de `settings`.
+    private val clock: Clock = Clock.system(Settings().zone),
     private val devUserId: String = "dev",
 ) : Authenticator {
     override suspend fun authenticate(call: ApplicationCall): Principal? {

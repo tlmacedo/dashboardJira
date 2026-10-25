@@ -20,6 +20,10 @@ data class JiraInstanceSettings(
 /**
  * Configuração do painel lida do ambiente.
  * Padrões seguros: Jira real desligado, modo de desenvolvimento ligado.
+ *
+ * É uma `data class`, então `copy` existe. Usar `copy(jiraLiveEnabled = ...)` é PERMITIDO em testes e
+ * PROIBIDO em código de produção (religaria o Jira real sem passar pelo ambiente); o teste
+ * `SomenteAFabricaCriaClientesJira` falha se esse padrão aparecer em `src/main`.
  */
 data class Settings(
     val jiraLiveEnabled: Boolean = false,
@@ -33,6 +37,8 @@ data class Settings(
     val databaseUser: String = "painel",
     /** Sem valor padrão: vem de `DATABASE_PASSWORD`. Nunca aparece em `toString`. */
     val databasePassword: String = "",
+    /** Tamanho máximo do pool de conexões (`DATABASE_POOL_SIZE`, de 1 a 100). */
+    val databasePoolSize: Int = 10,
     /** Instâncias do Jira configuradas (`samsung`, `sidia`); só entram quando completas. */
     val jiraInstances: Map<String, JiraInstanceSettings> = emptyMap(),
 ) {
@@ -41,7 +47,7 @@ data class Settings(
         "Settings(jiraLiveEnabled=$jiraLiveEnabled, dashboardDevMode=$dashboardDevMode, " +
             "retentionMonths=$retentionMonths, zone=$zone, configDir=$configDir, " +
             "databaseUrl=${mascararUrl(databaseUrl)}, staticDir=$staticDir, databaseUser=$databaseUser, " +
-            "databasePassword=***, jiraInstances=$jiraInstances)"
+            "databasePassword=***, databasePoolSize=$databasePoolSize, jiraInstances=$jiraInstances)"
 
     companion object {
         /**
@@ -69,6 +75,10 @@ data class Settings(
                 staticDir = caminho(env, "PAINEL_STATIC_DIR") ?: padrao.staticDir,
                 databaseUser = texto(env, "DATABASE_USER") ?: padrao.databaseUser,
                 databasePassword = env["DATABASE_PASSWORD"]?.takeIf { it.isNotBlank() } ?: padrao.databasePassword,
+                databasePoolSize = texto(env, "DATABASE_POOL_SIZE")?.let {
+                    it.toIntOrNull()?.takeIf { n -> n in 1..100 }
+                        ?: throw IllegalArgumentException("DATABASE_POOL_SIZE inválido: '$it' (esperado inteiro de 1 a 100)")
+                } ?: padrao.databasePoolSize,
                 jiraInstances = listOfNotNull(
                     instancia(env, "samsung", "JIRA_SAMSUNG", JiraAuthKind.BEARER),
                     instancia(env, "sidia", "JIRA_SIDIA", JiraAuthKind.BASIC),

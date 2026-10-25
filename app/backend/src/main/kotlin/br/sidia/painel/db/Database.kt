@@ -8,12 +8,12 @@ import javax.sql.DataSource
 /** Acesso ao PostgreSQL: pool de conexões e migrações. URL, usuário e senha vêm sempre de fora. */
 object Database {
     /** Abre um pool HikariCP. O [DataSource] devolvido é um [HikariDataSource] (fechável). */
-    fun connect(url: String, user: String?, password: String?): DataSource {
+    fun connect(url: String, user: String?, password: String?, poolSize: Int = 10): DataSource {
         val config = HikariConfig().apply {
             jdbcUrl = url
             if (user != null) username = user
             if (password != null) this.password = password
-            maximumPoolSize = 10
+            maximumPoolSize = poolSize
         }
         return HikariDataSource(config)
     }

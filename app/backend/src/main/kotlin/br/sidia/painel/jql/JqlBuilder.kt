@@ -70,7 +70,7 @@ class JqlBuilder(dict: FieldDictionary, instance: String) {
     fun orderBy(field: String, asc: Boolean = true): JqlBuilder {
         val def = dict.get(field)
         require(camposOrdenados.add(def.name.lowercase())) { "orderBy repetido para o campo '${def.name}'" }
-        ordenacao +="${JqlValues.quotedField(def.name)} ${if (asc) "ASC" else "DESC"}"
+        ordenacao += "${JqlValues.quotedField(def.name)} ${if (asc) "ASC" else "DESC"}"
         return this
     }
 
