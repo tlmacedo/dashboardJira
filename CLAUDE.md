@@ -19,6 +19,7 @@ Dashboard de gestão do time TG-Basic sobre tasks do Jira Data Center: fluxo, pr
 - **Atraso justificado:** duas métricas lado a lado ("no prazo" e "no prazo ajustado"); labels em YAML.
 - **Sem ranking de pessoas.** Tabelas de pessoas em ordem alfabética. Integridade só para gerente e sempre auditada.
 - **Acesso:** `DASHBOARD_DEV_MODE=true` sem login e com todos os dados (faixa vermelha). Em produção: SSO/OIDC; usuário vê só o próprio; Squad Leader vê o próprio e o seu squad; coordenador e gerente veem todos.
+- **Identidade:** o `id` da pessoa em `papeis.yaml` é o username do Jira, igual ao `assignee` das issues (não é código de cargo; o papel define a visão). Ids reservados: `dev`, `system`, `admin`, `root`, `anonymous`.
 - **Auditoria:** só o Reporter (PL), coordenadores e gerente, ou o Squad Leader do responsável podem trocar responsável, vencimento e labels de atraso. Os demais casos geram alerta ou auditoria (regras e sinais no relatório e na memória do projeto).
 - **Ausências e feriados:** arquivo YAML versionado, somente leitura no app.
 

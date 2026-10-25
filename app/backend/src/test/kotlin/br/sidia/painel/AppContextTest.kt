@@ -75,7 +75,7 @@ class AppContextTest {
 
     private val papeisTeste = """
         pessoas:
-          - id: ge-001
+          - id: gerente.exemplo
             nome: Gerente Ficticia
             papeis:
               - papel: GERENTE
@@ -123,7 +123,7 @@ class AppContextTest {
             databasePassword = pg.password,
         )
         AppContext.load(s).use { ctx ->
-            assertTrue(Role.GERENTE in ctx.roles.rolesOf("ge-001", java.time.LocalDate.parse("2026-10-25")))
+            assertTrue(Role.GERENTE in ctx.roles.rolesOf("gerente.exemplo", java.time.LocalDate.parse("2026-10-25")))
         }
         val av = avisos()
         assertTrue(av.any { "papeis.exemplo.yaml" in it }, av.toString())
@@ -178,11 +178,11 @@ class AppContextTest {
             pasta.resolve("papeis.yaml"),
             """
             pessoas:
-              - id: co-001
+              - id: coord.um
                 nome: Coordenador Ficticio
                 papeis:
                   - papel: COORDENADOR
-              - id: ge-001
+              - id: gerente.exemplo
                 nome: Gerente Encerrada
                 papeis:
                   - papel: GERENTE
@@ -202,7 +202,7 @@ class AppContextTest {
             pasta.resolve("papeis.yaml"),
             """
             pessoas:
-              - id: co-001
+              - id: coord.um
                 nome: Coordenador Ficticio
                 papeis:
                   - papel: COORDENADOR
@@ -256,7 +256,7 @@ class AppContextTest {
             pasta.resolve("papeis.yaml"),
             """
             pessoas:
-              - id: ge-001
+              - id: gerente.exemplo
                 nome: Fulano Secreto
                 papeis:
                   - papel: PAPEL_INEXISTENTE

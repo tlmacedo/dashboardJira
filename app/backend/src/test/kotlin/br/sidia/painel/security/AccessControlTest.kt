@@ -219,9 +219,9 @@ class AccessControlTest {
 
     @Test
     fun principalComPapelVigenteEhLiberado() {
-        // O principal vem do diretório de exemplo (us-002: USUARIO sem data de fim), não é montado à mão.
+        // O principal vem do diretório de exemplo (dev.alfa1: USUARIO sem data de fim), não é montado à mão.
         val diretorio = RoleDirectory.fromYaml(TestPaths.configDir.resolve("papeis.exemplo.yaml"))
-        val principal = principalFor("us-002", diretorio, java.time.LocalDate.now())
+        val principal = principalFor("dev.alfa1", diretorio, java.time.LocalDate.now())
         assertEquals(setOf(Role.USUARIO), principal.roles)
         val usuario = autenticadorFixo(principal)
         assertEquals(HttpStatusCode.OK, status(producao, usuario, "/api/ping-protegido"))
@@ -233,12 +233,12 @@ class AccessControlTest {
         val diretorio = RoleDirectory(
             listOf(
                 Pessoa(
-                    "us-001", "Ex-Usuario",
+                    "dev.beta1", "Ex-Usuario",
                     listOf(AtribuicaoPapel(Role.USUARIO, Vigencia(null, hoje.minusDays(1)), "Alfa")),
                 ),
             ),
         )
-        val ex = autenticadorFixo(principalFor("us-001", diretorio, hoje))
+        val ex = autenticadorFixo(principalFor("dev.beta1", diretorio, hoje))
         assertEquals(HttpStatusCode.Forbidden, status(producao, ex, "/api/ping-protegido"))
     }
 

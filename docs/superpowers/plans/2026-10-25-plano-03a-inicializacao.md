@@ -36,7 +36,7 @@ app/backend/src/main/kotlin/br/sidia/painel/
   AppContext.kt                       # carga de calendário, papéis, banco, fábrica Jira
   Application.kt                      # module(settings, context, authenticator) e main com encerramento limpo
   security/Authenticator.kt           # principalFor(userId, directory, today)
-  security/RoleDirectory.kt           # validação de vigências sobrepostas e padrão de ids
+  security/RoleDirectory.kt           # validação de vigências sobrepostas e de ids (username do Jira; padrão por cargo abandonado)
   jira/JiraClientFactory.kt           # única criação de JiraClient
   jira/JiraClient.kt                  # correções (total ausente, teto de páginas, rede, timeout, JSON)
   jql/JqlBuilder.kt, CardQueryFactory.kt
@@ -99,7 +99,7 @@ app/backend/src/main/resources/logback.xml
   - `close()` fecha o pool (`HikariDataSource`).
 - `fun Application.module(settings: Settings = Settings.fromEnv(), context: AppContext, authenticator: Authenticator = ...)`: usa `context.roles`/`context.calendar` onde precisar; `main()` cria o contexto com `AppContext.load(Settings.fromEnv())` e registra encerramento (`Runtime.addShutdownHook` ou o evento `ApplicationStopped`) que chama `context.close()`. Os testes existentes (`HealthTest`, `MetaTest`, `AccessControlTest`, `SpaTest`) passam a montar um contexto de teste sem banco (`dataSource = null`) por uma função auxiliar `testContext(settings)` em `src/test/kotlin/br/sidia/painel/TestContext.kt`.
 - `fun principalFor(userId: String, directory: RoleDirectory, today: LocalDate): Principal` em `security/Authenticator.kt`: papéis SEMPRE de `directory.rolesOf(userId, today)`; usuário desconhecido recebe `setOf(Role.USUARIO)` apenas se o `DevAuthenticator`/provedor decidir; a função em si devolve conjunto vazio para id desconhecido (fail-closed). `DevAuthenticator` usa `principalFor("dev", ...)` somente se existir no diretório; senão mantém o `Principal("dev", {GERENTE})` de desenvolvimento (documentado em pt-BR) — nunca em produção.
-- `RoleDirectory.fromYaml` passa a validar no carregamento: (a) o padrão de id `^(ge|co|sl|us)-\d{3}$`; (b) vigências de `USUARIO` com squads diferentes que se sobrepõem em qualquer dia → `IllegalArgumentException` citando o id e o intervalo; (c) `SQUAD_LEADER` e `USUARIO` sem squad onde é obrigatório.
+- `RoleDirectory.fromYaml` passa a validar no carregamento: (a) o id como username do Jira (regra de `JqlValues.username`; o padrão antigo `ge|co|sl|us-NNN` foi abandonado, e `dev`, `system`, `admin`, `root`, `anonymous` são reservados); (b) vigências de `USUARIO` com squads diferentes que se sobrepõem em qualquer dia → `IllegalArgumentException` citando o id e o intervalo; (c) `SQUAD_LEADER` e `USUARIO` sem squad onde é obrigatório.
 - `logback.xml` com nível `INFO` (e `WARN` para bibliotecas ruidosas), sem imprimir cabeçalhos ou corpos de requisição.
 
 - [ ] **Passo 1: Testes que falham:** `producaoSemPapeisFalha`; `devSemPapeisUsaExemploComAviso`; `producaoSemCalendarioFalha`; `bancoIndisponivelFalhaSemSenhaNaMensagem` (URL inválida/porta fechada, mensagem não contém a senha); `carregaComBancoRealETestcontainers` (PostgreSQL real: contexto sobe, migra e `close()` fecha o pool); `principalVemDoDiretorio` (id conhecido → papéis do diretório na data; id desconhecido → vazio; papel encerrado ontem não vale hoje); `idForaDoPadraoFalha`; `vigenciaUsuarioSobrepostaFalha` e `vigenciaUsuarioAdjacenteOk` (pontas inclusivas: 30/06 e 01/07 não se sobrepõem); `moduloSobeComContextoDeTeste`.

@@ -23,7 +23,7 @@ fun principalFor(userId: String, directory: RoleDirectory, today: LocalDate): Pr
  *
  * Os parâmetros [directory], [clock] e [devUserId] existem só para testes com diretório próprio: se o
  * id [devUserId] tiver papel vigente no diretório, os papéis vêm dele. O app real não passa diretório
- * (os ids reais seguem o padrão `xx-000`, então o id "dev" nunca existe no arquivo de papéis).
+ * (o id "dev" é reservado em [RoleDirectory], então nunca existe no arquivo de papéis).
  */
 class DevAuthenticator(
     private val directory: RoleDirectory? = null,

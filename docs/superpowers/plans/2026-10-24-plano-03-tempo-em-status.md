@@ -13,7 +13,7 @@
 ## Nota: Tarefa 0 (inicialização) já executada no Plano 3A
 
 A antiga "Tarefa 0" (ligar calendário, papéis, banco, fábrica única do cliente Jira e controle de acesso na subida do app) foi detalhada e **já executada** no plano [`2026-10-25-plano-03a-inicializacao.md`](2026-10-25-plano-03a-inicializacao.md). Ainda falta, antes ou durante este Plano 3:
-- Mapeamento de identidade entre os ids do diretório de papéis (`us-001`...) e os usernames do Jira (decisão do usuário pendente).
+- Identidade: **decidido: id = assignee do Jira.** O `id` de cada pessoa em `papeis.yaml` é o username do Jira (o mesmo valor do campo `assignee`), então `Visibility` e a auditoria comparam os dois por igualdade, sem tabela de mapeamento. Resta só conferir os ids com o Jira na primeira conexão autorizada (ver `docs/jira/checklist-primeira-conexao.md`).
 - Cache e fechamento dos clientes HTTP criados pela fábrica (hoje cada `create` abre um `HttpClient` novo).
 - `testContext` com banco, para testar o `access_log`.
 - `SearchRequest` tipado (hoje a consulta é montada como texto).
