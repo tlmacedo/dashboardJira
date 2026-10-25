@@ -43,6 +43,8 @@ class RetryPolicy(
 /** Cria o cliente HTTP real (CIO + JSON). Nunca é usado nos testes, que injetam o MockEngine. */
 fun createJiraHttpClient(): HttpClient = HttpClient(CIO) {
     install(ContentNegotiation) { json() }
+    // Nunca seguir redirecionamentos: a credencial não pode ir a outro host.
+    followRedirects = false
 }
 
 /**
@@ -50,10 +52,12 @@ fun createJiraHttpClient(): HttpClient = HttpClient(CIO) {
  */
 class JiraClient(
     private val config: JiraInstanceConfig,
-    private val http: HttpClient,
+    http: HttpClient,
     private val guard: LiveGuard,
     private val retry: RetryPolicy = RetryPolicy(),
 ) {
+    // Mesmo que o cliente injetado siga redirecionamentos, aqui eles ficam desligados.
+    private val http: HttpClient = http.config { followRedirects = false }
     private val baseUrl = config.baseUrl.trimEnd('/')
     private val json = Json { ignoreUnknownKeys = true }
 
@@ -111,7 +115,7 @@ class JiraClient(
             val repetivel = resposta.status.value in STATUS_REPETIVEIS
             if (!repetivel || tentativa >= retry.maxRetries) return resposta
             val espera = resposta.headers[HttpHeaders.RetryAfter]?.trim()?.toLongOrNull()
-                ?.coerceAtLeast(0)?.seconds
+                ?.coerceIn(0, RETRY_AFTER_MAX_SEGUNDOS)?.seconds
                 ?: retry.backoff(tentativa)
             retry.delay(espera)
             tentativa++
@@ -120,9 +124,15 @@ class JiraClient(
 
     /** Monta a exceção com o status e um resumo do corpo (sem quebras de linha, até 300 caracteres). */
     private fun erro(status: Int, corpo: String): JiraException {
-        val resumo = resumir(corpo)
-        val mensagens = extrairMensagens(corpo)
-        val msg = "Jira respondeu $status" + (mensagens ?: resumo)?.let { ": $it" }.orEmpty()
+        val limpo = mascarar(corpo)
+        val resumo = resumir(limpo)
+        val mensagens = extrairMensagens(limpo)
+        val prefixo = if (status in 300..399) {
+            "Jira respondeu $status (redirecionamento não seguido, verifique a URL base)"
+        } else {
+            "Jira respondeu $status"
+        }
+        val msg = prefixo + (mensagens ?: resumo)?.let { ": $it" }.orEmpty()
         return JiraException(status, msg, resumo)
     }
 
@@ -135,11 +145,21 @@ class JiraClient(
         null
     }
 
+    /** Troca o token e o base64 do Basic por `***` antes de qualquer texto sair do cliente. */
+    private fun mascarar(texto: String): String {
+        var r = texto
+        if (config.auth == JiraAuthKind.BASIC) r = r.replace(authorization.removePrefix("Basic "), "***")
+        if (config.token.isNotEmpty()) r = r.replace(config.token, "***")
+        return r
+    }
+
     private fun resumir(texto: String): String? =
         texto.replace(Regex("\\s+"), " ").trim().take(300).ifEmpty { null }
 
     private companion object {
         val TIMEOUT = 30.seconds
+        // Teto para Retry-After: um valor absurdo do servidor não pode travar o job.
+        const val RETRY_AFTER_MAX_SEGUNDOS = 120L
         val STATUS_REPETIVEIS = setOf(429, 502, 503, 504)
     }
 }

@@ -150,6 +150,64 @@ class JiraClientTest {
     }
 
     @Test
+    fun retryAfterGigantePassaAoTetoDe120s() = runBlocking {
+        var n = 0
+        val esperas = mutableListOf<Duration>()
+        val engine = MockEngine {
+            n++
+            if (n == 1) respond("", HttpStatusCode.TooManyRequests, headersOf(HttpHeaders.RetryAfter, "99999999999"))
+            else respond(corpoOk, HttpStatusCode.OK, json)
+        }
+        val retry = RetryPolicy(maxRetries = 5, backoff = { 1.seconds }, delay = { esperas += it })
+        JiraClient(cfg(), HttpClient(engine), LiveGuard(true), retry).search(SearchRequest("x", listOf("summary")))
+        assertEquals(listOf(120.seconds), esperas)
+    }
+
+    @Test
+    fun retryAfterNegativoViraZeroETextoInvalidoUsaBackoff() = runBlocking {
+        var n = 0
+        val esperas = mutableListOf<Duration>()
+        val engine = MockEngine {
+            n++
+            when (n) {
+                1 -> respond("", HttpStatusCode.TooManyRequests, headersOf(HttpHeaders.RetryAfter, "-5"))
+                2 -> respond("", HttpStatusCode.TooManyRequests, headersOf(HttpHeaders.RetryAfter, "amanha"))
+                else -> respond(corpoOk, HttpStatusCode.OK, json)
+            }
+        }
+        val retry = RetryPolicy(maxRetries = 5, backoff = { 9.seconds }, delay = { esperas += it })
+        JiraClient(cfg(), HttpClient(engine), LiveGuard(true), retry).search(SearchRequest("x", listOf("summary")))
+        assertEquals(listOf(0.seconds, 9.seconds), esperas)
+    }
+
+    @Test
+    fun redirecionamentoNaoEhSeguidoNemRepetido() = runBlocking {
+        val engine = MockEngine {
+            respond("", HttpStatusCode.Found, headersOf(HttpHeaders.Location, "https://outro.exemplo.invalid/x"))
+        }
+        val client = JiraClient(cfg(), HttpClient(engine), LiveGuard(true), semEspera())
+        val e = assertFailsWith<JiraException> { client.search(SearchRequest("x", listOf("summary"))) }
+        assertEquals(302, e.status)
+        assertEquals(1, engine.requestHistory.size)
+        assertEquals("jira.exemplo.invalid", engine.requestHistory.single().url.host)
+    }
+
+    @Test
+    fun corpoDoErroNaoVazaTokenNemBase64DoBasic() = runBlocking {
+        val basic = Base64.getEncoder().encodeToString("usuario:segredo-super".toByteArray())
+        val engine = MockEngine {
+            respond("falha: token=segredo-super auth=Basic $basic fim", HttpStatusCode.BadRequest, json)
+        }
+        val client = JiraClient(cfg(JiraAuthKind.BASIC, "segredo-super", "usuario"), HttpClient(engine), LiveGuard(true), semEspera())
+        val e = assertFailsWith<JiraException> { client.search(SearchRequest("x", listOf("summary"))) }
+        for (texto in listOf(e.details!!, e.message!!)) {
+            assertFalse(texto.contains("segredo-super"))
+            assertFalse(texto.contains(basic))
+        }
+        assertContains(e.details!!, "***")
+    }
+
+    @Test
     fun tokenNuncaApareceNoToString() {
         val c = cfg(JiraAuthKind.BASIC, "segredo-super", "usuario")
         assertFalse(c.toString().contains("segredo-super"))
