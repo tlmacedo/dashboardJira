@@ -178,4 +178,24 @@ class JqlValuesTest {
         assertEquals("username", e.kind)
         assertEquals("x y", e.value)
     }
+
+    @Test
+    fun invalidJqlValueExceptionEhIllegalArgument() {
+        val e: Throwable = assertFailsWith<IllegalArgumentException> { JqlValues.username("x y") }
+        assertTrue(e is InvalidJqlValueException)
+        assertEquals("Valor inválido para username: x y", e.message)
+    }
+
+    @Test
+    fun mensagemSemQuebraDeLinhaNemControle() {
+        val e = assertFailsWith<InvalidJqlValueException> { JqlValues.username("a\nb\r\tc\u0000d") }
+        assertEquals("Valor inválido para username: a?b??c?d", e.message)
+        assertEquals("a\nb\r\tc\u0000d", e.value)
+    }
+
+    @Test
+    fun mensagemTruncaValorGigante() {
+        val e = assertFailsWith<InvalidJqlValueException> { JqlValues.username("A".repeat(100_000)) }
+        assertEquals("Valor inválido para username: ".length + 80, e.message!!.length)
+    }
 }

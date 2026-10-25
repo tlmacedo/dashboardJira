@@ -4,9 +4,18 @@ import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.time.format.ResolverStyle
 
-/** Valor recusado pelo validador. O valor original fica guardado só para diagnóstico/auditoria. */
+/**
+ * Valor recusado pelo validador. É um [IllegalArgumentException], como os demais erros de forma
+ * da entrada (uma rota HTTP trata uma família só). O valor original fica guardado só para
+ * diagnóstico/auditoria; a mensagem (que pode ir para log) leva no máximo 80 caracteres,
+ * com caracteres de controle trocados por `?`.
+ */
 class InvalidJqlValueException(val kind: String, val value: String) :
-    RuntimeException("Valor inválido para $kind: ${value.take(80)}")
+    IllegalArgumentException("Valor inválido para $kind: ${amostra(value)}") {
+    private companion object {
+        fun amostra(v: String): String = v.take(80).map { if (Character.isISOControl(it)) '?' else it }.joinToString("")
+    }
+}
 
 /**
  * Validadores de valores que entram em JQL.

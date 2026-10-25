@@ -14,6 +14,10 @@ data class Periodo(val de: LocalDate, val ate: LocalDate) {
  * nenhum valor de `params` é concatenado em texto.
  */
 class CardQueryFactory(private val dict: FieldDictionary) {
+    private companion object {
+        /** Máximo de itens numa lista de parâmetro (squad, os, tipo). */
+        const val MAX_ITENS = 200
+    }
 
     fun build(spec: CardSpec, params: Map<String, Any>): JqlQuery {
         val declarados = spec.parametros.associateBy { it.name }
@@ -55,6 +59,7 @@ class CardQueryFactory(private val dict: FieldDictionary) {
 
     private fun listaDeTexto(p: CardParam, v: Any): List<String> {
         require(v is List<*> && v.all { it is String }) { "parâmetro '${p.name}' deve ser uma lista de textos" }
+        require(v.size <= MAX_ITENS) { "parâmetro '${p.name}' com ${v.size} itens; o limite é $MAX_ITENS" }
         return v.map { it as String }
     }
 

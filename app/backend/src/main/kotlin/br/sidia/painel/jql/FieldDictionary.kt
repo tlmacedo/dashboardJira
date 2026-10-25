@@ -49,7 +49,8 @@ class FieldDef(
 }
 
 /** Campo pedido que não consta no dicionário. */
-class UnknownFieldException(val name: String) : RuntimeException("Campo fora do dicionário: $name")
+class UnknownFieldException(val name: String, contexto: String? = null) :
+    RuntimeException("Campo fora do dicionário: $name" + (contexto?.let { " ($it)" } ?: ""))
 
 /**
  * Dicionário de campos do Jira. Nomes são únicos por instância, sem diferenciar maiúsculas

@@ -72,9 +72,21 @@ object CardSpecs {
             throw IllegalArgumentException("$path: ${e.message}", e)
         }
         val doDicionario = dict.forInstance(spec.instancia)
-        (spec.campos + spec.filtrosFixos.keys + spec.filtrosExcluidos.keys +
-            spec.parametros.map { CAMPO_DO_PARAMETRO.getValue(it.type) })
-            .forEach { doDicionario.get(it) }
+        val porSecao = listOf(
+            "campos" to spec.campos,
+            "filtrosFixos" to spec.filtrosFixos.keys.toList(),
+            "filtrosExcluidos" to spec.filtrosExcluidos.keys.toList(),
+            "parametros" to spec.parametros.map { CAMPO_DO_PARAMETRO.getValue(it.type) },
+        )
+        for ((secao, nomes) in porSecao) {
+            for (nome in nomes) {
+                try {
+                    doDicionario.get(nome)
+                } catch (e: UnknownFieldException) {
+                    throw UnknownFieldException(e.name, "$path, seção $secao, instância '${spec.instancia}'")
+                }
+            }
+        }
         return spec
     }
 
