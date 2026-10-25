@@ -1,0 +1,115 @@
+package br.sidia.painel.jql
+
+import com.charleskorn.kaml.Yaml
+import kotlinx.serialization.SerializationException
+import kotlinx.serialization.Serializable
+import java.nio.file.Files
+import java.nio.file.Path
+
+/** Tipos de parâmetro que uma ficha pode declarar. */
+val TIPOS_DE_PARAMETRO: Set<String> = setOf("squad", "periodo", "os", "pessoa", "tipo")
+
+/** Parâmetro declarado na ficha. [type] é um de [TIPOS_DE_PARAMETRO]. */
+data class CardParam(val name: String, val type: String, val required: Boolean = true)
+
+/**
+ * Ficha de um card (seção 5.2 da spec). [filtrosFixos] entra como `campo in (...)`;
+ * [filtrosExcluidos] entra como `campo not in (...)` (ex.: status cancelados).
+ */
+data class CardSpec(
+    val id: String,
+    val titulo: String,
+    val instancia: String,
+    val campos: List<String>,
+    val filtrosFixos: Map<String, List<String>>,
+    val parametros: List<CardParam>,
+    val formula: String,
+    val exemplo: String,
+    val aceite: List<String>,
+    val expandChangelog: Boolean,
+    val filtrosExcluidos: Map<String, List<String>> = emptyMap(),
+)
+
+/** Consulta pronta para o cliente do Jira: JQL gerado só pelo construtor, mais `fields` e expansão. */
+data class JqlQuery(val instance: String, val jql: String, val fields: List<String>, val expandChangelog: Boolean)
+
+/** Campo do dicionário que cada tipo de parâmetro filtra. */
+internal val CAMPO_DO_PARAMETRO: Map<String, String> = mapOf(
+    "squad" to "assignee",
+    "pessoa" to "assignee",
+    "periodo" to "resolved",
+    "os" to "OS Version",
+    "tipo" to "issuetype",
+)
+
+object CardSpecs {
+    /**
+     * Lê a ficha em YAML (estrita: chave desconhecida falha citando arquivo e chave) e confere,
+     * já na carga, que `campos`, as chaves dos filtros fixos e os campos filtrados pelos parâmetros
+     * existem no dicionário DA INSTÂNCIA da ficha. Campo ausente lança [UnknownFieldException].
+     */
+    fun fromYaml(path: Path, dict: FieldDictionary): CardSpec {
+        val ficha = try {
+            Yaml.default.decodeFromString(FichaYaml.serializer(), Files.readString(path))
+        } catch (e: SerializationException) {
+            throw IllegalArgumentException("$path: ficha inválida: ${e.message}", e)
+        }
+        val spec = try {
+            CardSpec(
+                id = ficha.id,
+                titulo = ficha.titulo,
+                instancia = ficha.instancia,
+                campos = ficha.campos,
+                filtrosFixos = ficha.filtrosFixos,
+                parametros = ficha.parametros.map { CardParam(it.nome, it.tipo, it.obrigatorio) },
+                formula = ficha.formula,
+                exemplo = ficha.exemplo,
+                aceite = ficha.aceite,
+                expandChangelog = ficha.expandChangelog,
+                filtrosExcluidos = ficha.filtrosExcluidos,
+            ).also { validar(it) }
+        } catch (e: IllegalArgumentException) {
+            throw IllegalArgumentException("$path: ${e.message}", e)
+        }
+        val doDicionario = dict.forInstance(spec.instancia)
+        (spec.campos + spec.filtrosFixos.keys + spec.filtrosExcluidos.keys +
+            spec.parametros.map { CAMPO_DO_PARAMETRO.getValue(it.type) })
+            .forEach { doDicionario.get(it) }
+        return spec
+    }
+
+    private fun validar(spec: CardSpec) {
+        require(spec.id.isNotBlank()) { "ficha sem id" }
+        require(spec.titulo.isNotBlank()) { "ficha '${spec.id}' sem titulo" }
+        require(spec.instancia.isNotBlank()) { "ficha '${spec.id}' sem instancia" }
+        spec.parametros.forEach {
+            require(it.type in TIPOS_DE_PARAMETRO) {
+                "parâmetro '${it.name}' com tipo desconhecido '${it.type}' (esperado: ${TIPOS_DE_PARAMETRO.joinToString()})"
+            }
+        }
+        require(spec.parametros.map { it.name }.toSet().size == spec.parametros.size) {
+            "ficha '${spec.id}' com nomes de parâmetro repetidos"
+        }
+        require(spec.parametros.map { it.type }.toSet().size == spec.parametros.size) {
+            "ficha '${spec.id}' com dois parâmetros do mesmo tipo"
+        }
+    }
+}
+
+@Serializable
+private data class FichaYaml(
+    val id: String,
+    val titulo: String,
+    val instancia: String,
+    val campos: List<String> = emptyList(),
+    val filtrosFixos: Map<String, List<String>> = emptyMap(),
+    val filtrosExcluidos: Map<String, List<String>> = emptyMap(),
+    val parametros: List<ParametroYaml> = emptyList(),
+    val formula: String = "",
+    val exemplo: String = "",
+    val aceite: List<String> = emptyList(),
+    val expandChangelog: Boolean = false,
+)
+
+@Serializable
+private data class ParametroYaml(val nome: String, val tipo: String, val obrigatorio: Boolean = true)

@@ -1,0 +1,57 @@
+# Ficha do card "Tempo em status". Estrita: chave desconhecida falha ao carregar.
+# Todo campo citado aqui precisa existir no dicionário (jira_campos) da instância da ficha.
+
+# Identificador estável do card (usado em rotas e no cache).
+id: tempo-em-status
+
+# Nome mostrado na interface.
+titulo: Tempo em status
+
+# Instância do Jira consultada; o dicionário de campos usado é o dessa instância.
+instancia: samsung
+
+# Campos do dicionário que o card lê além dos mínimos (summary, issuetype, status, assignee,
+# reporter, created, updated, resolutiondate, duedate, labels, parent, project, sempre pedidos).
+campos:
+  - OS Version
+  - SKU Type
+  - Checklist Type
+
+# Filtros sempre aplicados, no formato campo: [valores] (vira `campo in (...)`).
+filtrosFixos:
+  project: ["TG-Basic"]
+  issuetype: ["Checklist", "Checklist TG", "Checklist Review"]
+
+# Filtros de exclusão sempre aplicados (vira `campo not in (...)`).
+filtrosExcluidos:
+  status: ["Cancelled", "Canceled", "Dropped"]
+
+# Parâmetros aceitos na busca. tipo: squad | periodo | os | pessoa | tipo.
+# obrigatorio: false torna o parâmetro opcional (padrão: true).
+parametros:
+  - nome: squad       # lista de usernames (vinda do papéis YAML) -> assignee in (...)
+    tipo: squad
+  - nome: periodo     # de e ate (aaaa-mm-dd), de <= ate -> resolved >= de e resolved <= ate
+    tipo: periodo
+  - nome: os          # lista de valores conhecidos de "OS Version"; opcional
+    tipo: os
+    obrigatorio: false
+
+# Como o card calcula o resultado (texto para a tela de ajuda e para a revisão).
+formula: >-
+  Tempo em dias úteis (America/Manaus) que cada task resolvida no período passou em cada status,
+  somando as permanências do changelog; mostra mediana e P90 por status.
+
+# Exemplo de uso, para documentação.
+exemplo: >-
+  squad=[thiago.macedo, wendell.marques], periodo=2026-07-26 a 2026-10-24, os não informado.
+
+# Critérios de aceite verificáveis.
+aceite:
+  - Só entram tasks do projeto TG-Basic com os tipos Checklist, Checklist TG e Checklist Review.
+  - Tasks Cancelled, Canceled e Dropped ficam de fora.
+  - Só entram tasks resolvidas dentro do período informado.
+  - O filtro de OS Version é opcional e só aceita valores conhecidos.
+
+# Se pede o histórico (changelog) das issues para calcular o tempo em cada status.
+expandChangelog: true
