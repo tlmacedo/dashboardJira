@@ -31,7 +31,7 @@ filtrosExcluidos:
 parametros:
   - nome: squad       # lista de usernames (vinda do papéis YAML) -> assignee in (...)
     tipo: squad
-  - nome: periodo     # de e ate (aaaa-mm-dd), de <= ate -> resolved >= de e resolved <= ate
+  - nome: periodo     # de e ate (aaaa-mm-dd), de <= ate -> resolved >= de e resolved < dia seguinte (ate é inclusivo)
     tipo: periodo
   - nome: os          # lista de valores conhecidos de "OS Version"; opcional
     tipo: os

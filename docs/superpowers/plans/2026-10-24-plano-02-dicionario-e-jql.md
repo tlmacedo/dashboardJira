@@ -100,7 +100,7 @@ docs/jira/checklist-primeira-conexao.md
 
 - [ ] **Passo 1: Testes que falham:**
   - `dataValida` → `"2026-10-24"`; `dataImpossivel`: `"2026-13-45"` lança; `dataComTexto`: `"ontem"` lança.
-  - `usernameValido`: `"thiago.macedo"`, `"pedro.almeida-e"` passam; `usernameComEspaco`, `usernameComAspas` (`x" OR "`) e `usernameVazio` lançam.
+  - `usernameValido`: `"dev.alfa"`, `"dev.gama-e"` passam; `usernameComEspaco`, `usernameComAspas` (`x" OR "`) e `usernameVazio` lançam.
   - `literalForaDaListaLanca`; `literalDentroDaListaVoltaComAspas`: `literal("Android 16.0 (16)", allowed)` → `"\"Android 16.0 (16)\""`.
   - `relativeDays(100)` → `startOfDay(-100)`; `relativeDays(0)` e `relativeDays(4000)` lançam.
   - `campoComEspacoVaiEntreAspas`: `quotedField("OS Version")` → `"OS Version"`; `quotedField("cf[12416]")` → `cf[12416]`; `quotedField("a\"b")` lança.
@@ -136,7 +136,7 @@ docs/jira/checklist-primeira-conexao.md
   `inList`/`notInList` com lista vazia lançam `IllegalArgumentException("lista vazia para <campo>")`. Valores de campos `SELECT` com `knownValues` só aceitam o que está na lista; campos sem lista (`project`, `status`, `issuetype`, `Model Name`) aceitam texto livre **somente** via `JqlValues.safeText(value)`, que rejeita `"`, `\`, quebra de linha e caracteres de controle e limita a 120 caracteres (os valores saem sempre entre aspas duplas, então aspas e barra são o único jeito de escapar do literal; parênteses como em `Android 17.0 (OneUI_9.0)` são válidos). Acrescentar a `JqlValues` (Tarefa 2) a função `safeText` e o teste `safeTextRejeitaAspasEBarra` (`x") OR project is not EMPTY OR ("` lança; `Android 17.0 (OneUI_9.0)` passa).
 
 - [ ] **Passo 1: Testes que falham** (strings esperadas exatas):
-  - `jqlDoSquadAbertas`: `JqlBuilder(dict,"samsung").inList("project",listOf("TG-Basic")).users("assignee",listOf("thiago.macedo","wendell.marques")).notInList("status",listOf("Resolved","Closed","Cancelled")).relativeDaysAtLeast("created",100).build()` → `project in ("TG-Basic") AND assignee in ("thiago.macedo", "wendell.marques") AND status not in ("Resolved", "Closed", "Cancelled") AND created >= startOfDay(-100)` (usernames sempre entre aspas; nos testes reais os nomes são fictícios, `dev.alfa`, `dev.beta`).
+  - `jqlDoSquadAbertas`: `JqlBuilder(dict,"samsung").inList("project",listOf("TG-Basic")).users("assignee",listOf("dev.alfa","dev.beta")).notInList("status",listOf("Resolved","Closed","Cancelled")).relativeDaysAtLeast("created",100).build()` → `project in ("TG-Basic") AND assignee in ("dev.alfa", "dev.beta") AND status not in ("Resolved", "Closed", "Cancelled") AND created >= startOfDay(-100)` (usernames sempre entre aspas; nos testes reais os nomes são fictícios, `dev.alfa`, `dev.beta`).
   - `campoComEspaco`: `inList("OS Version", listOf("Android 17.0 (OneUI_9.0)"))` → `"OS Version" in ("Android 17.0 (OneUI_9.0)")`.
   - `ordenacao`: `.orderBy("resolved").orderBy("duedate", asc = false).build()` termina com ` ORDER BY resolved ASC, duedate DESC`.
   - `tentativaDeInjecaoFalha`: `users("assignee", listOf("x\") OR project is not EMPTY OR (\""))` lança `InvalidJqlValueException`.
@@ -173,7 +173,7 @@ docs/jira/checklist-primeira-conexao.md
 - [ ] **Passo 1: Testes que falham:**
   - `fichaDoTempoEmStatusCarrega`: a ficha carrega e `parametros` tem `squad`, `periodo`.
   - `fichaComCampoForaDoDicionarioFalha` (YAML de teste com `campos: [Inventado]`) → `UnknownFieldException` na carga.
-  - `jqlSnapshotTempoEmStatus`: com `squad=[thiago.macedo,wendell.marques]`, `periodo=(2026-07-26, 2026-10-24)`, `os=null` → `project in ("TG-Basic") AND issuetype in ("Checklist", "Checklist TG", "Checklist Review") AND assignee in ("thiago.macedo", "wendell.marques") AND status not in ("Cancelled", "Canceled", "Dropped") AND resolved >= "2026-07-26" AND resolved < "2026-10-25"` (fim 2026-10-24 inclusivo vira `< 2026-10-25`).
+  - `jqlSnapshotTempoEmStatus`: com `squad=[dev.alfa,dev.beta]`, `periodo=(2026-07-26, 2026-10-24)`, `os=null` → `project in ("TG-Basic") AND issuetype in ("Checklist", "Checklist TG", "Checklist Review") AND assignee in ("dev.alfa", "dev.beta") AND status not in ("Cancelled", "Canceled", "Dropped") AND resolved >= "2026-07-26" AND resolved < "2026-10-25"` (fim 2026-10-24 inclusivo vira `< 2026-10-25`).
   - `osOpcionalEntraQuandoInformado`: com `os=["Android 17.0 (OneUI_9.0)"]` o JQL ganha `AND "OS Version" in ("Android 17.0 (OneUI_9.0)")`.
   - `parametroObrigatorioAusenteFalha`: sem `periodo` → `IllegalArgumentException` citando `periodo`.
 - [ ] **Passo 2: Rodar** `./gradlew test --tests '*CardQueryFactoryTest*'` → FALHA.

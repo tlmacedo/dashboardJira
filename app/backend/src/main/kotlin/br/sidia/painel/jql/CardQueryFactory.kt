@@ -65,9 +65,17 @@ class CardQueryFactory(private val dict: FieldDictionary) {
             "summary", "issuetype", "status", "assignee", "reporter", "created", "updated",
             "resolutiondate", "duedate", "labels", "parent", "project",
         )
-        val extras = spec.campos.map { c -> campoDicionario.get(c).let { it.customId ?: it.name } }
+        // Campo com id técnico sai como customfield_NNNN (cf[NNNN] é normalizado); sem id, sai pelo nome.
+        val extras = spec.campos.map { c -> campoDicionario.get(c).let { idParaFields(it.customId) ?: it.name } }
         val fields = (minimos + extras).distinctBy { it.lowercase() }
         return JqlQuery(spec.instancia, b.build(), fields, spec.expandChangelog)
+    }
+
+    /** `cf[12416]` vira `customfield_12416`; `customfield_NNNN` fica como está; nulo continua nulo. */
+    private fun idParaFields(customId: String?): String? = when {
+        customId == null -> null
+        customId.startsWith("cf[") && customId.endsWith("]") -> "customfield_" + customId.substring(3, customId.length - 1)
+        else -> customId
     }
 
     private fun listaDeTexto(p: CardParam, v: Any): List<String> {

@@ -96,6 +96,41 @@ class JqlBuilderTest {
     }
 
     @Test
+    fun inListEmCampoUserSaiComAspas() {
+        assertEquals("assignee in (\"x\")", builder().inList("assignee", listOf("x")).build())
+        assertEquals("assignee in (\"empty\", \"dev.alfa\")", builder().inList("assignee", listOf("empty", "dev.alfa")).build())
+    }
+
+    @Test
+    fun notInListEmCampoUserSaiComAspas() {
+        assertEquals("assignee not in (\"x\", \"or\")", builder().notInList("assignee", listOf("x", "or")).build())
+    }
+
+    @Test
+    fun equalsToEmCampoUserSaiComAspas() {
+        assertEquals("assignee = \"dev.alfa\"", builder().equalsTo("assignee", "dev.alfa").build())
+        assertEquals("assignee = \"null\"", builder().equalsTo("assignee", "null").build())
+    }
+
+    @Test
+    fun campoUserValidaOUsernameEmTodosOsMetodos() {
+        val ataque = "x\") OR project is not EMPTY OR (\""
+        assertFailsWith<InvalidJqlValueException> { builder().inList("assignee", listOf(ataque)) }
+        assertFailsWith<InvalidJqlValueException> { builder().notInList("assignee", listOf("Maiuscula")) }
+        assertFailsWith<InvalidJqlValueException> { builder().equalsTo("assignee", "com espaço") }
+        assertFailsWith<InvalidJqlValueException> { builder().equalsTo("assignee", "-comeca-com-hifen") }
+    }
+
+    @Test
+    fun orderByRepetidoFalhaCitandoOCampo() {
+        val e = assertFailsWith<IllegalArgumentException> {
+            builder().orderBy("resolved").orderBy("duedate").orderBy("RESOLVED", asc = false)
+        }
+        assertTrue(e.message!!.contains("resolved"), e.message)
+        assertFailsWith<IllegalArgumentException> { builder().orderBy("OS Version").orderBy("os version") }
+    }
+
+    @Test
     fun orderByForaDoDicionarioFalha() {
         assertFailsWith<UnknownFieldException> { builder().inList("project", listOf("A")).orderBy("nada") }
     }

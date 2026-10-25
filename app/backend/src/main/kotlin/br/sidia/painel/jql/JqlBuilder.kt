@@ -11,6 +11,7 @@ class JqlBuilder(dict: FieldDictionary, instance: String) {
     private val dict: FieldDictionary = dict.forInstance(instance)
     private val clausulas = mutableListOf<String>()
     private val ordenacao = mutableListOf<String>()
+    private val camposOrdenados = mutableSetOf<String>()
 
     /** `campo in ("a", "b")`. */
     fun inList(field: String, values: List<String>): JqlBuilder = lista(field, values, "in")
@@ -68,7 +69,8 @@ class JqlBuilder(dict: FieldDictionary, instance: String) {
     /** Acrescenta um critério de ordenação; só campos do dicionário. Vai no fim, em `ORDER BY`. */
     fun orderBy(field: String, asc: Boolean = true): JqlBuilder {
         val def = dict.get(field)
-        ordenacao += "${JqlValues.quotedField(def.name)} ${if (asc) "ASC" else "DESC"}"
+        require(camposOrdenados.add(def.name.lowercase())) { "orderBy repetido para o campo '${def.name}'" }
+        ordenacao +="${JqlValues.quotedField(def.name)} ${if (asc) "ASC" else "DESC"}"
         return this
     }
 
@@ -113,9 +115,12 @@ class JqlBuilder(dict: FieldDictionary, instance: String) {
         require(values.isNotEmpty()) { "lista vazia para ${def.name}" }
     }
 
-    /** Valor já validado: username para USER; literal fechado se há lista de conhecidos; senão texto seguro. */
+    /**
+     * Valor já validado e entre aspas duplas: username (validado) para USER, o que neutraliza palavras
+     * reservadas do JQL; literal fechado se há lista de conhecidos; senão texto seguro.
+     */
     private fun valor(def: FieldDef, value: String): String = when {
-        def.type == FieldType.USER -> JqlValues.username(value)
+        def.type == FieldType.USER -> "\"${JqlValues.username(value)}\""
         def.knownValues.isNotEmpty() -> JqlValues.literal(value, def.knownValues)
         else -> JqlValues.safeText(value)
     }
