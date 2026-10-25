@@ -1,5 +1,6 @@
 package br.sidia.painel.config
 
+import br.sidia.painel.jira.JiraAuthKind
 import java.nio.file.Path
 import java.time.ZoneId
 import kotlin.test.Test
@@ -41,12 +42,183 @@ class SettingsTest {
         )
     }
 
+    // Revisado: variável presente mas vazia (comum no docker-compose) agora significa "usar o padrão".
     @Test
-    fun diretorioEstaticoVazioFalha() {
-        val e = assertFailsWith<IllegalArgumentException> {
-            Settings.fromEnv(mapOf("PAINEL_STATIC_DIR" to "  "))
+    fun diretorioEstaticoVazioUsaPadrao() {
+        assertEquals(Path.of("frontend/dist"), Settings.fromEnv(mapOf("PAINEL_STATIC_DIR" to "  ")).staticDir)
+    }
+
+    @Test
+    fun vazioUsaPadraoParaTodos() {
+        val s = Settings.fromEnv(
+            mapOf(
+                "JIRA_LIVE_ENABLED" to "",
+                "DASHBOARD_DEV_MODE" to " ",
+                "RETENTION_MONTHS" to "  ",
+                "PAINEL_TZ" to "",
+                "PAINEL_CONFIG_DIR" to "",
+                "DATABASE_URL" to "",
+                "DATABASE_USER" to "",
+                "DATABASE_PASSWORD" to "",
+                "PAINEL_STATIC_DIR" to "",
+            ),
+        )
+        assertEquals(Settings(), s)
+    }
+
+    @Test
+    fun poolTemPadraoDezELeVariavel() {
+        assertEquals(10, Settings.fromEnv(emptyMap()).databasePoolSize)
+        assertEquals(10, Settings.fromEnv(mapOf("DATABASE_POOL_SIZE" to "  ")).databasePoolSize)
+        assertEquals(25, Settings.fromEnv(mapOf("DATABASE_POOL_SIZE" to " 25 ")).databasePoolSize)
+        assertEquals(1, Settings.fromEnv(mapOf("DATABASE_POOL_SIZE" to "1")).databasePoolSize)
+        assertEquals(100, Settings.fromEnv(mapOf("DATABASE_POOL_SIZE" to "100")).databasePoolSize)
+    }
+
+    @Test
+    fun poolInvalidoCitaAVariavel() {
+        listOf("0", "101", "-3", "abc", "2.5").forEach { v ->
+            val e = assertFailsWith<IllegalArgumentException>(v) {
+                Settings.fromEnv(mapOf("DATABASE_POOL_SIZE" to v))
+            }
+            assertTrue("DATABASE_POOL_SIZE" in e.message.orEmpty(), e.message)
         }
-        assertTrue(e.message!!.contains("PAINEL_STATIC_DIR"))
+    }
+
+    @Test
+    fun lePainelBanco() {
+        val s = Settings.fromEnv(mapOf("DATABASE_USER" to "painel", "DATABASE_PASSWORD" to "segredo"))
+        assertEquals("painel", s.databaseUser)
+        assertEquals("segredo", s.databasePassword)
+    }
+
+    @Test
+    fun toStringNaoVazaSegredos() {
+        val s = Settings.fromEnv(
+            mapOf(
+                "DATABASE_URL" to "jdbc:postgresql://usuarioX:senhaUrlY@h/db",
+                "DATABASE_PASSWORD" to "senhaBancoZ",
+                "JIRA_SAMSUNG_URL" to "https://x.exemplo.com",
+                "JIRA_SAMSUNG_TOKEN" to "tokenSecretoW",
+            ),
+        )
+        val texto = s.toString()
+        listOf("senhaBancoZ", "tokenSecretoW", "usuarioX", "senhaUrlY").forEach {
+            assertFalse(texto.contains(it), "vazou $it")
+        }
+        assertTrue(texto.contains("jdbc:postgresql://***@h/db"))
+        assertFalse(s.jiraInstances.getValue("samsung").toString().contains("tokenSecretoW"))
+    }
+
+    @Test
+    fun toStringMascaraSenhaNaQuery() {
+        val a = Settings(databaseUrl = "jdbc:postgresql://h/db?user=u&password=abc123&ssl=true").toString()
+        val b = Settings(databaseUrl = "jdbc:postgresql://h/db?password=abc123").toString()
+        assertFalse(a.contains("abc123"))
+        assertFalse(b.contains("abc123"))
+        assertTrue(a.contains("password=***&ssl=true"))
+        assertTrue(b.contains("?password=***"))
+    }
+
+    @Test
+    fun toStringMascaraSenhaComCaracteresEspeciais() {
+        listOf(
+            "jdbc:postgresql://u:p/x@h/db",
+            "jdbc:postgresql://u:p?x@h/db",
+            "jdbc:postgresql://u:p@w@h/db",
+            "jdbc:postgresql://u:p:q@h/db",
+        ).forEach { url ->
+            val texto = Settings(databaseUrl = url).toString()
+            assertTrue(texto.contains("jdbc:postgresql://***@h/db"), "não mascarou $url: $texto")
+            assertFalse(texto.contains("u:p"), "vazou em $url")
+        }
+    }
+
+    @Test
+    fun toStringMascaraParametrosSecretosNaQuery() {
+        listOf(
+            "jdbc:postgresql://h/db?PASSWORD=sg1",
+            "jdbc:postgresql://h/db?user=u;password=sg1",
+            "jdbc:postgresql://h/db?sslpassword=sg1&ssl=true",
+            "jdbc:postgresql://h/db?pwd=sg1",
+            "jdbc:postgresql://h/db?a=1&pass=sg1",
+            "jdbc:postgresql://h/db?passwd=sg1",
+            "jdbc:postgresql://h/db?secret=sg1",
+            "jdbc:postgresql://h/db?Token=sg1",
+        ).forEach { url ->
+            val texto = Settings(databaseUrl = url).toString()
+            assertFalse(texto.contains("sg1"), "vazou em $url: $texto")
+            assertTrue(texto.contains("=***"), "sem máscara em $url")
+        }
+        assertTrue(Settings(databaseUrl = "jdbc:postgresql://h/db?user=u&ssl=true").toString().contains("user=u&ssl=true"))
+    }
+
+    @Test
+    fun toStringDaInstanciaMascaraCredenciaisNaUrl() {
+        val i = JiraInstanceSettings("https://usuarioX:tokenY@host.exemplo.com", JiraAuthKind.BEARER, null, "t")
+        val texto = i.toString()
+        assertFalse(texto.contains("usuarioX"))
+        assertFalse(texto.contains("tokenY"))
+        assertTrue(texto.contains("https://***@host.exemplo.com"))
+    }
+
+    @Test
+    fun tokenRecebeTrim() {
+        val s = Settings.fromEnv(
+            mapOf("JIRA_SAMSUNG_URL" to " https://s.exemplo.com ", "JIRA_SAMSUNG_TOKEN" to "  tok \n"),
+        )
+        assertEquals("tok", s.jiraInstances.getValue("samsung").token)
+        assertEquals("https://s.exemplo.com", s.jiraInstances.getValue("samsung").baseUrl)
+    }
+
+    @Test
+    fun booleanoInvalidoFalhaCitandoAVariavel() {
+        val e = assertFailsWith<IllegalArgumentException> {
+            Settings.fromEnv(mapOf("JIRA_LIVE_ENABLED" to "yes", "DATABASE_PASSWORD" to "segredoK"))
+        }
+        assertTrue(e.message!!.contains("JIRA_LIVE_ENABLED"))
+        assertFalse(e.message!!.contains("segredoK"))
+    }
+
+    @Test
+    fun instanciaSamsungCompleta() {
+        val s = Settings.fromEnv(
+            mapOf("JIRA_SAMSUNG_URL" to "https://s.exemplo.com", "JIRA_SAMSUNG_TOKEN" to "t"),
+        )
+        assertEquals(setOf("samsung"), s.jiraInstances.keys)
+        val i = s.jiraInstances.getValue("samsung")
+        assertEquals("https://s.exemplo.com", i.baseUrl)
+        assertEquals(JiraAuthKind.BEARER, i.auth)
+        assertEquals(null, i.username)
+        assertEquals("t", i.token)
+    }
+
+    @Test
+    fun instanciaSidiaCompleta() {
+        val s = Settings.fromEnv(
+            mapOf("JIRA_SIDIA_URL" to "https://d.exemplo.com", "JIRA_SIDIA_USER" to "u", "JIRA_SIDIA_TOKEN" to "t"),
+        )
+        val i = s.jiraInstances.getValue("sidia")
+        assertEquals(JiraAuthKind.BASIC, i.auth)
+        assertEquals("u", i.username)
+        assertEquals("t", i.token)
+    }
+
+    @Test
+    fun instanciaIncompletaFalha() {
+        val e = assertFailsWith<IllegalArgumentException> {
+            Settings.fromEnv(mapOf("JIRA_SIDIA_URL" to "https://valorSecretoQ.exemplo.com", "JIRA_SIDIA_USER" to " "))
+        }
+        val msg = e.message!!
+        assertTrue(msg.contains("JIRA_SIDIA_USER"))
+        assertTrue(msg.contains("JIRA_SIDIA_TOKEN"))
+        assertFalse(msg.contains("valorSecretoQ"))
+    }
+
+    @Test
+    fun semInstanciasMapaVazio() {
+        assertTrue(Settings.fromEnv(emptyMap()).jiraInstances.isEmpty())
+        assertTrue(Settings.fromEnv(mapOf("JIRA_SAMSUNG_URL" to "")).jiraInstances.isEmpty())
     }
 
     @Test

@@ -69,7 +69,7 @@ Por que agora: o app atual é um protótipo sem validação real, tem divergênc
 
 ### 4.3 Acesso e papéis
 - Flag `DASHBOARD_DEV_MODE` (padrão `true`): sem login, todos os dados visíveis, faixa vermelha fixa "MODO DESENVOLVIMENTO". Permitida mesmo com `JIRA_LIVE_ENABLED=true`, com a faixa avisando.
-- Produção (`false`): SSO/OIDC. **Usuário** vê só o próprio. **Squad Leader** vê o próprio e quem está no seu squad. **Coordenador** e **gerente** veem todos. Papéis, squads e liderança vêm de YAML.
+- Produção (`false`): SSO/OIDC. **Usuário** vê só o próprio. **Squad Leader** vê o próprio e quem está no seu squad. **Coordenador** e **gerente** veem todos. Papéis, squads e liderança vêm de YAML. O `id` da pessoa nesse YAML é o username dela no Jira, o mesmo valor do `assignee` das issues (não é código de cargo); `jira_sidia` é um campo opcional futuro para quem tem username diferente na instância Sidia.
 - Todas as rotas da API exigem sessão e aplicam o filtro por papel. **Integridade** só para gerente; toda consulta a Auditoria e Integridade é registrada.
 
 ### 4.4 Ausências

@@ -9,4 +9,10 @@ object TestPaths {
         System.getProperty("painel.configDir")
             ?: error("Propriedade painel.configDir ausente: rode os testes pelo Gradle"),
     )
+
+    /** Pasta `app/backend/src/main`, definida em `build.gradle.kts` pela propriedade `painel.mainSrcDir`. */
+    val mainSrcDir: Path = Path.of(
+        System.getProperty("painel.mainSrcDir")
+            ?: error("Propriedade painel.mainSrcDir ausente: rode os testes pelo Gradle"),
+    )
 }

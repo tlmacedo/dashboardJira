@@ -298,6 +298,82 @@ class CardQueryFactoryTest {
         assertFailsWith<InvalidJqlValueException> { fabrica.build(s, mapOf("p" to "dev.alfa", "t" to listOf("Inventado"))) }
     }
 
+    private fun dicionarioComCampo(nome: String, tipo: FieldType) = FieldDictionary(
+        listOf(
+            FieldDef("project", FieldType.SELECT, "samsung", "x"),
+            FieldDef(nome, tipo, "samsung", "x"),
+        ),
+    )
+
+    private fun parametroDoTipo(tipo: String) = "parametros:\n  - nome: p\n    tipo: $tipo\n"
+
+    @Test
+    fun osApontandoParaCampoDateOuUserFalhaNaCarga() {
+        for (tipo in listOf(FieldType.DATE, FieldType.USER)) {
+            val f = fichaTemp("[]", extra = parametroDoTipo("os"))
+            val e = assertFailsWith<IllegalArgumentException> { CardSpecs.fromYaml(f, dicionarioComCampo("OS Version", tipo)) }
+            assertTrue(e.message!!.contains("x.card.yaml") && e.message!!.contains("OS Version"), e.message)
+        }
+    }
+
+    @Test
+    fun tipoApontandoParaCampoDateOuUserFalhaNaCarga() {
+        for (tipo in listOf(FieldType.DATE, FieldType.USER)) {
+            val f = fichaTemp("[]", extra = parametroDoTipo("tipo"))
+            val e = assertFailsWith<IllegalArgumentException> { CardSpecs.fromYaml(f, dicionarioComCampo("issuetype", tipo)) }
+            assertTrue(e.message!!.contains("x.card.yaml") && e.message!!.contains("issuetype"), e.message)
+        }
+    }
+
+    @Test
+    fun osETipoApontandoParaCampoTextOuSelectCarregam() {
+        for (tipo in listOf(FieldType.TEXT, FieldType.SELECT)) {
+            CardSpecs.fromYaml(fichaTemp("[]", extra = parametroDoTipo("os")), dicionarioComCampo("OS Version", tipo))
+            CardSpecs.fromYaml(fichaTemp("[]", extra = parametroDoTipo("tipo")), dicionarioComCampo("issuetype", tipo))
+        }
+    }
+
+    @Test
+    fun fieldsUsaCustomfieldNoLugarDeNomeECfN() {
+        val d = FieldDictionary(
+            listOf(
+                FieldDef("project", FieldType.SELECT, "samsung", "x"),
+                FieldDef("OS Version", FieldType.SELECT, "samsung", "x", customId = "cf[12416]"),
+                FieldDef("SKU Type", FieldType.TEXT, "samsung", "x", customId = "customfield_10001"),
+                FieldDef("Checklist Type", FieldType.TEXT, "samsung", "x"),
+            ),
+        )
+        val s = CardSpecs.fromYaml(fichaTemp("[OS Version, SKU Type, Checklist Type]"), d)
+        val fields = CardQueryFactory(d).build(s, emptyMap()).fields
+        assertEquals(
+            listOf(
+                "summary", "issuetype", "status", "assignee", "reporter", "created", "updated",
+                "resolutiondate", "duedate", "labels", "parent", "project",
+                "customfield_12416", "customfield_10001", "Checklist Type",
+            ),
+            fields,
+        )
+        assertTrue("cf[12416]" !in fields && "OS Version" !in fields)
+    }
+
+    @Test
+    fun fieldsSemDuplicatasMantendoOsMinimos() {
+        val d = FieldDictionary(
+            listOf(
+                FieldDef("project", FieldType.SELECT, "samsung", "x"),
+                FieldDef("OS Version", FieldType.SELECT, "samsung", "x", customId = "cf[12416]"),
+                FieldDef("Outro", FieldType.TEXT, "samsung", "x", customId = "customfield_12416"),
+                FieldDef("labels", FieldType.LABELS, "samsung", "x"),
+            ),
+        )
+        val s = CardSpecs.fromYaml(fichaTemp("[OS Version, os version, Outro, labels, Labels]"), d)
+        val fields = CardQueryFactory(d).build(s, emptyMap()).fields
+        assertEquals(fields.size, fields.map { it.lowercase() }.toSet().size, fields.toString())
+        assertEquals(1, fields.count { it == "customfield_12416" })
+        assertEquals(1, fields.count { it.equals("labels", ignoreCase = true) })
+        assertTrue(fields.containsAll(listOf("summary", "project", "parent", "duedate")))
+    }
+
     @Test
     fun injecaoEmOsFalha() {
         assertFailsWith<InvalidJqlValueException> {

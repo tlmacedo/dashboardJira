@@ -18,6 +18,15 @@ services:
       DATABASE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-painel}
       DATABASE_USER: ${POSTGRES_USER:-painel}
       DATABASE_PASSWORD: ${POSTGRES_PASSWORD:?defina POSTGRES_PASSWORD}
+      # Instâncias do Jira NÃO entram por padrão. Para habilitar (com autorização), acrescente aqui,
+      # sem valores no arquivo, as variáveis listadas no .env.example (instância samsung usa Bearer;
+      # instância sidia usa Basic), no formato NOME: ${NOME:-}. A instância só ativa quando completa.
+    # PRODUÇÃO (DASHBOARD_DEV_MODE=false): a imagem só traz os modelos .exemplo, que não bastam.
+    # Os YAML reais (com pessoas) ficam fora da imagem e entram por volume SOMENTE LEITURA.
+    # Descomente e ajuste os caminhos do servidor; sem papeis.yaml e calendario.yaml o painel não sobe.
+    # volumes:
+    #   - ./config/papeis.yaml:/app/config/papeis.yaml:ro
+    #   - ./config/calendario.yaml:/app/config/calendario.yaml:ro
     ports:
       # Só localhost: o modo desenvolvimento não exige login. Para produção, veja o README.
       - "127.0.0.1:8080:8080"

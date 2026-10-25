@@ -7,6 +7,9 @@
 **/.gradle
 **/.kotlin
 **/.git
+# Arquivos reais com dados de pessoas: nunca entram na imagem (só os modelos .exemplo/.demo).
+# O calendario.yaml real (feriados) não tem dados pessoais e PODE entrar na imagem.
 config/equipes.yaml
 config/ausencias.yaml
 config/papeis.yaml
+config/squads.yaml

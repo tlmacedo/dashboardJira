@@ -1,7 +1,9 @@
 package br.sidia.painel.security
 
+import br.sidia.painel.TestPaths
 import br.sidia.painel.config.Settings
 import br.sidia.painel.module
+import br.sidia.painel.testContext
 import io.ktor.client.request.get
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.ApplicationCall
@@ -40,7 +42,7 @@ class AccessControlTest {
         var resultado = HttpStatusCode.InternalServerError
         testApplication {
             application {
-                module(settings, autenticador)
+                module(settings, testContext(settings), autenticador)
                 routing {
                     get("/api/ping-protegido") { call.respondText("pong") }
                     requireRole(Role.GERENTE) {
@@ -115,7 +117,8 @@ class AccessControlTest {
         var resultado = HttpStatusCode.InternalServerError
         try {
             testApplication {
-                application { module(Settings(dashboardDevMode = false, staticDir = dist), autenticador) }
+                val s = Settings(dashboardDevMode = false, staticDir = dist)
+                application { module(s, testContext(s), autenticador) }
                 resultado = client.get(caminho).status
             }
         } finally {
@@ -167,7 +170,7 @@ class AccessControlTest {
     @Test
     fun devAuthenticatorForaDoDevModeLanca() {
         assertFailsWith<IllegalArgumentException> {
-            testApplication { application { module(producao, DevAuthenticator()) }; client.get("/api/health") }
+            testApplication { application { module(producao, testContext(producao), DevAuthenticator()) }; client.get("/api/health") }
         }
     }
 
@@ -177,7 +180,7 @@ class AccessControlTest {
         var codigo = HttpStatusCode.OK
         testApplication {
             application {
-                module(producao, autenticadorFixo(Principal("ana", setOf(Role.USUARIO))))
+                module(producao, testContext(producao), autenticadorFixo(Principal("ana", setOf(Role.USUARIO))))
                 routing { requireRole(Role.GERENTE) { get("/api/efeito") { executou = true; call.respondText("x") } } }
             }
             codigo = client.get("/api/efeito").status
@@ -192,7 +195,7 @@ class AccessControlTest {
         var codigo = HttpStatusCode.OK
         testApplication {
             application {
-                module(producao, OidcAuthenticator())
+                module(producao, testContext(producao), OidcAuthenticator())
                 routing { requireRole(Role.GERENTE) { get("/api/efeito") { executou = true; call.respondText("x") } } }
             }
             codigo = client.get("/api/efeito").status
@@ -202,11 +205,49 @@ class AccessControlTest {
     }
 
     @Test
+    fun principalSemPapeisEhNegadoEmRotasProtegidas() {
+        val vazio = autenticadorFixo(Principal("fantasma.teste", emptySet()))
+        // sem requireRole e com requireRole(GERENTE): ambas negam com 403
+        assertEquals(HttpStatusCode.Forbidden, status(producao, vazio, "/api/ping-protegido"))
+        assertEquals(HttpStatusCode.Forbidden, status(producao, vazio, "/api/so-gerente"))
+        // rotas públicas continuam públicas
+        assertEquals(HttpStatusCode.OK, status(producao, vazio, "/api/health"))
+        assertEquals(HttpStatusCode.OK, status(producao, vazio, "/api/meta"))
+        // rota de API inexistente também exige papel: 403, não 404
+        assertEquals(HttpStatusCode.Forbidden, status(producao, vazio, "/api/inexistente"))
+    }
+
+    @Test
+    fun principalComPapelVigenteEhLiberado() {
+        // O principal vem do diretório de exemplo (dev.alfa1: USUARIO sem data de fim), não é montado à mão.
+        val diretorio = RoleDirectory.fromYaml(TestPaths.configDir.resolve("papeis.exemplo.yaml"))
+        val principal = principalFor("dev.alfa1", diretorio, java.time.LocalDate.now())
+        assertEquals(setOf(Role.USUARIO), principal.roles)
+        val usuario = autenticadorFixo(principal)
+        assertEquals(HttpStatusCode.OK, status(producao, usuario, "/api/ping-protegido"))
+    }
+
+    @Test
+    fun papelEncerradoOntemEhNegadoHoje() {
+        val hoje = java.time.LocalDate.now()
+        val diretorio = RoleDirectory(
+            listOf(
+                Pessoa(
+                    "dev.beta1", "Ex-Usuario",
+                    listOf(AtribuicaoPapel(Role.USUARIO, Vigencia(null, hoje.minusDays(1)), "Alfa")),
+                ),
+            ),
+        )
+        val ex = autenticadorFixo(principalFor("dev.beta1", diretorio, hoje))
+        assertEquals(HttpStatusCode.Forbidden, status(producao, ex, "/api/ping-protegido"))
+    }
+
+    @Test
     fun gerenteExecutaHandler() {
         var executou = false
         testApplication {
             application {
-                module(producao, autenticadorFixo(Principal("gil", setOf(Role.GERENTE))))
+                module(producao, testContext(producao), autenticadorFixo(Principal("gil", setOf(Role.GERENTE))))
                 routing { requireRole(Role.GERENTE) { get("/api/efeito") { executou = true; call.respondText("x") } } }
             }
             client.get("/api/efeito")

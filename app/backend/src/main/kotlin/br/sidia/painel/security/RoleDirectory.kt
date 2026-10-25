@@ -1,5 +1,8 @@
 package br.sidia.painel.security
 
+import br.sidia.painel.jql.InvalidJqlValueException
+import br.sidia.painel.jql.JqlValues
+import br.sidia.painel.jql.amostra
 import com.charleskorn.kaml.Yaml
 import kotlinx.serialization.Serializable
 import java.nio.file.Files
@@ -7,21 +10,19 @@ import java.nio.file.Path
 import java.time.LocalDate
 
 /**
- * Diretório de pessoas, papéis e squads com vigência por data: toda consulta recebe a data,
+ * Diretório de pessoas, papéis e squads com vigência por data. O `id` de cada pessoa é o username dela
+ * no Jira (o mesmo valor do `assignee` das issues), não um código de cargo: toda consulta recebe a data,
  * então a autorização retroativa usa o papel que valia naquele dia. Domínio puro, sem rede.
  */
 class RoleDirectory(pessoas: List<Pessoa>) {
     private val pessoas: Map<String, Pessoa> = pessoas.associateBy { it.id }
 
     init {
-        require(this.pessoas.size == pessoas.size) { "Ids de pessoa duplicados" }
-        pessoas.forEach { p ->
-            p.papeis.forEach {
-                require(it.papel != Role.SQUAD_LEADER || !it.squad.isNullOrBlank()) {
-                    "Squad Leader sem squad: ${p.id}"
-                }
-            }
-        }
+        // Validação sempre no construtor: nenhum diretório inválido chega a existir.
+        // Primeiro o formato de cada id, para a mensagem de duplicado só citar ids já saneados.
+        pessoas.forEach(::validar)
+        val repetidos = pessoas.groupingBy { it.id }.eachCount().filterValues { it > 1 }.keys
+        require(repetidos.isEmpty()) { "Ids de pessoa duplicados: ${repetidos.joinToString(", ")}" }
     }
 
     private fun ativos(userId: String, date: LocalDate): List<AtribuicaoPapel> =
@@ -29,6 +30,10 @@ class RoleDirectory(pessoas: List<Pessoa>) {
 
     /** Papéis da pessoa na data (vazio se desconhecida). */
     fun rolesOf(userId: String, date: LocalDate): Set<Role> = ativos(userId, date).map { it.papel }.toSet()
+
+    /** Há ao menos uma pessoa com o [papel] vigente na data. */
+    fun hasRoleOn(papel: Role, date: LocalDate): Boolean =
+        pessoas.keys.any { papel in rolesOf(it, date) }
 
     /** Squad de que a pessoa é membro na data; o papel USUARIO tem precedência sobre o de líder. */
     fun squadOf(userId: String, date: LocalDate): String? {
@@ -57,22 +62,72 @@ class RoleDirectory(pessoas: List<Pessoa>) {
     }
 
     companion object {
+        /**
+         * Ids que nunca podem ser de pessoa: `dev` é o principal do modo desenvolvimento e os demais
+         * são contas de sistema comuns. Reservá-los evita que um YAML dê papel a eles por engano.
+         */
+        private val IDS_RESERVADOS = setOf("dev", "system", "admin", "root", "anonymous")
+        private val PAPEIS_COM_SQUAD = setOf(Role.USUARIO, Role.SQUAD_LEADER)
+
         /** Lê `pessoas: [{id, nome, papeis: [{papel, de?, ate?, squad?}]}]` de um YAML. */
         fun fromYaml(path: Path): RoleDirectory {
             val arquivo = Yaml.default.decodeFromString(ArquivoPapeis.serializer(), Files.readString(path))
-            return RoleDirectory(
-                arquivo.pessoas.map { p ->
-                    Pessoa(
-                        p.id,
-                        p.nome,
-                        p.papeis.map {
-                            val papel = Role.entries.firstOrNull { r -> r.name == it.papel.uppercase() }
-                                ?: throw IllegalArgumentException("Papel desconhecido '${it.papel}' em ${p.id}")
-                            AtribuicaoPapel(papel, Vigencia(it.de?.let(LocalDate::parse), it.ate?.let(LocalDate::parse)), it.squad)
-                        },
-                    )
-                },
-            )
+            val pessoas = arquivo.pessoas.map { p ->
+                Pessoa(
+                    p.id,
+                    p.nome,
+                    p.papeis.map {
+                        val papel = Role.entries.firstOrNull { r -> r.name == it.papel.uppercase() }
+                            ?: throw IllegalArgumentException("Papel desconhecido '${amostra(it.papel)}' em ${amostra(p.id)}")
+                        AtribuicaoPapel(papel, Vigencia(it.de?.let(LocalDate::parse), it.ate?.let(LocalDate::parse)), it.squad)
+                    },
+                )
+            }
+            return RoleDirectory(pessoas)
+        }
+
+        /**
+         * Validações de cada pessoa: id no formato de username do Jira (mesma regra de [JqlValues.username]),
+         * id não reservado, squad obrigatório e vigências de USUARIO sem sobreposição.
+         */
+        private fun validar(p: Pessoa) {
+            // O id é o username do Jira da pessoa (o mesmo valor do `assignee` das issues).
+            try {
+                JqlValues.username(p.id)
+            } catch (e: InvalidJqlValueException) {
+                throw IllegalArgumentException(
+                    "Id de pessoa fora da regra de username do Jira ([a-z0-9._-], 1 a 64 caracteres, " +
+                        "sem começar com hífen): '${amostra(p.id)}'. Copie o username exatamente como aparece no " +
+                        "perfil do Jira; se ele tiver maiúsculas, @, + ou acentos, o painel ainda não o suporta: " +
+                        "relate ao responsável pelo painel, não adapte o id",
+                )
+            }
+            require(p.id !in IDS_RESERVADOS) {
+                "Id de pessoa reservado (o modo desenvolvimento e contas de sistema usam '${p.id}'): " +
+                    "reservados são ${IDS_RESERVADOS.sorted().joinToString(", ")}"
+            }
+            p.papeis.forEach {
+                require(it.papel !in PAPEIS_COM_SQUAD || !it.squad.isNullOrBlank()) {
+                    "${it.papel} sem squad: ${p.id}"
+                }
+            }
+            // Um usuário não pode estar em dois squads no mesmo dia (pontas inclusivas).
+            val usuario = p.papeis.filter { it.papel == Role.USUARIO }
+            for (i in usuario.indices) {
+                for (j in i + 1 until usuario.size) {
+                    val a = usuario[i]
+                    val b = usuario[j]
+                    if (a.squad == b.squad) continue
+                    val inicio = listOfNotNull(a.vigencia.de, b.vigencia.de).maxOrNull()
+                    val fim = listOfNotNull(a.vigencia.ate, b.vigencia.ate).minOrNull()
+                    if (inicio == null || fim == null || !inicio.isAfter(fim)) {
+                        throw IllegalArgumentException(
+                            "Vigências de USUARIO em squads diferentes (${a.squad} e ${b.squad}) se sobrepõem " +
+                                "para ${p.id}: ${inicio ?: "início aberto"} a ${fim ?: "fim aberto"}",
+                        )
+                    }
+                }
+            }
         }
     }
 }

@@ -38,6 +38,7 @@ class JqlValuesTest {
     fun usernameValido() {
         assertEquals("dev.alfa", JqlValues.username("dev.alfa"))
         assertEquals("dev.gama", JqlValues.username("dev.gama"))
+        assertEquals("dev.gama-e", JqlValues.username("dev.gama-e"))
     }
 
     @Test

@@ -68,6 +68,13 @@ Regra de ouro do projeto: nenhuma consulta ao Jira da empresa sem **autorizaçã
   - Status cujo nome muda entre projetos do TG-Basic.
 - **Quando parar:** status sem categoria ou com categoria que contradiz o mapa; 401, 403, 429, 5xx ou CAPTCHA.
 
+## Passo extra (fora dos cinco): conferir os ids de `papeis.yaml`
+
+**Peça autorização expressa antes, por pesquisa.** O `id` de cada pessoa em `papeis.yaml` é o username dela no Jira, o mesmo valor do campo `assignee` das issues. Consulta: `GET {base}/rest/api/2/user?username={id}`, uma por `id` (cada uma é uma pesquisa com autorização própria; o usuário pode preferir conferir a lista na própria tela do Jira).
+
+- **O que conferir:** cada `id` existe no Jira (resposta 200) e o `name` devolvido é igual ao `id` escrito, **inclusive na caixa** (o painel compara exato e em minúsculas: se o Jira devolver maiúsculas, o `id` em minúsculas não casa com o `assignee`). Se divergir, relatar ao usuário; não adaptar o `id` nem o arquivo em silêncio. Quem usa username diferente na instância Sidia é o caso do campo futuro `jira_sidia` (ainda não lido pelo app).
+- **Quando parar:** `id` inexistente (404; relatar, sem corrigir o arquivo em silêncio); 401, 403, 429, 5xx ou CAPTCHA. Não copiar nomes nem e-mails da resposta para o repositório.
+
 ## Depois dos cinco passos
 
 1. Registrar o resultado de cada passo (data, instância, o que foi visto) na matriz, trocando **não validado** por **confirmado em aaaa-mm-dd**.

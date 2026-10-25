@@ -96,6 +96,10 @@ fun Application.installAccessControl(settings: Settings, authenticator: Authenti
         if (principal == null) {
             call.respond(HttpStatusCode.Unauthorized)
             finish()
+        } else if (principal.roles.isEmpty()) {
+            // Autenticado porém sem papel vigente (id desconhecido, papel encerrado): nega por padrão.
+            call.respond(HttpStatusCode.Forbidden)
+            finish()
         } else {
             call.attributes.put(chavePrincipal, principal)
         }

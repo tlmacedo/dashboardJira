@@ -6,10 +6,15 @@ class JiraLiveDisabledException(message: String) : RuntimeException(message)
 /**
  * Trava de segurança: sem `JIRA_LIVE_ENABLED=true`, nenhuma requisição ao Jira pode sair.
  * O cliente chama `check()` antes de TODA requisição (inclusive antes de cada nova tentativa).
+ *
+ * O estado é lido a cada `check()`, então a trava pode ser desligada no meio de um retry
+ * (os testes usam `LiveGuard { ligado }` com uma variável mutável). A classe e o método são finais.
  */
-class LiveGuard(private val enabled: Boolean) {
+class LiveGuard(private val enabled: () -> Boolean) {
+    constructor(enabled: Boolean) : this({ enabled })
+
     fun check() {
-        if (!enabled) {
+        if (!enabled()) {
             throw JiraLiveDisabledException("Consulta ao Jira bloqueada: JIRA_LIVE_ENABLED não está ativo")
         }
     }

@@ -11,7 +11,8 @@ import kotlin.test.assertEquals
 class HealthTest {
     @Test
     fun healthRetornaOk() = testApplication {
-        application { module(Settings.fromEnv(emptyMap())) }
+        val s = Settings.fromEnv(emptyMap())
+        application { module(s, testContext(s)) }
         val r = client.get("/api/health")
         assertEquals(HttpStatusCode.OK, r.status)
         assertEquals("""{"ok":true}""", r.bodyAsText())

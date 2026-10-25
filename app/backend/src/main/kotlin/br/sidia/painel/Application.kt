@@ -8,6 +8,7 @@ import br.sidia.painel.security.installAccessControl
 import io.ktor.http.HttpStatusCode
 import io.ktor.serialization.kotlinx.json.json
 import io.ktor.server.application.Application
+import io.ktor.server.application.ApplicationStopped
 import io.ktor.server.application.install
 import io.ktor.server.engine.embeddedServer
 import io.ktor.server.netty.Netty
@@ -19,6 +20,7 @@ import io.ktor.server.routing.routing
 import kotlinx.serialization.Serializable
 import org.slf4j.LoggerFactory
 import java.nio.file.Files
+import java.time.Clock
 
 @Serializable
 data class HealthResposta(val ok: Boolean)
@@ -29,14 +31,32 @@ data class MetaResposta(val devMode: Boolean, val liveEnabled: Boolean, val zone
 private val log = LoggerFactory.getLogger("br.sidia.painel")
 
 fun main() {
-    embeddedServer(Netty, port = 8080) { module() }.start(wait = true)
+    val settings = Settings.fromEnv()
+    // Falhas de configuração, papéis ou banco acontecem aqui, na subida, e não na primeira requisição.
+    val context = AppContext.load(settings)
+    Runtime.getRuntime().addShutdownHook(Thread { context.close() })
+    embeddedServer(Netty, port = 8080) {
+        module(context.settings, context)
+        monitor.subscribe(ApplicationStopped) { context.close() }
+    }.start(wait = true)
 }
 
-/** Módulo Ktor do painel: JSON, controle de acesso, rota de saúde e metadados do ambiente. */
+/** Em desenvolvimento, sem login (relógio na zona do painel); em produção, o SSO/OIDC. */
+private fun autenticadorPadrao(settings: Settings): Authenticator =
+    if (settings.dashboardDevMode) DevAuthenticator(clock = Clock.system(settings.zone)) else OidcAuthenticator()
+
+/**
+ * Módulo Ktor do painel: JSON, controle de acesso, rota de saúde e metadados do ambiente.
+ *
+ * A configuração efetiva é SEMPRE `context.settings`. O primeiro parâmetro existe só por
+ * compatibilidade de assinatura (posicional) e é ignorado, para que os dois nunca divirjam em silêncio.
+ */
 fun Application.module(
-    settings: Settings = Settings.fromEnv(),
-    authenticator: Authenticator = if (settings.dashboardDevMode) DevAuthenticator() else OidcAuthenticator(),
+    @Suppress("UNUSED_PARAMETER") settingsIgnorado: Settings,
+    context: AppContext,
+    authenticator: Authenticator = autenticadorPadrao(context.settings),
 ) {
+    val settings = context.settings
     install(ContentNegotiation) { json() }
     installAccessControl(settings, authenticator)
     if (settings.dashboardDevMode && settings.jiraLiveEnabled) {

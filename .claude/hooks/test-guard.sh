@@ -15,11 +15,31 @@ a() { caso arquivos "$(bash_json "$1")" "$2" "arquivos: $1"; }
 j 'curl -s https://jira.exemplo.com/rest/api/2/search' 2
 j 'python3 -c "import urllib.request as u;u.urlopen(\"https://x.atlassian.net/a\")"' 2
 j 'echo $JIRA_TOKEN' 2
+j 'echo $JIRA_SAMSUNG_TOKEN' 2
+j 'printenv JIRA_SIDIA_URL' 2
+j 'JIRA_LIVE_ENABLED=false ./gradlew test' 0
+j 'JIRA_LIVE_ENABLED=true ./gradlew test' 2
+j 'JIRA_LIVE_ENABLED=1 ./gradlew test' 2
+j 'JIRA_LIVE_ENABLED="true" ./gradlew test' 2
+j "JIRA_LIVE_ENABLED='true' ./gradlew test" 2
+j 'JIRA_LIVE_ENABLED = true ./gradlew test' 2
+j 'export JIRA_LIVE_ENABLED=" true"' 2
+j 'JIRA_LIVE_ENABLED=TRUE ./gradlew test' 2
+j 'env JIRA_LIVE_ENABLED=true ./gradlew test' 2
+j 'JIRA_LIVE_ENABLED_X=1 ./gradlew test' 2
+j 'JIRA_LIVE_ENABLED="false" ./gradlew test' 0
 j 'python -m jiradash serve' 2
 j 'ls -la' 0
 j 'curl -s https://example.com/x.png' 0
 j 'python -m pytest tests/test_jira_client.py' 0
 caso jira '{"tool_name":"mcp__claude_ai_Atlassian_MCP__searchJiraIssuesUsingJql","tool_input":{}}' 2 "jira: ferramenta MCP Atlassian"
+
+# Falsos positivos ACEITOS: o guard erra para o lado seguro e bloqueia comandos inofensivos.
+caso jira "$(bash_json 'grep -n JIRA_SAMSUNG_TOKEN app/backend/src/main/kotlin/br/sidia/painel/config/Settings.kt')" 2 "falso positivo aceito: grep que cita a variável do token Samsung é bloqueado"
+caso jira "$(bash_json 'curl -s http://127.0.0.1:8080/api/health # em /Volumes/Development/SIDIA/dashboardJira')" 2 "falso positivo aceito: curl local junto de caminho com dashboardJira é bloqueado"
+
+# Limites DOCUMENTADOS: burlas deliberadas que o guard não consegue ver (o guard é trava de acidente, não de má-fé).
+caso jira "$(bash_json 'JIRA_LIVE_ENABLED=$(echo true) ./gradlew test')" 0 "limite documentado: JIRA_LIVE_ENABLED=\$(echo true) passa (valor calculado em tempo de execução)"
 
 a 'echo x > .env' 2
 a 'git add .env' 2

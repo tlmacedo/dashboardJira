@@ -11,31 +11,44 @@
 # COMO USAR
 #   1. Copie este modelo para o arquivo real (que o git ignora e nunca é commitado):
 #        cp app/config/papeis.exemplo.yaml app/config/papeis.yaml
-#   2. Abra o papeis.yaml e troque os nomes inventados pelos nomes reais do time,
+#   2. Abra o papeis.yaml e troque os nomes e usernames inventados pelos reais do time,
 #      ajuste squads, papéis e datas.
-#   3. NUNCA coloque nomes reais neste arquivo de exemplo.
+#   3. NUNCA coloque nomes ou usernames reais neste arquivo de exemplo.
 #
 # ESTRUTURA (cada pessoa é um item da lista "pessoas")
 #
-#   - id: us-001            # identificador curto e único da pessoa (veja "CONVENÇÃO DE IDS")
+#   - id: dev.alfa1         # username da pessoa no Jira (veja "ID")
 #     nome: Fulano          # nome para exibição
 #     papeis:               # lista de papéis; uma pessoa pode ter VÁRIOS
-#       - papel: USUARIO    # obrigatório: um dos valores da seção abaixo
+#       - papel: USUARIO    # obrigatório: um dos valores da seção "PAPEL"
 #         squad: Alfa       # nome do grupo de pessoas (veja "SQUAD")
 #         de: 2026-01-01    # opcional: início da vigência (veja "DE E ATE")
 #         ate: 2026-06-30   # opcional: fim da vigência
 #
-# VALORES POSSÍVEIS DE "papel" (escreva exatamente assim, em maiúsculas)
+# ID  (identificador ÚNICO DA PESSOA)
+#   É o username que a pessoa tem no Jira Data Center, o MESMO valor que aparece no campo
+#   "assignee" das issues. É por isso que o painel liga issue -> pessoa por simples igualdade.
+#   NÃO é um código de cargo: o id não diz nada sobre o papel (quem muda de cargo continua
+#   com o mesmo id; o cargo está em "papel").
+#   Regras: minúsculas, apenas [a-z0-9._-], de 1 a 64 caracteres, sem começar com hífen.
+#   Cada id é único no arquivo e NUNCA se reutiliza o id de outra pessoa, mesmo que ela saia.
+#   Ids reservados (o painel recusa): dev, system, admin, root, anonymous.
 #
-#   USUARIO       Enxerga SOMENTE os próprios dados.
-#   SQUAD_LEADER  Enxerga os próprios dados e os do seu squad. EXIGE o campo "squad".
-#   COORDENADOR   Enxerga os dados de todos.
-#   GERENTE       Enxerga os dados de todos. É o único que acessa a Integridade
-#                 (e todo acesso a ela é auditado).
+# PAPEL  (o CARGO: define o que a pessoa enxerga)
+#   Escreva exatamente assim, em maiúsculas.
+#
+#   papel          o que enxerga
+#   -------------  ------------------------------------------------------------------
+#   USUARIO        SOMENTE o próprio (as issues em que ela é o assignee).
+#   SQUAD_LEADER   O próprio e os devs do seu squad. EXIGE o campo "squad".
+#   COORDENADOR    Todos.
+#   GERENTE        Todos. É o único que acessa a Integridade (todo acesso é auditado).
+#
+#   Issues cujo responsável NÃO está neste arquivo aparecem só para coordenação e gerente.
 #
 #   Quem pode trocar responsável, vencimento e labels de atraso de uma task (auditoria):
 #     - o Reporter (PL) da task;
-#     - qualquer COORDENADOR (ou GERENTE);
+#     - qualquer COORDENADOR ou o GERENTE;
 #     - o SQUAD_LEADER do squad em que o responsável estava naquela data.
 #   Qualquer outra pessoa que altere esses campos gera alerta ou registro de auditoria.
 #
@@ -45,9 +58,11 @@
 #   estão no mesmo squad quando o texto é idêntico (maiúsculas e minúsculas contam).
 #   "Alfa" e "Beta" abaixo são nomes INVENTADOS de squads de exemplo; troque pelos
 #   squads reais do time.
-#   Uma pessoa pode ter vários papéis. Por exemplo, quem lidera o Alfa e também
-#   trabalha nele tem DUAS entradas: USUARIO com squad Alfa e SQUAD_LEADER com squad Alfa.
 #   Coordenador e gerente não precisam de squad (veem todos).
+#
+# VÁRIOS PAPÉIS NA MESMA PESSOA
+#   Uma pessoa pode ter vários papéis. Quem lidera o Alfa e também trabalha nele tem
+#   DUAS entradas: USUARIO com squad Alfa (é membro) e SQUAD_LEADER com squad Alfa (lidera).
 #
 # DE E ATE (vigência, opcionais)
 #   Datas no formato ISO aaaa-mm-dd, ambas INCLUSIVAS (o dia indicado ainda vale).
@@ -61,57 +76,66 @@
 #     - papel encerrado: SQUAD_LEADER com "ate" preenchido; depois dessa data a pessoa
 #       segue só com os papéis que não têm fim.
 #
-# CONVENÇÃO DE IDS
-#   Duas letras do cargo + hífen + contador de 3 dígitos, sem repetir:
-#     ge-001  gerente          co-001  coordenador
-#     sl-001  Squad Leader     us-001  usuário
-#   A pessoa recebe o prefixo do seu CARGO PRINCIPAL ATUAL (o mais abrangente que ela
-#   tem hoje). Quem foi Squad Leader mas já não é, fica com "us". O contador é por
-#   prefixo e nunca é reaproveitado, mesmo se a pessoa sair.
+# ONDE ACHAR O USERNAME NO JIRA
+#   No perfil da pessoa, campo "Nome de usuário"; ou na URL do perfil:
+#   ...ViewProfile.jspa?name=<username>. É o mesmo texto que aparece em "Responsável"
+#   nas issues quando se filtra por assignee. Copie exatamente, sem adaptar.
+#
+# ERROS COMUNS
+#   - Usar no "id" o nome de exibição ("Maria Silva"), o e-mail ou um código de cargo.
+#     O id é só o username do Jira da pessoa.
+#   - Copiar o username com letra maiúscula. O painel só aceita minúsculas; se o username
+#     real tiver maiúsculas, @, + ou acentos, avise o responsável pelo painel (não adapte).
+#   - Reutilizar o id de outra pessoa (cada id é de uma pessoa só, para sempre).
+#   - Esquecer o "squad" de um USUARIO ou SQUAD_LEADER (o painel recusa o arquivo).
+#   - Deixar uma pessoa só com papéis já encerrados ("ate" no passado): ela some do painel.
+#     Mantenha ao menos um papel sem "ate" para quem continua no time.
+#   Se o id não for o username real, as issues da pessoa não são ligadas a ela.
 #
 # VALIDAÇÃO (o leitor é ESTRITO)
 #   Chaves desconhecidas são rejeitadas e o painel não sobe. Use só os campos
 #   id, nome, papeis, papel, de, ate e squad. Papel desconhecido, Squad Leader sem
-#   squad, ids repetidos e vigência invertida também são recusados.
+#   squad, ids repetidos, ids fora do formato ou reservados e vigência invertida
+#   também são recusados.
 #
 # CAMPOS QUE PODERÃO EXISTIR DEPOIS (ainda NÃO lidos pelo app; NÃO preencher)
 #   Ideias para versões futuras. Estão só em comentário: se você os escrever de verdade
 #   no arquivo, o painel vai recusá-lo.
 #     email:           e-mail corporativo da pessoa
-#     usuario_jira:    username ou key da pessoa no Jira Data Center (liga a pessoa
-#                      ao responsável das tasks)
+#     jira_sidia:      username da pessoa na instância Sidia, só para quem tem um
+#                      username DIFERENTE do "id" lá (o "id" segue sendo o username
+#                      da instância principal)
 #     ativo:           true/false, para desligar sem apagar o histórico
 #     observacao:      texto livre
-#     instancia:       samsung ou sidia (de qual Jira a pessoa vem)
 #     competencias:    lista, por exemplo [android-17]
 #     horas_semanais:  carga contratual, por exemplo 40
 #     alocacao:        percentual alocado ao squad, por exemplo 100
 # =====================================================================================
 pessoas:
   # --- Gerente (vê todos) ---
-  - id: ge-001
+  - id: gerente.exemplo
     nome: Gerente Ficticia
     papeis:
       - papel: GERENTE
 
   # --- Coordenadores (veem todos) ---
-  - id: co-001
+  - id: coord.um
     nome: Coordenador Ficticio Um
     papeis:
       - papel: COORDENADOR
 
-  - id: co-002
+  - id: coord.dois
     nome: Coordenador Ficticio Dois
     papeis:
       - papel: COORDENADOR
 
-  - id: co-003
+  - id: coord.tres
     nome: Coordenador Ficticio Tres
     papeis:
       - papel: COORDENADOR
 
   # --- Squad Leaders: cada um tem USUARIO (é membro) e SQUAD_LEADER (lidera) no mesmo squad ---
-  - id: sl-001
+  - id: lider.alfa
     nome: Lider Alfa Ficticio
     papeis:
       - papel: USUARIO
@@ -119,7 +143,7 @@ pessoas:
       - papel: SQUAD_LEADER
         squad: Alfa
 
-  - id: sl-002
+  - id: lider.beta
     nome: Lider Beta Ficticia
     papeis:
       - papel: USUARIO
@@ -129,7 +153,7 @@ pessoas:
 
   # --- Usuários ---
   # Mudou de squad em 01/07/2026: Alfa até 30/06, Beta a partir de 01/07.
-  - id: us-001
+  - id: dev.mudou
     nome: Pessoa Mudou de Squad
     papeis:
       - papel: USUARIO
@@ -139,15 +163,28 @@ pessoas:
         de: 2026-07-01
         squad: Beta
 
-  # Usuária comum, sempre no Alfa.
-  - id: us-002
-    nome: Pessoa Alfa Ficticia
+  # Usuários comuns do Alfa.
+  - id: dev.alfa1
+    nome: Pessoa Alfa Um Ficticia
     papeis:
       - papel: USUARIO
         squad: Alfa
 
+  - id: dev.alfa2
+    nome: Pessoa Alfa Dois Ficticio
+    papeis:
+      - papel: USUARIO
+        squad: Alfa
+
+  # Usuária comum do Beta.
+  - id: dev.beta1
+    nome: Pessoa Beta Um Ficticia
+    papeis:
+      - papel: USUARIO
+        squad: Beta
+
   # Foi Squad Leader do Alfa até 31/03/2026 (papel encerrado); depois segue como usuário.
-  - id: us-003
+  - id: ex.lider
     nome: Ex-Lider Ficticio
     papeis:
       - papel: USUARIO
