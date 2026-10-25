@@ -309,7 +309,7 @@ class AppContextTest {
         val s = producao(senha = pg.password).copy(
             jiraLiveEnabled = true,
             jiraInstances = mapOf(
-                "samsung" to JiraInstanceSettings("https://jira.exemplo.invalid/", JiraAuthKind.BEARER, null, "tk"),
+                "samsung" to JiraInstanceSettings("https://jira.exemplo.invalid/", JiraAuthKind.BEARER, null, "tk-12345"),
             ),
         )
         AppContext.load(s).use { assertNotNull(it.dataSource) }

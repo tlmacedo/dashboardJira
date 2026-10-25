@@ -168,6 +168,20 @@ class JiraClientRobustezTest {
     }
 
     @Test
+    fun tokenComEntidadesHtmlNomeadasEhMascarado() = runBlocking {
+        val tk = "ab&cd<ef>gh\"ij"
+        val config = JiraInstanceConfig("a", "https://jira.exemplo.invalid/", JiraAuthKind.BEARER, tk, null)
+        val formas = listOf(tk, "ab&amp;cd&lt;ef&gt;gh&quot;ij", "ab&#38;cd&lt;ef&#x3e;gh&quot;ij")
+        for (forma in formas) {
+            val html = MockEngine { respond("<html>$forma</html>", HttpStatusCode.OK, headersOf(HttpHeaders.ContentType, "text/html")) }
+            val e = assertFailsWith<JiraException> { JiraClient(config, HttpClient(html), LiveGuard(true), retry()).search(req) }
+            val texto = e.message.orEmpty() + "\n" + e.details.orEmpty()
+            assertTrue("***" in texto, "sem máscara para: $forma -> $texto")
+            assertFalse("&amp;" in texto || "&lt;" in texto || "&quot;" in texto, "sobrou entidade -> $texto")
+        }
+    }
+
+    @Test
     fun tokenEscapadoEmJsonUrlEHtmlEhMascarado() = runBlocking {
         val tk = "ab+cd/ef=gh"
         val config = JiraInstanceConfig("a", "https://jira.exemplo.invalid/", JiraAuthKind.BEARER, tk, null)

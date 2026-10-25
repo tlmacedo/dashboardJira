@@ -40,8 +40,8 @@ class JiraClientFactoryCacheTest {
     private fun settings(live: Boolean = true) = Settings(
         jiraLiveEnabled = live,
         jiraInstances = mapOf(
-            "samsung" to JiraInstanceSettings("https://jira.exemplo.invalid/", JiraAuthKind.BEARER, null, "tk-um"),
-            "sidia" to JiraInstanceSettings("https://jira2.exemplo.invalid/", JiraAuthKind.BEARER, null, "tk-dois"),
+            "samsung" to JiraInstanceSettings("https://jira.exemplo.invalid/", JiraAuthKind.BEARER, null, "tk-um-1234"),
+            "sidia" to JiraInstanceSettings("https://jira2.exemplo.invalid/", JiraAuthKind.BEARER, null, "tk-dois-123"),
         ),
     )
 

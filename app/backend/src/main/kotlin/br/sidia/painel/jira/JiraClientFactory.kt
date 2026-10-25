@@ -127,6 +127,8 @@ class JiraClientFactory internal constructor(
         if (s.token.isBlank()) falha("token-nao-vazio")
         // Só ASCII imprimível sem espaço (0x21-0x7E): o valor vai num cabeçalho e o Ktor o repetiria em erros.
         if (s.token.any { it.code !in 0x21..0x7E }) falha("token-sem-controle")
+        // Token curto demais mascararia pedaços comuns de mensagens ("a", "id") e as apagaria; a mensagem não ecoa o valor.
+        if (s.token.length < TOKEN_TAMANHO_MINIMO) falha("token-tamanho-minimo")
         if (s.auth == JiraAuthKind.BASIC) {
             val usuario = s.username
             if (usuario.isNullOrBlank()) falha("usuario-obrigatorio-no-basic")
@@ -152,6 +154,7 @@ class JiraClientFactory internal constructor(
 
     private companion object {
         val INSTANCIAS_CONHECIDAS = setOf("samsung", "sidia")
+        const val TOKEN_TAMANHO_MINIMO = 8
         val HOSTS_LOCAIS = setOf("localhost", "127.0.0.1", "[::1]")
     }
 }

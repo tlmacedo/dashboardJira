@@ -70,6 +70,14 @@ internal fun padraoEscapado(segredo: String): Regex {
             '"' -> alternativas += Regex.escape("\\\"")
             '\\' -> alternativas += Regex.escape("\\\\")
         }
+        // Entidades HTML nomeadas dos caracteres que o HTML escapa (token que contém & < > " ').
+        when (c) {
+            '&' -> alternativas += Regex.escape("&amp;")
+            '<' -> alternativas += Regex.escape("&lt;")
+            '>' -> alternativas += Regex.escape("&gt;")
+            '"' -> alternativas += Regex.escape("&quot;")
+            '\'' -> alternativas += Regex.escape("&apos;")
+        }
         if (codigo < 0x100) {
             alternativas += Regex.escape("%" + "%02x".format(codigo))
             alternativas += Regex.escape("%" + "%02X".format(codigo))
