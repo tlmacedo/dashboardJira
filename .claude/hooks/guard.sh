@@ -20,8 +20,9 @@ jira)
     mcp__*tlassian*) negar "ferramenta do Atlassian/Jira ($ferramenta). Regra do projeto: nenhuma consulta ao Jira sem autorização expressa do usuário para cada pesquisa." ;;
   esac
   cmd=$(printf '%s' "$payload" | jq -r '.tool_input.command // ""')
-  # 1) uso das credenciais/URL do Jira em qualquer comando
-  if printf '%s' "$cmd" | grep -Eq 'JIRA_(BASE_URL|TOKEN|EMAIL|SIDIA)[A-Z_]*'; then
+  # 1) uso das credenciais/URL do Jira em qualquer comando: barra QUALQUER JIRA_<letras/números/sublinhado>
+  #    exceto a flag de consulta real (JIRA_LIVE_ENABLED), que tem a regra 4 (ligar = bloqueado; false = liberado).
+  if printf '%s' "$cmd" | grep -Eo 'JIRA_[A-Za-z0-9_]+' | grep -qvx 'JIRA_LIVE_ENABLED'; then
     negar "comando usa variáveis de conexão do Jira. Peça autorização expressa para essa pesquisa."
   fi
   # 2) qualquer cliente de rede/linguagem com URL que cite Jira/Atlassian

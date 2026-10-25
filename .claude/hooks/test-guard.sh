@@ -15,6 +15,11 @@ a() { caso arquivos "$(bash_json "$1")" "$2" "arquivos: $1"; }
 j 'curl -s https://jira.exemplo.com/rest/api/2/search' 2
 j 'python3 -c "import urllib.request as u;u.urlopen(\"https://x.atlassian.net/a\")"' 2
 j 'echo $JIRA_TOKEN' 2
+j 'echo $JIRA_SAMSUNG_TOKEN' 2
+j 'printenv JIRA_SIDIA_URL' 2
+j 'JIRA_LIVE_ENABLED=false ./gradlew test' 0
+j 'JIRA_LIVE_ENABLED=true ./gradlew test' 2
+j 'JIRA_LIVE_ENABLED=1 ./gradlew test' 2
 j 'python -m jiradash serve' 2
 j 'ls -la' 0
 j 'curl -s https://example.com/x.png' 0
