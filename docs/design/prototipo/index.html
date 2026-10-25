@@ -1,0 +1,254 @@
+<!doctype html>
+<html lang="pt-BR" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Painel de Squads — protótipo</title>
+<style>
+/* PROTÓTIPO DESCARTÁVEL: dados fictícios, sem backend. Serve só para aprovar a direção visual. */
+:root{
+  --bg:#F7F7F7;--surface:#FFFFFF;--text:#181818;--text2:#595959;--line:#DADDE6;--soft:#EEF0F6;
+  --primary:#1329A0;--on-primary:#FFFFFF;--accent:#772FEB;--ok:#0B7A3B;--warn:#9A5B00;--bad:#B3261E;
+  --menu:#FFFFFF;--menu-text:#181818;--menu-text2:#595959;--menu-line:#DADDE6;--menu-active:#E8ECFF;
+  --s1:#1329A0;--s2:#772FEB;--s3:#B85A0B;--s4:#0B7A3B;--focus:#3333FF;
+  --frame:none;--font:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+}
+[data-theme=dark]{
+  --bg:#101521;--surface:#171E2E;--text:#EEF1F8;--text2:#B4BCCF;--line:#2A3449;--soft:#1E2740;
+  --primary:#8FA8FF;--on-primary:#0B1030;--accent:#B9A0FF;--ok:#77FF94;--warn:#FFB74D;--bad:#FF8A80;
+  --menu:#0D121C;--menu-text:#EEF1F8;--menu-text2:#B4BCCF;--menu-line:#222B40;--menu-active:#1E2740;
+  --s1:#8FA8FF;--s2:#B9A0FF;--s3:#F58634;--s4:#77FF94;--focus:#8FA8FF;
+}
+[data-theme=sidia]{
+  --bg:#F4F6FF;--surface:#FFFFFF;--text:#10163A;--text2:#4A5073;--line:#D6DBF2;--soft:#E9EDFF;
+  --primary:#1329A0;--menu:#1329A0;--menu-text:#FFFFFF;--menu-text2:#C9D4FF;--menu-line:#3A4DB8;--menu-active:#2438B0;
+  --frame:linear-gradient(90deg,#3E4095 0 25%,#00A85A 25% 50%,#F58634 50% 100%);
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:14px;line-height:1.45}
+button,select{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+.devbar{background:#B3261E;color:#fff;font-weight:600;font-size:12px;padding:5px 16px;text-align:center;letter-spacing:.2px}
+.app{display:grid;grid-template-columns:240px 1fr;min-height:calc(100vh - 28px)}
+.frame{height:5px;background:var(--frame)}
+/* menu */
+.menu{background:var(--menu);color:var(--menu-text);border-right:1px solid var(--menu-line);display:flex;flex-direction:column;padding:16px 12px;gap:4px;position:sticky;top:0;height:calc(100vh - 28px);overflow:auto}
+.menu .logo{padding:4px 8px 14px}
+.menu .logo img{height:34px;display:block}
+.menu .prod{font-size:12px;color:var(--menu-text2);padding:0 8px 12px}
+.grp{font-size:11px;text-transform:uppercase;letter-spacing:.8px;color:var(--menu-text2);padding:14px 8px 4px}
+.menu a{display:block;padding:7px 10px;border-radius:6px;color:var(--menu-text);text-decoration:none;font-size:13.5px}
+.menu a:hover{background:var(--menu-active)}
+.menu a[aria-current=page]{background:var(--menu-active);font-weight:650;box-shadow:inset 3px 0 0 var(--primary)}
+[data-theme=sidia] .menu a[aria-current=page]{box-shadow:inset 3px 0 0 #77FF94}
+.menu .foot{margin-top:auto;padding-top:14px;border-top:1px solid var(--menu-line);display:grid;gap:8px;font-size:12px;color:var(--menu-text2)}
+.seg{display:flex;border:1px solid var(--menu-line);border-radius:7px;overflow:hidden}
+.seg button{flex:1;background:transparent;border:0;padding:6px 4px;cursor:pointer;color:var(--menu-text2);font-size:12px}
+.seg button[aria-pressed=true]{background:var(--menu-active);color:var(--menu-text);font-weight:650}
+/* conteúdo */
+main{padding:22px 28px 48px;min-width:0}
+.top{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;justify-content:space-between;margin-bottom:16px}
+h1{font-size:22px;margin:0;letter-spacing:-.2px}
+.sub{color:var(--text2);margin:2px 0 0;max-width:62ch}
+.tools{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.tools select,.btn{background:var(--surface);border:1px solid var(--line);border-radius:7px;padding:6px 10px;cursor:pointer}
+.btn:hover,.tools select:hover{border-color:var(--primary)}
+.chip{display:inline-block;background:var(--soft);border-radius:99px;padding:2px 10px;font-size:12px;color:var(--text2)}
+/* faixa de KPIs: régua, não grade de cartões iguais */
+.kpis{display:flex;flex-wrap:wrap;background:var(--surface);border:1px solid var(--line);border-radius:10px;margin-bottom:18px}
+.kpi{flex:1 1 150px;padding:14px 18px;border-right:1px solid var(--line);text-align:left;background:none;border-top:0;border-bottom:0;border-left:0;cursor:pointer}
+.kpi:last-child{border-right:0}
+.kpi:hover{background:var(--soft)}
+.kpi .l{font-size:12px;color:var(--text2)}
+.kpi .v{font-size:28px;font-weight:700;letter-spacing:-.5px;font-variant-numeric:tabular-nums}
+.kpi .n{font-size:12px;color:var(--text2)}
+.ok{color:var(--ok)}.warn{color:var(--warn)}.bad{color:var(--bad)}
+.kpi .ok{color:var(--ok)}.kpi .warn{color:var(--warn)}.kpi .bad{color:var(--bad)}
+.sym{font-weight:700}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px 18px;margin-bottom:18px}
+.panel h2{font-size:14px;margin:0 0 10px}
+.two{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,.9fr);gap:18px}
+@media(max-width:1100px){.two{grid-template-columns:1fr}}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{font-weight:600;color:var(--text2);text-align:left;padding:7px 10px;border-bottom:1px solid var(--line);font-size:12px;position:sticky;top:0;background:var(--surface)}
+td{padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:middle}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+tr.row{cursor:pointer}tr.row:hover td{background:var(--soft)}
+.scroll{overflow-x:auto}
+.att{list-style:none;margin:0;padding:0}
+.att li{border-bottom:1px solid var(--line)}
+.att a{display:grid;grid-template-columns:22px 1fr auto auto;gap:8px;align-items:center;padding:9px 4px;color:var(--text);text-decoration:none}
+.att a:hover{background:var(--soft)}
+.att .c{font-weight:700;font-variant-numeric:tabular-nums}
+.att .go{color:var(--text2);font-size:12px}
+/* gráficos */
+.bars{display:flex;align-items:flex-end;gap:6px;height:130px;padding-top:6px}
+.bars i{flex:1;background:var(--s1);border-radius:3px 3px 0 0;min-height:3px;position:relative}
+.bars i:nth-child(odd){opacity:.85}
+.bars b{position:absolute;top:-16px;left:0;right:0;text-align:center;font-size:11px;font-weight:600;color:var(--text2)}
+.axis{display:flex;gap:6px;font-size:11px;color:var(--text2)}.axis span{flex:1;text-align:center}
+.hb{display:grid;grid-template-columns:130px 1fr 80px;gap:10px;align-items:center;padding:6px 0;font-size:13px}
+.track{position:relative;height:14px;background:var(--soft);border-radius:4px}
+.track .m{position:absolute;left:0;top:0;bottom:0;border-radius:4px 0 0 4px;background:var(--s1)}
+.track .p{position:absolute;top:-3px;bottom:-3px;width:3px;background:var(--text)}
+.wait .m{background:var(--s2)}.blk .m{background:var(--s3)}
+.heat td{text-align:center;font-variant-numeric:tabular-nums}
+.heat td:first-child{text-align:left}
+.cal td,.cal th{text-align:center;padding:6px 4px}
+.cal td:first-child,.cal th:first-child{text-align:left;width:120px}
+.abs{display:block;background:repeating-linear-gradient(135deg,var(--soft) 0 6px,var(--line) 6px 8px);border-radius:4px;padding:5px 2px;font-size:12px;color:var(--text2)}
+.due{display:inline-block;min-width:26px;padding:3px 7px;border-radius:99px;background:var(--soft);font-weight:650;cursor:pointer;border:0}
+.hol{display:block;background:var(--soft);border-radius:4px;padding:5px 2px;font-size:12px;color:var(--text2)}
+.legend{color:var(--text2);font-size:12px;margin-top:10px}
+.notice{border:1px solid var(--line);border-left-width:1px;background:var(--soft);padding:8px 12px;border-radius:8px;color:var(--text2);font-size:12.5px;margin-bottom:14px}
+/* gaveta */
+.shade{position:fixed;inset:0;background:rgba(10,14,30,.45);display:none;z-index:20}
+.drawer{position:fixed;top:0;right:0;bottom:0;width:min(460px,100%);background:var(--surface);border-left:1px solid var(--line);z-index:21;transform:translateX(100%);transition:transform .18s ease;overflow:auto;padding:20px}
+.open .shade{display:block}.open .drawer{transform:none}
+.drawer h3{margin:0 0 4px;font-size:17px}
+.drawer .x{float:right}
+.tl{list-style:none;margin:8px 0 0;padding:0;border-left:2px solid var(--line)}
+.tl li{padding:0 0 12px 14px;position:relative;font-size:13px}
+.tl li:before{content:"";position:absolute;left:-6px;top:5px;width:10px;height:10px;border-radius:50%;background:var(--primary)}
+.tl li.bad:before{background:var(--bad)}.tl li.warn:before{background:var(--warn)}
+.own{display:flex;height:16px;border-radius:4px;overflow:hidden;margin:8px 0 4px}
+.own i{display:block}
+@media(prefers-reduced-motion:reduce){.drawer{transition:none}}
+.burger{display:none}
+@media(max-width:820px){
+  .app{grid-template-columns:minmax(0,1fr)}.menu{position:static;height:auto;padding:10px 16px}
+  .menu .prod,#nav,.menu .foot{display:none}
+  .burger{display:inline-block;position:absolute;right:16px;top:14px}
+  .menu{position:relative}.menu .logo{padding-bottom:4px}
+  body.menuopen .menu .prod,body.menuopen #nav{display:block}
+  body.menuopen .menu .foot{display:grid}
+  main{padding:16px}
+  .kpi{flex-basis:44%}.hb{grid-template-columns:90px 1fr 70px}
+}
+</style>
+</head>
+<body>
+<div class="devbar" id="devbar"></div>
+<div class="frame"></div>
+<div class="app">
+  <nav class="menu" aria-label="Menu">
+    <div class="logo"><img id="logo" alt="sidia" src="assets/logo-sidia-azul.png"></div>
+    <button class="btn burger" id="burger" aria-label="Menu" aria-expanded="false">☰</button>
+    <div class="prod" id="prod"></div>
+    <div id="nav"></div>
+    <div class="foot">
+      <div><span id="lblRole"></span><div class="seg" id="role"></div></div>
+      <div><span id="lblTheme"></span><div class="seg" id="theme"></div></div>
+      <div><span id="lblLang"></span><div class="seg" id="lang"></div></div>
+      <div id="tz"></div>
+    </div>
+  </nav>
+  <main id="main" tabindex="-1"></main>
+</div>
+<div id="layer"><div class="shade" id="shade"></div><aside class="drawer" id="drawer" role="dialog" aria-modal="true" aria-labelledby="dtitle"></aside></div>
+<script>
+const S={theme:"light",lang:"pt",role:"gerente",unit:"util"};
+try{Object.assign(S,JSON.parse(localStorage.getItem("proto")||"{}"))}catch(e){}
+{const q=new URLSearchParams(location.search);["theme","lang","role"].forEach(k=>q.get(k)&&(S[k]=q.get(k)))}
+const save=()=>{try{localStorage.setItem("proto",JSON.stringify(S))}catch(e){}};
+const D={
+pt:{prod:"Painel de Squads",dev:"MODO DESENVOLVIMENTO: sem login, todos os dados visíveis · dados fictícios",role:"Papel (simulação)",theme:"Tema",lang:"Idioma",tz:"Fuso: America/Manaus (UTC−4)",
+ roles:{gerente:"Gerente",lider:"Squad Leader",usuario:"Usuário"},themes:{light:"Claro",dark:"Escuro",sidia:"Sidia"},
+ g:{ini:"Início",trab:"Trabalho em curso",res:"Resultados",pra:"Prazos",pes:"Pessoas e planejamento",aud:"Auditoria",gov:"Governança"},
+ n:{central:"Central de atenção",squad:"Meu squad",meu:"Meu painel",abertas:"Abertas",riscos:"Riscos",previsao:"Previsão",tempo:"Tempo em status",esforco:"Esforço por task",metas:"Metas e prazos",venc:"Vencimentos da semana",carga:"Carga por pessoa",cal:"Calendário do time",cobertura:"Cobertura por ausência",plano:"Plano 4–8 semanas",auditoria:"Alterações de data, dono e label",diverg:"Divergência Task × Review",integ:"Integridade",qual:"Qualidade dos dados",sync:"Sincronização"},
+ export:"Exportar CSV",see:"ver tasks",squadAll:"Todos os squads",period:"Últimos 90 dias",
+ central:{sub:"O que pede ação agora. Cada linha leva à tela e às tasks que compõem o número.",k:["Abertas","Vencidas","Risco alto","No prazo","No prazo ajustado"],att:"Indicadores de atenção",
+  rows:[["bad","Pessoas acima da capacidade",6,"Carga por pessoa"],["bad","Atrasos previstos pela capacidade",11,"Plano 4–8 semanas"],["warn","Sem atualização há mais de 7 dias",23,"Negligenciadas"],["warn","Paradas no status além do normal",14,"Negligenciadas"],["bad","Alterações sem autorização",4,"Auditoria"],["warn","Review com vencimento diferente da Task","7,2%","Divergência"]],
+  wk:"Entregas por semana",fc:"Quando o backlog termina",fcN:"semanas (P50 · P85 · P95) com chegada de itens novos",meta:"meta 90%"},
+ tempo:{sub:"Onde as tasks concluídas passam o tempo. Medido em dias úteis por padrão.",k:["Tasks analisadas","Eficiência de fluxo","Paradas além do normal"],byStatus:"Tempo por status (mediana e P85)",heat:"Mediana por pessoa × status (dias)",st:["Em andamento","Em revisão","Bloqueado"],stuck:"Abertas paradas além do normal",cols:["Task","Responsável","Status","Dias no status","Mediana"],util:"Dias úteis",corr:"Dias corridos",d:"d"},
+ cal:{sub:"Ausências, feriados e vencimentos por pessoa. Leitura apenas: as ausências vêm de arquivo YAML versionado.",days:["seg 26","ter 27","qua 28","qui 29","sex 30"],cap:"Capacidade do squad",due:"Vencimentos",abs:"ausência",hol:"Feriado",leg:"Ausência sem motivo detalhado. Clique num número para ver as tasks que vencem, quem cobre e as horas a replanejar.",week:"Semana 26–30 out 2026"},
+ aud:{sub:"Só Reporter (PL), coordenadores ou Squad Leader do responsável podem alterar responsável, vencimento e labels de atraso.",k:["Alterações","Sem autorização","Alertas (autorizadas)","Task × Review ≠"],notice:"Indício para revisão humana, não prova. Confira o histórico no Jira e converse antes de concluir.",cols:["Gravidade","Sinal","Task","Quem alterou","Autorizado"],yes:"Sim → alerta",no:"Não",na:"—",
+  rows:[["▲▲▲","Vencimento alterado pelo responsável","TG-1042","dev.ana",0],["▲▲","LATE_SENT com posse ≥ 2 d antes do vencimento","TG-1051","dev.bruno",null],["▲▲","Vencimento removido","TG-1066","dev.carla",0],["●","Label de atraso após task fechada","TG-1077","pl.diego",1],["▲▲","Review com vencimento ≠ Task","TG-1080","pl.diego",1]],
+  hist:"Histórico campo a campo",own:"Posse da task por pessoa",open:"Abrir no Jira"},
+ meu:{sub:"Só os seus dados.",k:["Minhas abertas","Vencem em 7 dias","Ocupação 4 semanas","Ausências futuras"],fila:"Minha fila (mais urgente primeiro)",cols:["Task","Resumo","Vence","Previsão","Risco"],esf:"Esforço das tasks fechadas no mês",esfK:["Peso por tipo","Testes TEST-*","Horas (worklog)","Índice de esforço"],out:"fora do ar"},
+ generic:"Tela prevista no mapa; fora do escopo deste protótipo.",
+ hint:"Protótipo descartável com dados fictícios. Alterne papel, tema e idioma no menu."},
+en:{prod:"Squad Dashboard",dev:"DEVELOPMENT MODE: no login, all data visible · fictional data",role:"Role (simulation)",theme:"Theme",lang:"Language",tz:"Time zone: America/Manaus (UTC−4)",
+ roles:{gerente:"Manager",lider:"Squad Leader",usuario:"User"},themes:{light:"Light",dark:"Dark",sidia:"Sidia"},
+ g:{ini:"Home",trab:"Work in progress",res:"Results",pra:"Deadlines",pes:"People & planning",aud:"Audit",gov:"Governance"},
+ n:{central:"Attention center",squad:"My squad",meu:"My dashboard",abertas:"Open",riscos:"Risks",previsao:"Forecast",tempo:"Time in status",esforco:"Effort per task",metas:"Goals & deadlines",venc:"Due this week",carga:"Load per person",cal:"Team calendar",cobertura:"Absence coverage",plano:"4–8 week plan",auditoria:"Date, owner & label changes",diverg:"Task × Review mismatch",integ:"Integrity",qual:"Data quality",sync:"Sync"},
+ export:"Export CSV",see:"see tasks",squadAll:"All squads",period:"Last 90 days",
+ central:{sub:"What needs action now. Each row leads to the screen and the tasks behind the number.",k:["Open","Overdue","High risk","On time","Adjusted on time"],att:"Attention indicators",
+  rows:[["bad","People over capacity",6,"Load per person"],["bad","Delays forecast by capacity",11,"4–8 week plan"],["warn","No update for more than 7 days",23,"Neglected"],["warn","Stuck in status beyond normal",14,"Neglected"],["bad","Changes without authorization",4,"Audit"],["warn","Review due date differs from Task","7.2%","Mismatch"]],
+  wk:"Deliveries per week",fc:"When the backlog ends",fcN:"weeks (P50 · P85 · P95) with new items arriving",meta:"goal 90%"},
+ tempo:{sub:"Where completed tasks spend their time. Measured in business days by default.",k:["Tasks analyzed","Flow efficiency","Stuck beyond normal"],byStatus:"Time per status (median and P85)",heat:"Median per person × status (days)",st:["In progress","In review","Blocked"],stuck:"Open tasks stuck beyond normal",cols:["Task","Assignee","Status","Days in status","Median"],util:"Business days",corr:"Calendar days",d:"d"},
+ cal:{sub:"Absences, holidays and due dates per person. Read-only: absences come from a versioned YAML file.",days:["Mon 26","Tue 27","Wed 28","Thu 29","Fri 30"],cap:"Squad capacity",due:"Due dates",abs:"absence",hol:"Holiday",leg:"Absence shown without detailed reason. Click a number to see tasks due, who can cover and hours to replan.",week:"Week Oct 26–30, 2026"},
+ aud:{sub:"Only the Reporter (PL), coordinators or the assignee's Squad Leader may change assignee, due date and delay labels.",k:["Changes","Unauthorized","Alerts (authorized)","Task × Review ≠"],notice:"A signal for human review, not proof. Check the history in Jira and talk to the person before concluding.",cols:["Severity","Signal","Task","Changed by","Authorized"],yes:"Yes → alert",no:"No",na:"—",
+  rows:[["▲▲▲","Due date changed by the assignee","TG-1042","dev.ana",0],["▲▲","LATE_SENT with ownership ≥ 2 d before due","TG-1051","dev.bruno",null],["▲▲","Due date removed","TG-1066","dev.carla",0],["●","Delay label after task closed","TG-1077","pl.diego",1],["▲▲","Review due date ≠ Task","TG-1080","pl.diego",1]],
+  hist:"Field-by-field history",own:"Task ownership per person",open:"Open in Jira"},
+ meu:{sub:"Only your own data.",k:["My open","Due in 7 days","4-week load","Future absences"],fila:"My queue (most urgent first)",cols:["Task","Summary","Due","Forecast","Risk"],esf:"Effort of tasks closed this month",esfK:["Type weight","TEST-* tests","Hours (worklog)","Effort index"],out:"out"},
+ generic:"Screen planned in the map; outside this prototype's scope.",
+ hint:"Disposable prototype with fictional data. Switch role, theme and language in the menu."}};
+const T=()=>D[S.lang];
+const NAV=[["ini",["central","squad","meu"]],["trab",["abertas","riscos","previsao"]],["res",["tempo","esforco"]],["pra",["metas","venc","diverg"]],["pes",["carga","cal","cobertura","plano"]],["aud",["auditoria","integ"]],["gov",["qual","sync"]]];
+const ACCESS={gerente:null,lider:["squad","abertas","riscos","previsao","tempo","esforco","metas","venc","carga","cal","cobertura","plano","meu"],usuario:["meu","abertas","tempo","esforco","metas","venc","cal"]};
+const HOME={gerente:"central",lider:"squad",usuario:"meu"};
+const allowed=id=>!ACCESS[S.role]||ACCESS[S.role].includes(id)||(id==="auditoria"&&S.role==="gerente");
+const $=s=>document.querySelector(s);
+const el=(h)=>{const d=document.createElement("div");d.innerHTML=h.trim();return d.firstChild};
+function seg(id,opts,cur,fn){const n=$(id);n.innerHTML="";opts.forEach(([k,l])=>{const b=document.createElement("button");b.textContent=l;b.setAttribute("aria-pressed",k===cur);b.onclick=()=>{fn(k);save();render()};n.append(b)})}
+function route(){const h=(location.hash||"#/").slice(2);return h||HOME[S.role]}
+function chrome(){const t=T();document.documentElement.dataset.theme=S.theme;document.documentElement.lang=S.lang==="pt"?"pt-BR":"en";
+ $("#devbar").textContent=t.dev;$("#prod").textContent=t.prod;$("#tz").textContent=t.tz;
+ $("#lblRole").textContent=t.role;$("#lblTheme").textContent=t.theme;$("#lblLang").textContent=t.lang;
+ $("#logo").src=S.theme==="light"?"assets/logo-sidia-azul.png":"assets/logo-sidia-branco.png";
+ seg("#role",Object.entries(t.roles),S.role,k=>{S.role=k;location.hash="#/"+HOME[k]});
+ seg("#theme",Object.entries(t.themes),S.theme,k=>S.theme=k);
+ seg("#lang",[["pt","PT"],["en","EN"]],S.lang,k=>S.lang=k);
+ const cur=route();let h="";
+ NAV.forEach(([g,items])=>{const vis=items.filter(allowed);if(!vis.length)return;h+=`<div class="grp">${t.g[g]}</div>`+vis.map(i=>`<a href="#/${i}" ${i===cur?'aria-current="page"':""}>${t.n[i]}</a>`).join("")});
+ $("#nav").innerHTML=h}
+const kpi=(l,v,n,cls="")=>{cls=cls||(n.startsWith("▲")?"bad":n.startsWith("●")?"warn":n.startsWith("✓")?"ok":"");return `<button class="kpi" data-drill="${l}"><div class="l">${l}</div><div class="v ${cls}">${v}</div><div class="n ${cls}">${n||"&nbsp;"}</div></button>`};
+const head=(id,sub,extra="")=>{const t=T();return `<div class="top"><div><h1>${t.n[id]}</h1><p class="sub">${sub}</p></div><div class="tools">${extra}<span class="chip">${t.squadAll}</span><span class="chip">${t.period}</span><button class="btn">${t.export}</button></div></div>`};
+const SYM={bad:"▲",warn:"●",ok:"✓"};
+function vCentral(){const t=T(),c=t.central;
+ const dc=x=>S.lang==="pt"?x:x.replace(",",".");
+ const k=[kpi(c.k[0],"412",S.lang==="pt"?"+8 vs. mês anterior":"+8 vs. previous month"),kpi(c.k[1],"18","▲","bad"),kpi(c.k[2],"9","▲","bad"),kpi(c.k[3],dc("87,4%"),`▲ ${c.meta}`,"warn"),kpi(c.k[4],dc("91,2%"),`✓ ${c.meta}`,"ok")].join("");
+ const rows=c.rows.map(r=>`<li><a href="#/${r[3]==="Auditoria"||r[3]==="Audit"?"auditoria":"central"}"><span class="sym ${r[0]}">${SYM[r[0]]}</span><span>${r[1]}</span><span class="c ${r[0]}">${r[2]}</span><span class="go">${r[3]} →</span></a></li>`).join("");
+ const w=[14,18,16,21,17,19,22,18,20,23,19,21],mx=24;
+ const bars=w.map(v=>`<i style="height:${v/mx*100}%"><b>${v}</b></i>`).join("");
+ return head("central",c.sub)+`<div class="kpis">${k}</div><div class="two"><section class="panel"><h2>${c.att}</h2><ul class="att">${rows}</ul></section><section class="panel"><h2>${c.wk}</h2><div class="bars" role="img" aria-label="${c.wk}">${bars}</div><div class="axis">${w.map((_,i)=>`<span>S${i+1}</span>`).join("")}</div><h2 style="margin-top:20px">${c.fc}</h2><div class="hb" style="grid-template-columns:130px 1fr"><b style="white-space:nowrap">P50 · P85 · P95</b><div class="track"><div class="m" style="width:46%"></div><span class="p" style="left:62%"></span><span class="p" style="left:80%"></span></div></div><p class="sub">9 · 13 · 16 ${c.fcN}</p></section></div>`}
+function vTempo(){const t=T(),c=t.tempo,f=S.unit==="util"?1:1.4,fx=n=>(n*f).toFixed(1).replace(".",",");
+ const tog=`<div class="seg" style="border-color:var(--line)" role="group"><button aria-pressed="${S.unit==="util"}" data-unit="util" style="color:inherit">${c.util}</button><button aria-pressed="${S.unit!=="util"}" data-unit="corr" style="color:inherit">${c.corr}</button></div>`;
+ const rows=[[c.st[0],3.2,6.1,""],[c.st[1],5.4,11,"wait"],[c.st[2],1.1,2.3,"blk"]];
+ const st=rows.map(([n,m,p,cl])=>`<div class="hb ${cl}"><span>${n}</span><div class="track" role="img" aria-label="${n}: ${fx(m)} / ${fx(p)}"><div class="m" style="width:${m*f/16*100}%"></div><span class="p" style="left:${p*f/16*100}%"></span></div><span class="num">${fx(m)} · ${fx(p)} ${c.d}</span></div>`).join("");
+ const cell=v=>{const x=v*f,s=x<=3?["✓","ok"]:x<=6?["●","warn"]:["▲","bad"];return `<td><span class="${s[1]}">${s[0]}</span> ${fx(v)}</td>`};
+ const heat=[["Ana",2.1,4.8,0],["Bruno",2.8,7.2,3],["Carla",1.9,3.1,0],["Diego",3.4,5.2,1.4]].map(r=>`<tr><td>${r[0]}</td>${cell(r[1])}${cell(r[2])}${r[3]?cell(r[3]):"<td>—</td>"}</tr>`).join("");
+ const stuck=[["TG-1103","Ana",c.st[1],9.5,5.4],["TG-1111","Bruno",c.st[2],6.0,1.1],["TG-1120","Diego",c.st[0],7.2,3.2]].map(r=>`<tr class="row" data-task="${r[0]}"><td>${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td><td class="num warn">● ${fx(r[3])} ${c.d}</td><td class="num">${fx(r[4])} ${c.d}</td></tr>`).join("");
+ return head("tempo",c.sub,tog)+`<div class="kpis">${kpi(c.k[0],"236","")}${kpi(c.k[1],"31%","▲","warn")}${kpi(c.k[2],"17","●","warn")}</div><section class="panel"><h2>${c.byStatus}</h2>${st}</section><div class="two"><section class="panel scroll"><h2>${c.heat}</h2><table class="heat"><thead><tr><th></th>${c.st.map(s=>`<th>${s}</th>`).join("")}</tr></thead><tbody>${heat}</tbody></table></section><section class="panel scroll"><h2>${c.stuck}</h2><table><thead><tr>${c.cols.map((x,i)=>`<th class="${i>2?"num":""}">${x}</th>`).join("")}</tr></thead><tbody>${stuck}</tbody></table></section></div>`}
+function vCal(){const t=T(),c=t.cal;
+ const P=[["Ana",["a","a","a","a","a"]],["Bruno",[0,0,2,0,1]],["Carla",[0,0,0,"h",0]],["Diego",[1,0,3,0,0]]];
+ const body=P.map(([n,r])=>`<tr><td>${n}</td>${r.map((v,i)=>`<td>${v==="a"?`<span class="abs">${c.abs}</span>`:v==="h"?`<span class="hol">${c.hol}</span>`:v?`<button class="due ${v>=3?"bad":""}" data-cell="${n}|${c.days[i]}">${v>=3?"▲ ":""}${v}</button>`:"·"}</td>`).join("")}</tr>`).join("");
+ const capr=[82,80,71,55,60].map(v=>`<td class="${v<60?"bad":v<75?"warn":"ok"}"><b>${v<60?"▲ ":v<75?"● ":"✓ "}${v}%</b></td>`).join("");
+ return head("cal",c.sub,`<span class="chip">${c.week}</span>`)+`<section class="panel scroll"><table class="cal"><thead><tr><th></th>${c.days.map(d=>`<th>${d}</th>`).join("")}</tr></thead><tbody>${body}<tr><td><b>${c.cap}</b></td>${capr}</tr><tr><td><b>${c.due}</b></td>${[3,5,9,4,6].map(v=>`<td><b class="${v>=9?"bad":""}">${v>=9?"▲ ":""}${v}</b></td>`).join("")}</tr></tbody></table><p class="legend">${c.leg}</p></section>`}
+function vAud(){const t=T(),a=t.aud;
+ const rows=a.rows.map((r,i)=>`<tr class="row" data-aud="${i}"><td class="${r[0].length>2?"bad":"warn"} sym">${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td><td>${r[3]}</td><td>${r[4]===0?`<span class="bad sym">✕ ${a.no}</span>`:r[4]===1?`<span class="warn sym">● ${a.yes}</span>`:a.na}</td></tr>`).join("");
+ return head("auditoria",a.sub)+`<div class="notice">${a.notice}</div><div class="kpis">${kpi(a.k[0],"128","")}${kpi(a.k[1],"14","▲","bad")}${kpi(a.k[2],"9","●","warn")}${kpi(a.k[3],"7,2%","●","warn")}</div><section class="panel scroll"><table><thead><tr>${a.cols.map(x=>`<th>${x}</th>`).join("")}</tr></thead><tbody>${rows}</tbody></table></section>`}
+function vMeu(){const t=T(),m=t.meu;
+ const q=[["TG-1210","Checklist — SM-X236B","28/10","30/10 ▲","bad"],["TG-1215","Checklist Review — SM-X236B","30/10","29/10 ✓","ok"],["TG-1221","Propagation — Android 17","03/11","02/11 ✓","ok"]].map(r=>`<tr class="row" data-task="${r[0]}"><td>${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td><td class="${r[4]}">${r[3]}</td><td class="${r[4]}">${r[4]==="bad"?"▲":"✓"}</td></tr>`).join("");
+ return head("meu",m.sub)+`<div class="kpis">${kpi(m.k[0],"14","")}${kpi(m.k[1],"3","●","warn")}${kpi(m.k[2],"92%","●","warn")}${kpi(m.k[3],"1","10–14/11")}</div><section class="panel scroll"><h2>${m.fila}</h2><table><thead><tr>${m.cols.map(x=>`<th>${x}</th>`).join("")}</tr></thead><tbody>${q}</tbody></table></section><section class="panel"><h2>${m.esf}</h2><div class="kpis" style="margin:0">${kpi(m.esfK[0],"3,0","")}${kpi(m.esfK[1],"12","")}${kpi(m.esfK[2],"41 h","")}${kpi(m.esfK[3],"57","")}</div></section>`}
+const vGeneric=id=>`<div class="top"><div><h1>${T().n[id]}</h1><p class="sub">${T().generic}</p></div></div>`;
+function drawer(html){$("#drawer").innerHTML=`<button class="btn x" id="close" aria-label="Fechar">✕</button>${html}`;document.body.classList.add("open");$("#close").onclick=closeD;$("#close").focus()}
+function closeD(){document.body.classList.remove("open")}
+function taskDrawer(k){const a=T().aud;drawer(`<h3 id="dtitle">${k}</h3><p class="sub">Checklist — SM-X236B · Android 17</p><h4>${a.hist}</h4><ul class="tl"><li>20/10 09:12 · created by pl.diego</li><li>21/10 14:03 · assignee → dev.ana (pl.diego ✓)</li><li class="bad">27/10 17:40 · due 28/10 → 30/10 (dev.ana ✕)</li><li class="warn">28/10 08:05 · label LATE_SENT added (dev.ana)</li></ul><h4>${a.own}</h4><div class="own" role="img" aria-label="ownership"><i style="width:35%;background:var(--s2)"></i><i style="width:65%;background:var(--s1)"></i></div><div class="sub">pl.diego 2 d · dev.ana 4 d</div>`)}
+function render(){chrome();const id=route();const m=$("#main");
+ if(!allowed(id)){m.innerHTML=`<div class="top"><div><h1>${T().n[id]||id}</h1><p class="sub">🔒 ${S.lang==="pt"?"Sem permissão para este papel.":"Not available for this role."}</p></div></div>`;return}
+ const V={central:vCentral,squad:vCentral,tempo:vTempo,cal:vCal,auditoria:vAud,meu:vMeu};
+ m.innerHTML=(V[id]||(()=>vGeneric(id)))();
+ m.querySelectorAll("[data-unit]").forEach(b=>b.onclick=()=>{S.unit=b.dataset.unit;save();render()});
+ m.querySelectorAll("[data-task]").forEach(r=>r.onclick=()=>taskDrawer(r.dataset.task));
+ m.querySelectorAll("[data-aud]").forEach(r=>r.onclick=()=>taskDrawer(T().aud.rows[r.dataset.aud][2]));
+ m.querySelectorAll("[data-cell]").forEach(b=>b.onclick=()=>{const[n,d]=b.dataset.cell.split("|");drawer(`<h3 id="dtitle">${n} · ${d}</h3><p class="sub">${S.lang==="pt"?"Tasks que vencem, quem pode cobrir e horas a replanejar.":"Tasks due, who can cover and hours to replan."}</p><table><tbody><tr><td>TG-1210</td><td>Checklist</td><td class="bad">▲ 8 h</td></tr><tr><td>TG-1233</td><td>Review</td><td>3 h</td></tr></tbody></table><p class="sub">${S.lang==="pt"?"Cobertura sugerida: Carla (folga 22%, competência Android 17).":"Suggested cover: Carla (22% slack, Android 17 skill)."}</p>`)});
+ m.querySelectorAll("button.kpi").forEach(b=>b.onclick=()=>drawer(`<h3 id="dtitle">${b.dataset.drill}</h3><p class="sub">${T().see} — ${S.lang==="pt"?"janela, nova aba e CSV, com a coluna Detalhe.":"window, new tab and CSV, with a Detail column."}</p>`))}
+$("#burger").onclick=()=>{const o=document.body.classList.toggle("menuopen");$("#burger").setAttribute("aria-expanded",o)};
+$("#shade").onclick=closeD;document.addEventListener("keydown",e=>{if(e.key==="Escape")closeD()});
+addEventListener("hashchange",()=>{closeD();render()});render();
+</script>
+</body>
+</html>

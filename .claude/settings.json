@@ -1,0 +1,30 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "mcp__.*tlassian.*|Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/guard.sh jira",
+            "timeout": 10,
+            "onFailure": "block",
+            "statusMessage": "Verificando trava do Jira..."
+          }
+        ]
+      },
+      {
+        "matcher": "Write|Edit|NotebookEdit|Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/guard.sh arquivos",
+            "timeout": 10,
+            "onFailure": "block",
+            "statusMessage": "Verificando segredos e configs reais..."
+          }
+        ]
+      }
+    ]
+  }
+}
