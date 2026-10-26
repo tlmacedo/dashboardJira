@@ -3,7 +3,7 @@
 ## COMECE AQUI (ClineSR, outro PC, clone do GitHub)
 
 1. Leia, nesta ordem: `.clinerules/00-regras-do-projeto.md` → `docs/guia-execucao-outra-ia.md` → `docs/ferramentas-claude-para-o-cline/README.md` → `CLAUDE.md` → este arquivo → o índice `docs/superpowers/plans/2026-10-24-indice-dos-planos.md`.
-2. **Estado do código:** Planos 1, 2, 3A e 3 estão na `main`. O **Plano 4A (sincronização periódica, 12 tarefas)** e o **Plano 4 (Auditoria, 9 tarefas)** eram a missão da noite de 25/10; veja a seção "Plano 4A" abaixo e o arquivo de progresso `docs/superpowers/progresso/2026-10-25-plano-04a-sincronizacao.md` (estado final, Minor adiados, rulings, as 8 coisas do ClineSR e as pendências da 1ª conexão). Os planos 5 a 16 e suas specs (`docs/superpowers/specs/2026-10-25-spec-fase-*.md`) estão escritos e aguardam execução, na ordem do índice.
+2. **Estado do código:** Planos 1, 2, 3A, 3 e **4A (sincronização periódica, 12 tarefas, PR #14)** estão na `main`; veja `docs/superpowers/progresso/2026-10-25-plano-04a-sincronizacao.md` (estado final, Minor adiados, rulings, as 8 coisas do ClineSR e as pendências da 1ª conexão). O **Plano 4 (Auditoria, 9 tarefas) está PARCIAL na branch `feat/auditoria`** (PR aberta como rascunho, não mesclada): Tarefas 1 a 3 concluídas e revisadas (a 3 com a correção do alerta de loop em `35d7326`); **continue pela Tarefa 4** conforme `docs/superpowers/progresso/2026-10-25-plano-04-auditoria.md` (estado por tarefa e passo a passo). Os planos 5 a 16 e suas specs (`docs/superpowers/specs/2026-10-25-spec-fase-*.md`) estão escritos e aguardam execução, na ordem do índice.
 3. **Jira:** a flag `JIRA_LIVE_ENABLED` é a única trava (`false` = proibido para todos; `true` = liberado). Só o usuário a muda. O primeiro uso real segue `docs/jira/checklist-primeira-conexao.md` e o Plano 14a.
 4. **Dúvida ou falta de direção = pergunta ao usuário** com opções (recomendada primeiro, cada opção com porquê e consequência). Workflows do Cline em `.clinerules/workflows/`.
 5. **Clone o projeto numa pasta SEM "jira" no nome** (o hook de proteção bloqueia a palavra), no Windows 11 use os comandos PowerShell dos workflows, e rode primeiro o teste do hook (`docs/ferramentas-claude-para-o-cline/hooks.md`). Instalar as skills de terceiros: `scripts/instalar-skills-cline.ps1`.
@@ -13,7 +13,7 @@
 
 ## Onde paramos
 
-As PRs #5, #6, #7 e #8 (planejamento, Planos 1, 2 e 3A) foram **mescladas na `main` em 25/10** (`5afb93f`), a pedido do usuário, depois do CI. O repositório `tlmacedo/dashboardJira` está PRIVADO (o histórico tem usernames reais). As branches locais mescladas foram apagadas; as remotas correspondentes ainda existem no GitHub (apagar só se o usuário quiser). **Plano 3 (`feat/tempo-em-status`) executado e revisado (tarefas 0A a 7, onda final de Minor e revisão final); branch publicada e PR aberta em 25/10, merge só quando o usuário mandar.** Os Planos 1, 2 e 3A estão executados e revisados.
+As PRs #5, #6, #7 e #8 (planejamento, Planos 1, 2 e 3A) foram **mescladas na `main` em 25/10** (`5afb93f`), a pedido do usuário, depois do CI. O repositório `tlmacedo/dashboardJira` está PRIVADO (o histórico tem usernames reais). As branches locais mescladas foram apagadas; as remotas correspondentes ainda existem no GitHub (apagar só se o usuário quiser). **Plano 3 (`feat/tempo-em-status`) executado e revisado (tarefas 0A a 7, onda final de Minor e revisão final); mesclado na `main` em 25/10 (PR #9).** Os Planos 1, 2 e 3A estão executados e revisados.
 
 **Regra de fim de branch (usuário, 25/10):** revisão, commit, push, PR, voltar a `main` e `pull`, sempre. Antes do push, checar dados pessoais no histórico a publicar (usernames reais, nomes, segredos, informação interna) e a visibilidade do repositório.
 
@@ -28,17 +28,17 @@ As PRs #5, #6, #7 e #8 (planejamento, Planos 1, 2 e 3A) foram **mescladas na `ma
 
 Commits do Plano 3A: `9cd22aa` (plano) até `8e84a31` (ajustes de identidade). Plano 2: `b734dea` até `9fceb8b`. Plano 1: `87a12db` até `8202fcb`.
 
-## Plano 4A (sincronização periódica), estado em 26/10 (branch `feat/sincronizacao`)
+## Plano 4A (sincronização periódica), estado em 26/10 (mesclado na `main`, PR #14)
 
-- **Plano 4A pronto**: as 12 tarefas, a onda final de Minor, a revisão final (opus) e a rodada de correção dela (I1 a I4 e M1 a M4) estão na branch. Falta só o fim de fluxo (varredura de dados pessoais, push, PR contra a `origin/main`, merge). Detalhes, commits, testes, Minor adiados e rulings: `docs/superpowers/progresso/2026-10-25-plano-04a-sincronizacao.md`.
-- **Próximo: Plano 9 e depois Plano 4**, conforme o índice dos planos.
-- **Nenhum acesso ao Jira foi feito.** O primeiro ciclo real é do **usuário**: ele liga a flag de acesso ao Jira **à mão** e segue o runbook (Etapa 1 com `SYNC_MAX_ITENS=50` e `SYNC_MAX_REQUISICOES=5`). O ClineSR (ou qualquer IA) **pede a ele**: os hooks barram a IA de editar o arquivo de ambiente, o compose e as settings, e de gravar texto que ligue a flag. **Decisão provisória de 26/10 (madrugada), a confirmar com o usuário** (a alternativa é uma exceção explícita nos hooks).
+- **Plano 4A pronto**: as 12 tarefas, a onda final de Minor, a revisão final (opus) e a rodada de correção dela (I1 a I4 e M1 a M4) estão na `main` (PR #14, `ecc4d98`). Detalhes, commits, testes, Minor adiados e rulings: `docs/superpowers/progresso/2026-10-25-plano-04a-sincronizacao.md`.
+- **Plano 4 (Auditoria) em andamento** na `feat/auditoria` (PR #15, rascunho): Tarefas 1 a 3 feitas; próxima: Tarefa 4. Depois, o Plano 9 (CI) e os demais na ordem do índice.
+- **Nenhum acesso ao Jira foi feito.** O primeiro ciclo real é do **usuário**: ele liga a flag de acesso ao Jira **à mão** e segue o runbook (Etapa 1 com `SYNC_MAX_ITENS=50` e `SYNC_MAX_REQUISICOES=5`). O ClineSR (ou qualquer IA) **pede a ele**: os hooks barram a IA de editar o arquivo de ambiente, o compose e as settings, e de gravar texto que ligue a flag. **Decisão confirmada pelo usuário em 26/10.**
 - Travas dos hooks são de acidente, não de má-fé (ruling de 26/10); três opções de endurecimento ficam para decisão futura do usuário (proteger os diretórios de hooks, resolver symlinks, bloquear qualquer escrita que cite a flag com valor diferente de desligado): ver o arquivo de progresso.
 - Pendências do primeiro ciclo: formato de `from/to` do assignee (`JIRAUSER*`), fuso do `updated >=`, `key in (...)` com chave apagada (HTTP 400 e fallback por chave), tipo e direção do link `Blocks` (linhas na matriz de compatibilidade). `SYNC_INSTANCIAS` só aceita `samsung` por enquanto (`sidia` exige ficha própria, Plano 14b).
 
 ## Próximos passos, em ordem
 
-1. **Plano 4A pronto; próximo: Plano 9 e depois Plano 4.** Fim de fluxo do 4A: varredura de dados pessoais, push, PR contra a `origin/main`, merge (a sincronização periódica, a retenção e o `status_map.yaml` fora do `.gitignore`, antes pendências sem dono, foram entregues no 4A).
+1. **Continuar o Plano 4 pela Tarefa 4** (estado em `docs/superpowers/progresso/2026-10-25-plano-04-auditoria.md`); depois o Plano 9 e os demais na ordem do índice. O Plano 4A já está na `main`.
 2. **Ordem dos planos:** conforme o índice em `docs/superpowers/plans/2026-10-24-indice-dos-planos.md`; detalhar só ao iniciar.
 3. Regra de integração: cada branch termina com revisão, push, PR e volta à `main` com `pull`; mesclar só quando o usuário mandar.
 

@@ -1,0 +1,11 @@
+# Modelo dos labels de atraso (copie para labels_atraso.yaml e ajuste). Não leva dado pessoal.
+# Estrito: chave desconhecida falha ao carregar.
+versao: 1
+
+# Labels que justificam um atraso. Sem diferenciar maiúsculas. Um "*" só vale no FIM do padrão
+# (prefixo): "ONHOLDBY-*" casa ONHOLDBY-PL; padrões como "*X" e "A*B" falham ao carregar.
+justificativas: ["ONHOLDBY-*", "LATE_SENT", "LATE_REVIEW", "DUEDATE_NEGOTIATED", "BI-CONSIDERCANCELLED"]
+
+# Subconjunto de justificativas que marca entrega tardia (os dois labels de atraso da spec 4.2).
+# Cada item precisa estar coberto por justificativas.
+tardias: ["LATE_SENT", "LATE_REVIEW"]

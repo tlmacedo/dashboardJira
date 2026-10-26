@@ -23,6 +23,7 @@ fun testContextComBanco(
     jira: JiraClientFactory = JiraClientFactory(settings),
 ): AppContext {
     val campos = camposDeTeste()
+    val vinculos = vinculosDeTeste()
     val ds = Database.connect(container.jdbcUrl, container.username, container.password, poolSize = 4)
     ds.connection.use { it.createStatement().execute("DROP SCHEMA public CASCADE; CREATE SCHEMA public;") }
     Database.migrate(ds)
@@ -35,7 +36,9 @@ fun testContextComBanco(
         statusMap = StatusMap.fromYaml(TestPaths.configDir.resolve("status_map.exemplo.yaml")),
         campos = campos,
         fichas = fichasDeTeste(campos),
-        vinculos = vinculosDeTeste(),
+        vinculos = vinculos,
+        labelsDeAtraso = labelsDeAtrasoDeTeste(),
+        regrasAuditoria = regrasDeAuditoriaDeTeste(vinculos),
         clock = clock,
     )
 }

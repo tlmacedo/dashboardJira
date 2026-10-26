@@ -40,7 +40,7 @@ O Plano 4A está **pronto**. Falta apenas o fim de fluxo da branch (varredura de
 ## Rulings (decisões já tomadas)
 
 1. **Auditoria Task x Review (25/10, usuário):** pareamento pelo link "Blocks / is blocked by", não pelo `parent`. Tipo e direção do link a confirmar na 1ª conexão (configurável em YAML, aceita as duas direções). Escrita no Jira pelo painel (corrigir vencimento, labels) é **futuro**: Plano 16, não executar sem decisão do usuário.
-2. **Quem liga a flag de acesso ao Jira (I5, madrugada de 26/10): o USUÁRIO, à mão.** O ClineSR pede a ele. Os hooks barram a IA de editar o arquivo de ambiente, o compose e as settings, e de gravar texto que ligue a flag. **Decisão provisória, a confirmar com o usuário** (primeira pergunta da próxima sessão com ele). A alternativa seria uma exceção explícita nos hooks.
+2. **Quem liga a flag de acesso ao Jira (I5, madrugada de 26/10): o USUÁRIO, à mão.** O ClineSR pede a ele. Os hooks barram a IA de editar o arquivo de ambiente, o compose e as settings, e de gravar texto que ligue a flag. **CONFIRMADA pelo usuário em 26/10 (manhã):** ele liga a flag à mão e avisa o ClineSR. Nenhuma exceção nos hooks.
 3. **Travas dos hooks são "de acidente", não de má-fé (ruling de 26/10, repetido após o segundo security review):** os achados médios (symlink/`ln` para arquivo protegido; opções de `git`, `rg` e `docker` que escrevem arquivos; hooks sem auto-proteção; conteúdo em formatos decodificados) **não foram escalados**. Motivo: são contornos deliberados de dois passos ou de opções raras, fora do alvo de uma trava de acidente; proteger `.claude/hooks/**` bloquearia edições legítimas dos próximos planos (inclusive as do ClineSR). A proteção real é revisão humana por PR de toda mudança nos hooks. Custo se estiver errado: uma IA mal-intencionada poderia contornar; mitigado pela revisão de PR e pelo fato de a flag só mudar pelo usuário.
 4. **Opções de endurecimento para decisão futura do usuário:**
    - (a) proteger `.claude/hooks/**` e `.clinerules/hooks/**` contra escrita pela IA (custo: bloqueia edições legítimas e passa a exigir o usuário);
@@ -121,4 +121,4 @@ Seguir `docs/jira/checklist-primeira-conexao.md` e `docs/jira/runbook-sincroniza
 - Formato real de `duedate`, `labels` e do `from/to` do assignee (Plano 4, Tarefa 9).
 - `SYNC_INSTANCIAS` só aceita `samsung` por enquanto; a instância `sidia` exige ficha própria (Plano 14b).
 - Calendário real e demais YAML reais montados pelo compose (somente leitura); o banco precisa estar sem dados de demonstração antes de ligar a flag.
-- Confirmar com o usuário o ruling provisório sobre quem liga a flag e as opções de endurecimento dos hooks.
+- Quem liga a flag: **confirmado** (o usuário, à mão). Ainda para decidir com o usuário: as opções de endurecimento dos hooks (proteger `.claude/hooks/**` e `.clinerules/hooks/**` da escrita da IA; resolver o caminho real antes de comparar; barrar qualquer escrita que cite a flag com valor diferente de `false`).

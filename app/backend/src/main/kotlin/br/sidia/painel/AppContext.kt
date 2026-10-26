@@ -2,6 +2,8 @@ package br.sidia.painel
 
 import br.sidia.painel.config.Settings
 import br.sidia.painel.db.Database
+import br.sidia.painel.auditoria.RegrasDeAuditoria
+import br.sidia.painel.domain.LabelsDeAtraso
 import br.sidia.painel.domain.StatusMap
 import br.sidia.painel.jira.JiraClientFactory
 import br.sidia.painel.jql.CardSpec
@@ -35,6 +37,10 @@ class AppContext(
     val fichas: Map<String, CardSpec>,
     /** Como a Review se liga à sua task (tipo do link, tipos de issue); lido de `vinculos.yaml`. */
     val vinculos: VinculosConfig,
+    /** Labels que justificam atraso e os que marcam entrega tardia; lido de `labels_atraso.yaml`. */
+    val labelsDeAtraso: LabelsDeAtraso,
+    /** Limites, gravidades e versão das regras da auditoria; lido de `auditoria.yaml`. */
+    val regrasAuditoria: RegrasDeAuditoria,
     val clock: Clock = Clock.system(settings.zone),
 ) : AutoCloseable {
     private val aoFechar = java.util.concurrent.CopyOnWriteArrayList<() -> Unit>()
@@ -89,6 +95,11 @@ class AppContext(
             // Vínculos Review x task (tipo do link e tipos de issue): config sem dado pessoal; o modelo só cai em dev.
             val arquivoVinculos = resolver(settings, "vinculos")
             val vinculos = lerYaml(arquivoVinculos) { VinculosConfig.fromYaml(arquivoVinculos) }
+            // Labels de atraso e regras da auditoria: config versionada sem dado pessoal; o modelo só cai em dev.
+            val arquivoLabels = resolver(settings, "labels_atraso")
+            val labelsDeAtraso = lerYaml(arquivoLabels) { LabelsDeAtraso.fromYaml(arquivoLabels) }
+            val arquivoAuditoria = resolver(settings, "auditoria")
+            val regrasAuditoria = lerYaml(arquivoAuditoria) { RegrasDeAuditoria.fromYaml(arquivoAuditoria, vinculos) }
 
             // Valida na subida todas as instâncias do Jira configuradas (sem enviar nada); só id e regra na falha.
             val jira = JiraClientFactory(settings)
@@ -102,7 +113,7 @@ class AppContext(
             }
 
             val ds = abrirBanco(settings)
-            return AppContext(settings, calendario, papeis, ds, jira, mapaDeStatus, campos, fichas, vinculos, clock)
+            return AppContext(settings, calendario, papeis, ds, jira, mapaDeStatus, campos, fichas, vinculos, labelsDeAtraso, regrasAuditoria, clock)
         }
 
         /**
