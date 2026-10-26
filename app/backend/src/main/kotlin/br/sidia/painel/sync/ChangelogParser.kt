@@ -33,6 +33,14 @@ data class ChangeEventRecord(
 
 /** Converte o JSON do Jira DC (issue + históricos do changelog) em linha do tempo e em eventos. */
 object ChangelogParser {
+
+    /**
+     * Campos cujo valor antigo/novo é gravado em `change_event` (necessários ao cálculo e à auditoria).
+     * O responsável (`assignee`) tem tratamento próprio (username normalizado). Os demais campos
+     * (reporter, description, summary, comment...) gravam só o nome do campo, sem texto nem nomes de pessoas.
+     */
+    private val CAMPOS_COM_VALOR = listOf("status", "resolution", "duedate", "labels", "OS Version")
+
     private val OFFSET_SEM_DOIS_PONTOS: DateTimeFormatter = DateTimeFormatterBuilder()
         .append(DateTimeFormatter.ISO_LOCAL_DATE_TIME)
         .appendOffset("+HHmm", "Z")
@@ -77,8 +85,10 @@ object ChangelogParser {
                 val item = el as? JsonObject ?: return@forEachIndexed
                 val campo = item.texto("field") ?: return@forEachIndexed
                 val ehResponsavel = campo.equals("assignee", ignoreCase = true)
-                val de = if (ehResponsavel) usuario(item, "from", "fromString") else item.texto("fromString")
-                val para = if (ehResponsavel) usuario(item, "to", "toString") else item.texto("toString")
+                val guardaValor = CAMPOS_COM_VALOR.any { campo.equals(it, ignoreCase = true) }
+                // Campos fora da lista só registram que houve mudança: nunca o texto (privacidade).
+                val de = if (ehResponsavel) usuario(item, "from", "fromString") else if (guardaValor) item.texto("fromString") else null
+                val para = if (ehResponsavel) usuario(item, "to", "toString") else if (guardaValor) item.texto("toString") else null
                 eventos += ChangeEventRecord("$key:$historicoId:$i", key, campo, de, para, quando, autor)
             }
         }

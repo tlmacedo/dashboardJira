@@ -79,6 +79,36 @@ class ChangelogParserTest {
     }
 
     @Test
+    fun camposForaDaListaNaoGuardamTextoAntigoNemNovo() {
+        val h = historicos(
+            """[{"id":"7","created":"2026-10-03T10:00:00.000-0400","author":{"name":"Ana.Silva"},
+                "items":[
+                 {"field":"reporter","from":"u1","to":"u2","fromString":"Pessoa Exemplo Um","toString":"Pessoa Exemplo Dois"},
+                 {"field":"description","fromString":"texto antigo livre","toString":"texto novo livre"},
+                 {"field":"summary","fromString":"titulo antigo","toString":"titulo novo"},
+                 {"field":"Comment","fromString":null,"toString":"comentario com dado pessoal"},
+                 {"field":"status","from":"1","to":"3","fromString":"To Do","toString":"In Progress"},
+                 {"field":"resolution","fromString":null,"toString":"Done"},
+                 {"field":"duedate","fromString":"2026-10-01","toString":"2026-10-09"},
+                 {"field":"labels","fromString":"","toString":"atraso_justificado"}
+                ]}]""",
+        )
+        val porCampo = ChangelogParser.toEvents(issue(), h).associateBy { it.field }
+        for (campo in listOf("reporter", "description", "summary", "Comment")) {
+            val e = porCampo.getValue(campo)
+            assertNull(e.from, campo)
+            assertNull(e.to, campo)
+            assertEquals("ana.silva", e.authorRef, campo)
+        }
+        assertEquals("In Progress", porCampo.getValue("status").to)
+        assertEquals("Done", porCampo.getValue("resolution").to)
+        assertEquals("2026-10-09", porCampo.getValue("duedate").to)
+        assertEquals("atraso_justificado", porCampo.getValue("labels").to)
+        // ids continuam estáveis por item (idempotência do sync)
+        assertEquals(8, porCampo.values.map { it.changelogId }.toSet().size)
+    }
+
+    @Test
     fun idDoEventoEUnicoPorItem() {
         val h = historicos(
             """[{"id":"5","created":"2026-10-02T10:00:00.000-0400","items":[
