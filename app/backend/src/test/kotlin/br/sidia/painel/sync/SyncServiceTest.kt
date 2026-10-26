@@ -382,6 +382,24 @@ class SyncServiceTest {
     }
 
     @Test
+    fun tetosDaEtapa1DoRunbookRepetidosNaoSuspendem() = runBlocking {
+        // Etapa 1 do runbook: tetos pequenos de propósito; repetir o ciclo não pode suspender a instância.
+        val porItens = montar(SyncSettings(maxItens = 1))
+        issues = listOf(issue(1, em("12:10:00")), issue(2, em("12:20:00")))
+        repeat(5) { assertEquals("TETO_ITENS", executada(porItens.incremental("samsung")).codigoErro) }
+        assertNull(estado.suspensa("samsung"))
+        ctx?.close()
+        val porRequisicoes = montar(SyncSettings(maxRequisicoes = 1))
+        porPagina = 1
+        issues = listOf(issue(3, em("12:30:00")), issue(4, em("12:40:00")))
+        repeat(5) { assertEquals("ORCAMENTO_REQUISICOES", executada(porRequisicoes.incremental("samsung")).codigoErro) }
+        assertNull(estado.suspensa("samsung"))
+        val s = porRequisicoes
+        // Uma execução de verdade ainda roda depois dos limites (não ficou negada).
+        assertIs<ResultadoExecucao.Executada>(s.incremental("samsung"))
+    }
+
+    @Test
     fun instanciaForaDaListaNaoExecuta() = runBlocking {
         val s = montar(SyncSettings(instancias = listOf("samsung")))
         assertEquals(ResultadoExecucao.Negada(MotivoNegacao.INSTANCIA_NAO_CONFIGURADA), s.incremental("sidia"))

@@ -174,6 +174,7 @@
   "sinc.tipo.RETENCAO": "Retenção",
   "sinc.status.OK": "OK",
   "sinc.status.FALHA": "Falha",
+  "sinc.status.INCOMPLETA": "Incompleta (limite)",
   "sinc.status.CANCELADA": "Cancelada",
   "sinc.status.EM_ANDAMENTO": "Em andamento",
   "sinc.erro.HTTP_401": "Não autorizado (HTTP 401): o Jira recusou a credencial",

@@ -169,6 +169,16 @@ describe('tela Sincronização', () => {
     expect(screen.getByText('Carregando…')).toBeInTheDocument()
   })
 
+  it('limiteDeCargaApareceComoIncompletaEnaoComoFalha', async () => {
+    simular(200, {
+      ...LIGADO,
+      instancias: [{ ...LIGADO.instancias[0], execucoes: [{ ...EXEC_FALHA, codigoErro: 'TETO_ITENS' }] }],
+    })
+    renderizar()
+    expect(await screen.findByText(/● Incompleta \(limite\)/)).toBeInTheDocument()
+    expect(screen.queryByText(/▲ Falha/)).not.toBeInTheDocument()
+  })
+
   it('nuncaMostraTextoLivreDeErro', async () => {
     simular(200, {
       ...LIGADO,

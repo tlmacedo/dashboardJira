@@ -8,14 +8,17 @@ import './sincronizacao.css'
 const FUSO = 'America/Manaus'
 
 /** A cor nunca é o único sinal: todo estado leva símbolo e texto. */
-const SIMBOLO_STATUS: Record<string, string> = { OK: '✓', FALHA: '▲', CANCELADA: '●', EM_ANDAMENTO: '●' }
+const SIMBOLO_STATUS: Record<string, string> = { OK: '✓', FALHA: '▲', INCOMPLETA: '●', CANCELADA: '●', EM_ANDAMENTO: '●' }
+
+/** Códigos de limite próprio: a execução parou no teto com o cursor avançando (não conta como falha seguida). */
+const CODIGOS_DE_LIMITE = new Set(['TETO_ITENS', 'ORCAMENTO_REQUISICOES', 'TEMPO_ESGOTADO'])
 const SIMBOLO_GATE: Record<string, string> = {
   LIBERADA: '✓',
   DESLIGADO_PELA_FLAG: '●',
   INSTANCIA_NAO_CONFIGURADA: '●',
   SUSPENSA_POR_ERRO: '▲',
 }
-const CLASSE_STATUS: Record<string, string> = { OK: 'ok', FALHA: 'ruim', CANCELADA: 'aviso', EM_ANDAMENTO: 'aviso' }
+const CLASSE_STATUS: Record<string, string> = { OK: 'ok', FALHA: 'ruim', INCOMPLETA: 'aviso', CANCELADA: 'aviso', EM_ANDAMENTO: 'aviso' }
 const CLASSE_GATE: Record<string, string> = {
   LIBERADA: 'ok',
   DESLIGADO_PELA_FLAG: 'aviso',
@@ -157,11 +160,14 @@ function TabelaExecucoes({ nome, execucoes, t, lang }: { nome: string; execucoes
           </tr>
         </thead>
         <tbody>
-          {execucoes.map((e, i) => (
+          {execucoes.map((e, i) => {
+            // Bateu num limite nosso (itens, requisições ou tempo): progresso parcial, não falha do Jira.
+            const status = e.status === 'FALHA' && e.codigoErro && CODIGOS_DE_LIMITE.has(e.codigoErro) ? 'INCOMPLETA' : e.status
+            return (
             <tr key={`${e.inicio}:${e.tipo}:${i}`}>
               <td>{rotulo(t, `sinc.tipo.${e.tipo}`, e.tipo)}</td>
-              <td className={`sinc-${CLASSE_STATUS[e.status] ?? 'aviso'}`}>
-                {`${SIMBOLO_STATUS[e.status] ?? '●'} ${rotulo(t, `sinc.status.${e.status}`, e.status)}`}
+              <td className={`sinc-${CLASSE_STATUS[status] ?? 'aviso'}`}>
+                {`${SIMBOLO_STATUS[status] ?? '●'} ${rotulo(t, `sinc.status.${status}`, status)}`}
               </td>
               <td>{data(e.inicio, lang)}</td>
               <td>{data(e.fim, lang)}</td>
@@ -181,7 +187,8 @@ function TabelaExecucoes({ nome, execucoes, t, lang }: { nome: string; execucoes
                 )}
               </td>
             </tr>
-          ))}
+            )
+          })}
         </tbody>
       </table>
     </div>

@@ -152,6 +152,8 @@ docker compose logs -f painel
 
 A reconciliação roda uma vez por dia (`SYNC_HORA_RECONCILIACAO`, padrão 03:00 de Manaus). Ela compara a lista leve do Jira com a base local: renomeia issues movidas, marca como removidas as que sumiram e rebusca as divergentes ou ausentes (isso também recupera issues que a paginação pulou numa carga longa). Depois da primeira, confira em `/api/sync/status` que `ultimaReconciliacao` foi preenchida e que a execução do tipo reconciliação terminou com status OK.
 
+**Issue apagada no Jira:** antes de marcar uma issue como removida, o app a confirma por chave (`key in (...)`, lotes de 100). O Jira Data Center pode responder HTTP 400 a esse JQL quando uma chave citada não existe mais; nesse caso o app refaz a confirmação **chave por chave** (400 ou 404 numa chave sozinha = ausente, pode remover). Esse caminho gasta uma requisição por chave do lote do orçamento (`SYNC_MAX_REQUISICOES`) e ainda **não foi validado neste servidor**: na primeira reconciliação, confira que não houve `HTTP_400` e que `removidas` é coerente. Qualquer outro erro (401, 403, 429, 5xx, rede) segue as regras normais e nada é removido.
+
 **Guarda de 50%:** se a remoção passaria de 50% da base local, ou o Jira vier vazio com base local, a reconciliação aborta com `RECONCILIACAO_SUSPEITA` e **não remove, não renomeia e não rebusca nada**. Isso protege contra um filtro errado ou uma resposta vazia. Não force: investigue a ficha `sincronizacao` e o escopo da credencial.
 
 ## Como ler o status
@@ -178,10 +180,10 @@ A resposta traz só códigos, contagens e instantes: nunca URL, token, JQL, mens
 | `RESPOSTA_INVALIDA` | O Jira respondeu 2xx com corpo que o app não entende. | Só após 3 falhas seguidas |
 | `DADO_MALFORMADO` | Issue com data ou usuário malformado. Registrada com este código. | **Sim, após 3 falhas seguidas** (o app para até reiniciar) |
 | `RECONCILIACAO_SUSPEITA` | A guarda de 50% da reconciliação disparou. Nada foi alterado. | Não suspende sozinha, mas é motivo para parar |
-| `ORCAMENTO_REQUISICOES` | Bateu em `SYNC_MAX_REQUISICOES`. | Não |
-| `TETO_ITENS` | Bateu em `SYNC_MAX_ITENS`. | Não |
-| `TEMPO_ESGOTADO` | Passou de `SYNC_TEMPO_MAX_MIN`. | Não |
-| `CONFLITO_DE_UNICIDADE` | Violação de unicidade no banco. | Não |
+| `ORCAMENTO_REQUISICOES` | Bateu em `SYNC_MAX_REQUISICOES`. Aparece como **Incompleta (limite)** na tela; não conta como falha seguida. | Não, nunca |
+| `TETO_ITENS` | Bateu em `SYNC_MAX_ITENS`. Aparece como **Incompleta (limite)**; não conta como falha seguida. | Não, nunca |
+| `TEMPO_ESGOTADO` | Passou de `SYNC_TEMPO_MAX_MIN`. Aparece como **Incompleta (limite)**; não conta como falha seguida. | Não, nunca |
+| `CONFLITO_DE_UNICIDADE` | Violação de unicidade no banco. | Só após 3 falhas seguidas |
 | `INSTANCIA_SEM_CREDENCIAL` | Instância listada em `SYNC_INSTANCIAS` sem URL ou token completos. | Não |
 | `INTERROMPIDA`, `CANCELADA` | Execução interrompida (outra réplica, parada do app). | Não |
 | `ERRO_INTERNO` | Falha do próprio app. Veja o log. | Só após 3 falhas seguidas |

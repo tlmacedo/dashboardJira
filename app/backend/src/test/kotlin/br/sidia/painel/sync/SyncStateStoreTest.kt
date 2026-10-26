@@ -115,6 +115,21 @@ class SyncStateStoreTest {
     }
 
     @Test
+    fun codigosDeLimiteNaoContamComoFalhaSeguida() {
+        fun falhar(codigo: String) {
+            val id = store.iniciar("samsung", SyncKind.INCREMENTAL, t("2026-10-30T12:00:00Z"))
+            store.concluir(id, RunStatus.FALHA, RunResumo(), codigo, null, t("2026-10-30T12:00:30Z"))
+        }
+        listOf("TETO_ITENS", "ORCAMENTO_REQUISICOES", "TEMPO_ESGOTADO", "TETO_ITENS", "ORCAMENTO_REQUISICOES").forEach(::falhar)
+        assertEquals(0, store.falhasSeguidas("samsung", SyncKind.INCREMENTAL))
+        // Falhas reais intercaladas com limites: só as reais contam.
+        falhar("HTTP_5XX")
+        falhar("TETO_ITENS")
+        falhar("REDE")
+        assertEquals(2, store.falhasSeguidas("samsung", SyncKind.INCREMENTAL))
+    }
+
+    @Test
     fun suspensaoPersisteAteLimpar() {
         assertNull(store.suspensa("samsung"))
         store.suspender("samsung", "HTTP_401", t("2026-10-30T12:00:00Z"))

@@ -171,6 +171,8 @@ class PostgresSyncStateStore(private val ds: DataSource) : SyncStateStore {
         c.prepareStatement(
             "SELECT count(*) FROM sync_run WHERE instance = ? AND kind = ? AND status = 'FALHA' " +
                 "AND codigo_erro IS DISTINCT FROM 'INTERROMPIDA' " +
+                // Parar num limite nosso (itens, requisições, tempo) é progresso parcial com o cursor avançando, não falha.
+                "AND COALESCE(codigo_erro, '') NOT IN ('TETO_ITENS', 'ORCAMENTO_REQUISICOES', 'TEMPO_ESGOTADO') " +
                 "AND id > GREATEST(" +
                 "COALESCE((SELECT max(id) FROM sync_run WHERE instance = ? AND kind = ? AND status = 'OK'), 0), " +
                 "COALESCE((SELECT falhas_desde_run_id FROM sync_state WHERE instance = ?), 0))",
