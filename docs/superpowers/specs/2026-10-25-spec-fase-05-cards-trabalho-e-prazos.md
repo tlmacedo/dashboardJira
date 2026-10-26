@@ -48,7 +48,7 @@ Ela também cria o **modelo de leitura único** (`IssueSnapshot` e `WorkStore`),
 - **Agregados seguem a visibilidade:** todo número é calculado só sobre o que o papel vê; para `USUARIO`, só as tasks da própria pessoa.
 - **Sem ranking de pessoas:** tabelas por pessoa em ordem alfabética, sem "maior/menor"; contagem por pessoa atribuída pela posse no instante do evento.
 - **Concluída** = categoria `DONE` **e** `resolution` **e** `resolved`; resolução negativa (lista em `status_map`) = cancelada; divergência vira aviso `DONE_SEM_RESOLUTION` (Qualidade dos dados, Fase 7).
-- **Atraso justificado:** "no prazo" e "no prazo ajustado" lado a lado, com a mesma regra de `NoPrazo` (Plano 4); labels de `labels_atraso.yaml`.
+- **Atraso justificado:** "no prazo" e "no prazo ajustado" lado a lado, com **uma única regra compartilhada** por Auditoria (Plano 4), Fechadas e Metas: `NoPrazo.noUniverso` (concluída positiva, resolução não negativa, tipo diferente de `Epic`, vencimento em `[de, ate]`) e `NoPrazo.calcular`, consolidadas no Plano 5, Tarefa 7; as candidatas são lidas por vencimento. Labels de `labels_atraso.yaml`.
 - **Fuso America/Manaus** para todo "dia"; **dias úteis por padrão**, `unit=corrido` alterna e fica na URL; semana = segunda a domingo de Manaus.
 - **Interface:** temas Claro, Escuro e Sidia; pt-BR e inglês completos (teste de paridade de chaves); WCAG AA; a cor nunca é o único sinal (`✓`, `●`, `▲` com texto); foco e `Esc` na gaveta; CSV com neutralização de fórmula.
 - **Dados pessoais:** fixtures só com nomes fictícios; nunca editar nem commitar configs reais.
@@ -107,7 +107,7 @@ Ela também cria o **modelo de leitura único** (`IssueSnapshot` e `WorkStore`),
 | Abertas e Negligenciadas com listas separadas e P85 do próprio tipo | `contagensDeAbertas`, `acimaDoP85UsaOProprioTipo`, `negligenciadasSeparadas`, `camposDeTrabalhoIndisponiveisViraAviso` (T5) |
 | Fechadas e Metas com no prazo e ajustado, data original e pessoas em ordem alfabética | `noPrazoEAjustado` (T6), `metasDoCenario`, `dataOriginal`, `tabelaPorPessoaAlfabetica` (T7) |
 | Drill do mesmo tamanho do número em todo card | `drillTemOMesmoTamanhoDoCard` (T5, T6, T7, T10), `drillNivel` (T11), `drillBacklogMesmoTamanho` (T12) |
-| Mesmo "no prazo" e mesmo dia em três telas | `mesmoNoPrazoEmTresTelas`, `mesmaSemanaEmFechadasETempoEmStatus` (T9) |
+| Mesmo "no prazo" e mesmo dia em três telas | `RegraUnicaNoPrazoTest.mesmoUniversoComCanceladaEpicEResolvidaAntes` (T7: cancelada com vencimento, Epic e resolvida antes do período → `(5, 4, 5)` em Auditoria, Fechadas e Metas), `canceladaComVencimentoForaDoUniverso`, `epicForaDoUniverso` (T7), `mesmoNoPrazoEmTresTelas`, `mesmaSemanaEmFechadasETempoEmStatus` (T9) |
 | Eventos pela data do changelog | `reabertaForaDoPeriodoNaoConta`, `porResponsavelNoInstanteDoEvento` (T10) |
 | Riscos com pesos versionados e fatores exclusivos | `riscoDoCenario`, `fatoresExclusivos`, `regrasEstritas` (T11) |
 | Previsão estável, conservadora e honesta quando não converge; só com o visível | `chegadaIgualAVazaoNaoConverge`, `mesmaSementeMesmoResultado`, `confiancaPelaAmostra`, `previsaoDoUsuarioSoComAsProprias` (T12) |
@@ -144,7 +144,7 @@ Ela também cria o **modelo de leitura único** (`IssueSnapshot` e `WorkStore`),
 | `DadosDeDemonstracao`, `DASHBOARD_DEMO_DATA` | Plano 4A (Tarefa 10) |
 | `shared/csv.ts` (`linhaFiltrosCsv`), `Shell`, `t()` | frontend (Planos 3 e 4) |
 
-Nomes que esta fase **produz** e as Fases 6 e 7 consomem: `IssueSnapshot`, `WorkStore`/`PostgresWorkStore`, `Fluxo` (inclusive `AMOSTRA_MINIMA` e `avisosDeAmostra`), `MonteCarlo`, `FiltrosDeCard`, `Escopo`/`escopoDe`, `CardDeLeitura`/`rotaDeCard`, `NoPrazo.classificar`, `PrevisaoDeTermino`, kit `CardPage`/`KpiCard`/`useCard`/`Filtros`/`shared/DrillDrawer`.
+Nomes que esta fase **produz** e as Fases 6 e 7 consomem: `IssueSnapshot`, `WorkStore`/`PostgresWorkStore`, `Fluxo` (inclusive `AMOSTRA_MINIMA` e `avisosDeAmostra`), `MonteCarlo`, `FiltrosDeCard`, `Escopo`/`escopoDe`, `CardDeLeitura`/`rotaDeCard`, `NoPrazo.noUniverso` e `NoPrazo.calcular` (regra única de "no prazo"), `WorkStore.candidatasNoPrazo` (única leitura das candidatas, usada por Fechadas e por `MetasCalculator.calcular(candidatasNoPrazo, resolvidasNoPeriodo, ...)`), `NoPrazo.classificar`, `ConsultaDeTrabalho.vencimentoDe/vencimentoAte`, `PrevisaoDeTermino`, kit `CardPage`/`KpiCard`/`useCard`/`Filtros`/`shared/DrillDrawer`.
 
 **Cenário de teste TRB-1** (relógio sexta 30/10/2026, 08:00 de Manaus; feriados 12/10 e 02/11; pessoas `ana`, `bruno` do Alfa, `carla` do Beta, `lider.alfa`, `coord.um`, `gerente.exemplo`): definido por inteiro no plano, antes do bloco 5a. É a base de todos os números esperados.
 

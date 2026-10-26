@@ -37,7 +37,7 @@ Este plano consome nomes dos Planos 3, 4A e 4. **Antes da Tarefa 1**, o executor
 - Nenhuma chamada ao Jira; só fixtures, builders em memória e `MockEngine`. `JIRA_LIVE_ENABLED=false`. Hook `BLOQUEADO` = parar e relatar. Variáveis novas nunca começam com `JIRA_`.
 - Fuso America/Manaus para todo "dia"; **dias úteis por padrão** (`unit=corrido` alterna e fica na URL); semana = segunda a domingo de Manaus.
 - **Concluída** = categoria `DONE` **e** `resolution` preenchida **e** `resolved` preenchido; resolução negativa (lista em `status_map`) = cancelada; divergência vai para aviso `DONE_SEM_RESOLUTION` (Qualidade dos dados, Fase 7).
-- **Atraso justificado:** "no prazo" e "no prazo ajustado" lado a lado, com a mesma regra de `NoPrazo` (Plano 4); labels de `labels_atraso.yaml`.
+- **Atraso justificado:** "no prazo" e "no prazo ajustado" lado a lado, com **uma única regra compartilhada** (`NoPrazo.noUniverso` + `NoPrazo.calcular`, consolidada na Tarefa 7) usada por Auditoria (Plano 4), Fechadas e Metas; labels de `labels_atraso.yaml`.
 - Status fora do mapa → resposta 200 com `AvisoDto(STATUS_SEM_MAPEAMENTO, bloqueante)` e números nulos, nunca 500.
 - **Agregados seguem a visibilidade:** todo número (inclusive P50/P85 históricos e throughput) é calculado só sobre as issues que o papel vê; para `USUARIO`, isso significa **só as tasks da própria pessoa** (Decisão 2). Faixa histórica com menos de `AMOSTRA_MINIMA = 5` itens continua aparecendo, com o aviso informativo `AMOSTRA_PEQUENA` (`params`: `tipo`, `n`, `minimo`). Issue sem responsável ou com responsável fora do diretório: só coordenação e gerente (Decisão 1).
 - **Todo número clicável abre as tasks que o compõem, com o mesmo tamanho.**
@@ -131,7 +131,7 @@ As concluídas vão direto de In Progress para Closed. Ciclo em dias úteis: TG-
   ```kotlin
   data class IssueSnapshot(val instance: String, val key: String, val summary: String, val issueType: String, val priority: String?,
       val status: String, val resolution: String?, val created: Instant, val updated: Instant?, val resolved: Instant?,
-      val duedate: LocalDate?, val assignee: String?, val reporter: String?, val labels: List<String>, val parentKey: String?,
+      val duedate: LocalDate?, val assignee: String?, val reporter: String?, val labels: List<String>, val parentKey: String?, /* só hierarquia/Epic; o par Task × Review vem do link Blocks (4A T12), não daqui */
       val epicKey: String?, val storyPoints: Double?, val estimateS: Long?, val remainingS: Long?, val spentS: Long?,
       val osVersion: String?, val flagged: Boolean, val components: List<String>,
       val timeline: IssueTimeline, val events: List<ChangeEventRecord>)
@@ -285,7 +285,7 @@ As concluídas vão direto de In Progress para Closed. Ciclo em dias úteis: TG-
       fun calcular(resolvidas: List<IssueSnapshot>, de: LocalDate, ate: LocalDate, agora: Instant, unit: TimeUnitMode, visiveis: Set<String>): FechadasDto
   }
   ```
-  Período padrão 90 dias pela data de resolução (Manaus). "No prazo" delega a `NoPrazo` (mesma regra do Plano 4). `porPessoa`: `finalizou` = responsável na resolução; `participou` = teve posse; horas estimadas × gastas por `estimate_s`/`spent_s` da issue (worklog só na Fase 6); só pessoas visíveis, ordem alfabética, sem "melhor/pior". `semResolution` = issues em `DONE` sem resolution cuja `entrouEmDone` cai no período (lidas por `comEventoEntre(..., campos = {status})`, valem com `resolved` nulo ou não; aviso `DONE_SEM_RESOLUTION` informativo, vai para Qualidade dos dados). A ficha `fechadas` **não** exclui status de cancelamento (as canceladas contam em FE-06); o mesmo vale para `negativas`.
+  Período padrão 90 dias pela data de resolução (Manaus). "No prazo" delega a `NoPrazo` (mesma regra do Plano 4); na Tarefa 7 o bloco "no prazo" de Fechadas passa a receber as candidatas **lidas por vencimento** e a regra única `NoPrazo.noUniverso` (ver a Tarefa 7). `porPessoa`: `finalizou` = responsável na resolução; `participou` = teve posse; horas estimadas × gastas por `estimate_s`/`spent_s` da issue (worklog só na Fase 6); só pessoas visíveis, ordem alfabética, sem "melhor/pior". `semResolution` = issues em `DONE` sem resolution cuja `entrouEmDone` cai no período (lidas por `comEventoEntre(..., campos = {status})`, valem com `resolved` nulo ou não; aviso `DONE_SEM_RESOLUTION` informativo, vai para Qualidade dos dados). A ficha `fechadas` **não** exclui status de cancelamento (as canceladas contam em FE-06); o mesmo vale para `negativas`.
 - [ ] **Passo 1: Testes que falham** (TRB-1, período 01/10 a 30/10):
   - `contagensDasFechadas`: `concluidas=4`, `canceladas=1`, `semResolution=1`, `pontos=8.0`.
   - `cicloELeadEmUteis`: `ciclo = FaixaDto(5.0, 7.1, 4)`; em `CORRIDO` `FaixaDto(6.5, 11.2, 4)`; `lead` corridos `FaixaDto(10.5, 14.1, 4)`.
@@ -300,11 +300,31 @@ As concluídas vão direto de In Progress para Closed. Ciclo em dias úteis: TG-
 
 ### Tarefa 7: Metas e prazos (domínio e API)
 
-**Arquivos:** Modificar `domain/NoPrazo.kt` (extrai a classificação por issue; `NoPrazoTest` segue verde); Criar `cards/metas/{MetasCalculator.kt,MetasDto.kt,CardMetas.kt,RegrasDeMetas.kt}`, `app/config/cards/metas.card.yaml`, `app/config/metas.exemplo.yaml`; Teste `cards/metas/MetasCalculatorTest.kt`, `cards/MetasRoutesTest.kt`, `domain/NoPrazoTest.kt`.
+**Arquivos:** Modificar `domain/NoPrazo.kt` (regra única do universo e classificação por issue; `NoPrazoTest` segue verde), `trabalho/WorkStore.kt` (leitura por vencimento), `cards/fechadas/FechadasCalculator.kt` e `cards/fechadas/CardFechadas.kt` (bloco "no prazo" pela regra única), `auditoria/AuditStore.kt` (só se o `PostgresAuditStore` não ler as candidatas de "no prazo" por vencimento em `[de, ate]`); Criar `cards/metas/{MetasCalculator.kt,MetasDto.kt,CardMetas.kt,RegrasDeMetas.kt}`, `app/config/cards/metas.card.yaml`, `app/config/metas.exemplo.yaml`; Teste `cards/metas/MetasCalculatorTest.kt`, `cards/MetasRoutesTest.kt`, `domain/NoPrazoTest.kt`, `trabalho/WorkStoreTest.kt`, `cards/RegraUnicaNoPrazoTest.kt`.
+
+**Regra única de "no prazo" (antiobjetivo da spec mestra 2: números divergentes entre telas).** Auditoria (Plano 4), Fechadas (T6) e Metas (esta tarefa) usam **a mesma função** para decidir o universo e contar, sem cópia de regra em nenhum calculador:
+- **Universo** (`NoPrazo.noUniverso`): categoria `DONE` **e** `resolution` preenchida **e** `resolved` preenchido **e** `resolution` fora de `StatusMap.resolucoesNegativas` (canceladas ficam fora) **e** tipo diferente de `Epic` (sem diferenciar maiúsculas) **e** vencimento (dia) em `[de, ate]`. É o mesmo critério de `Fluxo.concluidaPositiva` mais "não Epic" e "vence no período".
+- **Contagem** (`NoPrazo.calcular`, assinatura do Plano 4 mantida): aplica `noUniverso` e `classificar`; no prazo = dia de Manaus de `resolved` ≤ vencimento; ajustado = no prazo **ou** label que `justifica`.
+- **Candidatas lidas por vencimento:** quem chama passa as issues com vencimento em `[de, ate]`, não "as resolvidas no período" (uma issue resolvida em 28/09 que vence em 05/10 entra em outubro nas três telas). Fechadas continua usando as resolvidas no período para os demais KPIs; só o bloco `noPrazo`/`noPrazoAjustado`/`comVencimento`/taxas vem da regra única.
+- **Uma só leitura das candidatas:** `WorkStore.candidatasNoPrazo` (abaixo) é o único jeito de obter a lista que entra em `NoPrazo.calcular` nos cards; a Auditoria (Plano 4) passa as issues do `PostgresAuditStore` com vencimento em `[de, ate]`.
+- `NoPrazoTest.noPrazoEAjustado` do Plano 4 não muda (TG-21 a TG-25 não são canceladas nem Epic). Os números do TRB-1 em Fechadas (T6) e Metas também não mudam, porque nenhuma issue do TRB-1 resolvida antes de 01/10 vence em outubro (conferir na fixture antes do Passo 2; se houver, atualizar os valores esperados e registrar `Ruling:`).
 
 **Interfaces:**
 - Produz:
   ```kotlin
+  // domain/NoPrazo.kt (regra única; usada por AuditCalculator, FechadasCalculator e MetasCalculator)
+  object NoPrazo {
+      fun noUniverso(i: AuditIssue, map: StatusMap, zone: ZoneId, de: LocalDate, ate: LocalDate): Boolean
+      fun calcular(issues: List<AuditIssue>, labels: LabelsDeAtraso, statusMap: StatusMap, zone: ZoneId,
+                   de: LocalDate, ate: LocalDate, sinais: List<Sinal> = emptyList()): NoPrazoResultado   // filtra por noUniverso
+  }
+  // trabalho/WorkStore.kt: ConsultaDeTrabalho ganha vencimentoDe: LocalDate? = null, vencimentoAte: LocalDate? = null
+  // (duedate em [vencimentoDe, vencimentoAte], inclusivo; combinável com situacao = TODAS)
+  fun WorkStore.candidatasNoPrazo(instance: String, filtro: FiltroDeFicha?, de: LocalDate, ate: LocalDate): List<IssueSnapshot>
+      // = snapshots(ConsultaDeTrabalho(instance, filtro, Situacao.TODAS, vencimentoDe = de, vencimentoAte = ate))
+  // cards/fechadas/FechadasCalculator.kt (assinatura nova; substitui a da T6):
+  //   fun calcular(resolvidas: List<IssueSnapshot>, candidatasNoPrazo: List<IssueSnapshot>, de: LocalDate, ate: LocalDate,
+  //                agora: Instant, unit: TimeUnitMode, visiveis: Set<String>): FechadasDto
   enum class FaixaDePrazo { D3_OU_ANTES, D2, D1, D, ATRASO_1_3, ATRASO_MAIS_3 }
   data class ClassePrazo(val delta: Int, val faixa: FaixaDePrazo, val noPrazo: Boolean, val ajustado: Boolean)
   fun NoPrazo.classificar(resolvidaEm: LocalDate, vencimento: LocalDate, labels: List<String>, regras: LabelsDeAtraso): ClassePrazo
@@ -319,10 +339,12 @@ As concluídas vão direto de In Progress para Closed. Ciclo em dias úteis: TG-
       val porPessoa: List<LinhaMetaDto>, val avisos: List<AvisoDto>)
   @Serializable data class LinhaMetaDto(val chave: String, val universo: Int, val noPrazo: Int, val noPrazoAjustado: Int, val estado: String)  // "ok" (✓ ≥ meta), "atencao" (● até 10 pp abaixo), "problema" (▲)
   class MetasCalculator(cal: BusinessCalendar, map: StatusMap, labels: LabelsDeAtraso, regras: RegrasDeMetas, roles: RoleDirectory) {
-      fun calcular(concluidas: List<IssueSnapshot>, de: LocalDate, ate: LocalDate, g: Granularidade, visiveis: Set<String>): MetasDto
+      // candidatasNoPrazo = WorkStore.candidatasNoPrazo(...); resolvidasNoPeriodo = snapshots(RESOLVIDAS em [de, ate+1)), só para semVencimento
+      fun calcular(candidatasNoPrazo: List<IssueSnapshot>, resolvidasNoPeriodo: List<IssueSnapshot>, de: LocalDate, ate: LocalDate,
+                   g: Granularidade, visiveis: Set<String>): MetasDto
   }
   ```
-  Universo: concluídas positivas com **vencimento** no período (padrão 90 dias), exclui tipo `Epic`. Δ = dia de Manaus da resolução − vencimento. Faixas: `Δ ≤ −3`, `−2`, `−1`, `0`, `1..3`, `> 3`. "No prazo" = `Δ ≤ 0`; ajustado = no prazo ou label que `justifica`; data original = `vencimentoOriginal()`; `alertaDataOriginal` quando `taxaNoPrazo − taxaOriginal ≥ 5 pp`. Tabelas por tipo/prioridade/squad/pessoa: squad pelo `RoleDirectory.squadOf` do responsável na data da resolução; pessoas e squads em ordem alfabética, nunca por taxa. `semVencimento` = concluídas positivas resolvidas no período sem vencimento (drill próprio). Parâmetro `granularidade=dia|semana|mes` (padrão `semana`).
+  Universo: `NoPrazo.noUniverso` (concluídas positivas com **vencimento** no período, padrão 90 dias, sem `Epic`); `noPrazo` e `noPrazoAjustado` vêm de `NoPrazo.calcular`, nunca de uma contagem própria. Δ = dia de Manaus da resolução − vencimento. Faixas: `Δ ≤ −3`, `−2`, `−1`, `0`, `1..3`, `> 3`. "No prazo" = `Δ ≤ 0`; ajustado = no prazo ou label que `justifica`; data original = `vencimentoOriginal()`; `alertaDataOriginal` quando `taxaNoPrazo − taxaOriginal ≥ 5 pp`. Tabelas por tipo/prioridade/squad/pessoa: squad pelo `RoleDirectory.squadOf` do responsável na data da resolução; pessoas e squads em ordem alfabética, nunca por taxa. `semVencimento` = concluídas positivas resolvidas no período sem vencimento (drill próprio). Parâmetro `granularidade=dia|semana|mes` (padrão `semana`).
 - [ ] **Passo 1: Testes que falham** (TRB-1, período 01/10 a 30/10):
   - `classificarFaixas`: Δ `−3` → `D3_OU_ANTES`; `0` → `D`; `+4` → `ATRASO_MAIS_3`; `NoPrazoTest` inteiro verde.
   - `metasDoCenario`: `universo=4`, `noPrazo=3`, `noPrazoAjustado=4`, `antecipadas=1`, `emD1D2=1`, `noDia=2`, `atrasadas=1`, `taxaNoPrazo=0.75`, `taxaAjustada=1.0`, `taxaAntecipadas=0.25`.
@@ -331,7 +353,10 @@ As concluídas vão direto de In Progress para Closed. Ciclo em dias úteis: TG-
   - `estadoDaLinha`: taxa 0.90 com meta 0.90 → `ok`; 0.85 → `atencao`; 0.75 → `problema`.
   - `tabelaPorPessoaAlfabetica` (`ana`, `bruno`, `carla`).
   - Rotas: `drillTemOMesmoTamanhoDoCard` (`noPrazo`, `ajustado`, `faixa:D`, `atrasadas`, `semVencimento`); `granularidadeInvalida400`; `versaoDasRegrasNaResposta` (`"metas v1, labels v1"`).
-- [ ] **Passo 2: Rodar** `./gradlew test --tests '*MetasCalculatorTest*' --tests '*MetasRoutesTest*' --tests '*NoPrazoTest*'` → FALHA. **Passo 3: Implementar.** **Passo 4: Rodar** → PASSA. **Passo 5: Commit** `feat(cards): Metas e prazos com data original e atraso justificado`.
+  - `NoPrazoTest`: `canceladaComVencimentoForaDoUniverso` (`resolution = "Won't Do"`, vence no período → `noUniverso == false`); `epicForaDoUniverso`; `resolvidaAntesDoPeriodoComVencimentoDentroEntra` (resolvida 28/09, vence 05/10, período outubro → `true`).
+  - `WorkStoreTest.porVencimento` (`vencimentoDe`/`vencimentoAte` inclusivos; `removida_em IS NULL` mantido).
+  - `RegraUnicaNoPrazoTest.mesmoUniversoComCanceladaEpicEResolvidaAntes` (Testcontainers, cenário **TRB-1P** = TRB-1 sem alteração **mais** três issues fictícias, todas de `ana`: `TG-150` status `Cancelled`, `resolution = "Won't Do"`, resolvida 19/10, vence 20/10; `TG-151` tipo `Epic`, `Resolved` + `Done`, resolvida 18/10, vence 20/10; `TG-152` tipo `Task`, `Resolved` + `Done`, resolvida 28/09, vence 05/10). Chamadas como `gerente.exemplo` com `de=2026-10-01` e `ate=2026-10-30` **explícitos** nas três rotas (a Auditoria tem padrão de 30 dias e as outras de 90): `/api/auditoria/sinais` (`noPrazo`), `/api/cards/fechadas` e `/api/cards/metas` devolvem o mesmo trio `(universo/concluidas/comVencimento, noPrazo, noPrazoAjustado) == (5, 4, 5)`. Com as regras antigas divergiriam (Auditoria contaria `TG-150` e `TG-151` → 7; Fechadas pelas resolvidas no período contaria `TG-150`/`TG-151` e perderia `TG-152` → 6; Metas, conforme a lista que a rota passasse, daria 4 ou 5); o teste prova que o resultado não depende da tela. `TG-150` continua contando em `canceladas` de Fechadas (FE-06).
+- [ ] **Passo 2: Rodar** `./gradlew test --tests '*MetasCalculatorTest*' --tests '*MetasRoutesTest*' --tests '*NoPrazoTest*' --tests '*WorkStoreTest*' --tests '*RegraUnicaNoPrazoTest*' --tests '*FechadasCalculatorTest*' --tests '*AuditCalculatorTest*'` → FALHA. **Passo 3: Implementar.** **Passo 4: Rodar** → PASSA. **Passo 5: Commit** `feat(cards): Metas e prazos com data original e atraso justificado`.
 
 ---
 
@@ -354,7 +379,7 @@ As concluídas vão direto de In Progress para Closed. Ciclo em dias úteis: TG-
 **Interfaces:** Consome os calculadores das Tarefas 5 a 7 e `NoPrazo`/`AuditCalculator` do Plano 4.
 
 - [ ] **Passo 1: Testes que falham:**
-  - `mesmoNoPrazoEmTresTelas`: no TRB-1 mais a issue `TG-120` (resolvida `2026-10-16T03:30Z`, vence 15/10), `FechadasDto.noPrazo == MetasDto.noPrazo == NoPrazoResultado.noPrazo` (Auditoria) `== 4`, e as três contam `TG-120` no dia 15/10.
+  - `mesmoNoPrazoEmTresTelas`: no TRB-1 mais a issue `TG-120` (resolvida `2026-10-16T03:30Z`, vence 15/10), `FechadasDto.noPrazo == MetasDto.noPrazo == NoPrazoResultado.noPrazo` (Auditoria) `== 4`, e as três contam `TG-120` no dia 15/10. Reforço: acrescentar também `TG-150` (cancelada com vencimento) e `TG-151` (Epic) do TRB-1P da Tarefa 7, com `de`/`ate` explícitos e iguais nas três chamadas; o resultado continua `4` nas três (as duas ficam fora do universo pela regra única `NoPrazo.noUniverso`).
   - `mesmaSemanaEmFechadasETempoEmStatus` (TG-112 na semana de 12/10 nas duas).
   - `CompatLegadoTrabalhoTest` (fórmula do app atual conferida no código de `legacy/backend/jiradash/analytics.py` antes de aceitar): `cicloCorridoComoOLegado` (P50 `6.5` em `CORRIDO`, 1ª entrada em ativo/espera/bloqueado); `faixasDeIdadeComoOLegado` (`0–7/8–14/15–30/>30` em corridos); `metasDeltaComoOLegado` (mesmas faixas D-3..> 3 d).
   - `documentoCitaOsIds`: o documento cita AB-01..AB-09, NG-01..NG-06, FE-01..FE-12, MT-01..MT-14.
@@ -486,7 +511,7 @@ As concluídas vão direto de In Progress para Closed. Ciclo em dias úteis: TG-
 ## Autoavaliação
 
 - **Cobertura da spec e do relatório:** 6.1 (atraso justificado em Metas, Negativas e Fechadas: T6, T7, T10; dicionário como filtro por OS: T4; fuso único e dias úteis: T3; percentis por tipo: T3, T5, T6; previsão com chegada: T12), 4.2 (concluída, eventos pelo changelog, Central com itens separados preparada em Negligenciadas: T5), 5.2 (ficha e JQL por card), 10 (número = lista do drill, mesmo dia em todas as telas: T9; visibilidade por papel em todas as rotas). IDs: AB, NG, FE, MT (5a); NE, RI, PV, EP (5b). Meu painel (MP), Visão geral (VG) e a Central ficam na Fase 7; "pela capacidade" e "Atrasa?" (PV-06) na Fase 6.
-- **Consistência de tipos:** `IssueSnapshot` (T2) alimenta `Fluxo` (T3), todos os calculadores (T5 a T12) e, nas Fases 6 e 7, Carga, Esforço, Checklist × Review; `CardDeLeitura`/`rotaDeCard` (T4) servem todas as rotas; `NoPrazo.classificar` (T7) é usado por Fechadas, Metas e Negativas; `PrevisaoDeTermino` (T11) é implementada pela `Agenda` da Fase 6.
+- **Consistência de tipos:** `IssueSnapshot` (T2) alimenta `Fluxo` (T3), todos os calculadores (T5 a T12) e, nas Fases 6 e 7, Carga, Esforço, Checklist × Review; `CardDeLeitura`/`rotaDeCard` (T4) servem todas as rotas; `NoPrazo.noUniverso` + `NoPrazo.calcular` (regra única, T7) são usados por Auditoria (Plano 4), Fechadas e Metas, e `NoPrazo.classificar` (T7) por Fechadas, Metas e Negativas; `PrevisaoDeTermino` (T11) é implementada pela `Agenda` da Fase 6.
 - **Pendências deliberadas:** `Story Points`, `Epic Link` e `Flagged` são "a confirmar" na 1ª conexão; sem eles os cards mostram aviso, não zero. A taxa de chegada fica ligada por padrão (decisão da spec 4.2); `comChegada: false` no YAML reproduz o app atual.
 
 ## Decisões (25/10, valor padrão recomendado, reversível)

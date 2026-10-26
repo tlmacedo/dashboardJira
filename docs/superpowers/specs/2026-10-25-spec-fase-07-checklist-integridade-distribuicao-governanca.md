@@ -94,7 +94,7 @@ Esta fase porta as telas restantes do app atual que dependem de tudo o que veio 
 
 **Checklist × Review.**
 - Os tipos de review vêm **só** de `ctx.regrasAuditoria.tiposReview` (fonte única).
-- Os pares saem de `TaskReview.pares`, e o pai é o campo `parent`.
+- Os pares saem de `TaskReview.pares(issues, vinculos)`, com os vínculos já resolvidos pelo link "Blocks / is blocked by" (`ParesLidos`, Plano 4; `issue_link`, 4A Tarefa 12), nas duas direções; o campo `parent` não define o par.
 - Os filtros se aplicam ao pai.
 - A visibilidade vale pelo responsável do pai **ou** da review.
 
@@ -236,7 +236,7 @@ Legenda: **[main]** existe hoje na `main`; **[Plano N]** é previsto pelo plano 
 | `AvisoDto`, `DrillRow`, `ORDEM_NATURAL_DE_CHAVES` | `.../cards/TempoEmStatusDto.kt`, `domain/` | [main] Plano 3 |
 | `AppContext`, `testContextComBanco` | `.../AppContext.kt`, `src/test/.../TestContextComBanco.kt` | [main] |
 | `SyncStatusDto`, `GET /api/sync/status` (tela Sincronização: SI-01, SI-02) | `.../sync/` | [Plano 4A] Tarefa 8 |
-| `TaskReview.pares/resumo`, `ParTaskReview`, `AuditTimeline`, `AuditCalculator`, `Sinal`, `Detector`, `RegrasDeAuditoria.tiposReview/statusCancelamento` | `.../auditoria/` | [Plano 4] |
+| `TaskReview.pares(issues, vinculos)/resumo`, `ParTaskReview`, `ParesLidos`, `AuditTimeline`, `AuditCalculator`, `Sinal`, `Detector`, `RegrasDeAuditoria.tiposReview/statusCancelamento` | `.../auditoria/` | [Plano 4] |
 | `LabelsDeAtraso`, `NoPrazo.classificar` | `.../domain/LabelsDeAtraso.kt`, `domain/NoPrazo.kt` | [Plano 4] |
 | `executarAuditado` | `.../cards/RotaAuditada.kt` | [Plano 4] Tarefa 7 |
 | `IssueSnapshot`, `WorkStore`, `toAuditIssue`, `Fluxo` | `.../trabalho/` | [Plano 5] Tarefas 2 e 3 |

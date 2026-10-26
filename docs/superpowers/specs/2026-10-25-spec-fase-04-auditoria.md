@@ -3,6 +3,7 @@
 Data: 25/10/2026
 Plano de implementação: [`docs/superpowers/plans/2026-10-25-plano-04-auditoria.md`](../plans/2026-10-25-plano-04-auditoria.md) (Tarefas 1 a 9)
 Spec mestra do projeto: [`2026-10-24-painel-squads-kotlin-react-design.md`](2026-10-24-painel-squads-kotlin-react-design.md) (seções 4.2, 4.3, 7, 9 e 10)
+Depende de: **Plano 4A mesclado na `main` (executar depois do 4A)**. O plano usa `JqlValues.issueKey` (4A, T3), `AvisoDto.params` (4A, T8), `issue.removida_em` (4A, T2 e T6), `DadosDeDemonstracao` (4A, T10), `cadaPassoDoChecklistConfirmaAFlag` (4A, T11) e os vínculos `issue_link`/`IssueLinkStore`, `VinculosConfig`, `ParesTaskReview` e `ParDeChaves` (4A, T12); sem o 4A, não compila. **Executar depois do 4A completo, inclusive a Tarefa 12.**
 
 **Precedência:** `CLAUDE.md` > `docs/guia-execucao-outra-ia.md` > esta spec > o plano. A spec mestra (seções 2 e 3) ainda fala em "autorização expressa por pesquisa"; isso foi **substituído em 25/10** pela regra da flag única (seção 3). Onde houver conflito, vale a regra nova.
 
@@ -21,7 +22,7 @@ Esta fase detecta essas alterações no changelog já gravado no banco (`change_
 - Reconstruir o estado de cada issue em qualquer instante (responsável, vencimento, labels, fechada ou não) a partir do changelog.
 - Decidir quem estava autorizado na **data civil de Manaus** de cada alteração, com vigência de papéis.
 - Detectar 11 sinais (seção 4) com gravidade e limites em YAML versionado; a versão das regras sai em toda resposta.
-- Task × Review: pares, percentual divergente, alerta no evento que gera a divergência.
+- Task × Review: pares pelo link de issue "Blocks / is blocked by" (`issue_link`, 4A T12), nas duas direções; percentual divergente; alerta no evento que gera a divergência; lista de divergências com link direto para a task (e a Review) no Jira, pela URL base da configuração.
 - "No prazo" e "no prazo ajustado" lado a lado, com o contador "justificadas sob auditoria".
 - API e duas telas React densas (Auditoria e Divergência), com drill do mesmo tamanho do número e CSV seguro.
 - Documento de diferenças com o app atual.
@@ -32,6 +33,8 @@ Esta fase detecta essas alterações no changelog já gravado no banco (`change_
 - "Estimativa reduzida" e "worklog retroativo" (sem valor de estimativa no changelog e sem worklog sincronizado).
 - Histórico de reporter e conteúdo de descrição/título (o changelog só guarda o nome desses campos).
 - Tabela de achados, triagem ou migração para sinais (são calculados na consulta).
+- Corrigir a divergência pelo painel (botão, rota de escrita): escrita no Jira é o Plano 16 (`2026-10-25-plano-16-escrita-no-jira-pelo-painel.md`), futuro.
+- Parear Review e task pelo campo `parent` (`parentKey` fica só para hierarquia/Epic).
 - Qualquer conexão real ao Jira.
 
 ### Antiobjetivos (falha mesmo que "funcione")
@@ -43,6 +46,7 @@ Esta fase detecta essas alterações no changelog já gravado no banco (`change_
 - Data avaliada em UTC em vez de Manaus (alteração às 23:30 de Manaus mudando de dia).
 - Formato inesperado de `duedate` sumir em silêncio ou dar 500.
 - Consulta à auditoria sem registro em `access_log`.
+- URL do Jira escrita no código (o link da lista vem da configuração da instância) ou qualquer requisição ao Jira para montá-lo.
 
 ## 3. Restrições
 
@@ -62,7 +66,7 @@ Esta fase detecta essas alterações no changelog já gravado no banco (`change_
 
 ### Restrições técnicas da fase
 
-- Sem migração. Se o Plano 4A já estiver na `main` (ordem prevista), a leitura acrescenta `removida_em IS NULL` e o teste `auditoriaIgnoraIssueRemovida`.
+- Sem migração. O Plano 4A já está na `main` (pré-requisito): a leitura sempre acrescenta `removida_em IS NULL` e o teste `auditoriaIgnoraIssueRemovida`.
 - Toda consulta (200, 400, 403, 404) grava `access_log`; falha ao gravar = 503 sem dados.
 - Período padrão de 30 dias de Manaus, `ate` inclusivo, máximo 180 dias; data inválida ou `de > ate` = 400, nunca 500.
 - No histórico, campo fora da lista de permissão sai com `de`/`para` nulos e `valorGuardado=false`.
@@ -79,12 +83,15 @@ Esta fase detecta essas alterações no changelog já gravado no banco (`change_
 6. Primeira definição do vencimento (vazio → data) não é alteração.
 7. Estimativa reduzida e worklog retroativo ficam fora.
 8. LGPD: confirmar a base legal com o DPO antes de usar com dados reais; até lá, fixtures e demonstração.
+9. **[usuário]** A Review se liga à task pelo **link "Blocks / is blocked by"** (`issue_link`, gravado no 4A, Tarefa 12), nas duas direções, e **não** pelo campo `parent`.
+10. **[usuário]** Ação no painel: lista de divergências com link direto para a task no Jira (URL base da configuração, nunca hardcoded); sem botão de correção; escrita no Jira pelo painel é futura (Plano 16).
 
 ### Valor padrão recomendado (do plano, reversível)
 
-- `auditoria.exemplo.yaml`: `pertoDoVencimentoDias: 2`, `posseAntesDoVencimentoDias: 2`, `passaBolaTrocas: 3`, `statusCancelamento: [Cancelled, Canceled, Dropped]`, `tiposReview: ["Checklist Review"]`; gravidade 3 para vencimento alterado/removido, responsável não autorizado, passa-bola e label após vencimento, 1 para Task × Review, 2 para os demais.
+- `auditoria.exemplo.yaml`: `pertoDoVencimentoDias: 2`, `posseAntesDoVencimentoDias: 2`, `passaBolaTrocas: 3`, `statusCancelamento: [Cancelled, Canceled, Dropped]` (`tiposReview` sai do `vinculos.yaml` do 4A, fonte única, e continua exposto em `RegrasDeAuditoria.tiposReview`); gravidade 3 para vencimento alterado/removido, responsável não autorizado, passa-bola e label após vencimento, 1 para Task × Review, 2 para os demais.
 - `labels_atraso.exemplo.yaml`: justificativas `ONHOLDBY-*`, `LATE_SENT`, `LATE_REVIEW`, `DUEDATE_NEGOTIATED`, `BI-CONSIDERCANCELLED`; tardias `LATE_SENT`, `LATE_REVIEW`.
 - Reporter (PL): a autorização usa o reporter **atual**; havendo evento de `reporter`, aviso `REPORTER_ALTERADO`.
+- Task × Review: Review ligada a mais de uma task (ou task com mais de uma Review) vira aviso informativo `VINCULO_AMBIGUO` e fica o par de menor chave natural (resolvido no 4A); base sem nenhum vínculo do tipo configurado → card vazio com aviso `VINCULOS_INDISPONIVEIS`, sem erro.
 
 ### Os 11 sinais (`CodigoSinal`)
 
@@ -92,7 +99,7 @@ Esta fase detecta essas alterações no changelog já gravado no banco (`change_
 |---|---|---|
 | `VENCIMENTO_ALTERADO_NAO_AUTORIZADO` | `from` e `to` legíveis e diferentes, autor não autorizado | auditoria |
 | `VENCIMENTO_REMOVIDO` | `from` preenchido e `to` nulo, qualquer autor | auditoria |
-| `VENCIMENTO_TASK_REVIEW_DIVERGENTE` | evento que deixa Task e Review com vencimentos diferentes | alerta |
+| `VENCIMENTO_TASK_REVIEW_DIVERGENTE` | evento que deixa Task e Review (ligadas pelo link `Blocks`) com vencimentos diferentes | alerta |
 | `RESPONSAVEL_TROCADO_NAO_AUTORIZADO` | troca por não autorizado | auditoria |
 | `PASSA_BOLA` | ≥ 3 trocas perto do vencimento, ou volta a quem já teve; um por issue | auditoria |
 | `TROCA_PERTO_DO_VENCIMENTO` | troca a até 2 dias do vencimento por não autorizado | auditoria |
@@ -119,6 +126,8 @@ Esta fase detecta essas alterações no changelog já gravado no banco (`change_
 | Sinais de vencimento, responsável, passa-bola e cancelamento com fronteiras | `alteradoPeloResponsavelGeraAuditoria`, `removidoGeraMesmoPorCoordenador`, `passaBolaTresTrocasNaJanela`, `limiteDaJanela`, `autorJirauserNaoResolvidoAparece` (T3) |
 | Sinais de labels, com fronteira de Manaus | `labelAposVencimentoFronteira`, `tardiaComPosseAntecipada`, `responsavelAutorizadoViraAlerta` (T4) |
 | Task × Review, no prazo e ajustado, todos os 11 códigos detectáveis | `quatroParesUmDivergente`, `noPrazoEAjustado`, `justificadaSobAuditoriaContaNoAjustado`, `todoCodigoDetectadoNoCenarioCompleto` (T5) |
+| Par Task × Review só pelo link `Blocks` (nas duas direções), nunca pelo `parent`; ambiguidade e falta de vínculos viram aviso | `quatroParesUmDivergente`, `reviewSemTaskLigadaIgnorada`, `parentKeyNaoFormaPar`, `ambosSemVencimentoNaoDiverge`, `sinalNoEventoQueDiverge`, `vinculoAmbiguoViraAviso`, `semVinculosCardVazioComAviso` (T5); `paresPeloVinculoBlocks`, `pontaRemovidaNaoFormaPar`, `semVinculosSinalizaIndisponivel` (T6); `tiposReviewVemDosVinculos` (T1) |
+| Lista de divergências com link para o Jira pela configuração, sem correção | `divergenciaTrazUrlDaInstancia`, `semRotaDeCorrecao` (T7); `divergenciaLinkParaATaskNoJira` (T8) |
 | Dado ruim vira aviso, não 500 | `vencimentoIlegivelViraAviso`, `statusSemMapaIgnoraIssueEAvisa` (T5) |
 | Leitura no banco por instância, com período `[de, ate)` | `fronteiraDoPeriodo`, `instanciaSeparada`, `trazTodosOsEventosDaIssue` (T6) |
 | Só coordenação e gerente; toda consulta auditada; aviso fixo | `soCoordenacaoEGerente`, `todaConsultaGravaAccessLog`, `avisoFixoIndicioNaoProva`, `devModeSemLogin` (T7) |
@@ -132,7 +141,9 @@ Esta fase detecta essas alterações no changelog já gravado no banco (`change_
 - **Formato real** de `duedate`, `labels` (separador em `toString`) e do `from/to` do assignee só se confirma na primeira conexão (checklist, Passo 4); o leitor aceita os dois formatos conhecidos de `duedate`.
 - **Reporter como PL** é premissa a confirmar no Jira real; reporter alterado só gera aviso.
 - **LGPD/DPO:** base legal pendente; até lá, só fixtures e demonstração.
-- **Nome de teste trocado no Plano 4A:** a Tarefa 9 do plano 4 diz que `PreparacaoDocsTest` continua passando com `cadaPassoDoChecklistExigeAutorizacaoExpressa`. Depois do Plano 4A (Tarefa 11) esse teste se chama **`cadaPassoDoChecklistConfirmaAFlag`**, e `checklistETemTodasAsChamadas` passou a contar "Confirme `JIRA_LIVE_ENABLED=true`". Ao escrever o Passo 4 do checklist na Tarefa 9, use a frase "Confirme `JIRA_LIVE_ENABLED=true` e rode o passo", nunca "peça autorização expressa".
+- **Nome de teste trocado no Plano 4A:** depois do Plano 4A (Tarefa 11), o teste do checklist se chama **`cadaPassoDoChecklistConfirmaAFlag`** (nome único em todos os planos; a Tarefa 9 do plano 4 só confere que ele continua passando), e `checklistETemTodasAsChamadas` passou a contar "Confirme `JIRA_LIVE_ENABLED=true`". Ao escrever o Passo 4 do checklist na Tarefa 9, use a frase "Confirme `JIRA_LIVE_ENABLED=true` e rode o passo", nunca "peça autorização expressa".
+- **Vínculo real a confirmar:** nome exato do tipo de link (`Blocks`) e direção em que a Review aparece só se confirmam na primeira conexão (4A, item no Passo 4 do checklist); até lá vale o `vinculos.exemplo.yaml`.
+- **Assinatura nova de `TaskReview.pares`** (recebe `ParDeChaves` já resolvidos, não mais `tiposReview`): o Plano 7 (Checklist × Review) consome essa função e precisa passar os vínculos.
 - **`RotaAuditada`** extrai o `executar` do Tempo em status: risco de mudar comportamento; os testes do Tempo em status precisam seguir verdes.
 
 ## 8. Glossário (nomes das fases anteriores que esta fase consome)
@@ -152,6 +163,8 @@ Esta fase detecta essas alterações no changelog já gravado no banco (`change_
 | `FiltroDeFicha`, `ctx.fichas` | Plano 4A (T3, T8) | Filtro de leitura pela ficha do card |
 | `DadosDeDemonstracao`, `DASHBOARD_DEMO_DATA` | Plano 4A (T10) | Dados fictícios com casos de cada sinal, para ver a tela sem Jira |
 | `PreparacaoDocsTest.cadaPassoDoChecklistConfirmaAFlag` | Plano 4A (T11) | Substituto de `cadaPassoDoChecklistExigeAutorizacaoExpressa` |
+| `issue_link`, `IssueLinkStore.ativos`, `VinculosConfig` (`ctx.vinculos`), `ParesTaskReview.resolver`, `ParDeChaves` | Plano 4A (T12) | Vínculos "Blocks / is blocked by" e pares Task × Review já resolvidos (desempate pela chave natural) |
+| `settings.jiraInstances[instance].baseUrl` | `config/Settings.kt` | URL base da instância para o link "abrir no Jira" (nunca hardcoded), remontada por `java.net.URI` sem userinfo, query nem fragmento; nunca a string de `Settings.mascararUrl` |
 | Frontend: `Shell`, `t()`, `DrillDrawer`, `linhaFiltrosCsv`, `format.ts` | `app/frontend/src/` (Plano 3) | Kit de tela; o CSV vai para `shared/csv.ts` nesta fase |
 
 Nomes que esta fase **produz** e a Fase 5 consome: `LabelsDeAtraso`, `NoPrazo`, `NoPrazoResultado`, `AuditIssue`, `AuditTimeline.responsavelEm`, `RegrasDeAuditoria.tiposReview`, `executarAuditado` (`cards/RotaAuditada.kt`), `shared/csv.ts`, `ctx.labelsDeAtraso`, `ctx.regrasAuditoria`.
