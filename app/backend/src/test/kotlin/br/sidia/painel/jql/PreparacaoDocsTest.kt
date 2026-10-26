@@ -96,6 +96,42 @@ class PreparacaoDocsTest {
     }
 
     @Test
+    fun cadaVariavelDoRunbookTemRepasseNoComposeEExemploNoEnv() {
+        val runbook = ler("docs/jira/runbook-sincronizacao.md")
+        val env = ler("app/.env.example")
+        val compose = ler("app/docker-compose.yml")
+        val nomes = (Regex("SYNC_[A-Z_]+").findAll(runbook).map { it.value } + sequenceOf("RETENTION_MONTHS")).toSet()
+        assertTrue(nomes.size >= 10, "Esperadas as SYNC_* e RETENTION_MONTHS no runbook: $nomes")
+        for (nome in nomes) {
+            assertTrue(Regex("^#?\\s*$nome=", RegexOption.MULTILINE).containsMatchIn(env), "$nome sem exemplo no .env.example")
+            assertTrue(
+                Regex("^\\s+$nome: \\$\\{$nome:-\\}\\s*$", RegexOption.MULTILINE).containsMatchIn(compose),
+                "$nome sem repasse ativo no docker-compose.yml",
+            )
+        }
+        for (nome in listOf("JIRA_SAMSUNG_URL", "JIRA_SAMSUNG_TOKEN", "JIRA_SIDIA_URL", "JIRA_SIDIA_USER", "JIRA_SIDIA_TOKEN")) {
+            assertTrue(
+                Regex("^\\s+$nome: \\$\\{$nome:-\\}\\s*$", RegexOption.MULTILINE).containsMatchIn(compose),
+                "$nome sem repasse ativo (sem valor padrão) no compose",
+            )
+        }
+    }
+
+    @Test
+    fun composeMontaAsConfigsReaisSomenteLeitura() {
+        val compose = ler("app/docker-compose.yml")
+        assertTrue(
+            Regex("^\\s+- \\./config:/app/config:ro\\s*$", RegexOption.MULTILINE).containsMatchIn(compose),
+            "Compose sem o volume ./config:/app/config:ro ativo",
+        )
+    }
+
+    @Test
+    fun runbookNaoCitaTarefaInterna() {
+        assertTrue(!Regex("Tarefa \\d+").containsMatchIn(ler("docs/jira/runbook-sincronizacao.md")))
+    }
+
+    @Test
     fun readmeSemRegraAntiga() {
         for (arquivo in listOf("app/README.md", "app/.env.example")) {
             assertTrue(!ler(arquivo).contains("autorização expressa"), "$arquivo ainda cita a regra antiga")

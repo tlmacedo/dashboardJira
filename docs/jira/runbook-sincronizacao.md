@@ -47,6 +47,24 @@ Copy-Item app\config\jira_campos.exemplo.yaml app\config\jira_campos.yaml
 
 Confira com `git status` que nenhum desses arquivos aparece como novo. Se aparecer, pare: o `.gitignore` está incompleto.
 
+**Como os arquivos chegam ao contêiner.** O `docker-compose.yml` monta a pasta `app/config/` do host em `/app/config`, somente leitura (`:ro`), por cima da config embutida na imagem (que só traz os modelos `.exemplo`). Portanto os arquivos reais acima, e as fichas em `cards/`, são lidos sem rebuild de imagem: basta criar o arquivo e reiniciar (`docker compose up -d`). Nada com dado pessoal é copiado para a imagem nem para o repositório. Um arquivo `vinculos` (vínculo Blocks), quando existir, segue o mesmo caminho.
+
+**Conferência dos arquivos carregados.** Depois de subir, o log da subida avisa, em modo desenvolvimento, de cada arquivo real ausente que foi trocado pelo modelo (`usando o modelo ... .exemplo.yaml`). Sem esse aviso para papéis, mapa de status e dicionário de campos, os reais foram carregados (o log nunca mostra o conteúdo). Em produção a ausência de um obrigatório derruba a subida.
+
+macOS (zsh), a partir da pasta `app`:
+
+```sh
+docker compose logs painel | grep "usando o modelo"
+```
+
+Windows 11 (PowerShell), a partir da pasta `app`:
+
+```powershell
+docker compose logs painel | Select-String "usando o modelo"
+```
+
+Saída vazia = nenhum modelo em uso.
+
 ## Variáveis
 
 A sincronização liga **somente** por `JIRA_LIVE_ENABLED=true`. As variáveis `SYNC_*` só ajustam limites e horários; vazio significa o padrão. Valor fora da faixa faz o app falhar na subida, citando só o nome da variável.
@@ -65,33 +83,53 @@ A sincronização liga **somente** por `JIRA_LIVE_ENABLED=true`. As variáveis `
 | `SYNC_TEMPO_MAX_MIN` | `60` | 1 a 240 | Tempo máximo de uma execução. |
 | `RETENTION_MONTHS` | `24` | inteiro positivo | Meses de dados locais mantidos (ver Retenção). |
 
-Para o compose enxergar uma variável, ela precisa estar em `app/docker-compose.yml` no formato `NOME: ${NOME:-}`; os comentários do arquivo explicam.
+O `docker-compose.yml` já repassa ao contêiner todas as variáveis acima, as de conexão (`JIRA_SAMSUNG_URL`, `JIRA_SAMSUNG_TOKEN`, `JIRA_SIDIA_URL`, `JIRA_SIDIA_USER`, `JIRA_SIDIA_TOKEN`) e `DASHBOARD_DEMO_DATA`, sempre no formato `NOME: ${NOME:-}` (sem valor no arquivo; vazio = padrão do código). Os valores vêm do `.env`.
 
 ## Etapa 1: primeiro ciclo, pequeno
 
-Objetivo: ver o app falar com o Jira com o menor volume possível.
+Objetivo: ver o app falar com o Jira com o menor volume possível. Todos os comandos rodam na pasta `app/` (a partir da raiz do repositório).
 
-1. No `.env`, defina `SYNC_MAX_ITENS=50` e `SYNC_MAX_REQUISICOES=5`, mais URL e token da instância.
-2. **O usuário** liga a flag: `JIRA_LIVE_ENABLED=true` no `.env`.
-3. Reinicie o app. O agendador faz a carga inicial sozinho, dentro desses tetos.
+1. No `.env`, defina `SYNC_MAX_ITENS=50` e `SYNC_MAX_REQUISICOES=5`, mais URL e token da instância. **Ainda com `JIRA_LIVE_ENABLED=false`.**
+2. **Conferência antes de ligar a flag.** Veja o que o contêiner vai receber, sem imprimir segredo. Nunca rode `docker compose config` sem filtro: ele mostra a senha do banco e o token.
 
-macOS (zsh):
+   macOS (zsh):
 
-```sh
-cd app
-docker compose up --build -d
-```
+   ```sh
+   cd app
+   docker compose config | grep -E "JIRA_LIVE_ENABLED|DASHBOARD_|SYNC_|RETENTION_MONTHS"
+   docker compose config | grep -E "JIRA_[A-Z]+_(URL|USER|TOKEN):" | awk '{print $1, ($2 == "\"\"" ? "VAZIA" : "preenchida")}'
+   ```
 
-Windows 11 (PowerShell):
+   Windows 11 (PowerShell):
 
-```powershell
-cd app
-docker compose up --build -d
-```
+   ```powershell
+   Set-Location app
+   docker compose config | Select-String "JIRA_LIVE_ENABLED|DASHBOARD_|SYNC_|RETENTION_MONTHS"
+   docker compose config | Select-String "JIRA_[A-Z]+_(URL|USER|TOKEN):" | ForEach-Object {
+     $p = $_.Line.Trim() -split ":\s*", 2
+     "$($p[0]): " + $(if ($p[1] -in '""', "''", "") { "VAZIA" } else { "preenchida" })
+   }
+   ```
 
-4. Espere um ciclo e confira `/api/sync/status` e o card (próxima seção). O primeiro ciclo termina quando o app esgota o teto de 50 issues ou de 5 requisições; um código `TETO_ITENS` ou `ORCAMENTO_REQUISICOES` aqui é esperado, não é falha do Jira.
+   Esperado: `JIRA_LIVE_ENABLED: "false"`, `SYNC_MAX_ITENS: "50"`, `SYNC_MAX_REQUISICOES: "5"` e as credenciais da instância como `preenchida` (a da outra instância `VAZIA`). Se um teto aparecer vazio, a variável não chegou ao contêiner: pare e corrija o `.env`.
+3. **O usuário** liga a flag: `JIRA_LIVE_ENABLED=true` no `.env`.
+4. Suba (ou recrie) o app. O agendador faz a carga inicial sozinho, dentro desses tetos.
 
-Para acompanhar o log:
+   macOS (zsh), na pasta `app`:
+
+   ```sh
+   docker compose up --build -d
+   ```
+
+   Windows 11 (PowerShell), na pasta `app`:
+
+   ```powershell
+   docker compose up --build -d
+   ```
+
+5. Espere um ciclo e confira `/api/sync/status` e o card (próxima seção). O primeiro ciclo termina quando o app esgota o teto de 50 issues ou de 5 requisições; um código `TETO_ITENS` ou `ORCAMENTO_REQUISICOES` aqui é esperado, não é falha do Jira.
+
+Para acompanhar o log (macOS e PowerShell, na pasta `app`):
 
 ```sh
 docker compose logs -f painel
