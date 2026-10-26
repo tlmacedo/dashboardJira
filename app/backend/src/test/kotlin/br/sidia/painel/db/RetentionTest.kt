@@ -1,7 +1,7 @@
 package br.sidia.painel.db
 
+import br.sidia.painel.BancoEmArquivo
 import br.sidia.painel.time.BusinessCalendar
-import org.testcontainers.postgresql.PostgreSQLContainer
 import java.time.LocalDate
 import java.time.ZoneId
 import javax.sql.DataSource
@@ -14,7 +14,7 @@ import kotlin.test.assertFailsWith
 /** Testes contra PostgreSQL real (Testcontainers); nunca H2 nem mock. */
 class RetentionTest {
     companion object {
-        private val pg = PostgreSQLContainer("postgres:16").apply { start() }
+        private val pg = BancoEmArquivo()
     }
 
     private val zona = ZoneId.of("America/Manaus")
@@ -23,18 +23,23 @@ class RetentionTest {
 
     @BeforeTest
     fun preparar() {
-        ds = Database.connect(pg.jdbcUrl, pg.username, pg.password)
-        // banco limpo a cada teste: recria o schema e migra de novo
-        ds.connection.use { it.createStatement().execute("DROP SCHEMA public CASCADE; CREATE SCHEMA public;") }
+        ds = Database.connect(pg.jdbcUrl)
         Database.migrate(ds)
     }
 
     @AfterTest
     fun encerrar() {
         (ds as? AutoCloseable)?.close()
+        pg.limpar()
     }
 
-    private fun exec(sql: String) = ds.connection.use { it.createStatement().execute(sql) }
+    /** Os instantes ficam gravados como milissegundos; os literais de data dos testes (`'2024-10-24 00:00:00-04'`) são convertidos. */
+    private fun exec(sql: String) {
+        val convertido = Regex("'(\\d{4}-\\d\\d-\\d\\d \\d\\d:\\d\\d:\\d\\d)([+-]\\d\\d)'").replace(sql) { m ->
+            java.time.OffsetDateTime.parse(m.groupValues[1].replace(' ', 'T') + m.groupValues[2] + ":00").toInstant().toEpochMilli().toString()
+        }
+        ds.connection.use { it.createStatement().execute(convertido) }
+    }
 
     private fun contar(tabela: String): Int = ds.connection.use { c ->
         c.createStatement().executeQuery("SELECT count(*) FROM $tabela").use { it.next(); it.getInt(1) }
@@ -50,7 +55,7 @@ class RetentionTest {
     fun migracaoCriaTabelas() {
         val nomes = ds.connection.use { c ->
             c.createStatement().executeQuery(
-                "SELECT table_name FROM information_schema.tables WHERE table_schema='public'",
+                "SELECT name FROM sqlite_master WHERE type='table'",
             ).use { rs -> generateSequence { if (rs.next()) rs.getString(1) else null }.toSet() }
         }
         val esperadas = setOf("person", "issue", "change_event", "worklog", "sync_state", "access_log")
@@ -131,7 +136,7 @@ class RetentionTest {
         issueComDatas(2, null, "2026-10-01 12:00:00+00") // fica
         fun vinculo(instancia: String, de: String, para: String, removida: String? = null) = exec(
             "INSERT INTO issue_link(instance, from_key, to_key, link_type, direction, visto_em, removida_em) VALUES " +
-                "('$instancia', '$de', '$para', 'Blocks', 'OUTWARD', now(), ${removida?.let { "'$it'" } ?: "NULL"})",
+                "('$instancia', '$de', '$para', 'Blocks', 'OUTWARD', (CAST(strftime('%s','now') AS INTEGER) * 1000), ${removida?.let { "'$it'" } ?: "NULL"})",
         )
         vinculo("main", "TG-1", "TG-2") // ponta purgada como origem
         vinculo("main", "TG-3", "TG-1") // ponta purgada como destino
@@ -173,7 +178,7 @@ class RetentionTest {
         evento(1, 1, "2026-01-01 12:00:00+00")
         exec(
             "INSERT INTO issue_link(instance, from_key, to_key, link_type, direction, visto_em) VALUES " +
-                "('main', 'TG-1', 'TG-3', 'Blocks', 'OUTWARD', now())",
+                "('main', 'TG-1', 'TG-3', 'Blocks', 'OUTWARD', (CAST(strftime('%s','now') AS INTEGER) * 1000))",
         )
         Retention(ds, calendario).purge(LocalDate.of(2026, 10, 30), 24)
         val chaves = ds.connection.use { c ->

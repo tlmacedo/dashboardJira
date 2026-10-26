@@ -22,14 +22,11 @@ dependencies {
     implementation(libs.logback.classic)
     implementation(libs.hikari)
     implementation(libs.flyway.core)
-    runtimeOnly(libs.flyway.postgresql)
-    implementation(libs.postgresql)
+    implementation(libs.sqlite.jdbc)
 
     testImplementation(libs.ktor.server.test.host)
     testImplementation(libs.ktor.client.mock)
     testImplementation(libs.kotlin.test.junit5)
-    testImplementation(libs.testcontainers.postgresql)
-    testImplementation(libs.testcontainers.junit)
 }
 
 kotlin {
@@ -38,6 +35,11 @@ kotlin {
 
 application {
     mainClass.set("br.sidia.painel.ApplicationKt")
+}
+
+// `./gradlew run` roda a partir de app/ para que config/, frontend/dist, data/ e o arquivo de variáveis (caminhos relativos) existam.
+tasks.named<JavaExec>("run") {
+    workingDir = rootProject.layout.projectDirectory.dir("..").asFile
 }
 
 tasks.test {

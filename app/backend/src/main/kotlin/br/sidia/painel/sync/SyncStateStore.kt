@@ -34,11 +34,11 @@ interface RepositorioDeChaves {
     fun gravarChavesDeUsuario(instance: String, mapa: Map<String, String>, at: Instant)
 }
 
-/** Estado da sincronização por instância: cursor, execuções, suspensão e trava entre réplicas. */
+/** Estado da sincronização por instância: cursor, execuções, suspensão e trava de execução única. */
 interface SyncStateStore : RepositorioDeChaves {
     fun cursor(instance: String): Instant?
 
-    /** Monotônico (GREATEST): nunca recua. */
+    /** Monotônico (o maior vence): nunca recua. */
     fun avancarCursor(instance: String, novo: Instant)
     fun iniciar(instance: String, kind: SyncKind, at: Instant): Long
     /** Só conclui execução ainda EM_ANDAMENTO; devolve false (sem sobrescrever) se ela já foi fechada. */
@@ -70,12 +70,13 @@ interface SyncStateStore : RepositorioDeChaves {
     fun marcarReconciliacao(instance: String, at: Instant)
     fun ultimaReconciliacao(instance: String): Instant?
 
-    /** `pg_try_advisory_lock` numa conexão dedicada; devolve null se outra execução já detém a trava. */
+    /** Trava em memória por instância (o painel roda em um só processo); devolve null se outra execução já detém a trava. */
     suspend fun <T> comTrava(instance: String, bloco: suspend () -> T): T?
 
     /**
      * Fecha como FALHA/INTERROMPIDA (finished_at = [at]) as execuções EM_ANDAMENTO iniciadas antes de
-     * [inicioDoProcesso] cuja trava da instância não está presa por nenhuma sessão (nem de outra réplica).
+     * [inicioDoProcesso]. Só existe um processo por arquivo de banco (trava de processo na subida), então toda
+     * execução que ficou EM_ANDAMENTO de uma subida anterior é órfã.
      */
     fun fecharOrfas(inicioDoProcesso: Instant, at: Instant): Int
 }
@@ -89,7 +90,7 @@ private fun validarCodigo(codigo: String?) {
     require(codigo == null || CODIGO_VALIDO.matches(codigo)) { "Código de erro inválido: só A-Z, 0-9 e _" }
 }
 
-class PostgresSyncStateStore(private val ds: DataSource) : SyncStateStore {
+class SqliteSyncStateStore(private val ds: DataSource) : SyncStateStore {
 
     private fun <T> tx(bloco: (Connection) -> T): T = ds.connection.use { c ->
         c.autoCommit = false
@@ -116,7 +117,8 @@ class PostgresSyncStateStore(private val ds: DataSource) : SyncStateStore {
         tx { c ->
             c.prepareStatement(
                 "INSERT INTO sync_state(instance, watermark) VALUES (?, ?) " +
-                    "ON CONFLICT (instance) DO UPDATE SET watermark = GREATEST(sync_state.watermark, EXCLUDED.watermark)",
+                    "ON CONFLICT (instance) DO UPDATE SET watermark = CASE WHEN sync_state.watermark IS NULL " +
+                    "OR excluded.watermark > sync_state.watermark THEN excluded.watermark ELSE sync_state.watermark END",
             ).use { ps ->
                 ps.setString(1, instance)
                 ps.setTimestamp(2, ts(novo))
@@ -170,10 +172,10 @@ class PostgresSyncStateStore(private val ds: DataSource) : SyncStateStore {
     override fun falhasSeguidas(instance: String, kind: SyncKind): Int = tx { c ->
         c.prepareStatement(
             "SELECT count(*) FROM sync_run WHERE instance = ? AND kind = ? AND status = 'FALHA' " +
-                "AND codigo_erro IS DISTINCT FROM 'INTERROMPIDA' " +
+                "AND codigo_erro IS NOT 'INTERROMPIDA' " +
                 // Parar num limite nosso (itens, requisições, tempo) é progresso parcial com o cursor avançando, não falha.
                 "AND COALESCE(codigo_erro, '') NOT IN ('TETO_ITENS', 'ORCAMENTO_REQUISICOES', 'TEMPO_ESGOTADO') " +
-                "AND id > GREATEST(" +
+                "AND id > max(" +
                 "COALESCE((SELECT max(id) FROM sync_run WHERE instance = ? AND kind = ? AND status = 'OK'), 0), " +
                 "COALESCE((SELECT falhas_desde_run_id FROM sync_state WHERE instance = ?), 0))",
         ).use { ps ->
@@ -214,7 +216,8 @@ class PostgresSyncStateStore(private val ds: DataSource) : SyncStateStore {
 
     override fun ultimaPorTipo(instance: String?): Map<SyncKind, RegistroDeExecucao> = tx { c ->
         c.prepareStatement(
-            "SELECT DISTINCT ON (kind) * FROM sync_run WHERE instance = ? ORDER BY kind, started_at DESC, id DESC",
+            "SELECT * FROM sync_run r WHERE instance = ? AND id = (SELECT id FROM sync_run WHERE instance = r.instance " +
+                "AND kind = r.kind ORDER BY started_at DESC, id DESC LIMIT 1) ORDER BY kind",
         ).use { ps ->
             ps.setString(1, instance ?: INSTANCIA_RETENCAO)
             ps.executeQuery().use { rs ->
@@ -279,99 +282,31 @@ class PostgresSyncStateStore(private val ds: DataSource) : SyncStateStore {
         }
     }
 
+    /** Instâncias com execução em curso neste processo. */
+    private val emExecucao = java.util.concurrent.ConcurrentHashMap.newKeySet<String>()
+
     /**
-     * A trava vale pela sessão da conexão dedicada: se o processo morrer, o PostgreSQL a solta sozinho.
-     * A conexão fica reservada até o fim do bloco.
+     * Trava em memória: o painel é um processo só por arquivo de banco (garantido na subida por [br.sidia.painel.db.TravaDeProcesso]),
+     * então basta impedir duas execuções simultâneas da mesma instância dentro dele. Devolve null se já há uma em curso.
      */
     override suspend fun <T> comTrava(instance: String, bloco: suspend () -> T): T? {
-        val chave = "sync:$instance"
-        ds.connection.use { c ->
-            c.autoCommit = true
-            val obtida = c.prepareStatement("SELECT pg_try_advisory_lock(hashtextextended(?, 0))").use { ps ->
-                ps.setString(1, chave)
-                ps.executeQuery().use { it.next(); it.getBoolean(1) }
-            }
-            if (!obtida) return null
-            var falhaDoBloco: Throwable? = null
-            try {
-                return bloco()
-            } catch (e: Throwable) {
-                falhaDoBloco = e
-                throw e
-            } finally {
-                val liberada = try {
-                    c.prepareStatement("SELECT pg_advisory_unlock(hashtextextended(?, 0))").use { ps ->
-                        ps.setString(1, chave)
-                        ps.executeQuery().use { it.next(); it.getBoolean(1) }
-                    }
-                } catch (e: Exception) {
-                    falhaDoBloco?.addSuppressed(e)
-                    false
-                }
-                if (!liberada) descartar(c)
-            }
-        }
-    }
-
-    /** `pg_advisory_unlock`; false se a trava não foi solta (retorno falso ou exceção). */
-    private fun soltarTrava(c: Connection, chave: String): Boolean =
+        if (!emExecucao.add(instance)) return null
         try {
-            c.prepareStatement("SELECT pg_advisory_unlock(hashtextextended(?, 0))").use { ps ->
-                ps.setString(1, chave)
-                ps.executeQuery().use { it.next() && it.getBoolean(1) }
-            }
-        } catch (e: Exception) {
-            false
+            return bloco()
+        } finally {
+            emExecucao.remove(instance)
         }
-
-    /** Conexão com trava possivelmente presa: não volta ao pool (evicção); sem Hikari, fecha de verdade. */
-    private fun descartar(c: Connection) {
-        runCatching { (ds as? com.zaxxer.hikari.HikariDataSource)?.evictConnection(c) }
-        runCatching { c.abort(Runnable::run) }
     }
 
-    /**
-     * Órfã = EM_ANDAMENTO iniciada antes do início do processo e sem ninguém segurando a trava da instância.
-     * A trava é testada com pg_try_advisory_lock numa sessão própria: se obtém, ninguém a segura (órfã);
-     * se não, outra réplica ainda executa e a linha é preservada.
-     */
-    override fun fecharOrfas(inicioDoProcesso: Instant, at: Instant): Int {
-        var fechadas = 0
-        ds.connection.use { c ->
-            c.autoCommit = true
-            val instancias = c.prepareStatement(
-                "SELECT DISTINCT instance FROM sync_run WHERE status = 'EM_ANDAMENTO' AND started_at < ?",
-            ).use { ps ->
-                ps.setTimestamp(1, ts(inicioDoProcesso))
-                ps.executeQuery().use { rs -> generateSequence { if (rs.next()) rs.getString(1) else null }.toList() }
-            }
-            for (inst in instancias) {
-                val chave = "sync:$inst"
-                val obtida = c.prepareStatement("SELECT pg_try_advisory_lock(hashtextextended(?, 0))").use { ps ->
-                    ps.setString(1, chave)
-                    ps.executeQuery().use { it.next(); it.getBoolean(1) }
-                }
-                if (!obtida) continue
-                var presa = false
-                try {
-                    fechadas += c.prepareStatement(
-                        "UPDATE sync_run SET status = 'FALHA', codigo_erro = 'INTERROMPIDA', finished_at = ? " +
-                            "WHERE instance = ? AND status = 'EM_ANDAMENTO' AND started_at < ?",
-                    ).use { ps ->
-                        ps.setTimestamp(1, ts(at))
-                        ps.setString(2, inst)
-                        ps.setTimestamp(3, ts(inicioDoProcesso))
-                        ps.executeUpdate()
-                    }
-                } finally {
-                    // Soltar a trava confere o retorno: se falhar, a conexão (e a trava presa nela) é descartada.
-                    presa = !soltarTrava(c, chave)
-                    if (presa) descartar(c)
-                }
-                if (presa) break
-            }
+    override fun fecharOrfas(inicioDoProcesso: Instant, at: Instant): Int = tx { c ->
+        c.prepareStatement(
+            "UPDATE sync_run SET status = 'FALHA', codigo_erro = 'INTERROMPIDA', finished_at = ? " +
+                "WHERE status = 'EM_ANDAMENTO' AND started_at < ?",
+        ).use { ps ->
+            ps.setTimestamp(1, ts(at))
+            ps.setTimestamp(2, ts(inicioDoProcesso))
+            ps.executeUpdate()
         }
-        return fechadas
     }
 
     override fun chavesDeUsuario(instance: String): Map<String, String> = tx { c ->

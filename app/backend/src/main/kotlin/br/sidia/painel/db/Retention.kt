@@ -46,10 +46,10 @@ class Retention(private val ds: DataSource, private val calendar: BusinessCalend
             Purga("DELETE FROM worklog WHERE started < ?"),
             // Vínculo com uma ponta que esta execução vai purgar (mesma instância) ou removido no Jira antes do limite.
             Purga(
-                "DELETE FROM issue_link l WHERE l.removida_em < ? OR EXISTS (SELECT 1 FROM issue i WHERE i.instance = l.instance " +
+                "DELETE FROM issue_link AS l WHERE l.removida_em < ? OR EXISTS (SELECT 1 FROM issue i WHERE i.instance = l.instance " +
                     "AND i.key IN (l.from_key, l.to_key) AND $ISSUE_PURGAVEL)",
             ),
-            Purga("DELETE FROM issue i WHERE $ISSUE_PURGAVEL"),
+            Purga("DELETE FROM issue AS i WHERE $ISSUE_PURGAVEL"),
             Purga("DELETE FROM access_log WHERE at < ?", doAccessLog = true),
             Purga("DELETE FROM sync_run WHERE started_at < ?"),
             Purga("DELETE FROM jira_user_key WHERE visto_em < ?"),
@@ -74,7 +74,7 @@ class Retention(private val ds: DataSource, private val calendar: BusinessCalend
                     val sql = purga.sql
                     val corte = if (purga.doAccessLog) limiteAccessLog else limite
                     c.prepareStatement(sql).use { st ->
-                        for (i in 1..sql.count { it == '?' }) st.setObject(i, corte)
+                        for (i in 1..sql.count { it == '?' }) st.setTimestamp(i, java.sql.Timestamp.from(corte.toInstant()))
                         total += st.executeUpdate()
                     }
                 }

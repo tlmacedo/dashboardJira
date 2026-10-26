@@ -1,5 +1,6 @@
 package br.sidia.painel.sync
 
+import br.sidia.painel.BancoEmArquivo
 import br.sidia.painel.AppContext
 import br.sidia.painel.config.JiraInstanceSettings
 import br.sidia.painel.config.Settings
@@ -29,7 +30,6 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import org.junit.jupiter.api.AfterAll
-import org.testcontainers.postgresql.PostgreSQLContainer
 import java.time.Clock
 import java.time.Instant
 import java.time.ZoneOffset
@@ -51,12 +51,12 @@ import kotlin.time.Duration.Companion.seconds
  */
 class SyncServiceTest {
     companion object {
-        private val pg = PostgreSQLContainer("postgres:16").apply { start() }
+        private val pg = BancoEmArquivo()
 
         @JvmStatic
         @AfterAll
-        fun pararContainer() {
-            pg.stop()
+        fun apagarBanco() {
+            pg.apagar()
         }
     }
 
@@ -70,7 +70,7 @@ class SyncServiceTest {
     private var aoReceber: suspend MockRequestHandleScope.(JsonObject) -> HttpResponseData = { corpo -> paginar(corpo) }
 
     private var ctx: AppContext? = null
-    private lateinit var estado: PostgresSyncStateStore
+    private lateinit var estado: SqliteSyncStateStore
 
     @AfterTest
     fun encerrar() {
@@ -131,8 +131,8 @@ class SyncServiceTest {
         )
         val c = testContextComBanco(settings, pg, clock = relogio, jira = fabrica)
         ctx = c
-        estado = PostgresSyncStateStore(requireNotNull(c.dataSource))
-        return SyncService(c, PostgresIssueStore(requireNotNull(c.dataSource)), estado, SyncGate(live, settings.sync), relogio)
+        estado = SqliteSyncStateStore(requireNotNull(c.dataSource))
+        return SyncService(c, SqliteIssueStore(requireNotNull(c.dataSource)), estado, SyncGate(live, settings.sync), relogio)
     }
 
     private fun contar(tabela: String): Int = requireNotNull(requireNotNull(ctx).dataSource).connection.use { c ->
@@ -356,7 +356,7 @@ class SyncServiceTest {
         val r = executada(s.incremental("samsung"))
         assertEquals("HTTP_5XX", r.codigoErro)
         val linha = requireNotNull(requireNotNull(ctx).dataSource).connection.use { c ->
-            c.createStatement().executeQuery("SELECT row_to_json(r)::text FROM sync_run r").use { it.next(); it.getString(1) }
+            c.createStatement().executeQuery("SELECT json_object('instance', instance, 'kind', kind, 'status', status, 'codigo_erro', codigo_erro) || '' FROM sync_run r").use { it.next(); it.getString(1) }
         }
         assertFalse(linha.contains("segredo-xyz"), linha)
         assertEquals(500, estado.ultimas("samsung").single().httpStatus)
@@ -420,7 +420,7 @@ class SyncServiceTest {
 
     private fun servicoCom(store: SyncStateStore, live: Boolean): SyncService {
         val c = requireNotNull(ctx)
-        return SyncService(c, PostgresIssueStore(requireNotNull(c.dataSource)), store, SyncGate(live, c.settings.sync), relogio)
+        return SyncService(c, SqliteIssueStore(requireNotNull(c.dataSource)), store, SyncGate(live, c.settings.sync), relogio)
     }
 
     @Test

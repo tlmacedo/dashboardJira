@@ -41,26 +41,24 @@ data class Settings(
     val accessLogRetentionMonths: Int = 24,
     val zone: ZoneId = ZoneId.of("America/Manaus"),
     val configDir: Path = Path.of("config"),
-    val databaseUrl: String = "jdbc:postgresql://localhost:5432/painel",
+    /** `DATABASE_PATH`: arquivo SQLite do painel (criado na primeira subida). Sem servidor, sem usuário, sem senha. */
+    val databasePath: Path = Path.of("data/painel.db"),
     /** Diretório do build do frontend (`dist`) servido em `/`. */
     val staticDir: Path = Path.of("frontend/dist"),
-    val databaseUser: String = "painel",
-    /** Sem valor padrão: vem de `DATABASE_PASSWORD`. Nunca aparece em `toString`. */
-    val databasePassword: String = "",
-    /** Tamanho máximo do pool de conexões (`DATABASE_POOL_SIZE`, de 1 a 100). */
-    val databasePoolSize: Int = 10,
+    /** Tamanho máximo do pool de conexões (`DATABASE_POOL_SIZE`, de 1 a 100). No SQLite só um grava por vez. */
+    val databasePoolSize: Int = 4,
     /** Instâncias do Jira configuradas (`samsung`, `sidia`); só entram quando completas. */
     val jiraInstances: Map<String, JiraInstanceSettings> = emptyMap(),
     /** Ajustes da sincronização (`SYNC_*`). Só intervalos e limites: o modo vem da flag do Jira. */
     val sync: SyncSettings = SyncSettings(),
 ) {
-    /** Sem segredos: senha vira `***` e `usuario:senha@` e `password=` da URL são mascarados. */
+    /** Sem segredos: o painel não guarda senha de banco; as credenciais do Jira nunca entram aqui. */
     override fun toString(): String =
         "Settings(jiraLiveEnabled=$jiraLiveEnabled, dashboardDevMode=$dashboardDevMode, " +
             "dashboardDemoData=$dashboardDemoData, " +
             "retentionMonths=$retentionMonths, accessLogRetentionMonths=$accessLogRetentionMonths, zone=$zone, configDir=$configDir, " +
-            "databaseUrl=${mascararUrl(databaseUrl)}, staticDir=$staticDir, databaseUser=$databaseUser, " +
-            "databasePassword=***, databasePoolSize=$databasePoolSize, jiraInstances=$jiraInstances)"
+            "databasePath=$databasePath, staticDir=$staticDir, " +
+            "databasePoolSize=$databasePoolSize, jiraInstances=$jiraInstances)"
 
     companion object {
         /**
@@ -94,10 +92,8 @@ data class Settings(
                     }
                 } ?: padrao.zone,
                 configDir = caminho(env, "PAINEL_CONFIG_DIR") ?: padrao.configDir,
-                databaseUrl = texto(env, "DATABASE_URL") ?: padrao.databaseUrl,
+                databasePath = caminho(env, "DATABASE_PATH") ?: padrao.databasePath,
                 staticDir = caminho(env, "PAINEL_STATIC_DIR") ?: padrao.staticDir,
-                databaseUser = texto(env, "DATABASE_USER") ?: padrao.databaseUser,
-                databasePassword = env["DATABASE_PASSWORD"]?.takeIf { it.isNotBlank() } ?: padrao.databasePassword,
                 databasePoolSize = texto(env, "DATABASE_POOL_SIZE")?.let {
                     it.toIntOrNull()?.takeIf { n -> n in 1..100 }
                         ?: throw IllegalArgumentException("DATABASE_POOL_SIZE inválido: '$it' (esperado inteiro de 1 a 100)")

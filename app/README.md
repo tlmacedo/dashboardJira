@@ -2,32 +2,32 @@
 
 Backend Kotlin/Ktor em `backend/`, frontend React + TypeScript (Vite) em `frontend/`. O app Python anterior fica em `../legacy/` apenas como referência. Desenho completo: [spec](../docs/superpowers/specs/2026-10-24-painel-squads-kotlin-react-design.md).
 
-## Como subir (Docker)
+## Como subir (sem Docker e sem servidor de banco)
+
+Requisitos: **JDK 21** e **Node 22 com pnpm**. O banco é um arquivo SQLite (`data/painel.db`), criado sozinho na primeira subida.
 
 ```sh
-cp .env.example .env          # o .env é ignorado pelo git
-# edite o .env e defina POSTGRES_PASSWORD (ex.: openssl rand -hex 16)
-docker compose up --build -d
+cp .env.example .env     # opcional; o arquivo .env é ignorado pelo git
+sh iniciar.sh            # Linux/macOS
 ```
 
+No Windows (PowerShell): `Copy-Item .env.example .env` e depois `.\iniciar.ps1`.
+
+- Os scripts instalam as dependências do frontend, geram o build e rodam o backend (`./gradlew run`, executado a partir de `app/`).
 - Painel: <http://127.0.0.1:8080> (serve a SPA; a API fica em `/api/*`, por exemplo `/api/health` e `/api/meta`).
-- `POSTGRES_PASSWORD` é obrigatória e não tem valor padrão: sem ela o compose se recusa a iniciar.
-- Para derrubar e apagar os dados locais: `docker compose down -v`.
+- Para apagar os dados locais: pare o painel e apague `data/painel.db` (e `painel.db-wal` e `painel.db-shm`, se existirem).
+- Só **um painel por arquivo de banco**: uma segunda subida no mesmo arquivo é recusada (trava `painel.db.lock`).
 
-## Ver o painel hoje em 3 comandos
-
-A partir da raiz do repositório:
+## Ver o painel hoje com dados fictícios
 
 ```sh
 cd app
-POSTGRES_PASSWORD=<valor descartável> DASHBOARD_DEMO_DATA=true docker compose up --build -d
-open http://127.0.0.1:8080        # Linux: xdg-open; ou abra o endereço no navegador
+DASHBOARD_DEMO_DATA=true sh iniciar.sh        # PowerShell: $env:DASHBOARD_DEMO_DATA='true'; .\iniciar.ps1
 ```
 
-- Os dados são **100% fictícios** (issues `DEMO-n` e `DEMOCAT-n`, pessoas dos modelos `.exemplo`) e a faixa vermelha avisa. As datas se ajustam em semanas inteiras até hoje, então a tela Tempo em status mostra números úteis em qualquer dia. Nenhuma requisição ao Jira é feita.
-- O PostgreSQL fixa a senha na **primeira** criação do volume: reuse o mesmo valor nas subidas seguintes ou recomece com `docker compose down -v`.
-- `docker compose down -v` também é obrigatório **antes de ligar a flag do Jira**: o painel recusa subir com a flag ligada e dados de demonstração no banco. Um banco que já tem issues reais também recusa a demonstração.
-- Se `JIRA_LIVE_ENABLED` estiver ligada no terminal (ou no ambiente do Claude Code), o compose a repassa e a subida com demonstração **falha de propósito**: desligue-a nesse terminal antes.
+- Os dados são **100% fictícios** (issues `DEMO-n` e `DEMOCAT-n`, pessoas dos modelos `.exemplo`) e a faixa vermelha avisa. As datas se ajustam em semanas inteiras até hoje. Nenhuma requisição ao Jira é feita.
+- Apagar `data/painel.db` é obrigatório **antes de ligar a flag do Jira**: o painel recusa subir com a flag ligada e dados de demonstração no banco. Um banco que já tem issues reais também recusa a demonstração.
+- Se `JIRA_LIVE_ENABLED` estiver ligada no terminal (ou no ambiente do Claude Code), a subida com demonstração **falha de propósito**: desligue-a nesse terminal antes.
 
 ## Flags
 
@@ -36,7 +36,8 @@ open http://127.0.0.1:8080        # Linux: xdg-open; ou abra o endereço no nave
 | `JIRA_LIVE_ENABLED` | `false` | Única chave de liga e desliga da sincronização. Só o usuário liga; `false` proíbe qualquer acesso ao Jira. |
 | `DASHBOARD_DEV_MODE` | `true` | Modo desenvolvimento: **sem login**, todos os dados, faixa vermelha. |
 | `DASHBOARD_DEMO_DATA` | `false` | Carrega issues **fictícias** na subida, sem tocar no Jira. Só com `DASHBOARD_DEV_MODE=true` e `JIRA_LIVE_ENABLED=false`; qualquer outra combinação derruba a subida. |
-| `PAINEL_STATIC_DIR` | `frontend/dist` (`/app/static` na imagem) | Pasta do build do frontend servida em `/`. |
+| `PAINEL_STATIC_DIR` | `frontend/dist` | Pasta do build do frontend servida em `/`. |
+| `DATABASE_PATH` | `data/painel.db` | Arquivo SQLite do painel. |
 
 ## Sincronização periódica (`SYNC_*`)
 
@@ -44,11 +45,9 @@ A flag `JIRA_LIVE_ENABLED` é a única chave de liga e desliga. As variáveis `S
 
 ## Aviso de segurança
 
-O modo desenvolvimento **não tem login**. Nunca o exponha em rede com dados reais. Por isso o compose publica a porta só em `127.0.0.1:8080`.
+O modo desenvolvimento **não tem login**. Nunca o exponha em rede com dados reais. O painel escuta na porta `8080` e, sem Docker para limitar a publicação, **quem restringe o acesso é o firewall/rede da máquina**: em estação de trabalho, deixe-o acessível só em `127.0.0.1`.
 
-**A imagem Docker nasce com `DASHBOARD_DEV_MODE=true` (sem login).** NUNCA a publique com `docker run -p` nem em rede alguma sem antes desligar esse modo (`DASHBOARD_DEV_MODE=false`).
-
-Para produção: defina `DASHBOARD_DEV_MODE=false` (exige o login SSO/OIDC, previsto em plano posterior), e só então troque a publicação no `docker-compose.yml` (por exemplo `"8080:8080"` ou, melhor, um proxy reverso com TLS na frente). Não faça isso enquanto o login não existir.
+Para produção: defina `DASHBOARD_DEV_MODE=false` (exige o login SSO/OIDC, previsto em plano posterior). Não exponha em rede enquanto o login não existir.
 
 ## Inicialização e configuração
 
@@ -56,9 +55,9 @@ Na subida o painel carrega o calendário e o diretório de papéis, abre o pool 
 
 | Variável | Padrão | Efeito |
 |---|---|---|
-| `PAINEL_CONFIG_DIR` | `config` (`/app/config` na imagem) | Pasta dos YAML (`papeis.yaml`, `calendario.yaml`, `status_map.yaml`, `vinculos.yaml`, `cards/`). |
-| `DATABASE_POOL_SIZE` | `10` | Tamanho máximo do pool de conexões (1 a 100; vazio = padrão; inválido falha na subida). |
-| `DATABASE_URL`, `DATABASE_USER`, `DATABASE_PASSWORD` | ver `.env.example` | Conexão com o banco; a senha não tem padrão. |
+| `PAINEL_CONFIG_DIR` | `config` | Pasta dos YAML (`papeis.yaml`, `calendario.yaml`, `status_map.yaml`, `vinculos.yaml`, `cards/`). |
+| `DATABASE_POOL_SIZE` | `4` | Tamanho máximo do pool de conexões (1 a 100; vazio = padrão; inválido falha na subida). |
+| `DATABASE_PATH` | `data/painel.db` | Arquivo SQLite; a pasta é criada se não existir. |
 
 **Motivos de falha na subida em produção** (`DASHBOARD_DEV_MODE=false`):
 
@@ -68,39 +67,16 @@ Na subida o painel carrega o calendário e o diretório de papéis, abre o pool 
 - `vinculos.yaml` ausente (em dev usa `vinculos.exemplo.yaml` com aviso; em produção é obrigatório). Crie-o a partir de `config/vinculos.exemplo.yaml` (tipo do link que liga a Review à task e tipos de issue; sem dado pessoal).
 - YAML inválido: a mensagem cita só o caminho e o tipo do erro.
 - Nenhum **GERENTE** com papel vigente hoje no `papeis.yaml`.
-- `DATABASE_PASSWORD` vazia.
-- Banco indisponível ou migração que falha (a mensagem cita o destino sem credenciais).
+- Arquivo de banco inacessível, já em uso por outro painel ou migração que falha.
 - Com a flag `JIRA_LIVE_ENABLED` ligada, instância do Jira mal configurada (a mensagem cita só o id e a regra).
 
-**YAML reais em produção.** A imagem leva apenas os modelos (`*.exemplo.yaml`, `*.demo.yaml`) e `cards/`; os arquivos com pessoas ficam fora dela (`.dockerignore`). Monte-os somente leitura, no `docker-compose.yml` (há um bloco comentado pronto):
+**YAML reais em produção.** Coloque `papeis.yaml`, `calendario.yaml`, `status_map.yaml` e `vinculos.yaml` em `app/config/` (ou aponte `PAINEL_CONFIG_DIR`). Eles ficam fora do git (`.gitignore`); só os modelos `*.exemplo.yaml`/`*.demo.yaml` são versionados. O painel só lê esses arquivos.
 
-```yaml
-volumes:
-  - ./config/papeis.yaml:/app/config/papeis.yaml:ro
-  - ./config/calendario.yaml:/app/config/calendario.yaml:ro
-  - ./config/status_map.yaml:/app/config/status_map.yaml:ro
-```
-
-O `docker compose` padrão roda com `DASHBOARD_DEV_MODE=true` e por isso usa os modelos de exemplo (dados fictícios) e basta para subir.
-
-## Desenvolvimento sem Docker
+## Desenvolvimento
 
 ```sh
-cd backend && ./gradlew test        # testes do backend (veja a nota sobre Docker abaixo)
+cd backend && ./gradlew test        # testes do backend (SQLite em arquivo temporário; nada a instalar além do JDK 21)
 cd frontend && pnpm install && pnpm test && pnpm dev   # frontend em http://localhost:5173 (proxy de /api para :8080)
 ```
 
-### O que precisa de Docker nos testes
-
-- **Exigem Docker em execução:** os testes de banco (`RetentionTest`, em `backend/src/test/kotlin/br/sidia/painel/db/`), que sobem um PostgreSQL real via Testcontainers. Sem Docker eles **falham** (não são ignorados).
-- **Rodam sem Docker:** todos os demais testes do backend (configuração, cliente Jira com mock, calendário, papéis, controle de acesso, SPA, health e meta) e todos os testes do frontend (`pnpm test`).
-- Para rodar só o que dispensa Docker: `./gradlew test --tests 'br.sidia.painel.security.*' --tests 'br.sidia.painel.time.*' --tests 'br.sidia.painel.jira.*' --tests 'br.sidia.painel.config.*' --tests 'br.sidia.painel.SpaTest' --tests 'br.sidia.painel.HealthTest' --tests 'br.sidia.painel.MetaTest'`.
-
-### Rodar o backend fora do Docker
-
-A partir de `app/backend`, os padrões `frontend/dist` (`PAINEL_STATIC_DIR`) e `config` (`PAINEL_CONFIG_DIR`) apontam para o lugar errado (relativos a `backend/`). Indique os caminhos:
-
-```sh
-cd frontend && pnpm build && cd ../backend
-PAINEL_STATIC_DIR=../frontend/dist PAINEL_CONFIG_DIR=../config ./gradlew run
-```
+Em desenvolvimento, rode o backend (`cd backend && ./gradlew run`, que já usa `app/` como pasta de trabalho) e o `pnpm dev` em outro terminal.

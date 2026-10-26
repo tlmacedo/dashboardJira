@@ -2,6 +2,7 @@ package br.sidia.painel
 
 import br.sidia.painel.cards.registrarNegacaoSemPapel
 import br.sidia.painel.cards.rotasTempoEmStatus
+import br.sidia.painel.config.ArquivoEnv
 import br.sidia.painel.config.Settings
 import br.sidia.painel.db.AccessLog
 import br.sidia.painel.demo.prepararDemonstracao
@@ -10,8 +11,8 @@ import br.sidia.painel.security.DevAuthenticator
 import br.sidia.painel.security.OidcAuthenticator
 import br.sidia.painel.security.installAccessControl
 import br.sidia.painel.sync.Agendador
-import br.sidia.painel.sync.PostgresIssueStore
-import br.sidia.painel.sync.PostgresSyncStateStore
+import br.sidia.painel.sync.SqliteIssueStore
+import br.sidia.painel.sync.SqliteSyncStateStore
 import br.sidia.painel.sync.montarAgendador
 import br.sidia.painel.sync.rotasSyncStatus
 import io.ktor.server.application.ApplicationStarted
@@ -43,7 +44,10 @@ data class MetaResposta(val devMode: Boolean, val liveEnabled: Boolean, val zone
 private val log = LoggerFactory.getLogger("br.sidia.painel")
 
 fun main() {
-    val settings = Settings.fromEnv()
+    // Sem Docker para injetar variáveis: lê o arquivo local (PAINEL_ENV_FILE ou ./.env) por baixo do ambiente do processo.
+    val arquivoEnv = System.getenv("PAINEL_ENV_FILE")?.takeIf { it.isNotBlank() }?.let { java.nio.file.Path.of(it) }
+        ?: java.nio.file.Path.of(".env")
+    val settings = Settings.fromEnv(ArquivoEnv.combinar(ArquivoEnv.ler(arquivoEnv), System.getenv()))
     // Falhas de configuração, papéis ou banco acontecem aqui, na subida, e não na primeira requisição.
     val context = AppContext.load(settings)
     // Dados fictícios (só em desenvolvimento, Jira desligado) ou recusa de banco misturado; ver DadosDeDemonstracao.
@@ -86,7 +90,7 @@ fun Application.module(
     monitor.subscribe(ApplicationStarted) { app ->
         context.dataSource?.let { ds ->
             try {
-                val estado = PostgresSyncStateStore(ds)
+                val estado = SqliteSyncStateStore(ds)
                 estado.fecharOrfas(inicioDoProcesso, context.clock.instant())
                 estado.limparSuspensoes()
             } catch (e: Exception) {
@@ -122,8 +126,8 @@ fun Application.module(
         // Build do frontend: arquivos reais, e index.html só para rotas de página (ver StaticSpa.kt).
         spaEstatica(settings.staticDir)
         context.dataSource?.let { ds ->
-            rotasTempoEmStatus(context, PostgresIssueStore(ds), AccessLog(ds))
-            rotasSyncStatus(context, PostgresSyncStateStore(ds), AccessLog(ds))
+            rotasTempoEmStatus(context, SqliteIssueStore(ds), AccessLog(ds))
+            rotasSyncStatus(context, SqliteSyncStateStore(ds), AccessLog(ds))
         }
         get("/api/health") { call.respond(HealthResposta(ok = true)) }
         get("/api/meta") {

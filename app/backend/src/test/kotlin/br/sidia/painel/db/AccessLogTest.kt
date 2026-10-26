@@ -1,5 +1,6 @@
 package br.sidia.painel.db
 
+import br.sidia.painel.BancoEmArquivo
 import br.sidia.painel.AppContext
 import br.sidia.painel.config.Settings
 import br.sidia.painel.contarAccessLog
@@ -10,7 +11,6 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import org.junit.jupiter.api.AfterAll
-import org.testcontainers.postgresql.PostgreSQLContainer
 import java.time.Instant
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
@@ -24,13 +24,13 @@ import kotlin.test.assertNull
 /** Testes do registro de consultas contra PostgreSQL real (Testcontainers). */
 class AccessLogTest {
     companion object {
-        private val pg = PostgreSQLContainer("postgres:16").apply { start() }
+        private val pg = BancoEmArquivo()
 
         /** Para o contêiner explicitamente, sem depender do Ryuk. */
         @JvmStatic
         @AfterAll
-        fun pararContainer() {
-            pg.stop()
+        fun apagarBanco() {
+            pg.apagar()
         }
     }
 

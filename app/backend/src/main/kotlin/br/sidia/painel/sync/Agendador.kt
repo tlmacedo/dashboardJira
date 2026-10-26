@@ -132,11 +132,11 @@ fun montarAgendador(
     val ds = ctx.dataSource ?: return null
     val settings = ctx.settings
     val cfg = settings.sync
-    val estado = PostgresSyncStateStore(ds)
+    val estado = SqliteSyncStateStore(ds)
     val gate = SyncGate(settings.jiraLiveEnabled, cfg)
     val tarefas = ArrayList<TarefaAgendada>()
     if (gate.podeAgendar()) {
-        val servico = SyncService(ctx, PostgresIssueStore(ds), estado, gate, clock)
+        val servico = SyncService(ctx, SqliteIssueStore(ds), estado, gate, clock)
         for (instancia in cfg.instancias) {
             tarefas += TarefaAgendada(
                 SyncKind.INCREMENTAL,

@@ -50,7 +50,7 @@ sealed interface ResultadoExecucao {
  */
 class SyncService(
     private val ctx: AppContext,
-    private val store: PostgresIssueStore,
+    private val store: SqliteIssueStore,
     private val estado: SyncStateStore,
     private val gate: SyncGate,
     private val clock: Clock,
@@ -332,8 +332,8 @@ class SyncService(
         is TetoDeItensExcedidoException -> "TETO_ITENS" to null
         is DadoMalformadoException -> "DADO_MALFORMADO" to null
         is ReconciliacaoSuspeitaException -> "RECONCILIACAO_SUSPEITA" to null
-        // Violação de unicidade no banco (SQLState 23505): só o código, nunca o texto da exceção.
-        is java.sql.SQLException -> (if (e.sqlState == "23505") "CONFLITO_DE_UNICIDADE" else "ERRO_INTERNO") to null
+        // Violação de unicidade no banco (SQLite: UNIQUE ou PRIMARY KEY): só o código, nunca o texto da exceção.
+        is java.sql.SQLException -> (if (violacaoDeUnicidade(e)) "CONFLITO_DE_UNICIDADE" else "ERRO_INTERNO") to null
         is JiraException -> {
             val s = e.status
             val codigo = when {
@@ -398,4 +398,10 @@ internal class PlanoDeReconciliacao(
             return PlanoDeReconciliacao(renomear, remover, rebuscar)
         }
     }
+}
+
+private fun violacaoDeUnicidade(e: java.sql.SQLException): Boolean {
+    val codigo = (e as? org.sqlite.SQLiteException)?.resultCode ?: return false
+    return codigo == org.sqlite.SQLiteErrorCode.SQLITE_CONSTRAINT_UNIQUE ||
+        codigo == org.sqlite.SQLiteErrorCode.SQLITE_CONSTRAINT_PRIMARYKEY
 }

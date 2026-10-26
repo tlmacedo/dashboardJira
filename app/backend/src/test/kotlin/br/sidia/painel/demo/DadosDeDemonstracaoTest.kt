@@ -1,5 +1,6 @@
 package br.sidia.painel.demo
 
+import br.sidia.painel.BancoEmArquivo
 import br.sidia.painel.AppContext
 import br.sidia.painel.TestPaths
 import br.sidia.painel.config.JiraInstanceSettings
@@ -10,8 +11,8 @@ import br.sidia.painel.module
 import br.sidia.painel.sync.DirecaoVinculo
 import br.sidia.painel.sync.ParDeChaves
 import br.sidia.painel.sync.ParesTaskReview
-import br.sidia.painel.sync.PostgresIssueLinkStore
-import br.sidia.painel.sync.PostgresIssueStore
+import br.sidia.painel.sync.SqliteIssueLinkStore
+import br.sidia.painel.sync.SqliteIssueStore
 import br.sidia.painel.sync.VinculoRecord
 import br.sidia.painel.testContextComBanco
 import io.ktor.client.HttpClient
@@ -31,7 +32,6 @@ import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonObject
 import org.junit.jupiter.api.AfterAll
-import org.testcontainers.postgresql.PostgreSQLContainer
 import java.nio.file.Files
 import java.sql.Timestamp
 import java.time.Clock
@@ -50,12 +50,12 @@ import kotlin.io.path.name
 /** Dados de demonstração contra PostgreSQL real (Testcontainers). Nenhuma rede, nenhum Jira. */
 class DadosDeDemonstracaoTest {
     companion object {
-        private val pg = PostgreSQLContainer("postgres:16").apply { start() }
+        private val pg = BancoEmArquivo()
 
         @JvmStatic
         @AfterAll
-        fun pararContainer() {
-            pg.stop()
+        fun apagarBanco() {
+            pg.apagar()
         }
     }
 
@@ -72,7 +72,7 @@ class DadosDeDemonstracaoTest {
         testContextComBanco(settings, pg, clock = clock, jira = jira)
 
     private fun carregador(ctx: AppContext) =
-        DadosDeDemonstracao(requireNotNull(ctx.dataSource), PostgresIssueStore(ctx.dataSource!!), ctx.clock, ctx.settings.zone)
+        DadosDeDemonstracao(requireNotNull(ctx.dataSource), SqliteIssueStore(ctx.dataSource!!), ctx.clock, ctx.settings.zone)
 
     private fun contar(ctx: AppContext, sql: String, vararg params: Any): Int =
         requireNotNull(ctx.dataSource).connection.use { c ->
@@ -136,7 +136,7 @@ class DadosDeDemonstracaoTest {
         contexto(relogioEm(ancora.plusDays(1))).use { ctx ->
             carregador(ctx).carregar()
             val ds = requireNotNull(ctx.dataSource)
-            val ativos = PostgresIssueLinkStore(ds).ativos("samsung", "Blocks")
+            val ativos = SqliteIssueLinkStore(ds).ativos("samsung", "Blocks")
             // Dois pares, um em cada direção (visto pelas duas pontas, uma linha por link).
             assertEquals(
                 setOf(
@@ -260,7 +260,7 @@ class DadosDeDemonstracaoTest {
     @Test
     fun demoRecusaBancoComDadosReais() {
         contexto(relogioEm(ancora.plusDays(1))).use { ctx ->
-            val store = PostgresIssueStore(requireNotNull(ctx.dataSource))
+            val store = SqliteIssueStore(requireNotNull(ctx.dataSource))
             store.upsert(issueReal("TG-1"), emptyList(), "samsung")
             // Uma linha de demonstração antiga também NÃO pode ser apagada quando a recusa acontece.
             store.upsert(issueReal("DEMO-99").let { JsonObject(it + ("id" to kotlinx.serialization.json.JsonPrimitive("777002"))) }, emptyList(), "samsung")
@@ -277,7 +277,7 @@ class DadosDeDemonstracaoTest {
     @Test
     fun demoRecusaIssueRealEmOutraInstancia() {
         contexto(relogioEm(ancora.plusDays(1))).use { ctx ->
-            val store = PostgresIssueStore(requireNotNull(ctx.dataSource))
+            val store = SqliteIssueStore(requireNotNull(ctx.dataSource))
             // Instância fora do manifesto, com chave real: a carga também recusa.
             store.upsert(issueReal("TG-5"), emptyList(), "outra")
             val e = assertFailsWith<DemoRecusadaException> { carregador(ctx).carregar() }

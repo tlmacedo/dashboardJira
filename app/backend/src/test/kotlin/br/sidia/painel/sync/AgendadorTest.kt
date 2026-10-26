@@ -1,5 +1,6 @@
 package br.sidia.painel.sync
 
+import br.sidia.painel.BancoEmArquivo
 import br.sidia.painel.config.JiraInstanceSettings
 import br.sidia.painel.config.Settings
 import br.sidia.painel.jira.JiraAuthKind
@@ -16,7 +17,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import org.junit.jupiter.api.AfterAll
-import org.testcontainers.postgresql.PostgreSQLContainer
 import java.time.Clock
 import java.time.Instant
 import java.time.LocalTime
@@ -50,12 +50,12 @@ class RelogioMutavel(inicio: Instant, private val zona: ZoneId = ZoneOffset.UTC)
 /** Agenda pura e agendador contra PostgreSQL real; relógio e `dormir` injetados, sem espera de relógio real. */
 class AgendadorTest {
     companion object {
-        private val pg = PostgreSQLContainer("postgres:16").apply { start() }
+        private val pg = BancoEmArquivo()
 
         @JvmStatic
         @AfterAll
-        fun pararContainer() {
-            pg.stop()
+        fun apagarBanco() {
+            pg.apagar()
         }
 
         private val MANAUS = ZoneId.of("America/Manaus")
@@ -79,9 +79,9 @@ class AgendadorTest {
         ),
     )
 
-    private fun estadoNovo(): Pair<br.sidia.painel.AppContext, PostgresSyncStateStore> {
+    private fun estadoNovo(): Pair<br.sidia.painel.AppContext, SqliteSyncStateStore> {
         val ctx = testContextComBanco(settings(false), pg)
-        return ctx to PostgresSyncStateStore(requireNotNull(ctx.dataSource))
+        return ctx to SqliteSyncStateStore(requireNotNull(ctx.dataSource))
     }
 
     private fun tarefa(kind: SyncKind = SyncKind.INCREMENTAL, executar: suspend () -> Unit) =
@@ -286,7 +286,7 @@ class AgendadorTest {
         testContextComBanco(base, pg).use { ctx ->
             val ag = requireNotNull(montarAgendador(ctx))
             ag.ciclo() // não lança
-            val estado = PostgresSyncStateStore(requireNotNull(ctx.dataSource))
+            val estado = SqliteSyncStateStore(requireNotNull(ctx.dataSource))
             val ultimas = estado.ultimas("sidia")
             assertTrue(ultimas.isNotEmpty())
             assertTrue(ultimas.all { it.status == RunStatus.FALHA && it.codigoErro == "INSTANCIA_SEM_CREDENCIAL" })
@@ -297,7 +297,7 @@ class AgendadorTest {
     fun reinicioLimpaSuspensao() = testApplication {
         val s = settings(false)
         val ctx = testContextComBanco(s, pg)
-        val estado = PostgresSyncStateStore(requireNotNull(ctx.dataSource))
+        val estado = SqliteSyncStateStore(requireNotNull(ctx.dataSource))
         estado.suspender("samsung", "HTTP_401", Instant.parse("2026-10-30T12:00:00Z"))
         assertEquals("HTTP_401", estado.suspensa("samsung"))
         application { module(s, ctx) }
@@ -310,7 +310,7 @@ class AgendadorTest {
     fun inicioFechaOrfasAnterioresAoProcesso() = testApplication {
         val s = settings(false)
         val ctx = testContextComBanco(s, pg)
-        val estado = PostgresSyncStateStore(requireNotNull(ctx.dataSource))
+        val estado = SqliteSyncStateStore(requireNotNull(ctx.dataSource))
         val id = estado.iniciar("samsung", SyncKind.INCREMENTAL, Instant.parse("2020-01-01T00:00:00Z"))
         application { module(s, ctx) }
         client.get("/api/health")
@@ -331,7 +331,7 @@ class AgendadorTest {
     fun moduloIniciaEParaOAgendador() {
         val s = settings(false)
         val ctx = testContextComBanco(s, pg)
-        val estado = PostgresSyncStateStore(requireNotNull(ctx.dataSource))
+        val estado = SqliteSyncStateStore(requireNotNull(ctx.dataSource))
         val rodou = CompletableDeferred<Unit>()
         val ag = Agendador(
             listOf(tarefa { rodou.complete(Unit) }),

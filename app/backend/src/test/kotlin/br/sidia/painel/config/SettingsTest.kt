@@ -76,9 +76,9 @@ class SettingsTest {
     }
 
     @Test
-    fun poolTemPadraoDezELeVariavel() {
-        assertEquals(10, Settings.fromEnv(emptyMap()).databasePoolSize)
-        assertEquals(10, Settings.fromEnv(mapOf("DATABASE_POOL_SIZE" to "  ")).databasePoolSize)
+    fun poolTemPadraoQuatroELeVariavel() {
+        assertEquals(4, Settings.fromEnv(emptyMap()).databasePoolSize)
+        assertEquals(4, Settings.fromEnv(mapOf("DATABASE_POOL_SIZE" to "  ")).databasePoolSize)
         assertEquals(25, Settings.fromEnv(mapOf("DATABASE_POOL_SIZE" to " 25 ")).databasePoolSize)
         assertEquals(1, Settings.fromEnv(mapOf("DATABASE_POOL_SIZE" to "1")).databasePoolSize)
         assertEquals(100, Settings.fromEnv(mapOf("DATABASE_POOL_SIZE" to "100")).databasePoolSize)
@@ -95,34 +95,31 @@ class SettingsTest {
     }
 
     @Test
-    fun lePainelBanco() {
-        val s = Settings.fromEnv(mapOf("DATABASE_USER" to "painel", "DATABASE_PASSWORD" to "segredo"))
-        assertEquals("painel", s.databaseUser)
-        assertEquals("segredo", s.databasePassword)
+    fun leCaminhoDoBancoSqlite() {
+        assertEquals(java.nio.file.Path.of("data/painel.db"), Settings.fromEnv(emptyMap()).databasePath)
+        val s = Settings.fromEnv(mapOf("DATABASE_PATH" to "dados/meu.db"))
+        assertEquals(java.nio.file.Path.of("dados/meu.db"), s.databasePath)
     }
 
     @Test
     fun toStringNaoVazaSegredos() {
         val s = Settings.fromEnv(
             mapOf(
-                "DATABASE_URL" to "jdbc:postgresql://usuarioX:senhaUrlY@h/db",
-                "DATABASE_PASSWORD" to "senhaBancoZ",
                 "JIRA_SAMSUNG_URL" to "https://x.exemplo.com",
                 "JIRA_SAMSUNG_TOKEN" to "tokenSecretoW",
             ),
         )
         val texto = s.toString()
-        listOf("senhaBancoZ", "tokenSecretoW", "usuarioX", "senhaUrlY").forEach {
+        listOf("tokenSecretoW").forEach {
             assertFalse(texto.contains(it), "vazou $it")
         }
-        assertTrue(texto.contains("jdbc:postgresql://***@h/db"))
         assertFalse(s.jiraInstances.getValue("samsung").toString().contains("tokenSecretoW"))
     }
 
     @Test
     fun toStringMascaraSenhaNaQuery() {
-        val a = Settings(databaseUrl = "jdbc:postgresql://h/db?user=u&password=abc123&ssl=true").toString()
-        val b = Settings(databaseUrl = "jdbc:postgresql://h/db?password=abc123").toString()
+        val a = JiraInstanceSettings("https://h/db?user=u&password=abc123&ssl=true", JiraAuthKind.BEARER, null, "t").toString()
+        val b = JiraInstanceSettings("https://h/db?password=abc123", JiraAuthKind.BEARER, null, "t").toString()
         assertFalse(a.contains("abc123"))
         assertFalse(b.contains("abc123"))
         assertTrue(a.contains("password=***&ssl=true"))
@@ -132,13 +129,13 @@ class SettingsTest {
     @Test
     fun toStringMascaraSenhaComCaracteresEspeciais() {
         listOf(
-            "jdbc:postgresql://u:p/x@h/db",
-            "jdbc:postgresql://u:p?x@h/db",
-            "jdbc:postgresql://u:p@w@h/db",
-            "jdbc:postgresql://u:p:q@h/db",
+            "https://u:p/x@h/db",
+            "https://u:p?x@h/db",
+            "https://u:p@w@h/db",
+            "https://u:p:q@h/db",
         ).forEach { url ->
-            val texto = Settings(databaseUrl = url).toString()
-            assertTrue(texto.contains("jdbc:postgresql://***@h/db"), "não mascarou $url: $texto")
+            val texto = JiraInstanceSettings(url, JiraAuthKind.BEARER, null, "t").toString()
+            assertTrue(texto.contains("https://***@h/db"), "não mascarou $url: $texto")
             assertFalse(texto.contains("u:p"), "vazou em $url")
         }
     }
@@ -146,20 +143,20 @@ class SettingsTest {
     @Test
     fun toStringMascaraParametrosSecretosNaQuery() {
         listOf(
-            "jdbc:postgresql://h/db?PASSWORD=sg1",
-            "jdbc:postgresql://h/db?user=u;password=sg1",
-            "jdbc:postgresql://h/db?sslpassword=sg1&ssl=true",
-            "jdbc:postgresql://h/db?pwd=sg1",
-            "jdbc:postgresql://h/db?a=1&pass=sg1",
-            "jdbc:postgresql://h/db?passwd=sg1",
-            "jdbc:postgresql://h/db?secret=sg1",
-            "jdbc:postgresql://h/db?Token=sg1",
+            "https://h/db?PASSWORD=sg1",
+            "https://h/db?user=u;password=sg1",
+            "https://h/db?sslpassword=sg1&ssl=true",
+            "https://h/db?pwd=sg1",
+            "https://h/db?a=1&pass=sg1",
+            "https://h/db?passwd=sg1",
+            "https://h/db?secret=sg1",
+            "https://h/db?Token=sg1",
         ).forEach { url ->
-            val texto = Settings(databaseUrl = url).toString()
+            val texto = JiraInstanceSettings(url, JiraAuthKind.BEARER, null, "t").toString()
             assertFalse(texto.contains("sg1"), "vazou em $url: $texto")
             assertTrue(texto.contains("=***"), "sem máscara em $url")
         }
-        assertTrue(Settings(databaseUrl = "jdbc:postgresql://h/db?user=u&ssl=true").toString().contains("user=u&ssl=true"))
+        assertTrue(JiraInstanceSettings("https://h/db?user=u&ssl=true", JiraAuthKind.BEARER, null, "t").toString().contains("user=u&ssl=true"))
     }
 
     @Test

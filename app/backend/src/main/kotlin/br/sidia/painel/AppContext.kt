@@ -2,6 +2,7 @@ package br.sidia.painel
 
 import br.sidia.painel.config.Settings
 import br.sidia.painel.db.Database
+import br.sidia.painel.db.TravaDeProcesso
 import br.sidia.painel.auditoria.RegrasDeAuditoria
 import br.sidia.painel.domain.LabelsDeAtraso
 import br.sidia.painel.domain.StatusMap
@@ -42,6 +43,8 @@ class AppContext(
     /** Limites, gravidades e versão das regras da auditoria; lido de `auditoria.yaml`. */
     val regrasAuditoria: RegrasDeAuditoria,
     val clock: Clock = Clock.system(settings.zone),
+    /** Trava do arquivo do banco (um painel por banco); solta ao fechar. Nula nos testes, que usam arquivos próprios. */
+    private val travaDeProcesso: AutoCloseable? = null,
 ) : AutoCloseable {
     private val aoFechar = java.util.concurrent.CopyOnWriteArrayList<() -> Unit>()
 
@@ -67,7 +70,11 @@ class AppContext(
             }
             jira.close()
         } finally {
-            (dataSource as? AutoCloseable)?.close()
+            try {
+                (dataSource as? AutoCloseable)?.close()
+            } finally {
+                travaDeProcesso?.close()
+            }
         }
     }
 
@@ -75,7 +82,7 @@ class AppContext(
         private val log = LoggerFactory.getLogger(AppContext::class.java)
 
         /**
-         * Carrega arquivos de configuração, valida a senha do banco, abre o pool e migra o schema.
+         * Carrega arquivos de configuração, abre o banco SQLite (um painel por arquivo) e migra o schema.
          * Falhas de configuração e de banco viram [IllegalStateException] sem segredos.
          */
         fun load(settings: Settings, clock: Clock = Clock.system(settings.zone)): AppContext {
@@ -105,15 +112,23 @@ class AppContext(
             val jira = JiraClientFactory(settings)
             jira.validarInstancias()
 
-            if (settings.databasePassword.isBlank()) {
-                if (!settings.dashboardDevMode) {
-                    throw IllegalStateException("DATABASE_PASSWORD obrigatório em produção")
-                }
-                log.warn("DATABASE_PASSWORD vazio: aceito apenas em modo desenvolvimento.")
+            val trava = try {
+                TravaDeProcesso.adquirir(settings.databasePath)
+            } catch (e: IllegalStateException) {
+                throw e
+            } catch (e: Exception) {
+                throw IllegalStateException("Falha ao abrir o banco em ${settings.databasePath} (${e.javaClass.simpleName})")
             }
-
-            val ds = abrirBanco(settings)
-            return AppContext(settings, calendario, papeis, ds, jira, mapaDeStatus, campos, fichas, vinculos, labelsDeAtraso, regrasAuditoria, clock)
+            val ds = try {
+                abrirBanco(settings)
+            } catch (e: Throwable) {
+                trava.close()
+                throw e
+            }
+            return AppContext(
+                settings, calendario, papeis, ds, jira, mapaDeStatus, campos, fichas, vinculos, labelsDeAtraso, regrasAuditoria, clock,
+                travaDeProcesso = trava,
+            )
         }
 
         /**
@@ -208,13 +223,13 @@ class AppContext(
                 throw IllegalStateException("ficha $arquivo inválida: ${e.javaClass.simpleName}")
             }
 
-        /** Abre o pool e migra; a falha cita só o tipo da exceção (a original pode trazer URL e senha). */
+        /** Abre o arquivo SQLite e migra; a falha cita só o tipo da exceção. */
         private fun abrirBanco(settings: Settings): DataSource {
-            val destino = Settings.mascararUrl(settings.databaseUrl)
+            val destino = settings.databasePath
             val ds = try {
-                Database.connect(settings.databaseUrl, settings.databaseUser, settings.databasePassword, settings.databasePoolSize)
+                Database.connect(Database.urlDeArquivo(destino), settings.databasePoolSize)
             } catch (e: Exception) {
-                throw IllegalStateException("Falha ao conectar ao banco em $destino (${e.javaClass.simpleName})")
+                throw IllegalStateException("Falha ao abrir o banco em $destino (${e.javaClass.simpleName})")
             }
             try {
                 Database.migrate(ds)

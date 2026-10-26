@@ -8,7 +8,7 @@ web
 
 ## Stack
 
-Backend em Kotlin (Ktor) com PostgreSQL; frontend em React + TypeScript com Vite (SPA). Decisão do usuário, tomada pelas regras de negócio. O app Python atual será substituído.
+Backend em Kotlin (Ktor) com SQLite embutido (sem Docker nem servidor de banco); frontend em React + TypeScript com Vite (SPA). Decisão do usuário, tomada pelas regras de negócio. O app Python atual será substituído.
 
 ## Users
 

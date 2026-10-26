@@ -1,5 +1,6 @@
 package br.sidia.painel.sync
 
+import br.sidia.painel.BancoEmArquivo
 import br.sidia.painel.AppContext
 import br.sidia.painel.config.JiraInstanceSettings
 import br.sidia.painel.config.Settings
@@ -21,7 +22,6 @@ import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import org.junit.jupiter.api.AfterAll
-import org.testcontainers.postgresql.PostgreSQLContainer
 import java.time.Clock
 import java.time.Instant
 import java.time.ZoneOffset
@@ -43,12 +43,12 @@ import kotlin.time.Duration.Companion.seconds
  */
 class ReconciliacaoTest {
     companion object {
-        private val pg = PostgreSQLContainer("postgres:16").apply { start() }
+        private val pg = BancoEmArquivo()
 
         @JvmStatic
         @AfterAll
-        fun pararContainer() {
-            pg.stop()
+        fun apagarBanco() {
+            pg.apagar()
         }
     }
 
@@ -68,8 +68,8 @@ class ReconciliacaoTest {
      */
     private val apagadas = mutableMapOf<String, Int>()
     private var ctx: AppContext? = null
-    private lateinit var store: PostgresIssueStore
-    private lateinit var estado: PostgresSyncStateStore
+    private lateinit var store: SqliteIssueStore
+    private lateinit var estado: SqliteSyncStateStore
 
     @AfterTest
     fun encerrar() {
@@ -140,8 +140,8 @@ class ReconciliacaoTest {
         val c = testContextComBanco(settings, pg, clock = relogio, jira = fabrica)
         ctx = c
         val ds = requireNotNull(c.dataSource)
-        store = PostgresIssueStore(ds)
-        estado = PostgresSyncStateStore(ds)
+        store = SqliteIssueStore(ds)
+        estado = SqliteSyncStateStore(ds)
         return SyncService(c, store, estado, SyncGate(live, settings.sync), relogio)
     }
 
@@ -236,9 +236,9 @@ class ReconciliacaoTest {
         semearBase(4)
         consulta(
             "INSERT INTO issue_link(instance, from_key, to_key, link_type, direction, visto_em) VALUES " +
-                "('samsung', 'TG-3', 'TG-4', 'Blocks', 'OUTWARD', now()), " +
-                "('samsung', 'TG-4', 'TG-1', 'Relates', 'SIMETRICO', now()), " +
-                "('sidia', 'TG-3', 'TG-4', 'Blocks', 'OUTWARD', now())",
+                "('samsung', 'TG-3', 'TG-4', 'Blocks', 'OUTWARD', (CAST(strftime('%s','now') AS INTEGER) * 1000)), " +
+                "('samsung', 'TG-4', 'TG-1', 'Relates', 'SIMETRICO', (CAST(strftime('%s','now') AS INTEGER) * 1000)), " +
+                "('sidia', 'TG-3', 'TG-4', 'Blocks', 'OUTWARD', (CAST(strftime('%s','now') AS INTEGER) * 1000))",
         )
         noJira.remove("TG-4")
         noJira["TG-40"] = 904L to instante("10:00")
@@ -258,9 +258,9 @@ class ReconciliacaoTest {
         // O vínculo já existe sob a chave nova (visto antes pela outra ponta) e também sob a antiga; e há um com a própria chave nova.
         consulta(
             "INSERT INTO issue_link(instance, from_key, to_key, link_type, direction, visto_em) VALUES " +
-                "('samsung', 'TG-3', 'TG-4', 'Blocks', 'OUTWARD', now()), " +
-                "('samsung', 'TG-3', 'TG-40', 'Blocks', 'OUTWARD', now()), " +
-                "('samsung', 'TG-4', 'TG-40', 'Relates', 'SIMETRICO', now())",
+                "('samsung', 'TG-3', 'TG-4', 'Blocks', 'OUTWARD', (CAST(strftime('%s','now') AS INTEGER) * 1000)), " +
+                "('samsung', 'TG-3', 'TG-40', 'Blocks', 'OUTWARD', (CAST(strftime('%s','now') AS INTEGER) * 1000)), " +
+                "('samsung', 'TG-4', 'TG-40', 'Relates', 'SIMETRICO', (CAST(strftime('%s','now') AS INTEGER) * 1000))",
         )
         noJira.remove("TG-4")
         noJira["TG-40"] = 904L to instante("10:00")
@@ -538,11 +538,10 @@ class ReconciliacaoTest {
         val s = montar()
         // Gatilho de teste: simula uma corrida que o banco rejeita com SQLState 23505.
         consulta(
-            """CREATE FUNCTION falha_unico() RETURNS trigger AS ${'$'}${'$'}
-            BEGIN RAISE EXCEPTION 'segredo-no-texto-da-excecao' USING ERRCODE = '23505'; END
-            ${'$'}${'$'} LANGUAGE plpgsql""",
+            "CREATE TRIGGER t_falha BEFORE INSERT ON issue BEGIN " +
+                "INSERT INTO jira_user_key(instance, user_key, username, visto_em) VALUES ('x', 'segredo-no-texto-da-excecao', 'u', 0); " +
+                "INSERT INTO jira_user_key(instance, user_key, username, visto_em) VALUES ('x', 'segredo-no-texto-da-excecao', 'u', 0); END",
         )
-        consulta("CREATE TRIGGER t_falha BEFORE INSERT ON issue FOR EACH ROW EXECUTE FUNCTION falha_unico()")
         noJira["TG-1"] = 901L to instante("10:00")
         val r = executada(s.incremental("samsung"))
         assertEquals(RunStatus.FALHA, r.status)
