@@ -7,3 +7,10 @@ status_map:
   "Aguardando": wait
   "Bloqueado": blocked
   "Concluído": done
+  # Nomes em inglês das fixtures do Data Center (para o fluxo sync -> card funcionar em dev).
+  "To Do": todo
+  "In Progress": active
+  "In Review": wait
+  "Blocked": blocked
+  "Done": done
+  "Closed": done
