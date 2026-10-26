@@ -290,6 +290,19 @@ foreach ($f in @('-', 'true')) {
 }
 Caso '-' (Sf 'app\backend\src' 'fun ' '*.kt') $false "não regressão: buscar em src com '*.kt'"
 Caso '-' (Sf '.' 'TODO:' '*.{kt,tsx,md}') $false "não regressão: grupo de extensões seguras (regex com ':')"
+# chaves com alternativa vazia (no bash o `read` descartava o vazio e *{.kt,} passava; o vazio expande para *)
+foreach ($g in @('*{.kt,}', '{,.kt}', '*{.kt,,.md}', '*{}', '*{,}', '{.kt}{,.md}', '*{.kt', '*.kt}', '*{{.kt,}}')) {
+    Caso '-' (Sf '.' 'x' $g) $true "busca: chaves inseguras '$g'"
+}
+Caso '-' (Sf '.' 'x' '*.{kt,tsx}') $false "não regressão: '*.{kt,tsx}'"
+Caso '-' (Sf '.' 'x' '*{.kt,.md}') $false "não regressão: '*{.kt,.md}'"
+# nome exato sem curinga: pode ser PASTA; só extensão segura ou a lista curta de arquivos conhecidos
+foreach ($g in @('config', 'app/config', 'secrets', 'papeis.yaml', '.env', 'Config', '{config,README.md}')) {
+    Caso '-' (Sf '.' 'x' $g) $true "busca: nome exato sem extensão segura '$g'"
+}
+foreach ($g in @('Dockerfile', 'gradlew', 'gradlew.bat', 'README', 'README.md', '.gitignore', 'build.gradle.kts', '{Makefile,LICENSE}')) {
+    Caso '-' (Sf '.' 'x' $g) $false "não regressão: nome exato seguro '$g'"
+}
 Caso '-' (Sf 'app\config' 'id' '*.exemplo.yaml') $false 'não regressão: modelos .exemplo.yaml'
 Caso '-' (Sf '.' 'JIRA_' '.env.example') $false 'não regressão: buscar só no .env.example'
 Caso '-' (Sf 'docs\README.md' 'x' '-') $false 'não regressão: busca num arquivo .md sem pattern'
