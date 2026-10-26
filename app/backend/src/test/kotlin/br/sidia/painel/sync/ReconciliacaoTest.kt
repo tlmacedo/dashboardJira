@@ -363,6 +363,18 @@ class ReconciliacaoTest {
     }
 
     @Test
+    fun reconciliacaoComFlagFalseNaoFazNadaComBasePreenchida() = runBlocking {
+        val s = montar(live = false)
+        semearBase(4)
+        noJira.remove("TG-4")
+        assertEquals(ResultadoExecucao.Negada(MotivoNegacao.DESLIGADO_PELA_FLAG), s.reconciliar("samsung"))
+        assertEquals(0, corpos.size)
+        assertEquals(0, contar("SELECT count(*) FROM issue WHERE removida_em IS NOT NULL"))
+        assertEquals(0, contar("SELECT count(*) FROM sync_run"))
+        assertNull(estado.ultimaReconciliacao("samsung"))
+    }
+
+    @Test
     fun candidataAremocaoQueOJiraAindaTrazPorChaveNaoEhRemovida() = runBlocking {
         val s = montar()
         semearBase(4)

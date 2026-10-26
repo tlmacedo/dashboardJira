@@ -1,10 +1,10 @@
 package br.sidia.painel.config
 
+import br.sidia.painel.jira.INSTANCIAS_CONHECIDAS
 import br.sidia.painel.jira.JiraAuthKind
+import br.sidia.painel.sync.SyncSettings
 import java.nio.file.InvalidPathException
 import java.nio.file.Path
-import br.sidia.painel.jira.INSTANCIAS_CONHECIDAS
-import br.sidia.painel.sync.SyncSettings
 import java.time.DateTimeException
 import java.time.LocalTime
 import java.time.ZoneId

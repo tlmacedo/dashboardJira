@@ -1,16 +1,16 @@
 package br.sidia.painel.config
 
 import br.sidia.painel.jira.JiraAuthKind
-import java.nio.file.Path
 import br.sidia.painel.sync.SyncSettings
+import java.nio.file.Path
 import java.time.LocalTime
 import java.time.ZoneId
-import kotlin.time.Duration.Companion.minutes
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
+import kotlin.time.Duration.Companion.minutes
 
 class SettingsTest {
     /** A tarefa `test` do Gradle fixa a flag em `false`: a suíte não herda a flag ligada no terminal. */

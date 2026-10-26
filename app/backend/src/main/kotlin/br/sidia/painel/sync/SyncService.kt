@@ -10,8 +10,6 @@ import br.sidia.painel.jql.AtualizadoDesde
 import br.sidia.painel.jql.CardQueryFactory
 import br.sidia.painel.jql.CardSpec
 import br.sidia.painel.jql.JqlQuery
-import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
@@ -20,6 +18,8 @@ import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import org.slf4j.LoggerFactory
 import java.time.Clock
 import java.time.Instant
