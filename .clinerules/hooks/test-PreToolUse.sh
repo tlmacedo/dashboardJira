@@ -130,6 +130,19 @@ for f in - true; do
 done
 caso - "$(sf app/backend/src 'fun ' '*.kt')" false "não regressão: buscar em src com '*.kt'"
 caso - "$(sf . 'TODO:' '*.{kt,tsx,md}')" false "não regressão: grupo de extensões seguras (regex com ':')"
+# chaves com alternativa vazia (o `read` descartava o campo vazio e *{.kt,} passava; o vazio expande para *)
+for g in '*{.kt,}' '{,.kt}' '*{.kt,,.md}' '*{}' '*{,}' '{.kt}{,.md}' '*{.kt' '*.kt}' '*{{.kt,}}'; do
+  caso - "$(sf . 'x' "$g")" true "busca: chaves inseguras '$g'"
+done
+caso - "$(sf . 'x' '*.{kt,tsx}')" false "não regressão: '*.{kt,tsx}'"
+caso - "$(sf . 'x' '*{.kt,.md}')" false "não regressão: '*{.kt,.md}'"
+# nome exato sem curinga: pode ser PASTA; só extensão segura ou a lista curta de arquivos conhecidos
+for g in 'config' 'app/config' 'secrets' 'papeis.yaml' '.env' 'Config' '{config,README.md}'; do
+  caso - "$(sf . 'x' "$g")" true "busca: nome exato sem extensão segura '$g'"
+done
+for g in 'Dockerfile' 'gradlew' 'gradlew.bat' 'README' 'README.md' '.gitignore' 'build.gradle.kts' '{Makefile,LICENSE}'; do
+  caso - "$(sf . 'x' "$g")" false "não regressão: nome exato seguro '$g'"
+done
 caso - "$(sf app/config 'id' '*.exemplo.yaml')" false "não regressão: modelos .exemplo.yaml"
 caso - "$(sf . 'JIRA_' '.env.example')" false "não regressão: buscar só no .env.example"
 caso - "$(sf docs/README.md 'x' '-')" false "não regressão: busca num arquivo .md sem pattern"

@@ -182,6 +182,9 @@ padrao_seguro() {
       # um único grupo, sem aninhamento
       case "$pre$meio$pos" in *[{}]*) return 1 ;; esac
       [ "$pre{$meio}$pos" = "$p" ] || return 1
+      # alternativa vazia expande para o resto do glob (*{.kt,} = *.kt OU *, que casa .env): bloqueia.
+      # Checado antes do `read`, que descarta campos vazios e esconderia a alternativa vazia.
+      case "$meio" in ''|,*|*,|*,,*) return 1 ;; esac
       IFS=, read -r -a lista <<< "$meio" || true
       alts=()
       for alt in ${lista[@]+"${lista[@]}"}; do alts+=("$pre$alt$pos"); done
@@ -201,6 +204,14 @@ padrao_seguro() {
       *)
         # nome exato: seguro se não for protegido
         if caminho_protegido "$alt"; then return 1; fi
+        # sem curinga: só com extensão segura ou na lista curta de arquivos conhecidos. Um nome solto
+        # (config, app, secrets) pode ser de PASTA, e o ripgrep buscaria tudo dentro dela.
+        if ! casa_c "$base" "$EXT_SEGURA"; then
+          case "$base" in
+            dockerfile|makefile|gradlew|gradlew.bat|readme|license|.gitignore|.gitattributes|.editorconfig) ;;
+            *) return 1 ;;
+          esac
+        fi
         ;;
     esac
   done
@@ -208,7 +219,7 @@ padrao_seguro() {
 }
 
 # busca de conteúdo (search_files e equivalentes): bloqueia se o escopo pode incluir arquivo protegido
-MSG_BUSCA="Forma permitida (documentada em docs/ferramentas-claude-para-o-cline/hooks.md, não é contorno): refazer a busca com file_pattern restrito a extensões seguras (ex.: '*.kt', '*.tsx', '*.md', '*.exemplo.yaml') ou a um nome de arquivo exato não protegido. Qualquer outra busca: pergunte ao usuário, só ele autoriza (rodando a busca fora do Cline)."
+MSG_BUSCA="Forma permitida (documentada em docs/ferramentas-claude-para-o-cline/hooks.md, não é contorno): refazer a busca com file_pattern restrito a extensões seguras (ex.: '*.kt', '*.tsx', '*.md', '*.exemplo.yaml') ou a um nome de arquivo exato com extensão segura (ou Dockerfile, Makefile, gradlew, gradlew.bat, README, LICENSE, .gitignore, .gitattributes, .editorconfig); nome sem extensão segura, como 'config' ou 'app', pode ser uma pasta e é bloqueado. Qualquer outra busca: pergunte ao usuário, só ele autoriza (rodando a busca fora do Cline)."
 checar_busca() { # ferramenta
   local caminho padrao regex escopo
   escopo=$(printf '%s' "$entrada" | jq -c "$prelude"'
