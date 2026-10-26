@@ -35,7 +35,7 @@ O Plano 4A está **pronto**. Falta apenas o fim de fluxo da branch (varredura de
 | I4: HANDOFF velho e pendências só no ledger local | este arquivo e o HANDOFF atualizado |
 | I5: o `CLAUDE.md` previa o ClineSR ligando a flag, mas os hooks barram a IA | Ruling provisório (abaixo): o usuário liga à mão |
 
-**Testes ao fim da rodada:** backend 662 (0 falhas), frontend 48 (0 falhas) e as 3 suítes de hook sem falhas (`sh .claude/hooks/test-guard.sh`, `sh .clinerules/hooks/test-PreToolUse.sh`, `pwsh -NoProfile -File .clinerules/hooks/test-PreToolUse.ps1`).
+**Testes ao fim da rodada:** backend 661 (0 falhas), frontend 48 (0 falhas) e as 3 suítes de hook sem falhas (`sh .claude/hooks/test-guard.sh`, `sh .clinerules/hooks/test-PreToolUse.sh`, `pwsh -NoProfile -File .clinerules/hooks/test-PreToolUse.ps1`).
 
 ## Rulings (decisões já tomadas)
 
