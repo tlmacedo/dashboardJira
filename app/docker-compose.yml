@@ -43,7 +43,7 @@ services:
     # Configs reais (papéis, calendário, mapa de status, dicionário de campos, fichas em cards/): a pasta app/config/
     # do host entra SOMENTE LEITURA por cima da config embutida na imagem (que só traz os modelos .exemplo).
     # Os arquivos reais com dados pessoais ficam no host, ignorados pelo git e fora da imagem (.dockerignore).
-    # Em produção (DASHBOARD_DEV_MODE=false) papeis.yaml, calendario.yaml e status_map.yaml são obrigatórios.
+    # Em produção (DASHBOARD_DEV_MODE=false) papeis.yaml, calendario.yaml, status_map.yaml e vinculos.yaml são obrigatórios.
     volumes:
       - ./config:/app/config:ro
     ports:
