@@ -34,9 +34,21 @@ class AppContext(
     val fichas: Map<String, CardSpec>,
     val clock: Clock = Clock.system(settings.zone),
 ) : AutoCloseable {
-    /** Fecha os clientes Jira e, SEMPRE depois (mesmo se isso falhar), o pool de conexões (se houver). */
+    private val aoFechar = java.util.concurrent.CopyOnWriteArrayList<() -> Unit>()
+
+    /** Registra uma ação que roda ANTES de fechar o Jira e o banco (ex.: parar o agendador). */
+    fun aoFechar(acao: () -> Unit) {
+        aoFechar += acao
+    }
+
+    /**
+     * Roda as ações registradas (cada uma isolada: a falha de uma não impede as outras), fecha os clientes Jira e,
+     * SEMPRE depois (mesmo se isso falhar), o pool de conexões (se houver).
+     */
     override fun close() {
         try {
+            val acoes = aoFechar.toList().also { aoFechar.clear() }
+            acoes.forEach { runCatching(it) }
             jira.close()
         } finally {
             (dataSource as? AutoCloseable)?.close()

@@ -80,18 +80,65 @@ class RetentionTest {
     }
 
     @Test
-    fun retencaoNaoMexeEmIssues() {
+    fun retencaoNaoMexeEmIssuesSemDatas() {
+        // issue sem resolved/updated (nulos) nunca é apagada; person e sync_state também ficam
         issue(1)
         issue(2)
         exec("INSERT INTO person(id, jira_ref, name, active) VALUES (1, 'u1', 'Ana', true)")
         exec("INSERT INTO sync_state(instance, watermark) VALUES ('main', '2020-01-01 00:00:00+00')")
-        exec("INSERT INTO access_log(id, user_id, route, filters, at) VALUES (1, 'u1', '/x', '', '2020-01-01 00:00:00+00')")
         evento(1, 1, "2020-01-01 00:00:00+00")
         Retention(ds, calendario).purge(LocalDate.of(2026, 10, 24), 24)
         assertEquals(2, contar("issue"))
         assertEquals(1, contar("person"))
         assertEquals(1, contar("sync_state"))
-        assertEquals(1, contar("access_log"))
+    }
+
+    private fun issueComDatas(id: Int, resolved: String?, updated: String?) {
+        val r = resolved?.let { "'$it'" } ?: "NULL"
+        val u = updated?.let { "'$it'" } ?: "NULL"
+        exec("INSERT INTO issue(id, key, instance, project, resolved, updated) VALUES ($id, 'TG-$id', 'main', 'TG', $r, $u)")
+    }
+
+    @Test
+    fun retencaoApagaIssueResolvidaAntigaEAccessLog() {
+        // hoje 2026-10-30 em Manaus, 24 meses: limite 2024-10-30 00:00 (04:00Z)
+        issueComDatas(1, "2024-09-01 12:00:00+00", "2024-09-02 12:00:00+00") // resolvida e parada: apaga
+        issueComDatas(2, null, "2024-09-02 12:00:00+00") // aberta antiga: fica
+        issueComDatas(3, "2024-09-01 12:00:00+00", "2025-01-10 12:00:00+00") // resolvida antiga mas mexida: fica
+        evento(1, 1, "2024-09-01 12:00:00+00") // evento antigo da issue 1 (sai pelo limite, não pela cascata)
+        evento(2, 1, "2026-01-01 12:00:00+00") // evento recente da issue 1: sai em cascata
+        exec("INSERT INTO access_log(id, user_id, route, filters, at) VALUES (1, 'u', '/x', '', '2024-10-29 12:00:00+00')")
+        exec("INSERT INTO access_log(id, user_id, route, filters, at) VALUES (2, 'u', '/x', '', '2024-10-30 04:00:00+00')")
+        Retention(ds, calendario).purge(LocalDate.of(2026, 10, 30), 24)
+        val chaves = ds.connection.use { c ->
+            c.createStatement().executeQuery("SELECT key FROM issue ORDER BY key").use { rs ->
+                generateSequence { if (rs.next()) rs.getString(1) else null }.toList()
+            }
+        }
+        assertEquals(listOf("TG-2", "TG-3"), chaves)
+        assertEquals(0, contar("change_event"))
+        val ids = ds.connection.use { c ->
+            c.createStatement().executeQuery("SELECT id FROM access_log").use { rs ->
+                generateSequence { if (rs.next()) rs.getInt(1) else null }.toList()
+            }
+        }
+        assertEquals(listOf(2), ids)
+    }
+
+    @Test
+    fun retencaoApagaSyncRunAntigo() {
+        exec("INSERT INTO sync_run(instance, kind, started_at, status) VALUES ('samsung', 'INCREMENTAL', '2024-10-29 12:00:00+00', 'OK')")
+        exec("INSERT INTO sync_run(instance, kind, started_at, status) VALUES ('samsung', 'INCREMENTAL', '2024-10-30 04:00:00+00', 'OK')")
+        Retention(ds, calendario).purge(LocalDate.of(2026, 10, 30), 24)
+        assertEquals(1, contar("sync_run"))
+    }
+
+    @Test
+    fun retencaoApagaChaveDeUsuarioNaoVistaHaMuito() {
+        exec("INSERT INTO jira_user_key(instance, user_key, username, visto_em) VALUES ('samsung', 'JIRAUSER1', 'ana', '2024-10-29 12:00:00+00')")
+        exec("INSERT INTO jira_user_key(instance, user_key, username, visto_em) VALUES ('samsung', 'JIRAUSER2', 'bia', '2025-06-01 12:00:00+00')")
+        Retention(ds, calendario).purge(LocalDate.of(2026, 10, 30), 24)
+        assertEquals(1, contar("jira_user_key"))
     }
 
     @Test

@@ -98,6 +98,51 @@ class FlagDesligadaZeroRequisicoesTest {
     }
 
     @Test
+    fun agendadorComFlagFalseUmDiaSimulado() = runBlocking {
+        val contador = AtomicInteger(0)
+        val provedor = AtomicInteger(0)
+        val settings = Settings(
+            jiraLiveEnabled = false,
+            jiraInstances = mapOf(
+                "samsung" to JiraInstanceSettings("https://jira.exemplo.invalid", JiraAuthKind.BEARER, null, "token-de-teste-123"),
+            ),
+        )
+        val fabrica = JiraClientFactory(settings, {
+            provedor.incrementAndGet()
+            HttpClient(MockEngine { contador.incrementAndGet(); respond("{}", HttpStatusCode.OK) })
+        })
+        val ctx = br.sidia.painel.testContextComBanco(settings, pg, jira = fabrica)
+        ctx.use {
+            val ds = requireNotNull(ctx.dataSource)
+            // 02:00 em Manaus; 24 h em passos de 1 min cobrem 03:00 (reconciliação) e 04:00 (retenção)
+            val relogio = RelogioMutavel(java.time.Instant.parse("2026-10-30T06:00:00Z"))
+            val passos = AtomicInteger(0)
+            val fim = kotlinx.coroutines.CompletableDeferred<Unit>()
+            val agendador = requireNotNull(
+                montarAgendador(ctx, relogio, dormir = { d ->
+                    relogio.avancar(d)
+                    if (passos.incrementAndGet() >= 24 * 60) {
+                        fim.complete(Unit)
+                        kotlinx.coroutines.awaitCancellation()
+                    }
+                }),
+            )
+            agendador.iniciar(kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Default))
+            kotlinx.coroutines.withTimeout(120_000) { fim.await() }
+            agendador.parar()
+            assertEquals(listOf(SyncKind.RETENCAO), agendador.tipos)
+            assertEquals(0, contador.get())
+            assertEquals(0, provedor.get())
+            val tipos = ds.connection.use { c ->
+                c.createStatement().executeQuery("SELECT kind FROM sync_run").use { rs ->
+                    generateSequence { if (rs.next()) rs.getString(1) else null }.toList()
+                }
+            }
+            assertEquals(listOf("RETENCAO"), tipos)
+        }
+    }
+
+    @Test
     fun nenhumaVariavelSyncLigaASincronizacao() {
         val env = mapOf(
             "SYNC_INSTANCIAS" to "samsung,sidia",
