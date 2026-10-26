@@ -123,7 +123,7 @@ $PADRAO_PROTEGIDOS = '(^|[\s"''=/\\:])(\.env(\.[A-Za-z0-9_-]+)?|(equipes|ausenci
 $PADRAO_EXT_SEGURA = '\.(kt|kts|java|gradle|ts|tsx|js|jsx|mjs|cjs|json|css|scss|html|md|sql|py|sh|ps1|xml|svg|toml|exemplo\.ya?ml|demo\.ya?ml|example|sample)$'
 # nome protegido citado num texto qualquer (regex de busca); modelos .env.example/.env.sample retirados antes
 $PADRAO_NOME_PROTEGIDO = '(^|[^a-z0-9_])\.env(\.[a-z0-9_*-]+)?([^a-z0-9_]|$)|(equipes|ausencias|papeis|squads)\.ya?ml|filtros_status_tool'
-$MSG_BUSCA = "Forma permitida (documentada em docs/ferramentas-claude-para-o-cline/hooks.md, não é contorno): refazer a busca com file_pattern restrito a extensões seguras (ex.: '*.kt', '*.tsx', '*.md', '*.exemplo.yaml') ou a um nome de arquivo exato não protegido. Qualquer outra busca: pergunte ao usuário, só ele autoriza (rodando a busca fora do Cline)."
+$MSG_BUSCA = "Forma permitida (documentada em docs/ferramentas-claude-para-o-cline/hooks.md, não é contorno): refazer a busca com file_pattern restrito a extensões seguras (ex.: '*.kt', '*.tsx', '*.md', '*.exemplo.yaml') ou a um nome de arquivo exato com extensão segura (ou Dockerfile, Makefile, gradlew, gradlew.bat, README, LICENSE, .gitignore, .gitattributes, .editorconfig); nome sem extensão segura, como 'config' ou 'app', pode ser uma pasta e é bloqueado. Qualquer outra busca: pergunte ao usuário, só ele autoriza (rodando a busca fora do Cline)."
 $PADRAO_MODELOS = '(^|[\s"''=/\\])\.env\.(example|sample)([\s"'';|&)]|$)'
 $PADRAO_ESCRITA = '(>|>>|tee\s|sed\s+(-[a-z]*i|--in-place)|(^|[\s;&|(])(cp|mv|rm|ln|truncate|dd|install|chmod|set-content|sc|add-content|ac|out-file|copy-item|copy|cpi|move-item|move|mi|remove-item|del|erase|ri|rd|rmdir|new-item|ni|rename-item|ren|rni|clear-content|clc|tee-object|xcopy|robocopy|icacls|attrib)\s|git\s+(add|commit|stash|checkout|restore|rm|mv))'
 # leitura (extra do Cline: o texto lido iria para o modelo de linguagem)
@@ -233,6 +233,10 @@ function Padrao-Seguro([string]$padrao) {
         $pos = $p.Substring($j + 1)
         # um único grupo, sem aninhamento
         if (($pre + $meio + $pos) -match '[{}]') { return $false }
+        # alternativa vazia expande para o resto do glob (*{.kt,} = *.kt OU *, que casa .env): bloqueia.
+        # O Split do .NET preserva vazios (o "*" cairia na checagem de extensão), mas a regra explícita
+        # mantém o mesmo comportamento do PreToolUse do bash, cujo `read` descarta vazios.
+        if ($meio -eq '' -or $meio.StartsWith(',') -or $meio.EndsWith(',') -or $meio.Contains(',,')) { return $false }
         foreach ($a in $meio.Split(',')) { [void]$alts.Add($pre + $a + $pos) }
     }
     else { [void]$alts.Add($p) }
@@ -245,7 +249,15 @@ function Padrao-Seguro([string]$padrao) {
             if (-not [regex]::IsMatch($base, $PADRAO_EXT_SEGURA)) { return $false }
             if (Nome-Protegido $base) { return $false }
         }
-        elseif (Caminho-Protegido $alt) { return $false }
+        else {
+            if (Caminho-Protegido $alt) { return $false }
+            # sem curinga: só com extensão segura ou na lista curta de arquivos conhecidos. Um nome solto
+            # (config, app, secrets) pode ser de PASTA, e o ripgrep buscaria tudo dentro dela.
+            if (-not [regex]::IsMatch($base, $PADRAO_EXT_SEGURA) -and
+                -not (@('dockerfile', 'makefile', 'gradlew', 'gradlew.bat', 'readme', 'license', '.gitignore', '.gitattributes', '.editorconfig') -contains $base)) {
+                return $false
+            }
+        }
     }
     return $true
 }
