@@ -1,4 +1,6 @@
 .superpowers/
+# Configurações locais do Claude Code (podem ligar a flag do hook; nunca versionar)
+.claude/settings.local.json
 __pycache__/
 app/data/
 app/.env
@@ -13,7 +15,11 @@ app/config/equipes.yaml
 **/config/equipes.yaml
 **/config/ausencias.yaml
 **/config/papeis.yaml
+**/config/calendario.yaml
 **/config/squads.yaml
+**/config/status_map.yaml
+**/config/jira_campos.yaml
+**/config/vinculos.yaml
 legacy/data/
 # Catálogo de filtros do Jira com usernames reais do time (vocabulário de consulta; nunca versionar)
 Filtros_Status_tool.txt

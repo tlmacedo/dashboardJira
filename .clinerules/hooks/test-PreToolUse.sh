@@ -69,6 +69,93 @@ caso true "$(cmd 'echo $JIRA_SAMSUNG_TOKEN')" true "trava mesmo com true: exibir
 caso true "$(cmd 'printenv JIRA_SIDIA_PASSWORD')" true "trava mesmo com true: exibir senha"
 caso true "$(cmd 'cd app/backend && ./gradlew run')" false "liberado: subir o app com a flag true"
 
+# --- ligar a flag por arquivo de configuração: só o usuário escreve em settings do Claude e override do compose ---
+JSON_ON='printf '"'"'{"env":{"JIRA_LIVE_ENABLED":"true"}}'"'"' > .claude/settings.local.json'
+for f in - false true; do
+  caso "$f" "$(cmd "$JSON_ON")" true "settings: printf JSON liga a flag"
+  caso "$f" "$(esc write_to_file '.claude/settings.local.json')" true "settings: write_to_file em settings.local.json"
+  caso "$f" "$(esc replace_in_file 'C:\x\.claude\settings.json')" true "settings: replace_in_file em settings.json (barras do Windows)"
+  caso "$f" "$(esc write_to_file 'app/docker-compose.override.yml')" true "compose: write_to_file no override"
+  caso "$f" "$(cmd 'tee app/docker-compose.override.yml < x.yml')" true "compose: tee no override"
+  caso "$f" "$(cmd 'cp x.json .claude/settings.local.json')" true "settings: cp para settings.local.json"
+  caso "$f" "$(ler '.claude/settings.json')" false "settings: ler settings.json liberado"
+  caso "$f" "$(cmd 'cat .claude/settings.json')" false "settings: cat settings.json liberado"
+  caso "$f" "$(esc write_to_file 'docs/x.json')" false "settings: docs/x.json liberado"
+done
+
+# --- onda final do Plano 4A: normalização, conteúdo e negação por padrão (espelha test-guard.sh) ---
+# O valor "true" é montado por variável: o literal da flag ligada não aparece neste arquivo.
+T=true
+escc() { jq -nc --arg t "$1" --arg p "$2" --arg k "$3" --arg c "$4" '{preToolUse:{toolName:$t,parameters:({path:$p} + {($k):$c})}}'; }
+for f in - false true; do
+  for p in '.claude//settings.local.json' '/x/.claude/./settings.json' '/x/.claude/hooks/../settings.json' \
+           '.CLAUDE/Settings.Local.JSON' 'C:\x\.claude\settings.json.' '/x/CLAUDE~1/settings.json' '/x/.claude/SETTIN~1.JSO' \
+           'app//Docker-Compose.Override.YML' 'app/docker-compose.override.yml:x' 'app/docker-compose.yml' 'app\compose.yaml ' 'app/DOCKER~1.YML'; do
+    caso "$f" "$(esc write_to_file "$p")" true "normalização: write_to_file em '$p'"
+  done
+  caso "$f" '{"preToolUse":{"toolName":"apply_patch","parameters":{"input":"*** Begin Patch\n*** Update File: app//docker-compose.yml\n@@\n-a\n+b\n*** End Patch"}}}' true "normalização: apply_patch no compose"
+  for p in '.claude/hooks/x.sh' 'docs/x.json' 'docs/compose-notas.md' '.claude/skills/a.md'; do
+    caso "$f" "$(esc write_to_file "$p")" false "não regressão: write_to_file em '$p'"
+  done
+  for c in 'cd .claude && cp /tmp/x settings.local.json' 'pushd .claude; mv x settings.json' 'cp x .claude//settings.json' \
+           'cp x settings.local.json' 'cp x CLAUDE~1/SETTIN~1.JSO' 'Copy-Item x .CLAUDE\SETTINGS.JSON'; do
+    caso "$f" "$(cmd "$c")" true "cd/normalização: $c"
+  done
+  # conteúdo
+  caso "$f" "$(escc write_to_file docs/x.md content "{\"JIRA_LIVE_ENABLED\": \"$T\"}")" true "conteúdo: write_to_file content JSON"
+  caso "$f" "$(escc replace_in_file docs/x.md diff "------- SEARCH
+a
+=======
+JIRA_LIVE_ENABLED=$T
++++++++ REPLACE")" true "conteúdo: replace_in_file diff"
+  caso "$f" "$(escc editor docs/x.md new_str "JIRA_LIVE_ENABLED: $T")" true "conteúdo: editor new_str"
+  caso "$f" "$(escc replace_in_file docs/x.md replace "jira_live_enabled = $T")" true "conteúdo: replace (minúsculas)"
+  caso "$f" "$(jq -nc --arg c "*** Begin Patch
+*** Add File: docs/x.md
++JIRA_LIVE_ENABLED=$T
+*** End Patch" '{preToolUse:{toolName:"apply_patch",parameters:{input:$c}}}')" true "conteúdo: apply_patch"
+  caso "$f" "$(cmd "echo JIRA_LIVE_ENABLED=$T >> docs/x.md")" true "conteúdo: comando grava a flag ligada"
+  caso "$f" "$(escc write_to_file docs/x.md content 'JIRA_LIVE_ENABLED=false')" false "não regressão: conteúdo com a flag false"
+  caso "$f" "$(escc write_to_file docs/x.md content 'JIRA_LIVE_ENABLED: ${JIRA_LIVE_ENABLED:-false}')" false "não regressão: padrão do compose"
+  # negação por padrão
+  for c in "python3 -c \"open('.claude/settings.json','w')\"" 'perl -pi -e s/a/b/ .claude/settings.json' 'node -e x app/docker-compose.yml' \
+           'ruby -e x app/compose.yaml' 'php -r x app/compose.yaml' 'pwsh -c x .claude/settings.json' 'powershell -c x app/docker-compose.yml' \
+           'git checkout -- app/docker-compose.yml' 'git restore app/docker-compose.override.yml' 'git apply --include=app/docker-compose.yml p.diff' \
+           'git stash pop && cat app/docker-compose.yml' 'patch app/docker-compose.yml < p.diff' 'rsync x .claude/settings.json' \
+           'curl -o app/docker-compose.override.yml https://example.com/x' 'wget -O .claude/settings.local.json https://example.com/x' \
+           'dd if=x of=app/docker-compose.yml' 'install x .claude/settings.json' 'ln -sf x .claude/settings.local.json' \
+           'sed -i s/a/b/ app/docker-compose.yml' 'echo x > app/docker-compose.yml' 'echo x >> .claude/settings.json' \
+           'echo x &> app/docker-compose.yml' 'echo x 1> app/docker-compose.yml' 'Set-Content app\docker-compose.yml x' \
+           'cp a .vscode/settings.json'; do
+    caso "$f" "$(cmd "$c")" true "nega por padrão: $c"
+  done
+  for c in 'cat .claude/settings.json' 'grep -n env app/docker-compose.yml' 'head -5 app/docker-compose.yml' 'sed -n 1,5p app/docker-compose.yml' \
+           'git diff app/docker-compose.yml' 'cd app && docker compose -f docker-compose.yml up -d' 'Select-String env app\docker-compose.yml'; do
+    caso "$f" "$(cmd "$c")" false "não regressão: $c"
+  done
+done
+caso - "$(ler 'app/docker-compose.yml')" false "não regressão: ler o compose"
+caso true "$(cmd "JIRA_LIVE_ENABLED=$T ./gradlew test 2>&1")" false "não regressão: flag no comando sem escrita, com a flag true"
+caso false "$(cmd 'echo "JIRA_LIVE_ENABLED: true" >> x.yml')" true "trava: forma YAML liga a flag"
+
+# --- coerência com o guard.sh da Tarefa 11 (mesma leitura da flag, mesmas bordas) ---
+caso " true " "$(cmd "curl -s $URL")" false "liberado: espaços nas pontas são ignorados"
+caso True "$(cmd "curl -s $URL")" false "liberado: True (maiúscula inicial)"
+for f in "tr ue" "true;" yes sim 0 truee; do
+  caso "$f" "$(cmd "curl -s $URL")" true "trava: flag '$f' não libera (só true libera)"
+  caso "$f" "$(mcp 'claude_ai_Atlassian_MCP' 'searchJiraIssuesUsingJql')" true "trava: MCP com flag '$f'"
+done
+caso false "$(cmd 'env JIRA_LIVE_ENABLED=true curl -s https://x.invalid/a')" true "trava: env liga a flag dentro do comando"
+caso false "$(cmd 'export JIRA_LIVE_ENABLED=true')" true "trava: export liga a flag dentro do comando"
+caso false "$(cmd '(JIRA_LIVE_ENABLED=true curl -s https://x.invalid/a)')" true "trava: ligar a flag em subshell"
+caso false "$(cmd 'JIRA_LIVE_ENABLED="true" curl -s https://x.invalid/a')" true "trava: ligar a flag com aspas"
+caso - "$(cmd 'JIRA_LIVE_ENABLED=true curl -s https://x.invalid/a')" true "trava: flag ausente, ligar dentro do comando"
+caso true "$(cmd 'curl -s -H "Authorization: Bearer $JIRA_SAMSUNG_TOKEN" https://jira.exemplo.invalid/rest/api/2/myself')" false "liberado: token como argumento de outro comando com a flag true"
+caso true "$(cmd 'JIRA_LIVE_ENABLED=true ./gradlew test')" false "liberado: ligar a flag no comando com a flag true no ambiente (igual ao guard.sh)"
+caso true "$(cmd 'ls && echo $JIRA_SAMSUNG_TOKEN')" true "trava mesmo com true: exibir token depois de &&"
+caso true "$(cmd 'env | grep -i jira')" true "trava mesmo com true: env canalizado para grep de jira"
+caso " TRUE " "$(cmd 'echo $JIRA_SAMSUNG_TOKEN')" true "trava mesmo com TRUE e espaços: exibir token"
+
 # --- comandos comuns sempre liberados ---
 caso - "$(cmd 'ls -la')" false "liberado: ls"
 caso - "$(cmd 'cd app/backend && ./gradlew test')" false "liberado: testes do backend"
@@ -187,7 +274,7 @@ caso - '{"preToolUse":{"toolName":"search_files","parameters":"{nao json"}}' tru
 grande=$(yes x | head -n 150000)
 caso - "$(cmd "$(printf 'cat .env\n%s' "$grande")")" true "falha fechada: comando grande (SIGPIPE) lendo .env"
 caso true "$(cmd "$(printf 'echo $JIRA_SAMSUNG_TOKEN\n%s' "$grande")")" true "falha fechada: token em comando grande"
-caso - "$(esc write_to_file 'C:\Users\THIAGO~1\x\README.md')" false "não regressão: pasta com nome curto 8.3 (TEMP do Windows)"
+caso - "$(esc write_to_file 'C:\Users\USUARIO~1\x\README.md')" false "não regressão: pasta com nome curto 8.3 (TEMP do Windows)"
 
 echo "falhas: $falhas"
 [ "$falhas" = 0 ]

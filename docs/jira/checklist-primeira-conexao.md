@@ -1,21 +1,19 @@
-# Checklist da primeira conexão autorizada ao Jira
+# Checklist da primeira conexão ao Jira
 
-Lista **mínima e ordenada** das chamadas a pedir ao usuário. Este documento só descreve; **ninguém faz nenhuma chamada** até o usuário autorizar.
+Lista **mínima e ordenada** das chamadas da primeira conexão. É um procedimento cuidadoso recomendado; a flag `JIRA_LIVE_ENABLED` é a única trava: com `false` nenhum passo pode ser executado (nem pelo app, nem pelo MCP da Atlassian, nem por `curl`), e só o usuário liga a flag. Com `true`, cada passo abaixo é uma chamada separada: rodar, registrar o resultado e só então seguir para a próxima. Fatos e riscos de cada item: [matriz-compatibilidade.md](matriz-compatibilidade.md).
 
-Regra de ouro do projeto: nenhuma consulta ao Jira da empresa sem **autorização expressa** do usuário, **por pesquisa**. Vale para o MCP da Atlassian, para `curl` e para o cliente HTTP do app. Cada passo abaixo é uma pesquisa separada: pedir, esperar o "sim", executar só aquela, registrar o resultado e voltar a pedir para a próxima. Uma autorização não vale para o passo seguinte. Fatos e riscos de cada item: [matriz-compatibilidade.md](matriz-compatibilidade.md).
-
-## Antes de pedir a primeira autorização
+## Antes do primeiro passo
 
 - [ ] **`JIRA_LIVE_ENABLED` só deve ser ligado pelo usuário.** O padrão é `false` (e `DASHBOARD_DEV_MODE=true`). Quem liga é o usuário, no ambiente dele; este checklist nunca liga a flag.
 - [ ] **O token fica em variável de ambiente.** Nunca em arquivo versionado, nunca em `.env` commitado, nunca colado em documento, relatório, log ou mensagem de commit. Se o token aparecer em algum arquivo do repositório, parar e avisar.
 - [ ] **Escolher a instância:** Samsung Data Center (`Bearer PAT`) ou Sidia (`Basic`, usuário e token). Uma instância por vez; cada uma repete os passos que precisar.
 - [ ] **Pare no primeiro erro 401, 403, 429, qualquer 5xx ou CAPTCHA.** Não repetir, não tentar outra credencial, não contornar. Insistir pode bloquear a conta. Relatar ao usuário o código e a mensagem e esperar instrução.
-- [ ] Confirmar a lista de pesquisas que o usuário aceita rodar nesta sessão (os cinco passos abaixo) e a ordem. Qualquer chamada fora da lista é uma pesquisa nova e exige nova autorização.
+- [ ] Combinar a lista de chamadas desta sessão (os cinco passos abaixo) e a ordem. Qualquer chamada fora da lista é um passo novo: confirmar a flag e registrar antes de rodar.
 - [ ] Limites desta primeira rodada: uma issue no passo 4, `maxResults=1` no passo 3, sem escrita, sem busca ampla.
 
 ## Passo 1: `GET /rest/api/2/myself` (credencial e fuso)
 
-**Peça autorização expressa antes.** Consulta: `GET {base}/rest/api/2/myself`, uma vez, na instância escolhida.
+**Confirme que a flag de acesso ao Jira está ligada e rode o passo.** Consulta: `GET {base}/rest/api/2/myself`, uma vez, na instância escolhida.
 
 - **O que conferir:**
   - A credencial vale (resposta 200) e o usuário é o esperado (nome e nome de exibição).
@@ -25,7 +23,7 @@ Regra de ouro do projeto: nenhuma consulta ao Jira da empresa sem **autorizaçã
 
 ## Passo 2: `GET /rest/api/2/field` (ids dos campos do dicionário)
 
-**Peça autorização expressa antes.** Consulta: `GET {base}/rest/api/2/field`, uma vez (a lista de todos os campos).
+**Confirme que a flag de acesso ao Jira está ligada e rode o passo.** Consulta: `GET {base}/rest/api/2/field`, uma vez (a lista de todos os campos).
 
 - **O que conferir:** casar cada campo de `app/config/jira_campos.exemplo.yaml` pelo nome com o `id` real (`customfield_NNNNN`), o `schema.type` e o nome exato. Procurar, em especial:
   - `OS Version`, `SKU Type`, `Checklist Type`, `Model Name`;
@@ -36,31 +34,32 @@ Regra de ouro do projeto: nenhuma consulta ao Jira da empresa sem **autorizaçã
 
 ## Passo 3: `POST /rest/api/2/search` com `maxResults=1`, uma vez por ficha de card
 
-**Peça autorização expressa antes**, **para cada ficha**: mostrar ao usuário o JQL gerado (o construtor produz o texto, sem rede) e a ficha a que pertence, e só então enviar. Consulta: `POST {base}/rest/api/2/search` com corpo `{"jql": "...", "maxResults": 1, "fields": ["key"]}`. O objetivo é só a contagem de referência (`total`).
+**Confirme que a flag de acesso ao Jira está ligada e rode o passo**, **para cada ficha**: mostrar e registrar o JQL gerado (o construtor produz o texto, sem rede) e a ficha a que pertence antes de enviar. Consulta: `POST {base}/rest/api/2/search` com corpo `{"jql": "...", "maxResults": 1, "fields": ["key"]}`. O objetivo é só a contagem de referência (`total`).
 
 - **O que conferir:**
   - O `total` bate com a contagem da mesma busca na tela do Jira (o usuário confere) e com a esperada pela ficha.
   - O JQL é aceito sem erro: campo por nome, aspas, username com `.` entre aspas e o fim do período (`resolved < dia seguinte`).
-  - Sondar `=` versus `~` em campo TEXT, ordenação (`ORDER BY labels`) e filtro salvo **não** faz parte deste passo: exige ficha ou pesquisa nova, com autorização própria.
-  - Fichas com `total` acima de 5.000: anotar; a paginação exige outro pedido de autorização.
+  - Sondar `=` versus `~` em campo TEXT, ordenação (`ORDER BY labels`) e filtro salvo **não** faz parte deste passo: é uma ficha ou chamada nova, com o JQL mostrado e registrado antes.
+  - Fichas com `total` acima de 5.000: anotar; a paginação é uma chamada nova.
   - Contagens por tipo de issue do TG-Basic, para validar a lista de tipos.
 - **Quando parar:** contagem diferente da esperada (não ajustar o JQL em silêncio: relatar); erro 400 de JQL (relatar o JQL e a mensagem); 401, 403, 429 ou CAPTCHA; qualquer resposta 5xx (não repetir); qualquer resposta com mais de uma issue (o corpo deve vir com `maxResults=1`).
 
 ## Passo 4: UMA issue com `expand=changelog`
 
-**Peça autorização expressa antes.** O usuário indica **uma** chave de issue (de preferência com troca de responsável e de vencimento no histórico). Consulta 4a: `GET {base}/rest/api/2/issue/{chave}?expand=changelog`, ou a busca equivalente `POST /search` com `expand: ["changelog"]` e `maxResults=1`. Consulta 4b, **só se o usuário autorizar separadamente**: `GET {base}/rest/api/2/issue/{chave}/changelog` na mesma issue.
+**Confirme que a flag de acesso ao Jira está ligada e rode o passo.** O usuário indica **uma** chave de issue (de preferência com troca de responsável e de vencimento no histórico). Consulta 4a: `GET {base}/rest/api/2/issue/{chave}?expand=changelog`, ou a busca equivalente `POST /search` com `expand: ["changelog"]` e `maxResults=1`. Consulta 4b, **só se a 4a não trouxer o changelog completo**: `GET {base}/rest/api/2/issue/{chave}/changelog` na mesma issue.
 
 - **O que conferir:**
   - Formato de `from`/`to` (e `fromString`/`toString`) nos itens com `field = assignee`: é usuário, chave ou nome de exibição?
   - Itens de `duedate` e `labels`, base da regra de auditoria.
   - Changelog truncado: comparar `changelog.total` com `maxResults` e o número de `histories`. Se o histórico vier cortado, o plano B é `expand=changelog` paginado.
   - 4b: se o endpoint `/changelog` existe e pagina. Não verificado; não depender dele antes de testar.
+  - Vínculos (a issue com changelog já traz `fields.issuelinks`): conferir em `fields.issuelinks` o nome exato do tipo (`type.name`, esperado `Blocks`), os textos `inward`/`outward` (esperados `is blocked by`/`blocks`) e em que direção a Review aparece em relação à task; se criar ou remover um link altera o `updated` das **duas** issues (se não alterar, o incremental não percebe a mudança: registrar e tratar como divergência na matriz); se o nome diferir, ajustar o `vinculos.yaml` real; registrar só o tipo e a direção na matriz, sem chaves nem resumo de issues reais.
 - **Regra:** não copiar dados pessoais das respostas para o repositório (observar e registrar só o formato).
 - **Quando parar:** changelog truncado sem como paginar; 401, 403, 429, 5xx ou CAPTCHA; 4b falhou (404): manter o plano B e não insistir.
 
 ## Passo 5: `GET /rest/api/2/status` (mapa de status)
 
-**Peça autorização expressa antes.** Consulta: `GET {base}/rest/api/2/status`, uma vez.
+**Confirme que a flag de acesso ao Jira está ligada e rode o passo.** Consulta: `GET {base}/rest/api/2/status`, uma vez.
 
 - **O que conferir:**
   - Cada status e a sua `statusCategory` (a task é concluída quando a categoria é `done` **e** há `resolution`).
@@ -70,7 +69,7 @@ Regra de ouro do projeto: nenhuma consulta ao Jira da empresa sem **autorizaçã
 
 ## Passo extra (fora dos cinco): conferir os ids de `papeis.yaml`
 
-**Peça autorização expressa antes, por pesquisa.** O `id` de cada pessoa em `papeis.yaml` é o username dela no Jira, o mesmo valor do campo `assignee` das issues. Consulta: `GET {base}/rest/api/2/user?username={id}`, uma por `id` (cada uma é uma pesquisa com autorização própria; o usuário pode preferir conferir a lista na própria tela do Jira).
+**Confirme que a flag de acesso ao Jira está ligada e rode o passo.** O `id` de cada pessoa em `papeis.yaml` é o username dela no Jira, o mesmo valor do campo `assignee` das issues. Consulta: `GET {base}/rest/api/2/user?username={id}`, uma por `id` (o usuário pode preferir conferir a lista na própria tela do Jira).
 
 - **O que conferir:** cada `id` existe no Jira (resposta 200) e o `name` devolvido é igual ao `id` escrito, **inclusive na caixa** (o painel compara exato e em minúsculas: se o Jira devolver maiúsculas, o `id` em minúsculas não casa com o `assignee`). Se divergir, relatar ao usuário; não adaptar o `id` nem o arquivo em silêncio. Quem usa username diferente na instância Sidia é o caso do campo futuro `jira_sidia` (ainda não lido pelo app).
 - **Quando parar:** `id` inexistente (404; relatar, sem corrigir o arquivo em silêncio); 401, 403, 429, 5xx ou CAPTCHA. Não copiar nomes nem e-mails da resposta para o repositório.
@@ -79,5 +78,6 @@ Regra de ouro do projeto: nenhuma consulta ao Jira da empresa sem **autorizaçã
 
 1. Registrar o resultado de cada passo (data, instância, o que foi visto) na matriz, trocando **não validado** por **confirmado em aaaa-mm-dd**.
 2. Não copiar para o repositório dados pessoais, tokens nem respostas brutas do Jira.
-3. Desligar `JIRA_LIVE_ENABLED` (o usuário) e encerrar a sessão com o token fora do ambiente.
-4. Qualquer chamada nova (outra ficha, outra issue, paginação, leitura de filtro salvo) volta ao início: **peça autorização expressa antes**.
+3. A sincronização periódica segue o [runbook da sincronização](runbook-sincronizacao.md) com a flag ligada (primeiro ciclo pequeno, limites padrão, reconciliação, como desligar e ler o status). A flag `JIRA_LIVE_ENABLED` continua sendo a única trava e só o usuário a muda.
+4. Voltar ao modo offline: o usuário desliga a flag (`false`) e encerra a sessão com o token fora do ambiente.
+5. Qualquer chamada nova (outra ficha, outra issue, paginação, leitura de filtro salvo) volta ao início: **confirme que a flag de acesso ao Jira está ligada**, mostre e registre o que será enviado e rode só aquela chamada.

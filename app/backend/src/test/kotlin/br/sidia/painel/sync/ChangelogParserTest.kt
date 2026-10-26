@@ -51,14 +51,24 @@ class ChangelogParserTest {
     }
 
     @Test
-    fun assigneeSoComStringsUsaNomeDeExibicao() {
+    fun assigneeSemFromETo_NuncaGravaNomeDeExibicao() {
         val h = historicos(
             """[{"id":"3","created":"2026-10-02T10:00:00.000-0400","author":{"name":"x"},
                 "items":[{"field":"assignee","from":null,"to":null,"fromString":"Ana Silva","toString":"Bruno Lima"}]}]""",
         )
+        val e = ChangelogParser.toEvents(issue(), h).single()
+        assertNull(e.from)
+        assertNull(e.to)
         val t = ChangelogParser.toTimeline(issue(), h)
-        assertEquals("bruno lima", t.assigneeChanges.single().to)
-        assertEquals("ana silva", t.initialAssignee)
+        assertNull(t.assigneeChanges.single().to)
+        assertNull(t.initialAssignee)
+    }
+
+    @Test
+    fun chaveInternaNaoResolvidaFicaEmMaiusculas() {
+        val e = ChangelogParser.toEvents(issue(), trocaDeResponsavel("jirauser99", " JiraUser7 ")).single()
+        assertEquals("JIRAUSER99", e.from)
+        assertEquals("JIRAUSER7", e.to)
     }
 
     @Test
@@ -116,5 +126,34 @@ class ChangelogParserTest {
         )
         val ids = ChangelogParser.toEvents(issue(), h).map { it.changelogId }
         assertEquals(2, ids.toSet().size)
+    }
+
+    private fun trocaDeResponsavel(de: String, para: String) = historicos(
+        """[{"id":"7","created":"2026-10-02T10:00:00.000-0400","author":{"name":"x"},
+            "items":[{"field":"assignee","from":"$de","to":"$para","fromString":"Nome De","toString":"Nome Para"}]}]""",
+    )
+
+    @Test
+    fun chaveInternaTraduzidaPeloMapa() {
+        val e = ChangelogParser.toEvents(
+            issue(), trocaDeResponsavel("JIRAUSER10", "jirauser11"),
+            mapOf("JIRAUSER10" to "ana.silva", "JIRAUSER11" to "bruno"),
+        ).single()
+        assertEquals("ana.silva", e.from)
+        assertEquals("bruno", e.to)
+    }
+
+    @Test
+    fun chaveInternaSemTraducaoFicaComOValorOriginal() {
+        val e = ChangelogParser.toEvents(issue(), trocaDeResponsavel("JIRAUSER99", "Bruno")).single()
+        assertEquals("JIRAUSER99", e.from) // sem normalizar: nunca casa com um username
+        assertEquals("bruno", e.to)
+    }
+
+    @Test
+    fun mapaNaoAlteraUsernameComum() {
+        val e = ChangelogParser.toEvents(issue(), trocaDeResponsavel("Ana.Silva", "bruno"), mapOf("JIRAUSER1" to "x")).single()
+        assertEquals("ana.silva", e.from)
+        assertEquals("bruno", e.to)
     }
 }

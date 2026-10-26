@@ -141,7 +141,7 @@ describe('tela Tempo em status', () => {
           porStatus: [],
           pessoaStatus: [],
           abertasParadas: [],
-          avisos: [{ codigo: 'STATUS_SEM_MAPEAMENTO', gravidade: 'bloqueante', mensagem: 'status sem mapeamento: Em Triagem' }],
+          avisos: [{ codigo: 'STATUS_SEM_MAPEAMENTO', gravidade: 'bloqueante', mensagem: 'status sem mapeamento: Em Triagem', params: { status: 'Em Triagem' } }],
         },
       },
     })
@@ -149,6 +149,51 @@ describe('tela Tempo em status', () => {
     expect(await screen.findByText(/status sem mapeamento: Em Triagem/i)).toBeInTheDocument()
     const kpis = screen.getByRole('group', { name: 'Indicadores' })
     expect(within(kpis).getAllByText('—')).toHaveLength(3)
+  })
+
+  it('avisoUsaParametroEmVezDaMensagem', async () => {
+    simular({
+      [CARD]: {
+        status: 200,
+        corpo: {
+          ...DTO,
+          avisos: [
+            { codigo: 'STATUS_SEM_MAPEAMENTO', gravidade: 'bloqueante', mensagem: '', params: { status: 'Revisando' } },
+            { codigo: 'CONCLUSAO_DIVERGENTE', gravidade: 'informativo', mensagem: '', params: { n: '3' } },
+          ],
+        },
+      },
+    })
+    renderizar()
+    // O texto vem do código (i18n) e do parâmetro; a mensagem do backend (vazia aqui) não é usada.
+    expect(await screen.findByText(/Há status sem mapeamento: Revisando/)).toBeInTheDocument()
+    expect(screen.getByText(/3 issue\(s\) com status e resolução divergentes/)).toBeInTheDocument()
+  })
+
+  it('avisoMantemLiteraisEspeciaisDoParametro', async () => {
+    simular({
+      [CARD]: {
+        status: 200,
+        corpo: {
+          ...DTO,
+          avisos: [{ codigo: 'STATUS_SEM_MAPEAMENTO', gravidade: 'bloqueante', mensagem: '', params: { status: "$& e $1 e $'" } }],
+        },
+      },
+    })
+    renderizar()
+    // Marcadores de substituição do JavaScript no valor aparecem literais, nunca interpretados.
+    expect(await screen.findByText("Há status sem mapeamento: $& e $1 e $'")).toBeInTheDocument()
+  })
+
+  it('avisoConcluidaSemDataEhInformativo', async () => {
+    simular({
+      [CARD]: {
+        status: 200,
+        corpo: { ...DTO, avisos: [{ codigo: 'CONCLUIDA_SEM_DATA', gravidade: 'informativo', mensagem: '', params: { n: '2' } }] },
+      },
+    })
+    renderizar()
+    expect(await screen.findByText(/2 issue\(s\) concluída\(s\) sem data de resolução/)).toBeInTheDocument()
   })
 
   it('avisoInformativoMantemOsNumeros', async () => {

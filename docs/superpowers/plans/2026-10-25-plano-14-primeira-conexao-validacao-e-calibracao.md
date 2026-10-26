@@ -21,7 +21,7 @@ Todo código novo é testado **offline**, com respostas sintéticas em `src/test
 | Nome ou capacidade | Origem |
 |---|---|
 | `CLAUDE.md`, regra 1: a flag `JIRA_LIVE_ENABLED` é a **única** trava; só o usuário muda. **Se a regra 1 da `main` ainda exigir autorização por pesquisa, vale o `CLAUDE.md`: perguntar ao usuário antes de cada consulta.** | `CLAUDE.md` (25/10) |
-| `docs/jira/checklist-primeira-conexao.md` com "Confirme `JIRA_LIVE_ENABLED=true` e rode o passo" em cada passo; `cadaPassoDoChecklistConfirmaAFlag`, `checklistSemRegraAntiga` | Plano 4A, T11 |
+| `docs/jira/checklist-primeira-conexao.md` com "Confirme que a flag de acesso ao Jira está ligada e rode o passo" em cada passo; `cadaPassoDoChecklistConfirmaAFlag`, `checklistSemRegraAntiga` | Plano 4A, T11 |
 | `docs/jira/runbook-sincronizacao.md` (Etapas 1 a 3), `SyncSettings` (`SYNC_MAX_ITENS`, `SYNC_MAX_REQUISICOES`, `SYNC_FUSO_SERVIDOR`, `SYNC_INSTANCIAS`), `GET /api/sync/status`, `SyncStateStore` (`cursor`, `avancarCursor`), `SyncService.incremental` | Plano 4A, T1, T2, T5, T8, T9 |
 | `FieldDictionary`, `FieldDefinition` (`nome`, `tipo`, `instancia`, `finalidade`, `valores`, `customId`), `FieldType` (`SELECT`, `TEXT`, `DATE`, `USER`, `LABELS`, `NUMBER`), `CardQueryFactory`, `ctx.fichas`, `ctx.campos` | Planos 2 e 4A, T3 |
 | `StatusMap` (com `ordem` e `resolucoesNegativas`) | Planos 3 e 5, T1 |

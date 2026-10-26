@@ -84,6 +84,10 @@ campos:
     tipo: DATE
     instancia: samsung
     finalidade: Data da última atualização
+  - nome: key
+    tipo: TEXT
+    instancia: samsung
+    finalidade: Chave da issue, como TG-123; filtro por chaves e desempate da ordenação na sincronização
   - nome: parent
     tipo: TEXT
     instancia: samsung

@@ -1,0 +1,195 @@
+{
+  "expand": "schema,names",
+  "startAt": 0,
+  "maxResults": 100,
+  "total": 8,
+  "issues": [
+    {
+      "id": "10001",
+      "key": "TG-1",
+      "fields": {
+        "summary": "Task bloqueada pela Review",
+        "project": {"key": "TG"},
+        "issuetype": {"name": "Task"},
+        "status": {"name": "In Progress"},
+        "assignee": {"name": "ana.silva"},
+        "reporter": {"name": "carla.souza"},
+        "created": "2026-10-01T09:00:00.000-0400",
+        "updated": "2026-10-02T10:00:00.000-0400",
+        "labels": [],
+        "issuelinks": [
+          {
+            "id": "30001",
+            "type": {"id": "10000", "name": "Blocks", "inward": "is blocked by", "outward": "blocks"},
+            "inwardIssue": {
+              "id": "10002", "key": "TG-2", "self": "https://jira.exemplo.invalid/rest/api/2/issue/10002",
+              "fields": {"summary": "Resumo da outra ponta que nao pode ser guardado", "status": {"name": "To Do"}, "priority": {"name": "High"}, "issuetype": {"name": "Checklist Review"}}
+            }
+          }
+        ]
+      },
+      "changelog": {"startAt": 0, "maxResults": 100, "total": 0, "histories": []}
+    },
+    {
+      "id": "10002",
+      "key": "TG-2",
+      "fields": {
+        "summary": "Review que bloqueia a task",
+        "project": {"key": "TG"},
+        "issuetype": {"name": "Checklist Review"},
+        "status": {"name": "To Do"},
+        "assignee": {"name": "bruno"},
+        "reporter": {"name": "carla.souza"},
+        "created": "2026-10-01T09:10:00.000-0400",
+        "updated": "2026-10-02T10:05:00.000-0400",
+        "labels": [],
+        "issuelinks": [
+          {
+            "id": "30001",
+            "type": {"id": "10000", "name": "Blocks", "inward": "is blocked by", "outward": "blocks"},
+            "outwardIssue": {
+              "id": "10001", "key": "TG-1", "self": "https://jira.exemplo.invalid/rest/api/2/issue/10001",
+              "fields": {"summary": "Outro resumo da outra ponta", "status": {"name": "In Progress"}, "priority": {"name": "Low"}, "issuetype": {"name": "Task"}}
+            }
+          }
+        ]
+      },
+      "changelog": {"startAt": 0, "maxResults": 100, "total": 0, "histories": []}
+    },
+    {
+      "id": "10003",
+      "key": "TG-3",
+      "fields": {
+        "summary": "Task que bloqueia a Review",
+        "project": {"key": "TG"},
+        "issuetype": {"name": "Task"},
+        "status": {"name": "In Progress"},
+        "assignee": {"name": "ana.silva"},
+        "reporter": {"name": "carla.souza"},
+        "created": "2026-10-01T09:20:00.000-0400",
+        "updated": "2026-10-02T10:10:00.000-0400",
+        "labels": [],
+        "issuelinks": [
+          {
+            "id": "30002",
+            "type": {"id": "10000", "name": "Blocks", "inward": "is blocked by", "outward": "blocks"},
+            "outwardIssue": {"id": "10004", "key": "TG-4", "fields": {"summary": "Resumo que nao entra", "status": {"name": "To Do"}}}
+          }
+        ]
+      },
+      "changelog": {"startAt": 0, "maxResults": 100, "total": 0, "histories": []}
+    },
+    {
+      "id": "10004",
+      "key": "TG-4",
+      "fields": {
+        "summary": "Review bloqueada pela task",
+        "project": {"key": "TG"},
+        "issuetype": {"name": "Checklist Review"},
+        "status": {"name": "To Do"},
+        "assignee": {"name": "bruno"},
+        "reporter": {"name": "carla.souza"},
+        "created": "2026-10-01T09:30:00.000-0400",
+        "updated": "2026-10-02T10:15:00.000-0400",
+        "labels": [],
+        "issuelinks": [
+          {
+            "id": "30002",
+            "type": {"id": "10000", "name": "Blocks", "inward": "is blocked by", "outward": "blocks"},
+            "inwardIssue": {"id": "10003", "key": "TG-3", "fields": {"summary": "Resumo que nao entra", "status": {"name": "In Progress"}}}
+          }
+        ]
+      },
+      "changelog": {"startAt": 0, "maxResults": 100, "total": 0, "histories": []}
+    },
+    {
+      "id": "10005",
+      "key": "TG-5",
+      "fields": {
+        "summary": "Task que bloqueia outra task",
+        "project": {"key": "TG"},
+        "issuetype": {"name": "Task"},
+        "status": {"name": "To Do"},
+        "assignee": {"name": "ana.silva"},
+        "reporter": {"name": "carla.souza"},
+        "created": "2026-10-01T09:40:00.000-0400",
+        "updated": "2026-10-02T10:20:00.000-0400",
+        "labels": [],
+        "issuelinks": [
+          {
+            "id": "30003",
+            "type": {"id": "10000", "name": "Blocks", "inward": "is blocked by", "outward": "blocks"},
+            "outwardIssue": {"id": "10006", "key": "TG-6"}
+          }
+        ]
+      },
+      "changelog": {"startAt": 0, "maxResults": 100, "total": 0, "histories": []}
+    },
+    {
+      "id": "10006",
+      "key": "TG-6",
+      "fields": {
+        "summary": "Task bloqueada por outra task",
+        "project": {"key": "TG"},
+        "issuetype": {"name": "Task"},
+        "status": {"name": "To Do"},
+        "assignee": {"name": "ana.silva"},
+        "reporter": {"name": "carla.souza"},
+        "created": "2026-10-01T09:50:00.000-0400",
+        "updated": "2026-10-02T10:25:00.000-0400",
+        "labels": [],
+        "issuelinks": [
+          {
+            "id": "30003",
+            "type": {"id": "10000", "name": "Blocks", "inward": "is blocked by", "outward": "blocks"},
+            "inwardIssue": {"id": "10005", "key": "TG-5"}
+          }
+        ]
+      },
+      "changelog": {"startAt": 0, "maxResults": 100, "total": 0, "histories": []}
+    },
+    {
+      "id": "10007",
+      "key": "TG-7",
+      "fields": {
+        "summary": "Task com vinculo simetrico e um item malformado",
+        "project": {"key": "TG"},
+        "issuetype": {"name": "Task"},
+        "status": {"name": "To Do"},
+        "assignee": {"name": "ana.silva"},
+        "reporter": {"name": "carla.souza"},
+        "created": "2026-10-01T10:00:00.000-0400",
+        "updated": "2026-10-02T10:30:00.000-0400",
+        "labels": [],
+        "issuelinks": [
+          {
+            "id": "30004",
+            "type": {"id": "10003", "name": "Relates", "inward": "relates to", "outward": "relates to"},
+            "outwardIssue": {"id": "10001", "key": "TG-1"}
+          },
+          {
+            "id": "30005",
+            "type": {"id": "10000", "name": "Blocks", "inward": "is blocked by", "outward": "blocks"}
+          }
+        ]
+      },
+      "changelog": {"startAt": 0, "maxResults": 100, "total": 0, "histories": []}
+    },
+    {
+      "id": "10008",
+      "key": "TG-8",
+      "fields": {
+        "summary": "Task sem o campo issuelinks",
+        "project": {"key": "TG"},
+        "issuetype": {"name": "Task"},
+        "status": {"name": "To Do"},
+        "assignee": {"name": "ana.silva"},
+        "reporter": {"name": "carla.souza"},
+        "created": "2026-10-01T10:10:00.000-0400",
+        "updated": "2026-10-02T10:35:00.000-0400",
+        "labels": []
+      },
+      "changelog": {"startAt": 0, "maxResults": 100, "total": 0, "histories": []}
+    }
+  ]
+}

@@ -73,7 +73,7 @@ object ChangelogParser {
     }
 
     /** Um evento por item de cada histórico, em ordem cronológica. */
-    fun toEvents(issue: JsonObject, changelog: List<JsonObject>): List<ChangeEventRecord> {
+    fun toEvents(issue: JsonObject, changelog: List<JsonObject>, chaves: Map<String, String> = emptyMap()): List<ChangeEventRecord> {
         val key = requireNotNull(issue.texto("key")) { "Issue sem chave" }
         val eventos = mutableListOf<ChangeEventRecord>()
         for (h in changelog) {
@@ -87,18 +87,24 @@ object ChangelogParser {
                 val ehResponsavel = campo.equals("assignee", ignoreCase = true)
                 val guardaValor = CAMPOS_COM_VALOR.any { campo.equals(it, ignoreCase = true) }
                 // Campos fora da lista só registram que houve mudança: nunca o texto (privacidade).
-                val de = if (ehResponsavel) usuario(item, "from", "fromString") else if (guardaValor) item.texto("fromString") else null
-                val para = if (ehResponsavel) usuario(item, "to", "toString") else if (guardaValor) item.texto("toString") else null
+                val de = if (ehResponsavel) usuario(item, "from", chaves) else if (guardaValor) item.texto("fromString") else null
+                val para = if (ehResponsavel) usuario(item, "to", chaves) else if (guardaValor) item.texto("toString") else null
                 eventos += ChangeEventRecord("$key:$historicoId:$i", key, campo, de, para, quando, autor)
             }
         }
         return eventos.sortedBy { it.at }
     }
 
-    /** Responsável: usa o username (`from`/`to`) quando presente; senão o texto (nome de exibição). */
-    private fun usuario(item: JsonObject, chave: String, chaveTexto: String): String? =
-        (item.texto(chave)?.takeIf { it.isNotBlank() } ?: item.texto(chaveTexto)?.takeIf { it.isNotBlank() })
-            ?.let(::normalizarUsername)
+    /**
+     * Responsável: usa o username (`from`/`to`); sem ele o resultado é nulo. NUNCA recorre a `fromString`/`toString`
+     * (nome de exibição, dado pessoal). Chave interna (`JIRAUSER*`) é traduzida por [chaves]; sem tradução fica
+     * sempre em maiúsculas, para nunca casar com um username.
+     */
+    private fun usuario(item: JsonObject, chave: String, chaves: Map<String, String>): String? {
+        val bruto = item.texto(chave)?.takeIf { it.isNotBlank() } ?: return null
+        if (ChavesDeUsuario.ehChaveInterna(bruto.trim())) return chaves[bruto.trim().uppercase()] ?: bruto.trim().uppercase()
+        return normalizarUsername(bruto)
+    }
 
     /**
      * Monta a linha do tempo a partir do estado atual da issue e dos eventos. O status/responsável
@@ -155,6 +161,8 @@ internal class CamposDaIssue(
     val parentKey: String?,
     val estimateS: Long?,
     val spentS: Long?,
+    /** Campo `id` da issue (numérico, estável mesmo que a chave mude). */
+    val jiraId: Long? = null,
 ) {
     companion object {
         fun de(issue: JsonObject): CamposDaIssue {
@@ -179,6 +187,7 @@ internal class CamposDaIssue(
                 parentKey = (f["parent"] as? JsonObject)?.texto("key"),
                 estimateS = (f["timeoriginalestimate"] as? JsonPrimitive)?.longOrNull,
                 spentS = (f["timespent"] as? JsonPrimitive)?.longOrNull,
+                jiraId = issue.texto("id")?.trim()?.toLongOrNull(),
             )
         }
     }

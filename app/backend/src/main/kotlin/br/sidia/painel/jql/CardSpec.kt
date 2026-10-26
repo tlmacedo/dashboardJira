@@ -7,7 +7,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 
 /** Tipos de parâmetro que uma ficha pode declarar. */
-val TIPOS_DE_PARAMETRO: Set<String> = setOf("squad", "periodo", "os", "pessoa", "tipo")
+val TIPOS_DE_PARAMETRO: Set<String> = setOf("squad", "periodo", "os", "pessoa", "tipo", "atualizadoDesde", "chaves")
 
 /** Parâmetro declarado na ficha. [type] é um de [TIPOS_DE_PARAMETRO]. */
 data class CardParam(val name: String, val type: String, val required: Boolean = true)
@@ -28,7 +28,15 @@ data class CardSpec(
     val aceite: List<String>,
     val expandChangelog: Boolean,
     val filtrosExcluidos: Map<String, List<String>> = emptyMap(),
+    /** Se verdadeiro, a consulta termina em `ORDER BY updated ASC, key ASC` (sincronização incremental). */
+    val ordenarPorAtualizacao: Boolean = false,
 )
+
+/**
+ * Valor do parâmetro `atualizadoDesde`: o instante de corte e o fuso do SERVIDOR do Jira, no qual
+ * o JQL é interpretado (`updated >= "aaaa-MM-dd HH:mm"` sem fuso explícito).
+ */
+data class AtualizadoDesde(val at: java.time.Instant, val fusoDoServidor: java.time.ZoneId)
 
 /** Consulta pronta para o cliente do Jira: JQL gerado só pelo construtor, mais `fields` e expansão. */
 data class JqlQuery(val instance: String, val jql: String, val fields: List<String>, val expandChangelog: Boolean)
@@ -40,7 +48,12 @@ internal val CAMPO_DO_PARAMETRO: Map<String, String> = mapOf(
     "periodo" to "resolved",
     "os" to "OS Version",
     "tipo" to "issuetype",
+    "atualizadoDesde" to "updated",
+    "chaves" to "key",
 )
+
+/** Campos usados por `ORDER BY updated ASC, key ASC` (ficha com `ordenarPorAtualizacao`). */
+internal val CAMPOS_DA_ORDENACAO: List<String> = listOf("updated", "key")
 
 object CardSpecs {
     /**
@@ -67,6 +80,7 @@ object CardSpecs {
                 aceite = ficha.aceite,
                 expandChangelog = ficha.expandChangelog,
                 filtrosExcluidos = ficha.filtrosExcluidos,
+                ordenarPorAtualizacao = ficha.ordenarPorAtualizacao,
             ).also { validar(it) }
         } catch (e: IllegalArgumentException) {
             throw IllegalArgumentException("$path: ${e.message}", e)
@@ -77,6 +91,8 @@ object CardSpecs {
             "filtrosFixos" to spec.filtrosFixos.keys.toList(),
             "filtrosExcluidos" to spec.filtrosExcluidos.keys.toList(),
             "parametros" to spec.parametros.map { CAMPO_DO_PARAMETRO.getValue(it.type) },
+            // A ordenação usa updated e key; sem eles no dicionário a falha vem já na carga.
+            "ordenarPorAtualizacao" to (if (spec.ordenarPorAtualizacao) CAMPOS_DA_ORDENACAO else emptyList()),
         )
         for ((secao, nomes) in porSecao) {
             for (nome in nomes) {
@@ -98,6 +114,8 @@ object CardSpecs {
         "pessoa" to setOf(FieldType.USER),
         "os" to setOf(FieldType.SELECT, FieldType.TEXT),
         "tipo" to setOf(FieldType.SELECT, FieldType.TEXT),
+        "atualizadoDesde" to setOf(FieldType.DATE),
+        "chaves" to setOf(FieldType.TEXT),
     )
 
     /**
@@ -154,6 +172,7 @@ private data class FichaYaml(
     val exemplo: String = "",
     val aceite: List<String> = emptyList(),
     val expandChangelog: Boolean = false,
+    val ordenarPorAtualizacao: Boolean = false,
 )
 
 @Serializable

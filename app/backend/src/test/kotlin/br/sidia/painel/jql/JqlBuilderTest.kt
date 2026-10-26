@@ -20,6 +20,8 @@ class JqlBuilderTest {
             FieldDef("duedate", FieldType.DATE, "samsung", "vencimento"),
             FieldDef("labels", FieldType.LABELS, "samsung", "labels"),
             FieldDef("summary", FieldType.TEXT, "samsung", "resumo"),
+            FieldDef("updated", FieldType.DATE, "samsung", "atualização"),
+            FieldDef("key", FieldType.TEXT, "samsung", "chave"),
             FieldDef("Story Points", FieldType.NUMBER, "samsung", "pontos"),
             FieldDef("OS Version", FieldType.SELECT, "samsung", "versão do SO", os),
             FieldDef("Campo Sidia", FieldType.TEXT, "sidia", "só da sidia"),
@@ -47,6 +49,38 @@ class JqlBuilderTest {
     fun usernamesReservadosSaemEntreAspas() {
         assertEquals("assignee in (\"empty\")", builder().users("assignee", listOf("empty")).build())
         assertEquals("assignee in (\"or\")", builder().users("assignee", listOf("or")).build())
+    }
+
+    @Test
+    fun dateTimeAtLeastGeraHoraNoFusoDoServidor() {
+        val instante = java.time.Instant.parse("2026-10-30T12:05:59Z")
+        val manaus = java.time.ZoneId.of("America/Manaus")
+        assertEquals("updated >= \"2026-10-30 08:05\"", builder().dateTimeAtLeast("updated", instante, manaus).build())
+    }
+
+    @Test
+    fun dateTimeAtLeastSoEmDate() {
+        val instante = java.time.Instant.parse("2026-10-30T12:05:59Z")
+        assertFailsWith<IllegalArgumentException> { builder().dateTimeAtLeast("summary", instante, java.time.ZoneOffset.UTC) }
+    }
+
+    @Test
+    fun chavesValidas() {
+        assertEquals("key in (\"TG-1\", \"TG-20\")", builder().keysIn(listOf("TG-1", "TG-20")).build())
+        listOf("tg-1", "TG-0", "TG-1) or (1=1").forEach { ruim ->
+            assertFailsWith<InvalidJqlValueException>(ruim) { builder().keysIn(listOf("TG-1", ruim)) }
+        }
+        assertFailsWith<IllegalArgumentException> { builder().keysIn(emptyList()) }
+        assertFailsWith<IllegalArgumentException> { builder().keysIn((1..101).map { "TG-$it" }) }
+        assertEquals(100, builder().keysIn((1..100).map { "TG-$it" }).build().split(", ").size)
+    }
+
+    @Test
+    fun ordenacaoPorAtualizacaoEChave() {
+        assertEquals(
+            "project in (\"TG-Basic\") ORDER BY updated ASC, key ASC",
+            builder().inList("project", listOf("TG-Basic")).orderBy("updated").orderBy("key").build(),
+        )
     }
 
     @Test

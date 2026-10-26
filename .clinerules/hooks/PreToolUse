@@ -8,7 +8,7 @@
 # Instalação (macOS/Linux): este arquivo já está no lugar certo (`.clinerules/hooks/PreToolUse`, sem
 # extensão e executável). No Cline, ligue "Enable Hooks" nas configurações de recursos (Features).
 # Windows: o Cline só executa `.clinerules/hooks/PreToolUse.ps1` (PowerShell), que reescreve estas regras;
-# ao mudar uma regra aqui ou no guard.sh, mude também o .ps1 e os dois testes.
+# ao mudar uma regra aqui ou no guard.sh, mude também o .ps1 e os dois testes (verificado em 26/10/2026).
 # Ver docs/ferramentas-claude-para-o-cline/hooks.md.
 #
 # Formatos de entrada aceitos (JSON no stdin):
@@ -19,10 +19,10 @@
 # Flag JIRA_LIVE_ENABLED (lida do ambiente do processo do Cline, NÃO do app/.env nem do comando):
 #   - ausente, false ou inválida  -> trava do Jira ATIVA (tudo o que o guard.sh barra continua barrado,
 #     inclusive ligar a flag dentro de um comando);
-#   - true (sem diferenciar maiúsculas, como o Settings.kt do app) -> o modo `jira` é dispensado,
-#     exceto exibir token ou senha do Jira no terminal, que continua barrado (Plano 4A, Decisão 10).
-#   PENDÊNCIA: quando a Tarefa 11 do Plano 4A for mesclada (guard.sh lendo a flag do ambiente), remover o
-#   atalho `jira_livre` e a expressão de token abaixo e chamar sempre `guard.sh jira` (fonte única).
+#   - true (sem diferenciar maiúsculas, espaços só nas pontas, como o Settings.kt do app) -> o guard.sh
+#     (que lê a mesma flag do mesmo ambiente) dispensa o modo `jira`, exceto exibir token ou senha do Jira
+#     no terminal, que continua barrado (Plano 4A, Decisão 10). Este adaptador chama SEMPRE `guard.sh jira`
+#     (Tarefa 11); a expressão de token abaixo é um reforço mais estrito do Cline.
 # Extras do Cline (além do guard.sh), só com a flag diferente de true: navegador (`browser_action`) e
 #   `web_fetch` para URL com jira/atlassian (decisão do usuário em 25/10: inclui a documentação pública do
 #   Jira; `web_search` continua liberado), cmdlets de rede do PowerShell (Invoke-WebRequest, iwr, irm...)
@@ -40,6 +40,13 @@
 # minúsculas, `\` -> `/`, sem prefixo de dispositivo (\\?\, \\.\, \??\), sem letra de unidade, qualquer `:`
 # restante bloqueia (fluxo alternativo NTFS `.env::$DATA`), `..` resolvido, pontos e espaços do fim de cada
 # segmento removidos (`.env.` = `.env` no Windows) e segmento com nome curto 8.3 (`ENV~1`) bloqueia.
+# Também bloqueiam: nome curto 8.3 da pasta `.claude` (`CLAUDE~1`) e qualquer segmento 8.3 dentro dela.
+#
+# Arquivos que só o usuário altera (ligam a flag; ler continua liberado), casados DEPOIS da normalização:
+# `.claude/settings*.json`, `*compose*override*` e todo `*compose*.y*ml` (inclusive o app/docker-compose.yml).
+# Em comandos, o guard.sh nega por padrão: se o comando cita esses arquivos, só passa leitura conhecida.
+# Conteúdo: escrever texto que liga a flag (JIRA_LIVE_ENABLED seguido de = ou : e valor 1/true) em
+# QUALQUER arquivo é bloqueado (write_to_file, replace_in_file, editor, new_rule, apply_patch).
 #
 # Limite honesto (igual ao guard.sh): trava contra acidente do assistente, não contra má-fé.
 # Falha fechada: sem jq, JSON ilegível, guard.sh ausente ou QUALQUER erro interno cancela a ferramenta
@@ -88,14 +95,15 @@ ferramenta=$(printf '%s' "$entrada" | jq -r '((.tool_call | objects | .name) // 
   bloquear "BLOQUEADO: erro ao ler o nome da ferramenta (falha fechada)."
 [ -n "$ferramenta" ] || bloquear "BLOQUEADO: entrada sem nome de ferramenta reconhecível (falha fechada)."
 
-flag=$(printf '%s' "${JIRA_LIVE_ENABLED:-}" | tr -d '[:space:]' | tr '[:upper:]' '[:lower:]')
+# mesma leitura do guard.sh e do Settings.kt: espaços só nas pontas (espaço no meio, como "tr ue", não vira true)
+flag=$(printf '%s' "${JIRA_LIVE_ENABLED:-}" | sed -E 's/^[[:space:]]+//; s/[[:space:]]+$//' | tr '[:upper:]' '[:lower:]')
 jira_livre=false
 [ "$flag" = "true" ] && jira_livre=true
 
 # extras do Cline (ver cabeçalho); grep -Ei = sem diferenciar maiúsculas
 Q="'"
 REDE_WINDOWS='(^|[^[:alnum:]_-])(invoke-webrequest|invoke-restmethod|iwr|irm|start-bitstransfer|bitsadmin|certutil|test-netconnection|tnc|resolve-dnsname|nslookup|ping|curl\.exe|wget\.exe)([^[:alnum:]_-]|$)|webclient|httpclient|xmlhttp|winhttp|start-process'
-LIGAR_FLAG_EXTRA="JIRA_LIVE_ENABLED[\"$Q[:space:],]+(-value[[:space:]]+)?[\"$Q]?[[:space:]]*(1|true)"
+LIGAR_FLAG_EXTRA="JIRA_LIVE_ENABLED[]\"$Q[:space:],:=]+(-value[[:space:]]+)?[\"$Q]?[[:space:]]*(1|true)"
 LISTAR_AMBIENTE='(^[[:space:]]*|[;&|(][[:space:]]*|cmd(\.exe)?[[:space:]]+/c[[:space:]]+)(env|printenv|set|export[[:space:]]+-p|declare[[:space:]]+-[px]|compgen[[:space:]]+-v)[[:space:]]*($|[;&|>)])|(get-childitem|gci|dir|ls|get-item|gi)[[:space:]]+(-path[[:space:]]+)?env:[\/]?\*?[[:space:]]*($|[;&|>)])|\[(system\.)?environment\]::getenvironmentvariables'
 URL_JIRA="https?://[^[:space:]\"$Q]*(jira|atlassian)"
 # protegidos em comandos (sem diferenciar maiúsculas): .env e .env.*, as configs reais em qualquer pasta, o
@@ -123,7 +131,8 @@ casa_c() { LC_ALL=C grep -Eq -- "$2" <<< "$1"; [ $? -ne 1 ]; }     # diferencian
 # Qualquer erro na normalização conta como protegido (falha fechada).
 caminho_protegido() {
   motivo=""
-  local n seg base k
+  norm=""   # caminho normalizado (segmentos unidos por '/'), usado por so_usuario_altera
+  local n seg base k i sob_claude
   local -a brutos partes
   case "$1" in *$'\n'*|*$'\r'*) motivo="caminho com quebra de linha"; return 0 ;; esac
   # minúsculas, barras normais, sem prefixo de dispositivo (\\?\UNC\, \\?\, \\.\, \??\) e sem letra de unidade
@@ -148,9 +157,21 @@ caminho_protegido() {
     k=$((k+1))
   done
   [ "$k" -gt 0 ] || return 1
+  # nome curto 8.3 da pasta .claude (CLAUDE~1) ou de qualquer segmento dentro dela (SETTIN~1.JSO)
+  i=0; sob_claude=
+  while [ "$i" -lt "$k" ]; do
+    seg="${partes[i]}"
+    case "$seg" in claude~[0-9]*) motivo="nome curto 8.3 ($seg) pode ser a pasta .claude"; return 0 ;; esac
+    if [ -n "$sob_claude" ]; then
+      case "$seg" in *~[0-9]*) motivo="nome curto 8.3 ($seg) dentro de .claude"; return 0 ;; esac
+    fi
+    [ "$seg" = .claude ] && sob_claude=1
+    norm="${norm:+$norm/}$seg"
+    i=$((i+1))
+  done
   base="${partes[k-1]}"
   # nome curto 8.3 só importa no último segmento (a proteção é pelo nome do arquivo; pastas como
-  # C:\Users\THIAGO~1\... continuam liberadas)
+  # C:\Users\USUARIO~1\... continuam liberadas)
   case "$base" in *~[0-9]*) motivo="nome curto 8.3 ($base) pode apontar para .env ou config real"; return 0 ;; esac
   case "$base" in
     .env.example|.env.sample) return 1 ;;
@@ -161,6 +182,20 @@ caminho_protegido() {
   esac
   return 1
 }
+
+# arquivos que ligam a flag (.claude/settings*.json, override do compose e todo compose *.y*ml): só o usuário
+# ESCREVE neles, com qualquer conteúdo; ler continua liberado. Recebe o caminho JÁ NORMALIZADO por
+# caminho_protegido (variável norm: minúsculas, '/', sem '.', '..', '//', unidade nem ponto/espaço final).
+# 0 = só o usuário altera.
+so_usuario_altera() {
+  local base="${1##*/}"
+  case "/$1" in */.claude/settings*.json) return 0 ;; esac
+  case "$base" in *compose*override*|*compose*.y*ml) return 0 ;; esac
+  return 1
+}
+
+# texto que liga a flag (qualquer arquivo; a IA nunca liga a flag). Mesma expressão dos comandos.
+conteudo_liga_flag() { casa "$1" "$LIGAR_FLAG_EXTRA"; }
 
 # texto (regex de busca) que cita nome protegido; 0 = cita
 nome_protegido() {
@@ -265,6 +300,11 @@ extras_comando() {
       bloquear "BLOQUEADO: comando lê segredo/config com dados reais (o conteúdo iria para o modelo)."
     fi
   fi
+  # settings do Claude e override do compose: escrever por comando é barrado com qualquer flag (ler é liberado)
+  if casa "$(printf '%s' "$1" | LC_ALL=C tr '\\' '/')" '\.claude/settings[^[:space:]"'"'"';|&)]*\.json|compose[^[:space:]"'"'"';|&)]*override' &&
+     casa "$1" "$ESCRITA"; then
+    bloquear "BLOQUEADO: comando escreve em settings do Claude ou override do compose: só o usuário altera esse arquivo."
+  fi
   if [ "$jira_livre" != true ]; then
     if casa "$1" "$REDE_WINDOWS" && casa "$1" 'jira|atlassian'; then
       bloquear "BLOQUEADO: comando de rede (PowerShell/Windows) para o Jira com JIRA_LIVE_ENABLED diferente de true."
@@ -309,7 +349,8 @@ case "$ferramenta" in
         fi
       fi
       extras_comando "$(printf '%s' "$c_json" | jq -r '.')"
-      [ "$jira_livre" = true ] || chamar_guard jira "$payload"
+      # o guard.sh lê a flag do mesmo ambiente: com true ele só barra exibir segredo (fonte única das regras)
+      chamar_guard jira "$payload"
       chamar_guard arquivos "$payload"
     done <<< "$comandos"
     liberar
@@ -388,12 +429,20 @@ case "$ferramenta" in
     ;;
 esac
 
-# escrita/edição: cada caminho passa pela normalização (maiúsculas, barras, aliases do Windows) e pelo modo
-# `arquivos` do guard.sh (que diferencia maiúsculas; por isso a checagem própria vem antes)
+# escrita/edição (só chega aqui write_to_file, replace_in_file, editor, new_rule e apply_patch).
+# Conteúdo: todo texto dos parâmetros (content, diff, replace, new_str, o patch...) não pode ligar a flag.
+# Checado aqui com here-string (texto grande não vira liberação por SIGPIPE nem estoura o ARG_MAX do jq).
+texto_escrito=$(printf '%s' "$entrada" | jq -r "$prelude"'[$in | .. | strings] | join("\n")') ||
+  bloquear "BLOQUEADO: erro ao ler o conteúdo de $ferramenta (falha fechada)."
+if conteudo_liga_flag "$texto_escrito"; then
+  bloquear "BLOQUEADO: $ferramenta grava texto que liga JIRA_LIVE_ENABLED (em qualquer arquivo). Só o usuário liga a flag."
+fi
+# cada caminho passa pela normalização (maiúsculas, barras, aliases do Windows) e pelo modo `arquivos` do guard.sh
 if [ -n "${caminhos:-}" ]; then
   while IFS= read -r p; do
     [ -n "$p" ] || continue
     if caminho_protegido "$p"; then bloquear "BLOQUEADO: escrita em arquivo protegido ($p): $motivo."; fi
+    if so_usuario_altera "$norm"; then bloquear "BLOQUEADO: escrita em $p: só o usuário altera esse arquivo (settings do Claude, compose e override do compose podem ligar JIRA_LIVE_ENABLED)."; fi
     payload=$(jq -nc --arg p "$p" '{tool_name: "Write", tool_input: {file_path: $p}}') || bloquear "BLOQUEADO: erro ao montar o payload (falha fechada)."
     chamar_guard arquivos "$payload"
   done <<< "$caminhos"

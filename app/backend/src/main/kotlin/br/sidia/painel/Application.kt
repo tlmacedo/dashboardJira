@@ -4,11 +4,19 @@ import br.sidia.painel.cards.registrarNegacaoSemPapel
 import br.sidia.painel.cards.rotasTempoEmStatus
 import br.sidia.painel.config.Settings
 import br.sidia.painel.db.AccessLog
+import br.sidia.painel.demo.prepararDemonstracao
 import br.sidia.painel.security.Authenticator
 import br.sidia.painel.security.DevAuthenticator
 import br.sidia.painel.security.OidcAuthenticator
 import br.sidia.painel.security.installAccessControl
+import br.sidia.painel.sync.Agendador
 import br.sidia.painel.sync.PostgresIssueStore
+import br.sidia.painel.sync.PostgresSyncStateStore
+import br.sidia.painel.sync.montarAgendador
+import br.sidia.painel.sync.rotasSyncStatus
+import io.ktor.server.application.ApplicationStarted
+import io.ktor.server.application.ApplicationStopping
+import kotlinx.coroutines.runBlocking
 import io.ktor.http.HttpStatusCode
 import io.ktor.serialization.kotlinx.json.json
 import io.ktor.server.application.Application
@@ -38,9 +46,19 @@ fun main() {
     val settings = Settings.fromEnv()
     // Falhas de configuração, papéis ou banco acontecem aqui, na subida, e não na primeira requisição.
     val context = AppContext.load(settings)
+    // Dados fictícios (só em desenvolvimento, Jira desligado) ou recusa de banco misturado; ver DadosDeDemonstracao.
+    try {
+        prepararDemonstracao(context)
+    } catch (e: Exception) {
+        context.close()
+        throw e
+    }
     Runtime.getRuntime().addShutdownHook(Thread { context.close() })
+    // O agendador para antes de o pool do banco fechar (AppContext.close); a retenção roda mesmo com o Jira desligado.
+    val agendador = montarAgendador(context)
+    agendador?.let { context.aoFechar { runBlocking { it.parar() } } }
     embeddedServer(Netty, port = 8080) {
-        module(context.settings, context)
+        module(context.settings, context, agendador = agendador)
         monitor.subscribe(ApplicationStopped) { context.close() }
     }.start(wait = true)
 }
@@ -59,8 +77,25 @@ fun Application.module(
     @Suppress("UNUSED_PARAMETER") settingsIgnorado: Settings,
     context: AppContext,
     authenticator: Authenticator = autenticadorPadrao(context.settings),
+    agendador: Agendador? = null,
 ) {
     val settings = context.settings
+    val inicioDoProcesso = context.clock.instant()
+    // Subida: fecha execuções órfãs de um processo anterior, tira suspensões (reiniciar equivale a religar a flag)
+    // e só então inicia o agendador (ver `Agendador`). Falha do banco aqui não impede o painel de subir.
+    monitor.subscribe(ApplicationStarted) { app ->
+        context.dataSource?.let { ds ->
+            try {
+                val estado = PostgresSyncStateStore(ds)
+                estado.fecharOrfas(inicioDoProcesso, context.clock.instant())
+                estado.limparSuspensoes()
+            } catch (e: Exception) {
+                log.warn("Preparação da sincronização na subida falhou: {}", e.javaClass.simpleName)
+            }
+        }
+        agendador?.iniciar(app)
+    }
+    monitor.subscribe(ApplicationStopping) { runBlocking { agendador?.parar() } }
     install(ContentNegotiation) { json() }
     // Sem banco (só em testes) não há auditoria nem rotas de dados.
     val auditoria = context.dataSource?.let { AccessLog(it) }
@@ -73,6 +108,7 @@ fun Application.module(
     val banner = when {
         !settings.dashboardDevMode -> null
         settings.jiraLiveEnabled -> "MODO DESENVOLVIMENTO: dados reais do Jira sem login"
+        settings.dashboardDemoData -> "MODO DESENVOLVIMENTO: dados fictícios de demonstração"
         else -> "MODO DESENVOLVIMENTO"
     }
     if (!Files.isDirectory(settings.staticDir)) {
@@ -87,6 +123,7 @@ fun Application.module(
         spaEstatica(settings.staticDir)
         context.dataSource?.let { ds ->
             rotasTempoEmStatus(context, PostgresIssueStore(ds), AccessLog(ds))
+            rotasSyncStatus(context, PostgresSyncStateStore(ds), AccessLog(ds))
         }
         get("/api/health") { call.respond(HealthResposta(ok = true)) }
         get("/api/meta") {

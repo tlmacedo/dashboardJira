@@ -271,6 +271,8 @@ docs/jira/{checklist-primeira-conexao.md, matriz-compatibilidade.md}, CLAUDE.md,
 
 **Arquivos:** Modificar `app/docker-compose.yml`, `app/Dockerfile` (se preciso) e `app/.env.example`. Criar `app/scripts/verificar-imagem.sh` e `docs/implantacao.md`. Teste: `implantacao/ComposeTest.kt`, que é estático e lê o YAML do compose.
 
+**Nota (hook):** o hook bloqueia a IA de editar o compose: entregar o trecho pronto ao usuário e perguntar (pergunta com opções).
+
 **Interfaces:**
 - Produz o perfil `prod` do compose:
   - `DASHBOARD_DEV_MODE=false` e `JIRA_LIVE_ENABLED=false`;
@@ -327,7 +329,7 @@ docs/jira/{checklist-primeira-conexao.md, matriz-compatibilidade.md}, CLAUDE.md,
   - `checklistCitaCadaCampoAConfirmar`: cada campo do dicionário com `finalidade` "a confirmar" aparece no checklist.
   - `matrizCitaCadaEndpoint`.
   - `cadaFichaUsaSoCamposDoDicionario`: carrega todas as `cards/*.card.yaml`.
-  - `cadaPassoDoChecklistConfirmaAFlag` (criado no Plano 4A, T11; **não** criar outro nome): continua passando. Cada seção de passo do checklist contém "Confirme `JIRA_LIVE_ENABLED=true`"; o documento diz que só o usuário muda a flag.
+  - `cadaPassoDoChecklistConfirmaAFlag` (criado no Plano 4A, T11; **não** criar outro nome): continua passando. Cada seção de passo do checklist contém "Confirme que a flag de acesso ao Jira está ligada" (frase sem o nome da flag, para o hook deixar editar); o documento diz que só o usuário muda a flag.
   - `documentosDeJiraSemRegraAntiga` (novo; estende o `checklistSemRegraAntiga` do 4A): nenhum documento de `docs/jira/` contém "autorização expressa" nem "por pesquisa". Se ainda existir no mesmo arquivo algum teste que exija essa expressão (por exemplo um `runbookAvisaRegraDoAssistente` de versão antiga do Plano 4A), ele é removido ou trocado pela checagem da flag.
   - `semHostRealNemToken`.
   - `testesNaoAcessamOJiraReal`: os documentos dizem que testes automáticos usam só fixtures e `MockEngine`, mesmo com a flag `true` (a prova técnica continua nos testes `SomenteAFabricaCriaClientesJira` e `FlagDesligadaZeroRequisicoesTest`).

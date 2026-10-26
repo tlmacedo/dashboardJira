@@ -1,15 +1,24 @@
 package br.sidia.painel.config
 
 import br.sidia.painel.jira.JiraAuthKind
+import br.sidia.painel.sync.SyncSettings
 import java.nio.file.Path
+import java.time.LocalTime
 import java.time.ZoneId
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
+import kotlin.time.Duration.Companion.minutes
 
 class SettingsTest {
+    /** A tarefa `test` do Gradle fixa a flag em `false`: a suíte não herda a flag ligada no terminal. */
+    @Test
+    fun suiteNaoHerdaAFlagDoAmbiente() {
+        assertEquals("false", System.getenv("JIRA_LIVE_ENABLED"))
+    }
+
     @Test
     fun padroesSaoSeguros() {
         val s = Settings.fromEnv(emptyMap())
@@ -227,5 +236,120 @@ class SettingsTest {
             Settings.fromEnv(mapOf("RETENTION_MONTHS" to "abc"))
         }
         assertTrue(e.message!!.contains("RETENTION_MONTHS"))
+    }
+
+    @Test
+    fun retencaoTemPisoDeSeguranca() {
+        for (v in listOf("1", "5", "0", "-3", "601")) {
+            val e = assertFailsWith<IllegalArgumentException> { Settings.fromEnv(mapOf("RETENTION_MONTHS" to v)) }
+            assertTrue(e.message!!.contains("RETENTION_MONTHS"))
+            assertFalse(e.message!!.contains("'$v'"), "a mensagem cita só o nome da variável")
+        }
+        assertEquals(6, Settings.fromEnv(mapOf("RETENTION_MONTHS" to "6")).retentionMonths)
+    }
+
+    @Test
+    fun retencaoDoAccessLogTemChaveSeparadaEPiso() {
+        assertEquals(24, Settings.fromEnv(emptyMap()).accessLogRetentionMonths)
+        assertEquals(12, Settings.fromEnv(mapOf("ACCESS_LOG_RETENTION_MONTHS" to "12")).accessLogRetentionMonths)
+        // RETENTION_MONTHS curto não encurta a auditoria
+        val s = Settings.fromEnv(mapOf("RETENTION_MONTHS" to "6"))
+        assertEquals(24, s.accessLogRetentionMonths)
+        for (v in listOf("11", "0", "abc", "601")) {
+            val e = assertFailsWith<IllegalArgumentException> {
+                Settings.fromEnv(mapOf("ACCESS_LOG_RETENTION_MONTHS" to v))
+            }
+            assertTrue(e.message!!.contains("ACCESS_LOG_RETENTION_MONTHS"))
+            assertFalse(e.message!!.contains("'$v'"))
+        }
+    }
+
+    @Test
+    fun syncLeTodasAsVariaveis() {
+        val s = Settings.fromEnv(
+            mapOf(
+                "SYNC_INSTANCIAS" to " samsung , sidia ",
+                "SYNC_INTERVALO_MIN" to "15",
+                "SYNC_HORA_RECONCILIACAO" to "02:30",
+                "SYNC_HORA_RETENCAO" to "05:15",
+                "SYNC_MAX_ITENS" to "1000",
+                "SYNC_MAX_REQUISICOES" to "100",
+                "SYNC_SOBREPOSICAO_MIN" to "10",
+                "SYNC_FUSO_SERVIDOR" to "America/Sao_Paulo",
+                "SYNC_TEMPO_MAX_MIN" to "30",
+            ),
+        ).sync
+        assertEquals(listOf("samsung", "sidia"), s.instancias)
+        assertEquals(15.minutes, s.intervalo)
+        assertEquals(LocalTime.of(2, 30), s.horaReconciliacao)
+        assertEquals(LocalTime.of(5, 15), s.horaRetencao)
+        assertEquals(1000, s.maxItens)
+        assertEquals(100, s.maxRequisicoes)
+        assertEquals(10.minutes, s.sobreposicao)
+        assertEquals(ZoneId.of("America/Sao_Paulo"), s.fusoDoServidor)
+        assertEquals(30.minutes, s.tempoMaximo)
+        // vazio = padrão
+        assertEquals(SyncSettings(), Settings.fromEnv(mapOf("SYNC_INTERVALO_MIN" to " ")).sync)
+    }
+
+    @Test
+    fun limitesForaDoIntervaloFalham() {
+        val casos = listOf(
+            "SYNC_INTERVALO_MIN" to "4", "SYNC_INTERVALO_MIN" to "1441",
+            "SYNC_MAX_ITENS" to "200001", "SYNC_MAX_ITENS" to "0",
+            "SYNC_MAX_REQUISICOES" to "20001", "SYNC_SOBREPOSICAO_MIN" to "61",
+            "SYNC_TEMPO_MAX_MIN" to "241", "SYNC_TEMPO_MAX_MIN" to "abc",
+        )
+        for ((nome, valor) in casos) {
+            val e = assertFailsWith<IllegalArgumentException> { Settings.fromEnv(mapOf(nome to valor)) }
+            assertTrue(e.message!!.contains(nome), "mensagem deve citar $nome")
+            // a mensagem cita só o nome da variável, nunca o valor informado
+            assertFalse(e.message!!.contains("'$valor'"), "mensagem não deve ecoar o valor de $nome")
+        }
+    }
+
+    @Test
+    fun instanciaDesconhecidaFalha() {
+        val e = assertFailsWith<IllegalArgumentException> { Settings.fromEnv(mapOf("SYNC_INSTANCIAS" to "samsung,xpto")) }
+        assertTrue(e.message!!.contains("SYNC_INSTANCIAS"))
+    }
+
+    @Test
+    fun horaInvalidaFalha() {
+        val e = assertFailsWith<IllegalArgumentException> { Settings.fromEnv(mapOf("SYNC_HORA_RECONCILIACAO" to "25:00")) }
+        assertTrue(e.message!!.contains("SYNC_HORA_RECONCILIACAO"))
+        assertFailsWith<IllegalArgumentException> { Settings.fromEnv(mapOf("SYNC_HORA_RETENCAO" to "3h")) }
+    }
+
+    @Test
+    fun demoPadraoEhFalse() {
+        assertFalse(Settings.fromEnv(emptyMap()).dashboardDemoData)
+        assertFalse(Settings.fromEnv(mapOf("DASHBOARD_DEMO_DATA" to "  ")).dashboardDemoData)
+        assertTrue(Settings.fromEnv(mapOf("DASHBOARD_DEMO_DATA" to "true")).dashboardDemoData)
+    }
+
+    @Test
+    fun demoEmProducaoDerrubaSubida() {
+        val e = assertFailsWith<IllegalArgumentException> {
+            Settings.fromEnv(mapOf("DASHBOARD_DEV_MODE" to "false", "DASHBOARD_DEMO_DATA" to "true"))
+        }
+        assertEquals("DASHBOARD_DEMO_DATA exige DASHBOARD_DEV_MODE=true", e.message)
+    }
+
+    @Test
+    fun demoComFlagLigadaDerrubaSubida() {
+        val e = assertFailsWith<IllegalArgumentException> {
+            Settings.fromEnv(mapOf("JIRA_LIVE_ENABLED" to "true", "DASHBOARD_DEMO_DATA" to "true"))
+        }
+        assertEquals("DASHBOARD_DEMO_DATA exige JIRA_LIVE_ENABLED=false", e.message)
+        // Demonstração desligada não impede a flag ligada nem a produção.
+        assertTrue(Settings.fromEnv(mapOf("JIRA_LIVE_ENABLED" to "true", "DASHBOARD_DEMO_DATA" to "false")).jiraLiveEnabled)
+        assertFalse(Settings.fromEnv(mapOf("DASHBOARD_DEV_MODE" to "false")).dashboardDemoData)
+    }
+
+    @Test
+    fun demoValorInvalidoFalha() {
+        val e = assertFailsWith<IllegalArgumentException> { Settings.fromEnv(mapOf("DASHBOARD_DEMO_DATA" to "sim")) }
+        assertTrue(e.message!!.contains("DASHBOARD_DEMO_DATA"))
     }
 }

@@ -501,18 +501,17 @@ function Esqueleto({ rotulo }: { rotulo: string }) {
 }
 
 /**
- * Texto do aviso traduzido pelo código. Só o nome do status sem mapeamento (dado, não texto) vem do
- * backend, depois do primeiro ": " da mensagem. Código desconhecido cai na mensagem original.
+ * Texto do aviso traduzido pelo código. Os dados do aviso (nome do status, contagem) vêm em `params` e
+ * entram nos marcadores `{nome}` do texto; a mensagem do backend só serve de último recurso para um código
+ * desconhecido.
  */
 function textoDoAviso(a: Aviso, t: (k: string) => string): string {
   const chave = `tempo.aviso.${a.codigo}`
   const base = t(chave)
   if (base === chave) return a.mensagem
-  if (a.codigo === 'STATUS_SEM_MAPEAMENTO') {
-    const i = a.mensagem.indexOf(': ')
-    if (i >= 0) return `${base}: ${a.mensagem.slice(i + 2)}`
-  }
-  return base
+  const preenchido = Object.entries(a.params ?? {}).reduce((texto, [nome, valor]) => texto.replaceAll(`{${nome}}`, () => valor), base)
+  // Marcador sem parâmetro correspondente nunca aparece cru na tela.
+  return preenchido.replace(/\{\w+\}/g, '…')
 }
 
 /** Só aviso bloqueante esconde os números; os informativos aparecem como faixa. */

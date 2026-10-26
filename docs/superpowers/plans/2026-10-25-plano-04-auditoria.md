@@ -385,7 +385,7 @@ docs/analise/diferencas-esperadas-auditoria.md
 - **Cobertura da spec:** 7.1 (quem pode alterar, vigência por data: T2), 7.2 (11 dos 12 itens da tabela: T3, T4, T5; "estimativa reduzida ou worklog retroativo" declarado fora por falta de dado), 7.3 (aviso fixo, consulta auditada, coordenação e gerente: T7 e T8), 4.2 (duas métricas lado a lado, labels em YAML: T1 e T5), 9 (gravidade e "perto do vencimento" configuráveis: T1), 10 (todo sinal detectado em fixture com fronteiras de 2 dias, fuso e autorizado × não autorizado: T3 a T5). Integridade (12 sinais) fica na Fase 7.
 - **Pareamento Task × Review:** só pelo link "Blocks / is blocked by" (`issue_link`, `ParesTaskReview.resolver` e `VinculosConfig` do 4A, Tarefa 12), nas duas direções; `parentKey` fica só para hierarquia/Epic (T5 `parentKeyNaoFormaPar`, T6 `paresPeloVinculoBlocks`). `tiposReview` tem uma fonte só (`vinculos.yaml`).
 - **Consistência de tipos:** `AuditIssue` (T2) é produzido pelo `PostgresAuditStore` (T6) e consumido por `AuditTimeline`, detectores (T3, T4), `TaskReview`/`NoPrazo`/`AuditCalculator` (T5) e rotas (T7); `CodigoSinal` nasce completo na T1 (as regras do YAML o referenciam) e `Sinal` na T3; `ResultadoAuditoria` (T5) vira `AuditoriaDto` (T7), espelhado no frontend (T8).
-- **Pendências deliberadas:** formato real de `duedate`, `labels` e do `from/to` do assignee só na 1ª conexão autorizada (checklist, Passo 4); o leitor aceita os dois formatos conhecidos.
+- **Pendências deliberadas:** formato real de `duedate`, `labels` e do `from/to` do assignee só na 1ª conexão real, com a flag ligada pelo usuário (checklist, Passo 4); o leitor aceita os dois formatos conhecidos.
 
 ## Decisões
 

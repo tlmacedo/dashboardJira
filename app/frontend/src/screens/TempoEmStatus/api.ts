@@ -15,7 +15,13 @@ export type StuckIssue = {
 }
 
 /** Aviso do backend: o texto exibido vem do código (i18n); a gravidade decide se esconde os números. */
-export type Aviso = { codigo: string; gravidade: 'bloqueante' | 'informativo' | string; mensagem: string }
+export type Aviso = {
+  codigo: string
+  gravidade: 'bloqueante' | 'informativo' | string
+  mensagem: string
+  /** Dados do aviso (`status`, `n`) para montar o texto pelo código; ausente quando o backend não manda. */
+  params?: Record<string, string>
+}
 
 export type TempoEmStatusDto = {
   analisadas: number

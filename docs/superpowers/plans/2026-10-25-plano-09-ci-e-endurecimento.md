@@ -260,6 +260,8 @@ docs/operacao/ci.md
 
 **Arquivos:** Modificar `app/Dockerfile`, `app/.dockerignore`, `app/docker-compose.yml`, `app/README.md`; Criar `ci/ImagemDockerTest.kt`.
 
+**Nota (hook):** o hook bloqueia a IA de editar o compose: entregar o trecho pronto ao usuário e perguntar (pergunta com opções).
+
 **Interfaces:**
 - `Dockerfile`: `ENV ... DASHBOARD_DEV_MODE=false` (e `JIRA_LIVE_ENABLED=false`); cada `FROM` com digest `imagem:tag@sha256:<digest>`, mantendo a tag para leitura. Digests **resolvidos na execução** com `docker buildx imagetools inspect <imagem:tag>` (ou `docker pull` + `docker inspect --format '{{index .RepoDigests 0}}'`); nunca escritos de memória. O mesmo para `postgres:16` no compose.
 - `docker-compose.yml`: o serviço local continua com `DASHBOARD_DEV_MODE: ${DASHBOARD_DEV_MODE:-true}` (desenvolvimento explícito no compose, nunca na imagem); comentário em pt-BR explicando a diferença.

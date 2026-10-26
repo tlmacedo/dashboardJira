@@ -32,7 +32,30 @@ class CardQueryFactory(private val dict: FieldDictionary) {
         const val MAX_ITENS = 200
     }
 
+    /**
+     * Mesma consulta de [build] (mesmo JQL), mas pedindo só `key` e `updated` e sem o changelog:
+     * serve para a sincronização descobrir o que mudou sem baixar o conteúdo todo.
+     */
+    fun buildLeve(spec: CardSpec, params: Map<String, Any>): JqlQuery =
+        JqlQuery(spec.instancia, montarJql(spec, params), listOf("key", "updated"), expandChangelog = false)
+
     fun build(spec: CardSpec, params: Map<String, Any>): JqlQuery {
+        val jql = montarJql(spec, params)
+        val campoDicionario = dict.forInstance(spec.instancia)
+        val minimos = listOf(
+            "summary", "issuetype", "status", "assignee", "reporter", "created", "updated",
+            "resolutiondate", "duedate", "labels", "parent", "project",
+            // Campo de sistema (não é do dicionário): os vínculos Blocks ligam a Review à sua task.
+            "issuelinks",
+        )
+        // Campo com id técnico sai como customfield_NNNN (cf[NNNN] é normalizado); sem id, sai pelo nome.
+        val extras = spec.campos.map { c -> campoDicionario.get(c).let { idParaFields(it.customId) ?: it.name } }
+        val fields = (minimos + extras).distinctBy { it.lowercase() }
+        return JqlQuery(spec.instancia, jql, fields, spec.expandChangelog)
+    }
+
+    /** Valida os parâmetros e monta o JQL, sempre pelo [JqlBuilder]. */
+    private fun montarJql(spec: CardSpec, params: Map<String, Any>): String {
         val declarados = spec.parametros.associateBy { it.name }
         params.keys.forEach { require(it in declarados) { "parâmetro desconhecido: '$it'" } }
         spec.parametros.forEach {
@@ -60,15 +83,16 @@ class CardQueryFactory(private val dict: FieldDictionary) {
         }
         valorDe("os")?.let { (p, v) -> b.inList(CAMPO_DO_PARAMETRO.getValue("os"), listaDeTexto(p, v)) }
 
-        val campoDicionario = dict.forInstance(spec.instancia)
-        val minimos = listOf(
-            "summary", "issuetype", "status", "assignee", "reporter", "created", "updated",
-            "resolutiondate", "duedate", "labels", "parent", "project",
-        )
-        // Campo com id técnico sai como customfield_NNNN (cf[NNNN] é normalizado); sem id, sai pelo nome.
-        val extras = spec.campos.map { c -> campoDicionario.get(c).let { idParaFields(it.customId) ?: it.name } }
-        val fields = (minimos + extras).distinctBy { it.lowercase() }
-        return JqlQuery(spec.instancia, b.build(), fields, spec.expandChangelog)
+        valorDe("atualizadoDesde")?.let { (p, v) ->
+            require(v is AtualizadoDesde) { "parâmetro '${p.name}' deve ser um AtualizadoDesde (instante e fuso do servidor)" }
+            b.dateTimeAtLeast(CAMPO_DO_PARAMETRO.getValue("atualizadoDesde"), v.at, v.fusoDoServidor)
+        }
+        valorDe("chaves")?.let { (p, v) -> b.keysIn(listaDeTexto(p, v)) }
+
+        if (spec.ordenarPorAtualizacao) {
+            CAMPOS_DA_ORDENACAO.forEach { b.orderBy(it, asc = true) }
+        }
+        return b.build()
     }
 
     /** `cf[12416]` vira `customfield_12416`; `customfield_NNNN` fica como está; nulo continua nulo. */

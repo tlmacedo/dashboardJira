@@ -210,4 +210,4 @@ Mantém a decisão de privacidade já tomada: sem ranking individual; tabelas de
 2. **Casos de referência:** reaproveitar os dados do modo demonstração e a suíte de ~600 testes como oráculo (mesmas entradas, mesmos números) antes de aposentar o Python.
 3. **Ordem de recriação:** (a) cálculos transversais da seção 3; (b) fatia vertical **Tempo em status (TS)**; (c) Abertas, Metas, Fechadas; (d) Capacidade e Carga; (e) Previsão, Riscos, Negativas; (f) Checklist × Review, Integridade; (g) Distribuição e Rebalanceamento; (h) Governança.
 4. **Decisões a tomar por card** (levar para o spec): manter / ajustar / remover / novo; fórmula validada com o gestor; fonte dos dados (Jira ou YAML).
-5. **Validação com Jira real** só depois da sua autorização expressa, por pesquisa, seguindo o checklist da 1ª conexão.
+5. **Validação com Jira real** só com a flag `JIRA_LIVE_ENABLED=true` (única trava; só o usuário a liga), seguindo o checklist da 1ª conexão.

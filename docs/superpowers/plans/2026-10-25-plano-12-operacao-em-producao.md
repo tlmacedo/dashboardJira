@@ -175,6 +175,8 @@ docs/implantacao.md, app/README.md, HANDOFF.md
 
 **Arquivos:** Criar `operacao/Metricas.kt`, `operacao/ServidorDeMetricas.kt`; Modificar `Application.kt` (`main`: segundo conector), `gradle/libs.versions.toml` e `build.gradle.kts` (`ktor-server-metrics-micrometer` 3.3.1 e `micrometer-registry-prometheus` em versão exata resolvida na execução: a última 1.x estável no Maven Central, registrada no progresso), `sync/SyncService.kt` e `db/AccessLog.kt` e `db/Retention.kt` (incrementam contadores), `app/docker-compose.yml` (perfil `prod`: porta interna sem `ports`), `app/.env.example`; Teste `operacao/MetricasTest.kt`.
 
+**Nota (hook):** o hook bloqueia a IA de editar o compose: entregar o trecho pronto ao usuário e perguntar (pergunta com opções).
+
 **Interfaces:**
 - Produz:
   ```kotlin
@@ -287,6 +289,8 @@ docs/implantacao.md, app/README.md, HANDOFF.md
 **PONTO DE PARADA (antes do Passo 3, só para o destino externo e a cifragem): onde os backups ficam fora do servidor** (spec, ponto de parada 2). O backup local agendado é feito em qualquer resposta.
 
 **Arquivos:** Criar `app/scripts/backup/backup.sh`, `app/scripts/backup/backup-loop.sh`, `docs/operacao/backup-e-restauracao.md`; Modificar `app/docker-compose.yml` (perfil `prod`: serviço `backup` e volume `backups`), `app/.env.example`, `implantacao/ComposeTest.kt`; Teste `operacao/BackupScriptTest.kt`.
+
+**Nota (hook):** o hook bloqueia a IA de editar o compose: entregar o trecho pronto ao usuário e perguntar (pergunta com opções).
 
 **Interfaces:**
 - `backup.sh` (POSIX `sh`, roda na imagem `postgres:16` com o mesmo digest do serviço `postgres`):

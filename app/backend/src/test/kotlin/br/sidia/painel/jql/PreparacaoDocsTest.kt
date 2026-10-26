@@ -15,6 +15,14 @@ class PreparacaoDocsTest {
     /** Raiz do repositório: `app/config` fica dois níveis abaixo dela. */
     private val raiz: Path = TestPaths.configDir.toAbsolutePath().normalize().parent.parent
 
+    /**
+     * Frase que abre cada passo do checklist. Escrita sem o nome da flag junto do valor ligado de propósito:
+     * os hooks barram gravar a flag em forma de atribuição, e o texto precisa poder ser editado por IA.
+     */
+    private companion object {
+        const val FRASE_DE_CONFIRMACAO = "Confirme que a flag de acesso ao Jira está ligada"
+    }
+
     private fun ler(relativo: String): String {
         val arquivo = raiz.resolve(relativo)
         assertTrue(Files.isRegularFile(arquivo), "Documento ausente: $arquivo")
@@ -28,8 +36,15 @@ class PreparacaoDocsTest {
         for (chamada in chamadas) {
             assertTrue(texto.contains(chamada), "Checklist sem a chamada $chamada")
         }
-        val ocorrencias = Regex(Regex.escape("autorização expressa")).findAll(texto).count()
-        assertTrue(ocorrencias >= 5, "Esperadas ao menos 5 menções a 'autorização expressa', achadas $ocorrencias")
+        val ocorrencias = Regex(Regex.escape(FRASE_DE_CONFIRMACAO)).findAll(texto).count()
+        assertTrue(ocorrencias >= 5, "Esperadas ao menos 5 menções a '$FRASE_DE_CONFIRMACAO', achadas $ocorrencias")
+    }
+
+    @Test
+    fun checklistSemRegraAntiga() {
+        val texto = ler("docs/jira/checklist-primeira-conexao.md")
+        assertTrue(!texto.contains("autorização expressa"), "Checklist ainda cita 'autorização expressa'")
+        assertTrue(!texto.contains("por pesquisa"), "Checklist ainda cita 'por pesquisa'")
     }
 
     /** Seções de passo do checklist: do título `## Passo`/`### Passo` até o próximo título de mesmo nível ou acima. */
@@ -47,12 +62,14 @@ class PreparacaoDocsTest {
     }
 
     @Test
-    fun cadaPassoDoChecklistExigeAutorizacaoExpressa() {
+    fun cadaPassoDoChecklistConfirmaAFlag() {
         val secoes = secoesDePasso(ler("docs/jira/checklist-primeira-conexao.md"))
         assertEquals(5, secoes.size, "Esperadas 5 seções de passo")
         for (secao in secoes) {
-            // Grafia exata (sem ignoreCase): os documentos escrevem "autorização expressa" em minúsculas.
-            assertTrue(secao.contains("autorização expressa"), "Seção sem 'autorização expressa': ${secao.lines().first()}")
+            assertTrue(
+                secao.contains(FRASE_DE_CONFIRMACAO),
+                "Seção sem '$FRASE_DE_CONFIRMACAO': ${secao.lines().first()}",
+            )
         }
     }
 
@@ -71,6 +88,87 @@ class PreparacaoDocsTest {
                 !Regex("[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(\\.[A-Za-z0-9-]+)+").containsMatchIn(texto),
                 "${doc.fileName}: e-mail no documento",
             )
+        }
+    }
+
+    @Test
+    fun runbookAvisaQueAFlagEhAUnicaTrava() {
+        val texto = ler("docs/jira/runbook-sincronizacao.md")
+        assertTrue(texto.contains("única trava"), "Runbook sem o aviso 'única trava'")
+        assertTrue(texto.contains("JIRA_LIVE_ENABLED"), "Runbook sem a flag")
+        assertTrue(!texto.contains("autorização expressa"), "Runbook não deve citar a regra antiga")
+    }
+
+    @Test
+    fun runbookCitaOChecklist() {
+        assertTrue(ler("docs/jira/runbook-sincronizacao.md").contains("checklist-primeira-conexao.md"))
+    }
+
+    @Test
+    fun runbookSoLigaPelaFlag() {
+        val texto = ler("docs/jira/runbook-sincronizacao.md")
+        assertTrue(texto.contains("JIRA_LIVE_ENABLED"))
+        assertTrue(!texto.contains("SYNC_MODE"), "Nenhuma variável SYNC_MODE existe")
+        assertTrue(!texto.contains("SYNC_AUTORIZACAO"), "Nenhuma variável SYNC_AUTORIZACAO existe")
+    }
+
+    @Test
+    fun cadaVariavelDoRunbookTemRepasseNoComposeEExemploNoEnv() {
+        val runbook = ler("docs/jira/runbook-sincronizacao.md")
+        val env = ler("app/.env.example")
+        val compose = ler("app/docker-compose.yml")
+        val nomes = (Regex("SYNC_[A-Z_]+").findAll(runbook).map { it.value } + sequenceOf("RETENTION_MONTHS", "ACCESS_LOG_RETENTION_MONTHS")).toSet()
+        assertTrue("ACCESS_LOG_RETENTION_MONTHS" in Regex("[A-Z_]+").findAll(runbook).map { it.value }.toSet(), "Runbook sem ACCESS_LOG_RETENTION_MONTHS")
+        assertTrue(nomes.size >= 10, "Esperadas as SYNC_* e RETENTION_MONTHS no runbook: $nomes")
+        for (nome in nomes) {
+            assertTrue(Regex("^#?\\s*$nome=", RegexOption.MULTILINE).containsMatchIn(env), "$nome sem exemplo no .env.example")
+            assertTrue(
+                Regex("^\\s+$nome: \\$\\{$nome:-\\}\\s*$", RegexOption.MULTILINE).containsMatchIn(compose),
+                "$nome sem repasse ativo no docker-compose.yml",
+            )
+        }
+        for (nome in listOf("JIRA_SAMSUNG_URL", "JIRA_SAMSUNG_TOKEN", "JIRA_SIDIA_URL", "JIRA_SIDIA_USER", "JIRA_SIDIA_TOKEN")) {
+            assertTrue(
+                Regex("^\\s+$nome: \\$\\{$nome:-\\}\\s*$", RegexOption.MULTILINE).containsMatchIn(compose),
+                "$nome sem repasse ativo (sem valor padrão) no compose",
+            )
+        }
+    }
+
+    @Test
+    fun composeMontaAsConfigsReaisSomenteLeitura() {
+        val compose = ler("app/docker-compose.yml")
+        assertTrue(
+            Regex("^\\s+- \\./config:/app/config:ro\\s*$", RegexOption.MULTILINE).containsMatchIn(compose),
+            "Compose sem o volume ./config:/app/config:ro ativo",
+        )
+    }
+
+    @Test
+    fun calendarioRealEstaNoGitignoreENoPassoDeCopiaDoRunbook() {
+        val gitignore = ler(".gitignore")
+        assertTrue(
+            Regex("^\\*\\*/config/calendario\\.yaml\\s*$", RegexOption.MULTILINE).containsMatchIn(gitignore),
+            ".gitignore sem **/config/calendario.yaml",
+        )
+        val runbook = ler("docs/jira/runbook-sincronizacao.md")
+        assertTrue(runbook.contains("cp app/config/calendario.exemplo.yaml app/config/calendario.yaml"), "Runbook sem a cópia (sh) do calendário")
+        assertTrue(
+            runbook.contains("Copy-Item app\\config\\calendario.exemplo.yaml app\\config\\calendario.yaml"),
+            "Runbook sem a cópia (PowerShell) do calendário",
+        )
+        assertTrue(Regex("^\\| `calendario.yaml` \\|", RegexOption.MULTILINE).containsMatchIn(runbook), "Runbook sem a linha do calendário na tabela")
+    }
+
+    @Test
+    fun runbookNaoCitaTarefaInterna() {
+        assertTrue(!Regex("Tarefa \\d+").containsMatchIn(ler("docs/jira/runbook-sincronizacao.md")))
+    }
+
+    @Test
+    fun readmeSemRegraAntiga() {
+        for (arquivo in listOf("app/README.md", "app/.env.example")) {
+            assertTrue(!ler(arquivo).contains("autorização expressa"), "$arquivo ainda cita a regra antiga")
         }
     }
 

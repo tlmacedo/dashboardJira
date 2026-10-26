@@ -14,7 +14,7 @@ Skill própria do projeto (não é de terceiros). Resume o que está em `CLAUDE.
 
 ## Proibições (valem com ou sem o hook ligado)
 
-- **Jira:** com `JIRA_LIVE_ENABLED` diferente de `true`, nenhum acesso a servidor Jira por nenhum caminho (app, `curl`, navegador, script, MCP). Só o usuário muda a flag; nunca a ligue, nem dentro de um comando. Testes usam sempre fixtures e `MockEngine`. Se o `CLAUDE.md` ainda exigir autorização por pesquisa com a flag `true`, essa exigência vale.
+- **Jira:** com `JIRA_LIVE_ENABLED` diferente de `true`, nenhum acesso a servidor Jira por nenhum caminho (app, `curl`, navegador, script, MCP). Só o usuário muda a flag; nunca a ligue, nem dentro de um comando. Testes usam sempre fixtures e `MockEngine`. A regra vigente é a regra 1 do `CLAUDE.md`; não há exigência extra de autorização por pesquisa.
 - **Arquivos reais:** nunca edite nem commite `.env`, `config/{papeis,equipes,ausencias,squads}.yaml` nem `Filtros_Status_tool.txt`. Use os modelos `.exemplo`/`.demo`.
 - **Dados pessoais:** só nomes fictícios (`ana.silva`, `bruno`, domínio `.invalid`) em fixtures, testes, docs e commits.
 - **Banco:** PostgreSQL real via Testcontainers; Docker ativo (`docker info`; se parado, `sh .claude/hooks/ensure-docker.sh`). Nunca H2 nem mock.

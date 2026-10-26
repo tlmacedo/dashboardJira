@@ -35,6 +35,14 @@ class MetaTest {
     }
 
     @Test
+    fun faixaComDadosDeDemonstracao() {
+        assertEquals(
+            """{"devMode":true,"liveEnabled":false,"zone":"America/Manaus","banner":"MODO DESENVOLVIMENTO: dados fictícios de demonstração"}""",
+            meta(mapOf("DASHBOARD_DEMO_DATA" to "true")),
+        )
+    }
+
+    @Test
     fun metaDevComLiveTemBannerDeDadosReais() {
         assertEquals(
             """{"devMode":true,"liveEnabled":true,"zone":"America/Manaus","banner":"MODO DESENVOLVIMENTO: dados reais do Jira sem login"}""",

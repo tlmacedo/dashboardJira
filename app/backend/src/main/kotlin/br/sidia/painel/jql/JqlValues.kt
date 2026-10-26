@@ -1,6 +1,8 @@
 package br.sidia.painel.jql
 
+import java.time.Instant
 import java.time.LocalDate
+import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.format.ResolverStyle
 
@@ -33,6 +35,8 @@ object JqlValues {
     private const val MAX_USERNAME = 64
     private const val MIN_DIAS = 1
     private const val MAX_DIAS = 3650
+    private const val MAX_PROJETO_CHAVE = 20
+    private const val MAX_NUMERO_CHAVE = 9
 
     /**
      * Aspas tipográficas e largas (U+201C, U+201D, U+2018, U+2019, U+FF02, U+FF07), crase (U+0060)
@@ -44,6 +48,8 @@ object JqlValues {
     // uuuu (ano proleptico) com STRICT: 2026-02-30 é recusado em vez de ajustado.
     private val formatoData: DateTimeFormatter =
         DateTimeFormatter.ofPattern("uuuu-MM-dd").withResolverStyle(ResolverStyle.STRICT)
+
+    private val formatoDataHora: DateTimeFormatter = DateTimeFormatter.ofPattern("uuuu-MM-dd HH:mm")
 
     /** Data `aaaa-mm-dd` (4 dígitos ASCII) existente no calendário. */
     fun isoDate(value: String): String {
@@ -59,6 +65,37 @@ object JqlValues {
             throw InvalidJqlValueException("data", value)
         }
         return value
+    }
+
+    /**
+     * Data e hora `aaaa-MM-dd HH:mm` no [zone] (o fuso do SERVIDOR do Jira, que interpreta o JQL),
+     * com o minuto truncado para baixo (segundos descartados). O ano precisa ter 4 dígitos.
+     */
+    fun jqlDateTime(at: Instant, zone: ZoneId): String {
+        val local = at.atZone(zone)
+        if (local.year !in 1000..9999) throw InvalidJqlValueException("data e hora", at.toString())
+        return formatoDataHora.format(local)
+    }
+
+    /**
+     * Chave de issue `PROJETO-N`: projeto `[A-Z][A-Z0-9_]{0,19}`, hífen e número `[1-9][0-9]{0,8}`.
+     * Laço simples sobre a string (sem regex); tudo que fugir do formato é recusado.
+     */
+    fun issueKey(v: String): String {
+        val hifen = v.indexOf('-')
+        if (hifen < 1 || hifen > MAX_PROJETO_CHAVE || v.length - hifen - 1 !in 1..MAX_NUMERO_CHAVE) {
+            throw InvalidJqlValueException("chave", v)
+        }
+        if (v[0] !in 'A'..'Z') throw InvalidJqlValueException("chave", v)
+        for (i in 1 until hifen) {
+            val c = v[i]
+            if (!(c in 'A'..'Z' || c in '0'..'9' || c == '_')) throw InvalidJqlValueException("chave", v)
+        }
+        if (v[hifen + 1] !in '1'..'9') throw InvalidJqlValueException("chave", v)
+        for (i in hifen + 2 until v.length) {
+            if (v[i] !in '0'..'9') throw InvalidJqlValueException("chave", v)
+        }
+        return v
     }
 
     /** Username: `[a-z0-9._-]`, 1 a 64 caracteres, sem começar com hífen. */

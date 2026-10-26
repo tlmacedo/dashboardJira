@@ -170,6 +170,9 @@ class JiraClientFactoryCacheTest {
         dataSource = pool,
         jira = jira,
         statusMap = br.sidia.painel.domain.StatusMap.fromYaml(TestPaths.configDir.resolve("status_map.exemplo.yaml")),
+        campos = br.sidia.painel.jql.FieldDictionary(emptyList()),
+        fichas = emptyMap(),
+        vinculos = br.sidia.painel.vinculosDeTeste(),
     )
 
     @Test

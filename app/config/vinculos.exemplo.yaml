@@ -1,0 +1,15 @@
+# Modelo da configuração dos vínculos entre issues (copie para vinculos.yaml e ajuste ao seu Jira).
+# A Review (Checklist Review) se liga à sua task pelo link de issue "Blocks / is blocked by"
+# (fields.issuelinks), nas duas direções; o campo parent NÃO define o par.
+# Estrito: chave desconhecida falha ao carregar. Não leva dado pessoal.
+versao: 1
+
+# type.name do link no Jira; confirmar na primeira conexão (docs/jira/checklist-primeira-conexao.md, Passo 4).
+tipoDeLink: Blocks
+
+# Tipos de issue que contam como Review (sem diferenciar maiúsculas). Obrigatório e não vazio.
+tiposReview: ["Checklist Review"]
+
+# Tipos que contam como task. Vazio = qualquer tipo da ficha de sincronização fora de tiposReview.
+# Um tipo não pode estar em tiposReview e em tiposTask ao mesmo tempo.
+tiposTask: []
