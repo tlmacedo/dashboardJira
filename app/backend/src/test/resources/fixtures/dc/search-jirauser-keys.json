@@ -1,0 +1,81 @@
+{
+  "expand": "schema,names",
+  "startAt": 0,
+  "maxResults": 100,
+  "total": 3,
+  "issues": [
+    {
+      "id": "10010",
+      "key": "TG-10",
+      "fields": {
+        "summary": "Responsável com chave interna",
+        "project": {"key": "TG"},
+        "issuetype": {"name": "Task"},
+        "status": {"name": "In Progress"},
+        "assignee": {"name": "Ana.Silva", "key": "JIRAUSER10500"},
+        "reporter": {"name": "carla.souza"},
+        "created": "2026-10-01T09:00:00.000-0400",
+        "updated": "2026-10-02T10:00:00.000-0400",
+        "labels": []
+      },
+      "changelog": {
+        "startAt": 0, "maxResults": 100, "total": 1,
+        "histories": [
+          {
+            "id": "20001",
+            "created": "2026-10-02T10:00:00.000-0400",
+            "author": {"name": "Ana.Silva", "key": "JIRAUSER10500"},
+            "items": [
+              {"field": "assignee", "from": null, "to": "JIRAUSER10500", "fromString": null, "toString": "Ana Silva"}
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "10011",
+      "key": "TG-11",
+      "fields": {
+        "summary": "Chave interna sem objeto correspondente",
+        "project": {"key": "TG"},
+        "issuetype": {"name": "Task"},
+        "status": {"name": "In Progress"},
+        "assignee": {"name": "bruno"},
+        "reporter": {"name": "carla.souza"},
+        "created": "2026-10-01T09:30:00.000-0400",
+        "updated": "2026-10-03T10:00:00.000-0400",
+        "labels": []
+      },
+      "changelog": {
+        "startAt": 0, "maxResults": 100, "total": 1,
+        "histories": [
+          {
+            "id": "20002",
+            "created": "2026-10-03T10:00:00.000-0400",
+            "author": {"name": "bruno"},
+            "items": [
+              {"field": "assignee", "from": "JIRAUSER99", "to": "bruno", "fromString": "Pessoa Antiga", "toString": "Bruno"}
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "10012",
+      "key": "TG-12",
+      "fields": {
+        "summary": "Issue sem data de criação",
+        "project": {"key": "TG"},
+        "issuetype": {"name": "Task"},
+        "status": {"name": "To Do"},
+        "assignee": {"name": "bruno"},
+        "updated": "2026-10-04T10:00:00.000-0400",
+        "labels": []
+      },
+      "changelog": {
+        "startAt": 0, "maxResults": 100, "total": 0,
+        "histories": []
+      }
+    }
+  ]
+}

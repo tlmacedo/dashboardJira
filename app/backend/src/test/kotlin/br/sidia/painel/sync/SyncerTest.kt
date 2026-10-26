@@ -17,6 +17,7 @@ import br.sidia.painel.testContextComBanco
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.mock.MockEngine
 import io.ktor.client.engine.mock.respond
+import io.ktor.client.engine.mock.toByteArray
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.headersOf
@@ -358,5 +359,138 @@ class SyncerTest {
         }
         assertTrue("TG-2" in e.message.orEmpty())
         assertFalse("segredo-xyz" in e.stackTraceToString())
+    }
+
+    // ---- Tarefa 4: fluxo, chaves internas e issues incompletas ----
+
+    private fun repositorioDeChaves() = PostgresSyncStateStore(requireNotNull(ctx.dataSource))
+
+    private fun buscaChaves() = fixture("search-jirauser-keys.json")
+
+    private fun valor(sql: String): String? = texto(sql).singleOrNull()
+
+    @Test
+    fun assigneeComChaveInternaViraUsername() = runBlocking {
+        Syncer(cliente(jira(busca = buscaChaves())), store, "samsung", chaves = repositorioDeChaves()).run(consulta)
+        assertEquals("ana.silva", valor("SELECT to_value FROM change_event WHERE changelog_id = 'TG-10:20001:0'"))
+        val tg10 = store.timelines("samsung", null, null, false).first { it.key == "TG-10" }
+        assertEquals("ana.silva", tg10.assigneeChanges.single().to)
+        assertEquals("ana.silva", tg10.currentAssignee)
+    }
+
+    @Test
+    fun chaveInternaSemMapaFicaMarcadaEContada() = runBlocking {
+        val r = Syncer(cliente(jira(busca = buscaChaves())), store, "samsung", chaves = repositorioDeChaves()).run(consulta)
+        assertEquals("JIRAUSER99", valor("SELECT from_value FROM change_event WHERE changelog_id = 'TG-11:20002:0'"))
+        assertEquals("bruno", valor("SELECT to_value FROM change_event WHERE changelog_id = 'TG-11:20002:0'"))
+        assertEquals(1, r.usuariosNaoResolvidos)
+    }
+
+    @Test
+    fun mapaVemDoJsonAntesDaSanitizacao() = runBlocking {
+        Syncer(cliente(jira(busca = buscaChaves())), store, "samsung", chaves = repositorioDeChaves()).run(consulta)
+        // o raw não guarda a key do usuário, mas o mapa persistido a conhece
+        assertEquals("false", valor("SELECT (raw->'fields'->'assignee' ? 'key')::text FROM issue WHERE key = 'TG-10'"))
+        assertFalse("JIRAUSER10500" in valor("SELECT raw::text FROM issue WHERE key = 'TG-10'").orEmpty())
+        assertEquals("ana.silva", repositorioDeChaves().chavesDeUsuario("samsung")["JIRAUSER10500"])
+        assertEquals(emptyMap(), repositorioDeChaves().chavesDeUsuario("sidia"))
+    }
+
+    @Test
+    fun mapaPersistidoResolveExecucaoSeguinte() = runBlocking {
+        Syncer(cliente(jira(busca = buscaChaves())), store, "samsung", chaves = repositorioDeChaves()).run(consulta)
+        // 2ª execução: sem o objeto com `key` e com um histórico novo que cita só a chave interna
+        val semObjeto = buscaChaves().replace(""", "key": "JIRAUSER10500"""", "").replace("\"20001\"", "\"20009\"")
+        assertFalse("JIRAUSER10500\"}" in semObjeto.substringBefore("\"changelog\""), "o objeto ainda tem a key")
+        val r = Syncer(cliente(jira(busca = semObjeto)), store, "samsung", chaves = repositorioDeChaves()).run(consulta)
+        assertEquals("ana.silva", valor("SELECT to_value FROM change_event WHERE changelog_id = 'TG-10:20009:0'"))
+        assertEquals(1, r.usuariosNaoResolvidos) // só o JIRAUSER99
+    }
+
+    @Test
+    fun semRepositorioDeChavesUsaSoOMapaDaIssue() = runBlocking {
+        val r = Syncer(cliente(jira(busca = buscaChaves())), store, "samsung").run(consulta)
+        assertEquals("ana.silva", valor("SELECT to_value FROM change_event WHERE changelog_id = 'TG-10:20001:0'"))
+        assertEquals(1, r.usuariosNaoResolvidos)
+    }
+
+    @Test
+    fun processaEmFluxo() = runBlocking {
+        val ordem = mutableListOf<String>()
+        fun issueMinima(n: Int) = """{"id":"${900 + n}","key":"TG-$n","fields":{"summary":"s$n","project":{"key":"TG"},
+            "issuetype":{"name":"Task"},"status":{"name":"To Do"},"created":"2026-10-01T09:00:00.000-0400",
+            "updated":"2026-10-0${n - 20}T09:00:00.000-0400","labels":[]},"changelog":{"total":0,"histories":[]}}"""
+        val todas = (21..26).map(::issueMinima)
+        val engine = MockEngine { req ->
+            val inicio = obj(String(req.body.toByteArray())).getValue("startAt").jsonPrimitive.content.toInt()
+            ordem += "req:$inicio"
+            val pagina = todas.drop(inicio).take(2)
+            respond("""{"startAt":$inicio,"maxResults":2,"total":6,"issues":[${pagina.joinToString(",")}]}""", HttpStatusCode.OK, json)
+        }
+        val gravadas = mutableListOf<IssueGravada>()
+        val r = Syncer(cliente(engine), store, "samsung").run(consulta) { g ->
+            ordem += "gravou:${g.key}"
+            gravadas += g
+        }
+        assertEquals(
+            listOf("req:0", "gravou:TG-21", "gravou:TG-22", "req:2", "gravou:TG-23", "gravou:TG-24", "req:4", "gravou:TG-25", "gravou:TG-26"),
+            ordem,
+        )
+        assertEquals(6, r.issues)
+        assertEquals((21..26).map { "TG-$it" }, gravadas.map { it.key })
+        assertEquals(Instant.parse("2026-10-01T13:00:00Z"), gravadas.first().updated)
+        // quando o callback roda, a issue já está commitada
+        assertEquals(6, contar("issue"))
+    }
+
+    @Test
+    fun aoGravarSoRodaDepoisDoCommit() = runBlocking {
+        var vistaNoCallback = -1
+        Syncer(cliente(jira(busca = buscaChaves())), store, "samsung").run(consulta) { g ->
+            if (g.key == "TG-10") vistaNoCallback = contar("issue")
+        }
+        assertEquals(1, vistaNoCallback)
+    }
+
+    @Test
+    fun issueSemCreatedContaComoIncompleta() = runBlocking {
+        val r = Syncer(cliente(jira(busca = buscaChaves())), store, "samsung").run(consulta)
+        assertEquals(1, r.incompletas)
+        assertEquals(3, r.issues)
+        assertEquals(3, contar("issue"))
+        // continua fora das linhas do tempo, como antes
+        assertEquals(listOf("TG-10", "TG-11"), store.timelines("samsung", null, null, false).map { it.key })
+    }
+
+    @Test
+    fun issueSemSummaryContaComoIncompleta() = runBlocking {
+        val busca = alterarIssue(fixture("search-tg-basic-changelog.json"), "TG-3") {
+            JsonObject(it + ("fields" to JsonObject(it.getValue("fields").jsonObject.filterKeys { k -> k != "summary" })))
+        }
+        val r = Syncer(cliente(jira(busca = busca)), store, "samsung").run(consulta)
+        assertEquals(1, r.incompletas)
+        assertEquals(4, contar("issue"))
+    }
+
+    @Test
+    fun jiraIdGravadoEReentradaLimpaRemovida() = runBlocking {
+        val syncer = Syncer(cliente(jira(busca = buscaChaves())), store, "samsung")
+        syncer.run(consulta)
+        assertEquals("10010", valor("SELECT jira_id::text FROM issue WHERE key = 'TG-10'"))
+        requireNotNull(ctx.dataSource).connection.use { c ->
+            c.createStatement().executeUpdate("UPDATE issue SET removida_em = now() WHERE key = 'TG-10'")
+        }
+        assertNotNull(valor("SELECT removida_em::text FROM issue WHERE key = 'TG-10'"))
+        syncer.run(consulta)
+        assertEquals(null, valor("SELECT removida_em::text FROM issue WHERE key = 'TG-10'"))
+        assertEquals("10010", valor("SELECT jira_id::text FROM issue WHERE key = 'TG-10'"))
+    }
+
+    @Test
+    fun issueSemIdNaoApagaOJiraIdJaGravado() = runBlocking {
+        Syncer(cliente(jira(busca = buscaChaves())), store, "samsung").run(consulta)
+        val semId = buscaChaves().replace("\"id\": \"10010\",", "")
+        Syncer(cliente(jira(busca = semId)), store, "samsung").run(consulta)
+        assertEquals("10010", valor("SELECT jira_id::text FROM issue WHERE key = 'TG-10'"))
     }
 }

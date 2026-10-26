@@ -95,15 +95,16 @@ class PostgresIssueStore(private val ds: DataSource) : IssueStore {
         val sql = """
             INSERT INTO issue (key, instance, project, issue_type, status, resolution, assignee_ref, reporter_ref,
                                created, updated, resolved, duedate, labels, parent_key, estimate_s, spent_s, raw,
-                               os_version)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CAST(? AS jsonb), ?)
+                               os_version, jira_id)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CAST(? AS jsonb), ?, ?)
             ON CONFLICT (instance, key) DO UPDATE SET
                 project = EXCLUDED.project, issue_type = EXCLUDED.issue_type,
                 status = EXCLUDED.status, resolution = EXCLUDED.resolution, assignee_ref = EXCLUDED.assignee_ref,
                 reporter_ref = EXCLUDED.reporter_ref, created = EXCLUDED.created, updated = EXCLUDED.updated,
                 resolved = EXCLUDED.resolved, duedate = EXCLUDED.duedate, labels = EXCLUDED.labels,
                 parent_key = EXCLUDED.parent_key, estimate_s = EXCLUDED.estimate_s, spent_s = EXCLUDED.spent_s,
-                raw = EXCLUDED.raw, os_version = EXCLUDED.os_version
+                raw = EXCLUDED.raw, os_version = EXCLUDED.os_version,
+                jira_id = COALESCE(EXCLUDED.jira_id, issue.jira_id), removida_em = NULL
             RETURNING id
         """.trimIndent()
         con.prepareStatement(sql).use { ps ->
@@ -125,6 +126,8 @@ class PostgresIssueStore(private val ds: DataSource) : IssueStore {
             if (c.spentS != null) ps.setLong(16, c.spentS) else ps.setNull(16, java.sql.Types.BIGINT)
             ps.setString(17, raw)
             ps.setString(18, osVersion)
+            // Id numérico do Jira (estável mesmo se a chave mudar); ausente ou não numérico fica nulo.
+            if (c.jiraId != null) ps.setLong(19, c.jiraId) else ps.setNull(19, java.sql.Types.BIGINT)
             ps.executeQuery().use { rs ->
                 check(rs.next()) { "upsert da issue não devolveu o id" }
                 return rs.getLong(1)
