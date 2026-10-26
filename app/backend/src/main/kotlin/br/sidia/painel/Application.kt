@@ -1,10 +1,14 @@
 package br.sidia.painel
 
+import br.sidia.painel.cards.registrarNegacaoSemPapel
+import br.sidia.painel.cards.rotasTempoEmStatus
 import br.sidia.painel.config.Settings
+import br.sidia.painel.db.AccessLog
 import br.sidia.painel.security.Authenticator
 import br.sidia.painel.security.DevAuthenticator
 import br.sidia.painel.security.OidcAuthenticator
 import br.sidia.painel.security.installAccessControl
+import br.sidia.painel.sync.PostgresIssueStore
 import io.ktor.http.HttpStatusCode
 import io.ktor.serialization.kotlinx.json.json
 import io.ktor.server.application.Application
@@ -58,7 +62,11 @@ fun Application.module(
 ) {
     val settings = context.settings
     install(ContentNegotiation) { json() }
-    installAccessControl(settings, authenticator)
+    // Sem banco (só em testes) não há auditoria nem rotas de dados.
+    val auditoria = context.dataSource?.let { AccessLog(it) }
+    installAccessControl(settings, authenticator, aoNegarSemPapel = { call, principal ->
+        auditoria?.let { registrarNegacaoSemPapel(it, context, call, principal) }
+    })
     if (settings.dashboardDevMode && settings.jiraLiveEnabled) {
         log.warn("ATENÇÃO: modo de desenvolvimento (sem login) com Jira real ligado: dados reais ficam expostos sem autenticação.")
     }
@@ -77,6 +85,9 @@ fun Application.module(
         route("/api") { handle { call.respond(HttpStatusCode.NotFound) } }
         // Build do frontend: arquivos reais, e index.html só para rotas de página (ver StaticSpa.kt).
         spaEstatica(settings.staticDir)
+        context.dataSource?.let { ds ->
+            rotasTempoEmStatus(context, PostgresIssueStore(ds), AccessLog(ds))
+        }
         get("/api/health") { call.respond(HealthResposta(ok = true)) }
         get("/api/meta") {
             call.respond(

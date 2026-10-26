@@ -1,7 +1,9 @@
 package br.sidia.painel.db
 
 import br.sidia.painel.time.BusinessCalendar
+import java.time.Instant
 import java.time.LocalDate
+import java.time.ZoneId
 import javax.sql.DataSource
 
 /**
@@ -10,13 +12,19 @@ import javax.sql.DataSource
  */
 class Retention(private val ds: DataSource, private val calendar: BusinessCalendar) {
 
+    companion object {
+        /** Instante-limite da retenção: `today - months` às 00:00 no [zone]. Mais antigo que isso é expurgado. */
+        fun limite(today: LocalDate, months: Int, zone: ZoneId): Instant =
+            today.minusMonths(months.toLong()).atStartOfDay(zone).toInstant()
+    }
+
     /**
      * Remove registros anteriores a `today.minusMonths(months)` às 00:00 no fuso do calendário
      * (o que está exatamente na data-limite permanece). Devolve a soma das linhas removidas.
      */
     fun purge(today: LocalDate, months: Int): Int {
         require(months >= 1) { "months deve ser >= 1 (recebido $months)" }
-        val limite = today.minusMonths(months.toLong()).atStartOfDay(calendar.zone).toOffsetDateTime()
+        val limite = limite(today, months, calendar.zone).atZone(calendar.zone).toOffsetDateTime()
         return ds.connection.use { c ->
             c.autoCommit = false
             try {

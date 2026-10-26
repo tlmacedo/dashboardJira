@@ -78,7 +78,12 @@ val ApplicationCall.principal: Principal
  * Resolve o principal uma vez por chamada para toda rota sob `/api/` (exceto health e meta).
  * Sem principal, responde 401 e interrompe o processamento.
  */
-fun Application.installAccessControl(settings: Settings, authenticator: Authenticator) {
+fun Application.installAccessControl(
+    settings: Settings,
+    authenticator: Authenticator,
+    // Gancho de auditoria: chamado quando um principal autenticado é negado por não ter papel vigente.
+    aoNegarSemPapel: suspend (ApplicationCall, Principal) -> Unit = { _, _ -> },
+) {
     // Em produção nunca se aceita o autenticador de desenvolvimento.
     require(settings.dashboardDevMode || authenticator !is DevAuthenticator) {
         "DevAuthenticator não pode ser usado fora do modo de desenvolvimento"
@@ -98,6 +103,14 @@ fun Application.installAccessControl(settings: Settings, authenticator: Authenti
             finish()
         } else if (principal.roles.isEmpty()) {
             // Autenticado porém sem papel vigente (id desconhecido, papel encerrado): nega por padrão.
+            // O gancho nunca pode impedir a negação (quem o fornece trata as próprias falhas).
+            try {
+                aoNegarSemPapel(call, principal)
+            } catch (e: kotlin.coroutines.cancellation.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                // negação segue mesmo assim
+            }
             call.respond(HttpStatusCode.Forbidden)
             finish()
         } else {

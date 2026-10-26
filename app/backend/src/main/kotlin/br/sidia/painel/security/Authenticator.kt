@@ -12,10 +12,17 @@ interface Authenticator {
 
 /**
  * Monta o principal SEMPRE a partir do diretório de papéis na data [today].
- * Id desconhecido ou sem papel vigente resulta em conjunto vazio (nega por padrão).
+ * O id é normalizado ([normalizarUsername]) antes da consulta. Id desconhecido, vazio ou sem papel
+ * vigente resulta em conjunto vazio (nega por padrão; nunca exceção, para manter o 403).
  */
-fun principalFor(userId: String, directory: RoleDirectory, today: LocalDate): Principal =
-    Principal(userId, directory.rolesOf(userId, today))
+fun principalFor(userId: String, directory: RoleDirectory, today: LocalDate): Principal {
+    val id = try {
+        normalizarUsername(userId)
+    } catch (e: IllegalArgumentException) {
+        return Principal(userId.trim(), emptySet())
+    }
+    return Principal(id, directory.rolesOf(id, today))
+}
 
 /**
  * Modo de desenvolvimento: sem login, sempre o `Principal("dev", {GERENTE})`. Esse gerente implícito

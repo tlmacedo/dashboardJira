@@ -11,12 +11,15 @@ import io.ktor.http.HttpStatusCode
 import io.ktor.http.headersOf
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.TimeoutCancellationException
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.toList
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import java.io.IOException
@@ -75,8 +78,8 @@ class JiraClientRobustezTest {
             val issues = (0 until max).joinToString(",") { """{"key":"TG-${inicio + it + 1}"}""" }
             respond("""{"startAt":$inicio,"maxResults":$max,"total":${inicio + max + 1},"issues":[$issues]}""", HttpStatusCode.OK, json)
         }
-        assertFailsWith<JiraException> { cliente(engine).searchAll(req, pageSize = 1000).toList() }
-        // 10_000 / 1000 = 10 páginas no máximo.
+        assertFailsWith<JiraException> { cliente(engine).searchAll(req, pageSize = 1000, maxItens = 10_000).toList() }
+        // O total prometido passa de 10_000 ao pedir a 10ª página (9000 + 1000 + 1): 10 requisições.
         assertEquals(10, engine.requestHistory.size)
     }
 
@@ -87,7 +90,7 @@ class JiraClientRobustezTest {
             val issues = (0 until 5000).joinToString(",") { """{"key":"TG-${inicio + it + 1}"}""" }
             respond("""{"startAt":$inicio,"maxResults":5000,"total":${inicio + 5001},"issues":[$issues]}""", HttpStatusCode.OK, json)
         }
-        assertFailsWith<JiraException> { cliente(engine).searchAll(req, pageSize = 5000).toList() }
+        assertFailsWith<JiraException> { cliente(engine).searchAll(req, pageSize = 5000, maxItens = 10_000).toList() }
         assertEquals(2, engine.requestHistory.size)
     }
 
@@ -101,7 +104,146 @@ class JiraClientRobustezTest {
             val issues = (inicio until fim).joinToString(",") { """{"key":"TG-${it + 1}"}""" }
             respond("""{"startAt":$inicio,"maxResults":$max,"total":10000,"issues":[$issues]}""", HttpStatusCode.OK, json)
         }
-        assertEquals(10_000, cliente(engine).searchAll(req, pageSize = 1000).toList().size)
+        assertEquals(10_000, cliente(engine).searchAll(req, pageSize = 1000, maxItens = 10_000).toList().size)
+    }
+
+    private fun jiraComTotal(total: Int) = MockEngine { r ->
+        val corpo = corpoDe(r)
+        val inicio = corpo["startAt"]!!.jsonPrimitive.content.toInt()
+        val max = corpo["maxResults"]!!.jsonPrimitive.content.toInt()
+        val fim = minOf(total, inicio + max)
+        val issues = (inicio until fim).joinToString(",") { """{"key":"TG-${it + 1}"}""" }
+        respond("""{"startAt":$inicio,"maxResults":$max,"total":$total,"issues":[$issues]}""", HttpStatusCode.OK, json)
+    }
+
+    @Test
+    fun maxItensEstouraComJiraException() = runBlocking {
+        // Padrão (50.000): total de 60.000 estoura, antes de emitir qualquer item.
+        val engine = jiraComTotal(60_000)
+        val emitidos = mutableListOf<JsonObject>()
+        val e = assertFailsWith<JiraException> { cliente(engine).searchAll(req).collect { emitidos += it } }
+        assertTrue("50000" in e.message!! && "60000" in e.message!!, e.message)
+        assertFalse("x" == e.message, "mensagem não deve ecoar o JQL")
+        assertEquals(0, emitidos.size)
+        assertEquals(1, engine.requestHistory.size)
+
+        // Com maxItens maior, passa em páginas.
+        val engine2 = jiraComTotal(60_000)
+        assertEquals(60_000, cliente(engine2).searchAll(req, pageSize = 5000, maxItens = 100_000).toList().size)
+        assertEquals(12, engine2.requestHistory.size)
+    }
+
+    @Test
+    fun maxItensNaoEcoaOJql() = runBlocking {
+        val q = SearchRequest("assignee = segredo.da.silva", listOf("key"))
+        val e = assertFailsWith<JiraException> { cliente(jiraComTotal(500)).searchAll(q, maxItens = 100).toList() }
+        assertFalse("segredo.da.silva" in tudoDe(e))
+        assertTrue("100" in e.message!! && "500" in e.message!!)
+    }
+
+    @Test
+    fun servidorQueMenteSobreOTotalAindaEhLimitadoPorMaxItens() = runBlocking {
+        // Total sempre pequeno, mas páginas cheias para sempre: o acumulado estoura o limite.
+        val engine = MockEngine { r ->
+            val inicio = corpoDe(r)["startAt"]!!.jsonPrimitive.content.toInt()
+            val issues = (0 until 10).joinToString(",") { """{"key":"TG-${inicio + it + 1}"}""" }
+            respond("""{"startAt":$inicio,"maxResults":10,"total":1000000,"issues":[$issues]}""", HttpStatusCode.OK, json)
+        }
+        assertFailsWith<JiraException> { cliente(engine).searchAll(req, pageSize = 10, maxItens = 50).toList() }
+        assertTrue(engine.requestHistory.size <= 6)
+    }
+
+    @Test
+    fun maxItensInvalidoFalha() {
+        val engine = jiraComTotal(10)
+        for (invalido in listOf(0, -1, 200_001)) {
+            assertFailsWith<IllegalArgumentException>("maxItens=$invalido") {
+                cliente(engine).searchAll(req, maxItens = invalido)
+            }.also { assertTrue("maxItens" in it.message!!) }
+        }
+        // Nos limites é aceito (e nada é enviado até coletar o Flow).
+        cliente(engine).searchAll(req, maxItens = 1)
+        cliente(engine).searchAll(req, maxItens = 200_000)
+        assertEquals(0, engine.requestHistory.size)
+    }
+
+    @Test
+    fun tokenComEntidadesHtmlNomeadasEhMascarado() = runBlocking {
+        val tk = "ab&cd<ef>gh\"ij"
+        val config = JiraInstanceConfig("a", "https://jira.exemplo.invalid/", JiraAuthKind.BEARER, tk, null)
+        val formas = listOf(tk, "ab&amp;cd&lt;ef&gt;gh&quot;ij", "ab&#38;cd&lt;ef&#x3e;gh&quot;ij")
+        for (forma in formas) {
+            val html = MockEngine { respond("<html>$forma</html>", HttpStatusCode.OK, headersOf(HttpHeaders.ContentType, "text/html")) }
+            val e = assertFailsWith<JiraException> { JiraClient(config, HttpClient(html), LiveGuard(true), retry()).search(req) }
+            val texto = e.message.orEmpty() + "\n" + e.details.orEmpty()
+            assertTrue("***" in texto, "sem máscara para: $forma -> $texto")
+            assertFalse("&amp;" in texto || "&lt;" in texto || "&quot;" in texto, "sobrou entidade -> $texto")
+        }
+    }
+
+    @Test
+    fun tokenEscapadoEmJsonUrlEHtmlEhMascarado() = runBlocking {
+        val tk = "ab+cd/ef=gh"
+        val config = JiraInstanceConfig("a", "https://jira.exemplo.invalid/", JiraAuthKind.BEARER, tk, null)
+        val formas = listOf(
+            tk,
+            "ab+cd\\/ef=gh",
+            "ab\\u002Bcd\\u002fef\\u003dgh",
+            "ab%2Bcd%2Fef%3Dgh",
+            "ab%2bcd%2fef%3dgh",
+            "ab&#43;cd&#47;ef&#61;gh",
+            "ab&#x2b;cd&#x2f;ef&#x3d;gh",
+            "ab&#x2B;cd&#x2F;ef&#x3D;gh",
+        )
+        for (forma in formas) {
+            // Em texto livre (details/mensagem de resumo)...
+            val livre = MockEngine { respond("falha com [$forma] no meio", HttpStatusCode.Forbidden, headersOf(HttpHeaders.ContentType, "text/plain")) }
+            val e1 = assertFailsWith<JiraException> { JiraClient(config, HttpClient(livre), LiveGuard(true), retry()).search(req) }
+            // ...e dentro de JSON com errorMessages.
+            val json2 = MockEngine { respond("""{"errorMessages":["token $forma invalido"]}""", HttpStatusCode.Forbidden, json) }
+            val e2 = assertFailsWith<JiraException> { JiraClient(config, HttpClient(json2), LiveGuard(true), retry()).search(req) }
+            // ...e em resposta 200 que não é JSON.
+            val html = MockEngine { respond("<html>$forma</html>", HttpStatusCode.OK, headersOf(HttpHeaders.ContentType, "text/html")) }
+            val e3 = assertFailsWith<JiraException> { JiraClient(config, HttpClient(html), LiveGuard(true), retry()).search(req) }
+            for (e in listOf(e1, e2, e3)) {
+                val texto = e.message.orEmpty() + "\n" + e.details.orEmpty()
+                assertTrue("***" in texto, "sem máscara para: $forma -> $texto")
+                assertFalse(forma in texto, "vazou a forma $forma -> $texto")
+                // Nenhum resto do escape do token (ex.: "cd\/ef", "%2Fef", "&#47;ef") pode sobrar.
+                assertFalse(Regex("(?i)cd(\\\\/|/|\\\\u002f|%2f|&#47;|&#x2f;)ef").containsMatchIn(texto), "vazou -> $texto")
+            }
+        }
+    }
+
+    @Test
+    fun base64DoBasicComBarraEMaisEscapadoEhMascarado() = runBlocking {
+        // Usuário e token escolhidos para o base64 conter '+' e '/'.
+        val usuario = "u"
+        val tk = "???>>>~~~"
+        val b64 = java.util.Base64.getEncoder().encodeToString("$usuario:$tk".toByteArray())
+        assertTrue('+' in b64 || '/' in b64, "base64 de teste sem + nem /: $b64")
+        val config = JiraInstanceConfig("a", "https://jira.exemplo.invalid/", JiraAuthKind.BASIC, tk, usuario)
+        val escapado = b64.replace("/", "\\/").replace("+", "\\u002b")
+        val engine = MockEngine { respond("""{"errorMessages":["eco $escapado e $b64"]}""", HttpStatusCode.Forbidden, json) }
+        val e = assertFailsWith<JiraException> { JiraClient(config, HttpClient(engine), LiveGuard(true), retry()).search(req) }
+        val texto = e.message.orEmpty() + e.details.orEmpty()
+        assertFalse(b64 in texto || escapado in texto, texto)
+        assertTrue("***" in texto)
+    }
+
+    @Test
+    fun delayDoRetryRespeitaCancelamento() = runBlocking {
+        var requisicoes = 0
+        val engine = MockEngine { requisicoes++; respond("", HttpStatusCode.ServiceUnavailable) }
+        val noDelay = kotlinx.coroutines.CompletableDeferred<Unit>()
+        // O delay é suspenso de verdade (cancelável): nunca termina sozinho dentro do teste.
+        val r = RetryPolicy(maxRetries = 5, backoff = { 1.seconds }, delay = { noDelay.complete(Unit); delay(60_000) })
+        val trabalho = launch(Dispatchers.Default) { cliente(engine, r = r).search(req) }
+        withTimeout(5_000) { noDelay.await() }
+        trabalho.cancel()
+        withTimeout(5_000) { trabalho.join() }
+        assertTrue(trabalho.isCancelled)
+        assertEquals(1, requisicoes, "não pode haver nova requisição depois do cancelamento")
     }
 
     @Test

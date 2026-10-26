@@ -1,0 +1,16 @@
+# Modelo do mapa de status -> categoria (copie para status_map.yaml e ajuste ao seu workflow).
+# Categorias: todo, active, wait, blocked, done.
+status_map:
+  "A Fazer": todo
+  "Em andamento": active
+  "Em revisão": wait
+  "Aguardando": wait
+  "Bloqueado": blocked
+  "Concluído": done
+  # Nomes em inglês das fixtures do Data Center (para o fluxo sync -> card funcionar em dev).
+  "To Do": todo
+  "In Progress": active
+  "In Review": wait
+  "Blocked": blocked
+  "Done": done
+  "Closed": done

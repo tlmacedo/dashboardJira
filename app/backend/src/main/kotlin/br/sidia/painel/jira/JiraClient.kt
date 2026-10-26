@@ -18,6 +18,7 @@ import io.ktor.http.HttpMethod
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.content.TextContent
 import io.ktor.http.encodeURLPathPart
+import br.sidia.painel.jql.JqlQuery
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.currentCoroutineContext
@@ -51,6 +52,47 @@ class RetryPolicy(
 )
 
 /**
+ * Expressão que casa o [segredo] cru ou com QUALQUER caractere escrito de forma escapada:
+ * JSON (`\/`, `\"`, `\\`, `\u00XX` em minúsculas e maiúsculas), URL (`%XX` em ambas as caixas) e
+ * HTML (`&#43;`, `&#x2b;`, `&#x2B;`). A escolha é por caractere, então formas misturadas também casam.
+ */
+internal fun padraoEscapado(segredo: String): Regex {
+    val sb = StringBuilder()
+    for (c in segredo) {
+        val alternativas = linkedSetOf(Regex.escape(c.toString()))
+        val codigo = c.code
+        val hexMin = "%04x".format(codigo)
+        val hexMai = "%04X".format(codigo)
+        alternativas += Regex.escape("\\u$hexMin")
+        alternativas += Regex.escape("\\u$hexMai")
+        when (c) {
+            '/' -> alternativas += Regex.escape("\\/")
+            '"' -> alternativas += Regex.escape("\\\"")
+            '\\' -> alternativas += Regex.escape("\\\\")
+        }
+        // Entidades HTML nomeadas dos caracteres que o HTML escapa (token que contém & < > " ').
+        when (c) {
+            '&' -> alternativas += Regex.escape("&amp;")
+            '<' -> alternativas += Regex.escape("&lt;")
+            '>' -> alternativas += Regex.escape("&gt;")
+            '"' -> alternativas += Regex.escape("&quot;")
+            '\'' -> alternativas += Regex.escape("&apos;")
+        }
+        if (codigo < 0x100) {
+            alternativas += Regex.escape("%" + "%02x".format(codigo))
+            alternativas += Regex.escape("%" + "%02X".format(codigo))
+        }
+        alternativas += Regex.escape("&#$codigo;")
+        alternativas += Regex.escape("&#x" + "%x".format(codigo) + ";")
+        alternativas += Regex.escape("&#x" + "%X".format(codigo) + ";")
+        alternativas += Regex.escape("&#X" + "%x".format(codigo) + ";")
+        alternativas += Regex.escape("&#X" + "%X".format(codigo) + ";")
+        sb.append("(?:").append(alternativas.joinToString("|")).append(')')
+    }
+    return Regex(sb.toString())
+}
+
+/**
  * Cria o cliente HTTP real (CIO). Nunca é usado nos testes, que injetam o MockEngine.
  * `internal`: só a [JiraClientFactory] a usa.
  */
@@ -76,8 +118,29 @@ class JiraClient internal constructor(
     private val guard: LiveGuard,
     private val retry: RetryPolicy = RetryPolicy(),
 ) {
+    // Cliente original (dono do motor) e derivado sem redirecionamentos: o derivado NÃO gerencia o motor,
+    // por isso o fechamento precisa fechar os dois.
+    private val httpOrigem: HttpClient = http
+
     // Mesmo que o cliente injetado siga redirecionamentos, aqui eles ficam desligados.
     private val http: HttpClient = http.config { followRedirects = false }
+
+    /**
+     * Fecha os recursos HTTP deste cliente. `internal`: só a [JiraClientFactory] o chama.
+     * Fecha o derivado e depois o original; se o primeiro falhar, o segundo ainda é fechado
+     * e o primeiro erro é relançado (o segundo vai como suprimido).
+     */
+    internal fun close() {
+        var erro: Throwable? = null
+        for (cliente in listOf(http, httpOrigem)) {
+            try {
+                cliente.close()
+            } catch (e: Throwable) {
+                if (erro == null) erro = e else erro.addSuppressed(e)
+            }
+        }
+        erro?.let { throw it }
+    }
     private val baseUrl = config.baseUrl.trimEnd('/')
     private val json = Json { ignoreUnknownKeys = true }
 
@@ -89,7 +152,28 @@ class JiraClient internal constructor(
         }
     }
 
-    suspend fun search(req: SearchRequest): SearchPage {
+    /** Busca uma página (até 100 itens) a partir de uma [JqlQuery]; a instância da consulta deve ser a do cliente. */
+    suspend fun search(query: JqlQuery): SearchPage = search(paraRequisicao(query))
+
+    /**
+     * Percorre todas as páginas de uma [JqlQuery] e emite cada issue. `pageSize` vai de 1 a 5000 e
+     * `maxItens` de 1 a 200.000; fora disso falha na hora, antes de qualquer requisição.
+     */
+    fun searchAll(query: JqlQuery, pageSize: Int = 1000, maxItens: Int = MAX_ITENS_PADRAO): Flow<JsonObject> =
+        searchAll(paraRequisicao(query), pageSize, maxItens)
+
+    /** Conta as issues de uma [JqlQuery] sem baixá-las. */
+    suspend fun count(query: JqlQuery): Int = count(paraRequisicao(query).jql)
+
+    /** Exige a mesma instância do cliente; a mensagem cita só os ids (nunca o JQL). */
+    private fun paraRequisicao(query: JqlQuery): SearchRequest {
+        require(query.instance == config.id) {
+            "A consulta é da instância '${query.instance}', mas o cliente é da instância '${config.id}'"
+        }
+        return SearchRequest(jql = query.jql, fields = query.fields, expandChangelog = query.expandChangelog)
+    }
+
+    internal suspend fun search(req: SearchRequest): SearchPage {
         // Validação antes do guard: pedido inválido nunca chega nem a consultar a trava.
         require(req.fields.isNotEmpty()) { "fields não pode ser vazio" }
         val corpo = buildJsonObject {
@@ -120,34 +204,39 @@ class JiraClient internal constructor(
 
     /**
      * Percorre todas as páginas de uma busca (requisições sequenciais por `startAt`) e emite cada issue.
-     * `pageSize` vai de 1 a 5000; fora disso falha na hora, antes de qualquer requisição.
+     * `pageSize` vai de 1 a 5000 e `maxItens` de 1 a 200.000; fora disso falha na hora, antes de qualquer requisição.
      * Para ao atingir o `total` ou ao receber uma página vazia (evita laço infinito).
-     * Teto de segurança: no máximo `MAX_ITENS / pageSize` páginas (arredondado para cima, mínimo 1);
-     * se o servidor ainda prometer mais, lança [JiraException]. `fields` vazio falha já nesta chamada.
+     * Teto de segurança: se o `total` informado pelo Jira (ou a soma dos itens recebidos) passar de `maxItens`,
+     * lança [JiraException] antes de emitir a página excedente; a mensagem cita só o limite e o total, nunca o JQL.
+     * `fields` vazio falha já nesta chamada.
      */
-    fun searchAll(req: SearchRequest, pageSize: Int = 1000): Flow<JsonObject> {
+    internal fun searchAll(req: SearchRequest, pageSize: Int = 1000, maxItens: Int = MAX_ITENS_PADRAO): Flow<JsonObject> {
         require(pageSize in 1..PAGE_SIZE_MAX) { "pageSize deve ficar entre 1 e $PAGE_SIZE_MAX" }
+        require(maxItens in 1..MAX_ITENS_LIMITE) { "maxItens deve ficar entre 1 e $MAX_ITENS_LIMITE" }
         require(req.fields.isNotEmpty()) { "fields não pode ser vazio" }
-        val maxPaginas = maxOf(1, (MAX_ITENS + pageSize - 1) / pageSize)
         return flow {
             var inicio = req.startAt
-            var paginas = 0
+            var emitidos = 0
             while (true) {
                 val pagina = search(req.copy(startAt = inicio, maxResults = pageSize))
-                paginas++
+                if (pagina.total > maxItens || emitidos + pagina.issues.size > maxItens) {
+                    throw JiraException(
+                        0,
+                        "Busca excedeu o limite de $maxItens itens (total informado: ${pagina.total}); refine o filtro",
+                        null,
+                    )
+                }
                 pagina.issues.forEach { emit(it) }
+                emitidos += pagina.issues.size
                 if (pagina.issues.isEmpty()) break
                 inicio += pagina.issues.size
                 if (inicio >= pagina.total) break
-                if (paginas >= maxPaginas) {
-                    throw JiraException(0, "Busca excedeu o teto de $maxPaginas páginas; refine o filtro", null)
-                }
             }
         }
     }
 
     /** Conta as issues de um JQL sem baixá-las: pede só 1 resultado e lê o `total`. */
-    suspend fun count(jql: String): Int =
+    internal suspend fun count(jql: String): Int =
         search(SearchRequest(jql = jql, fields = listOf("key"), maxResults = 1)).total
 
     /**
@@ -287,7 +376,8 @@ class JiraClient internal constructor(
         } else {
             "Jira respondeu $status"
         }
-        val msg = prefixo + (mensagens ?: resumo)?.let { ": $it" }.orEmpty()
+        // Mascara de novo a mensagem: ela vem de texto já decodificado do JSON (defesa em profundidade).
+        val msg = mascarar(prefixo + (mensagens ?: resumo)?.let { ": $it" }.orEmpty())
         return JiraException(status, msg, resumo)
     }
 
@@ -300,11 +390,19 @@ class JiraClient internal constructor(
         null
     }
 
-    /** Troca o token e o base64 do Basic por `***` antes de qualquer texto sair do cliente. */
+    /**
+     * Padrões do segredo (base64 do Basic e token), em texto cru e nas formas escapadas por JSON, URL e HTML.
+     * Calculados uma vez. O Basic vem primeiro: o base64 é mais longo e não contém o token cru.
+     */
+    private val padroesSecretos: List<Regex> = buildList {
+        if (config.auth == JiraAuthKind.BASIC) add(padraoEscapado(authorization.removePrefix("Basic ")))
+        if (config.token.isNotEmpty()) add(padraoEscapado(config.token))
+    }
+
+    /** Troca o token e o base64 do Basic (inclusive escapados) por `***` antes de qualquer texto sair do cliente. */
     private fun mascarar(texto: String): String {
         var r = texto
-        if (config.auth == JiraAuthKind.BASIC) r = r.replace(authorization.removePrefix("Basic "), "***")
-        if (config.token.isNotEmpty()) r = r.replace(config.token, "***")
+        for (p in padroesSecretos) r = p.replace(r, "***")
         return r
     }
 
@@ -314,7 +412,10 @@ class JiraClient internal constructor(
     private companion object {
         val TIMEOUT = 30.seconds
         const val PAGE_SIZE_MAX = 5000
-        // Teto de itens de um searchAll (vira o número máximo de páginas conforme o pageSize).
+        // Limite padrão e máximo de itens de um searchAll (parâmetro `maxItens`).
+        const val MAX_ITENS_PADRAO = 50_000
+        const val MAX_ITENS_LIMITE = 200_000
+        // Teto do changelog de uma issue (vira o número máximo de páginas de 100).
         const val MAX_ITENS = 10_000
         const val CHANGELOG_PAGINA = 100
         val CHAVE_ISSUE = Regex("[A-Z][A-Z0-9_]*-\\d+")

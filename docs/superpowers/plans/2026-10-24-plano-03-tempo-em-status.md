@@ -10,16 +10,47 @@
 
 **Spec:** `docs/superpowers/specs/2026-10-24-painel-squads-kotlin-react-design.md` (seções 4.2, 5.4, 6.1, 6.3). Depende dos Planos 01 (calendário, papéis, cliente, banco) e 02 (`CardQueryFactory`, ficha `tempo-em-status.card.yaml`).
 
-## Nota: Tarefa 0 (inicialização) já executada no Plano 3A
+## Estado herdado do Plano 3A (já executado) e o que falta (Tarefas 0A e 0B)
 
-A antiga "Tarefa 0" (ligar calendário, papéis, banco, fábrica única do cliente Jira e controle de acesso na subida do app) foi detalhada e **já executada** no plano [`2026-10-25-plano-03a-inicializacao.md`](2026-10-25-plano-03a-inicializacao.md). Ainda falta, antes ou durante este Plano 3:
-- Identidade: **decidido: id = assignee do Jira.** O `id` de cada pessoa em `papeis.yaml` é o username do Jira (o mesmo valor do campo `assignee`), então `Visibility` e a auditoria comparam os dois por igualdade, sem tabela de mapeamento. Resta só conferir os ids com o Jira na primeira conexão autorizada (ver `docs/jira/checklist-primeira-conexao.md`).
-- Cache e fechamento dos clientes HTTP criados pela fábrica (hoje cada `create` abre um `HttpClient` novo).
-- `testContext` com banco, para testar o `access_log`.
-- `SearchRequest` tipado (hoje a consulta é montada como texto).
-- Teto de itens contra a reconciliação (`total` do Jira versus itens recebidos).
-- Teste do atraso (`delay`) do retry com cancelamento.
-- Máscara do token escapado em mensagens de erro.
+A inicialização da aplicação (calendário, papéis, banco, fábrica única do cliente Jira, controle de acesso) foi executada no plano [`2026-10-25-plano-03a-inicializacao.md`](2026-10-25-plano-03a-inicializacao.md). O que este plano **assume como pronto**:
+- `AppContext(settings, calendar, roles, dataSource, jira)` com `load`; `module(settings, context, authenticator)`; `testContext(settings)` sem banco em `src/test/kotlin/br/sidia/painel/TestContext.kt`; `TestPaths.configDir`.
+- **Identidade decidida: `id` da pessoa em `papeis.yaml` = username do Jira = `assignee`.** `Visibility.visibleUserIds(principal, roles, hoje, allUsers)` e a auditoria comparam por igualdade. Os principais de teste deste plano são usernames (`ana`, `bruno`, `carla`, `lider.alfa`, `coord.um`, `gerente.exemplo`), montados em um `RoleDirectory` de teste em memória (regras do `RoleDirectory`: id `[a-z0-9._-]`, squad obrigatório para USUARIO e SQUAD_LEADER, vigências).
+- `JiraClientFactory.create(instanceId)` é o ÚNICO criador de `JiraClient` em produção; com `JIRA_LIVE_ENABLED=false` devolve um cliente que não envia nada e não exige credencial. O `Syncer` recebe o cliente de `context.jira.create(...)`, nunca o constrói (um teste varre `src/main`).
+- `JqlBuilder`/`CardQueryFactory.build(spec, params): JqlQuery` (usernames entre aspas; `resolved < dia seguinte`; `fields` por id).
+
+**O que falta antes das tarefas de domínio** (Tarefas 0A e 0B, abaixo): cache e fechamento dos clientes HTTP da fábrica; busca tipada por `JqlQuery`; teto de itens para a reconciliação; teste do `delay` do retry com cancelamento; máscara do token escapado; `testContextComBanco`; gravação do `access_log`; normalização de username na fronteira.
+
+---
+
+### Tarefa 0A: Cliente Jira — cache, fechamento, busca tipada, teto de itens e máscara escapada
+
+**Arquivos:** Modificar `jira/JiraClientFactory.kt`, `jira/JiraClient.kt`, `AppContext.kt`; Teste `jira/JiraClientFactoryCacheTest.kt`, `jira/JiraClientRobustezTest.kt` (acrescentar).
+
+**Interfaces:**
+- `JiraClientFactory.create(instanceId)` passa a devolver SEMPRE a mesma instância para o mesmo id (cache por instância, thread-safe); `JiraClientFactory : AutoCloseable` com `close()` que fecha todos os `HttpClient` criados (idempotente); `AppContext.close()` chama `jira.close()` ANTES de fechar o pool do banco.
+- `JiraClient.search(query: JqlQuery)`, `searchAll(query: JqlQuery, pageSize: Int = 1000, maxItens: Int = 50_000): Flow<JsonObject>` e `count(query: JqlQuery)`; as versões com `SearchRequest(jql: String)` passam a ser `internal` (só testes e a própria classe); a `JqlQuery` já carrega `fields` e `expandChangelog`. `maxItens` (padrão 50.000, 1..200.000) substitui o teto fixo de 10.000 itens; estourar → `JiraException` citando o limite e o `total`.
+- Máscara do token também na forma ESCAPADA: JSON (`\/`, `\u00xx`), URL-encoded (`%2B`...) e HTML (`&#43;`), em `details` e mensagens.
+
+- [ ] **Passo 1: Testes que falham:** `createDevolveAMesmaInstancia` (duas chamadas, mesmo objeto; instâncias diferentes → objetos diferentes); `closeFechaOsHttpClients` e `closeEhIdempotente` (usa provedor injetável que registra o fechamento); `appContextCloseFechaClientesAntesDoPool` (ordem registrada); `searchAllComJqlQueryUsaFieldsEExpand` (corpo enviado tem os `fields` e o `expand=changelog` da query); `maxItensEstouraComJiraException` (total 60.000 com padrão → erro; com `maxItens=100_000` passa em páginas); `maxItensInvalidoFalha` (0 e 200_001); `tokenEscapadoEmJsonUrlEHtmlEhMascarado`; `delayDoRetryRespeitaCancelamento` (cancelar a coroutine durante o `delay` interrompe sem nova requisição).
+- [ ] **Passo 2: Rodar** `./gradlew test --tests '*JiraClient*'` → FALHA. **Passo 3: Implementar.** **Passo 4: Rodar** → PASSA, e a suíte completa (`cleanTest test`; confira os XML). **Passo 5: Commit** `git commit -m "Cliente Jira: cache e fechamento, busca por JqlQuery, teto de itens e máscara do token escapado"`.
+
+---
+
+### Tarefa 0B: Contexto de teste com banco, `access_log` e normalização de username
+
+**Arquivos:** Criar `db/AccessLog.kt`, `security/Usernames.kt`, `src/test/kotlin/br/sidia/painel/TestContextComBanco.kt`; Modificar `security/Authenticator.kt`; Teste `db/AccessLogTest.kt`, `security/UsernamesTest.kt`.
+
+**Interfaces:**
+- `class AccessLog(private val ds: DataSource) { fun record(userId: String, route: String, filters: Map<String, String>, at: Instant) }` grava em `access_log(user_id, route, filters, at)`; `filters` em JSON; valores saneados (sem controle) e truncados em 200 caracteres; nunca grava token nem corpo.
+- `fun normalizarUsername(raw: String): String` (`trim().lowercase(Locale.ROOT)`) usado na fronteira: `Principal.userId`, reporter e assignee vindos do Jira ou do login; id vazio → `IllegalArgumentException`.
+- `fun testContextComBanco(settings, container): AppContext` com PostgreSQL real (Testcontainers compartilhado por classe) e `access_log` limpo entre testes.
+
+- [ ] **Passo 1: Testes que falham:** `gravaUmaLinhaPorConsulta`; `filtrosSaneadosETruncados` (valor com `\n` e 500 caracteres); `naoGravaSegredos` (filtros com chave `token`/`password` são descartados); `normalizaCaixaEEspacos` (`" Ana.Silva "` → `ana.silva`); `usernameVazioFalha`; `principalUsaUsernameNormalizado`.
+- [ ] **Passo 2: Rodar** os testes → FALHA. **Passo 3: Implementar.** **Passo 4: Rodar** → PASSA e suíte completa. **Passo 5: Commit** `git commit -m "access_log, normalização de username e contexto de teste com banco"`.
+
+---
+
+### (Tarefas 1 a 7: domínio, sincronização, API e tela)
 
 ## Restrições globais
 
@@ -168,7 +199,7 @@ docs/analise/diferencas-esperadas-tempo-em-status.md
       fun timelines(instance: String, closedFrom: Instant?, closedTo: Instant?, openOnly: Boolean): List<IssueTimeline>
   }
   class Syncer(private val client: JiraClient, private val store: IssueStore, private val instance: String) {
-      suspend fun run(query: JqlQuery): SyncSummary          // searchAll(...) e, por issue com changelog truncado, fullChangelog
+      suspend fun run(query: JqlQuery): SyncSummary          // client.searchAll(query) e, por issue com changelog truncado, fullChangelog
   }
   data class SyncSummary(val issues: Int, val events: Int)
   ```
@@ -181,7 +212,9 @@ docs/analise/diferencas-esperadas-tempo-em-status.md
   - `datasComOffsetViramInstant`: `"2026-10-05T08:00:00.000-0400"` → `2026-10-05T12:00:00Z`.
   - `syncerEhIdempotente`: rodar `run` duas vezes → `issue` e `change_event` com a mesma contagem (`SyncSummary(4, N)` e tabelas iguais).
   - `changelogTruncadoBuscaOCompleto`: o `MockEngine` recebe a requisição de `/issue/{key}/changelog` e o evento extra é gravado.
-  - `liveDesligadoNaoFazRequisicao`: com `LiveGuard(false)` o `Syncer.run` falha com `JiraLiveDisabledException` e 0 requisições (a trava vale também aqui).
+  - `liveDesligadoNaoFazRequisicao`: o cliente vem de `JiraClientFactory(settings com jiraLiveEnabled=false).create("samsung")` (não de `JiraClient(...)`): `Syncer.run` falha com `JiraLiveDisabledException` e 0 requisições (a trava vale também aqui).
+  - `syncerUsaUsernameNormalizado`: assignee `Ana.Silva` do changelog fica `ana.silva` na linha do tempo e na gravação (`normalizarUsername`, Tarefa 0B).
+  - Nos demais testes do `Syncer`, o cliente é criado com `MockEngine` pelo construtor `internal` de `JiraClient` (permitido: o teste está no mesmo módulo; a varredura só olha `src/main`).
 - [ ] **Passo 3: Rodar** `./gradlew test --tests '*ChangelogParserTest*' --tests '*SyncerTest*'` → FALHA.
 - [ ] **Passo 4: Implementar** (upsert com `ON CONFLICT (changelog_id) DO NOTHING` e `ON CONFLICT (key) DO UPDATE` para a issue).
 - [ ] **Passo 5: Rodar** → PASSA. **Passo 6: Commit** `git commit -m "Sincronização simulada do changelog do DC, idempotente"`.
@@ -196,7 +229,8 @@ docs/analise/diferencas-esperadas-tempo-em-status.md
 - Teste: `cards/TempoEmStatusRoutesTest.kt`
 
 **Interfaces:**
-- Consome: `IssueStore.timelines`, `TimeInStatusCalculator`, `Visibility`, `RoleDirectory`, `installAccessControl`, tabela `access_log`.
+- Consome: `IssueStore.timelines`, `TimeInStatusCalculator`, `Visibility`, `RoleDirectory`, `installAccessControl`, `AccessLog` (Tarefa 0B), `normalizarUsername`.
+- Produz também `GET /api/me` → `{"userId":"ana","roles":["USUARIO"]}` (papéis do `RoleDirectory` na data de hoje, nunca de claims; usado pelo frontend para montar o menu em produção; exige principal; em modo desenvolvimento devolve o principal `dev` com `GERENTE`).
 - Produz:
   ```
   GET /api/cards/tempo-em-status?squad=&pessoa=&tipo=&os=&de=aaaa-mm-dd&ate=aaaa-mm-dd&unit=util|corrido&semOutliers=true|false
@@ -204,7 +238,9 @@ docs/analise/diferencas-esperadas-tempo-em-status.md
   ```
   `TempoEmStatusDto(analisadas: Int, eficienciaFluxo: Double?, paradas: Int, porStatus: List<StatusStat>, pessoaStatus: List<PersonStatus>, abertasParadas: List<StuckIssue>, unit: String, avisos: List<String>)`; `DrillRow(key: String, resumo: String, responsavel: String?, status: String, detalhe: String)`. Padrão de período: últimos 90 dias (fuso Manaus). `avisos` traz `"status sem mapeamento: X"` quando `UnmappedStatusException`. Filtro: só entram issues com **algum intervalo** de responsável em `Visibility.visibleUserIds`; `pessoa=` fora do visível → 403.
 
-- [ ] **Passo 1: Testes que falham** (autenticador de teste por papel; dados do cenário TG-1 mais um segundo squad):
+- [ ] **Passo 1: Testes que falham** (contexto com banco da Tarefa 0B; `RoleDirectory` de teste em memória: `ana` e `bruno` USUARIO do squad Alfa, `lider.alfa` SQUAD_LEADER do Alfa, `carla` USUARIO do squad Beta, `coord.um` COORDENADOR, `gerente.exemplo` GERENTE; autenticador de teste que devolve `principalFor(id, diretório, hoje)`; dados do cenário TG-1 mais um segundo squad):
+  - `meDevolveOsPapeisDoDiretorio`: `GET /api/me` para `ana` → `roles=["USUARIO"]`; papel encerrado ontem → 403 (principal sem papel).
+  - `parametroSquadVemDoDiretorio`: `squad=Alfa` filtra pelas issues cujos assignees são os membros do squad Alfa NA DATA (via `RoleDirectory.membersOf`), nunca por lista digitada; squad inexistente → 400.
   - `usuarioVeSoOProprio`: `USUARIO` `ana` recebe `analisadas` contando só tasks em que ela teve posse; `pessoaStatus` só tem linhas dela.
   - `squadLeaderVeSeuSquad`: `SQUAD_LEADER` do squad A não vê tasks só do squad B.
   - `gerenteVeTodos`.
@@ -213,7 +249,8 @@ docs/analise/diferencas-esperadas-tempo-em-status.md
   - `periodoPadraoNoventaDias`: sem `de/ate` considera concluídas nos 90 dias até hoje (relógio injetável).
   - `drillTemOMesmoTamanhoDoCard`: para `kind=analisadas` o tamanho da lista == `analisadas`; para `kind=paradas` == `paradas`; para `status:Em revisão` == `porStatus["Em revisão"].n`.
   - `statusNaoMapeadoVaiParaAvisos`: resposta 200 com `avisos` não vazio e números nulos/zerados, nunca 500.
-  - `consultaEhRegistrada`: cada chamada grava uma linha em `access_log` (usuário, rota, filtros).
+  - `consultaEhRegistrada`: cada chamada (card, drill e `/api/me`) grava uma linha em `access_log` via `AccessLog.record` (usuário normalizado, rota, filtros saneados), inclusive as negadas com 403; chamadas públicas (`/api/health`, `/api/meta`, estático) NÃO gravam.
+  - `issueDeAssigneeForaDoDiretorioSoParaCoordenacao`: uma task cujo assignee não está no diretório aparece para `coord.um` e `gerente.exemplo` e nunca para `ana` nem `lider.alfa`.
 - [ ] **Passo 2: Rodar** `./gradlew test --tests '*TempoEmStatusRoutesTest*'` → FALHA.
 - [ ] **Passo 3: Implementar** reaproveitando `Visibility` e o calculador; relógio e calendário injetados.
 - [ ] **Passo 4: Rodar** → PASSA. **Passo 5: Commit** `git commit -m "API do card Tempo em status e detalhamento"`.
@@ -227,7 +264,7 @@ docs/analise/diferencas-esperadas-tempo-em-status.md
 - Teste: `TempoEmStatus.test.tsx`
 
 **Interfaces:**
-- Consome: `GET /api/cards/tempo-em-status` e `/api/drill/tempo-em-status` (Tarefa 5); `t()`, `ThemeProvider`, `Shell` (Plano 01).
+- Consome: `GET /api/cards/tempo-em-status`, `/api/drill/tempo-em-status` e `GET /api/me` (Tarefa 5); `t()`, `ThemeProvider`, `Shell` (Plano 01). O `Shell` passa a obter o papel efetivo de `/api/me` fora do modo desenvolvimento (hoje cai sempre em USUARIO), mantendo USUARIO como padrão enquanto carrega ou se falhar.
 - Produz: `export function TempoEmStatus(): JSX.Element`; tipos `TempoEmStatusDto` e `DrillRow` espelhando o backend; `fetchTempoEmStatus(params): Promise<TempoEmStatusDto>`.
   Layout **denso** (plano visual, seção 5 e protótipo A): cabeçalho com filtros em chips e botão CSV; 3 KPIs (Tasks analisadas, Eficiência de fluxo, Paradas além do normal); barras mediana/P85 por status; mapa pessoa × status (≤ 3 d ✓, 3–6 d ●, > 6 d ▲); tabela de abertas paradas; alternância Dias úteis/Dias corridos que muda `unit` na URL.
 
@@ -237,6 +274,7 @@ docs/analise/diferencas-esperadas-tempo-em-status.md
   - `clicarNoKpiAbreAGaveta`: abre `DrillDrawer` e mostra tantas linhas quanto o KPI indica.
   - `avisoDeStatusNaoMapeado`: com `avisos` não vazio, o aviso aparece e os KPIs mostram "—".
   - `semPermissaoMostraMensagem`: resposta 403 exibe a mensagem de papel, não quebra.
+  - `menuUsaPapelDeApiMeEmProducao`: com `/api/meta` `devMode:false` e `/api/me` `{roles:["COORDENADOR"]}` o menu mostra Auditoria e NÃO mostra Integridade; com `/api/me` falhando (403/500) o papel efetivo é USUARIO (menor privilégio) e o menu mostra só o que o USUARIO vê; o papel salvo em `localStorage` continua sem efeito em produção; em modo desenvolvimento o seletor de simulação segue valendo (Tarefa 9 do Plano 1).
   - `simbolosAlemDaCor`: células do mapa trazem `✓`, `●` ou `▲` como texto.
 - [ ] **Passo 2: Rodar** `cd app/frontend && pnpm vitest run src/screens/TempoEmStatus` → FALHA.
 - [ ] **Passo 3: Implementar** com TanStack Query; filtros e unidade na URL.

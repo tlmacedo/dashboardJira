@@ -2,6 +2,7 @@ package br.sidia.painel
 
 import br.sidia.painel.config.Settings
 import br.sidia.painel.db.Database
+import br.sidia.painel.domain.StatusMap
 import br.sidia.painel.jira.JiraClientFactory
 import br.sidia.painel.security.Role
 import br.sidia.painel.security.RoleDirectory
@@ -15,7 +16,8 @@ import javax.sql.DataSource
 
 /**
  * Dependências de longa vida do painel, montadas uma vez na subida: calendário, diretório de papéis,
- * pool do banco e fábrica do cliente Jira. [dataSource] é nulo apenas em testes sem banco.
+ * mapa de status, pool do banco, fábrica do cliente Jira e relógio. [dataSource] é nulo apenas em
+ * testes sem banco. [clock] é o relógio do painel (injetável em testes), sempre no fuso das configurações.
  * Nenhuma mensagem nem log carrega senha, token ou URL com credenciais.
  */
 class AppContext(
@@ -24,10 +26,16 @@ class AppContext(
     val roles: RoleDirectory,
     val dataSource: DataSource?,
     val jira: JiraClientFactory,
+    val statusMap: StatusMap,
+    val clock: Clock = Clock.system(settings.zone),
 ) : AutoCloseable {
-    /** Fecha o pool de conexões (se houver). */
+    /** Fecha os clientes Jira e, SEMPRE depois (mesmo se isso falhar), o pool de conexões (se houver). */
     override fun close() {
-        (dataSource as? AutoCloseable)?.close()
+        try {
+            jira.close()
+        } finally {
+            (dataSource as? AutoCloseable)?.close()
+        }
     }
 
     companion object {
@@ -43,6 +51,9 @@ class AppContext(
             val calendario = lerYaml(arquivoCalendario) { BusinessCalendar.fromYaml(arquivoCalendario, settings.zone) }
             val papeis = lerYaml(arquivoPapeis) { RoleDirectory.fromYaml(arquivoPapeis) }
             exigirGerenteVigente(settings, papeis, arquivoPapeis, LocalDate.now(clock))
+            // Mapa de status: em produção exige o arquivo real (sem inventar padrão); o modelo só cai em dev.
+            val arquivoStatus = resolver(settings, "status_map")
+            val mapaDeStatus = lerYaml(arquivoStatus) { StatusMap.fromYaml(arquivoStatus) }
 
             // Valida na subida todas as instâncias do Jira configuradas (sem enviar nada); só id e regra na falha.
             val jira = JiraClientFactory(settings)
@@ -56,7 +67,7 @@ class AppContext(
             }
 
             val ds = abrirBanco(settings)
-            return AppContext(settings, calendario, papeis, ds, jira)
+            return AppContext(settings, calendario, papeis, ds, jira, mapaDeStatus, clock)
         }
 
         /**

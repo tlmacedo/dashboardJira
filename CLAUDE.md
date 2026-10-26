@@ -11,6 +11,8 @@ Dashboard de gestão do time TG-Basic sobre tasks do Jira Data Center: fluxo, pr
 5. Idioma: conversar em pt-BR; comentários de código em pt-BR.
 6. **Docker sempre ativo.** O projeto depende de contêineres (PostgreSQL e testes com Testcontainers). Antes de testes, build ou qualquer trabalho que use banco, confira `docker info`; se estiver parado, **inicie em segundo plano** com `sh .claude/hooks/ensure-docker.sh` (abre o Docker Desktop, espera o daemon e sobe o `postgres` do `app/docker-compose.yml`). Hooks já fazem isso ao abrir a sessão e antes de `gradlew`/`docker`. Nunca trocar o banco real por H2 ou mock porque o Docker estava desligado: inicie-o ou relate.
 
+7. **Ao finalizar CADA branch, sempre, nesta ordem:** revisão (por tarefa e final), commit, `push`, PR; depois voltar para `main` e fazer `pull`, deixando tudo atualizado (o GitHub não pode ficar defasado). **Antes de qualquer `push`:** conferir que o histórico a publicar não tem dados pessoais (usernames reais, nomes), segredos nem informação interna da empresa, **lembrando que o repositório está PRIVADO (conferido em 25/10) mas o histórico já tem usernames reais, então não torná-lo público sem limpar o histórico**; havendo dúvida, parar e perguntar. Mesclar PR em `main` só quando o usuário mandar.
+
 ## Decisões de produto (resumo)
 
 - **Stack:** backend Kotlin (Ktor) + PostgreSQL; frontend React + TypeScript (Vite). O app Python em `legacy/` é referência e será substituído.

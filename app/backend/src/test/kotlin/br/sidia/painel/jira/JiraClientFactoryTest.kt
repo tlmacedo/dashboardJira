@@ -83,6 +83,17 @@ class JiraClientFactoryTest {
     }
 
     @Test
+    fun tokenCurtoDemaisFalhaSemEcoarOValor() {
+        for (t in listOf("a", "tk", "1234567")) {
+            val e = falhaDeConfiguracao(settings(tokenInstancia = t))
+            assertTrue("token-tamanho-minimo" in e.message!!, e.message)
+            assertFalse("'$t'" in e.message!! || "valor $t" in e.message!!, "eco do token")
+        }
+        // No mínimo (8) é aceito.
+        fabrica(settings(tokenInstancia = "12345678")).create("samsung")
+    }
+
+    @Test
     fun tokenComEspacoControleOuNaoAsciiFalha() {
         for (t in listOf("ab\ncd", "ab cd", "ab\tcd", "ab\r", " abc", "abc ", "açaí", "ab\u0000cd", "ab\u007Fcd")) {
             val e = falhaDeConfiguracao(settings(tokenInstancia = t))
