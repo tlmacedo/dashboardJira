@@ -157,7 +157,7 @@ Caso '-' (Mcp 'context7' 'get-library-docs') $false 'liberado: outro servidor MC
 Caso '-' (Web 'web_fetch' 'https://docs.cline.bot/') $false 'liberado: web_fetch fora do Jira'
 Caso '-' (Nav 'http://127.0.0.1:8080/') $false 'liberado: navegador no painel local'
 Caso '-' (Busca 'jira rest api search jql') $false 'liberado: web_search (busca genérica) mesmo citando jira'
-Caso '-' '{"preToolUse":{"toolName":"search_files","parameters":{"path":".","regex":"JIRA_"}}}' $false 'liberado: search_files'
+Caso '-' '{"preToolUse":{"toolName":"search_files","parameters":{"path":".","regex":"JIRA_"}}}' $true 'busca: search_files na raiz sem file_pattern (antes liberado)'
 Caso '-' (Ler 'app/.env.example') $false 'liberado: leitura do modelo .env.example'
 Caso '-' (Ler 'config/papeis.exemplo.yaml') $false 'liberado: leitura do modelo papeis.exemplo.yaml'
 Caso '-' (Cmd 'Get-Content config\equipes.exemplo.yaml') $false 'liberado: leitura do modelo no PowerShell'
@@ -248,7 +248,74 @@ Caso '-' (Esc 'write_to_file' '/x/app/.env') $true 'espelho guard arquivos: Edit
 Caso '-' (Esc 'write_to_file' '.env.example') $false 'espelho guard arquivos: Edit .env.example'
 Caso '-' (Esc 'write_to_file' 'config/equipes.yaml') $true 'espelho guard arquivos: Write equipes.yaml'
 
-# ---------- falha fechada ----------
+# ---------- 1) busca e listagem (search_files, list_files, list_code_definition_names) ----------
+function Sf([string]$p, [string]$r, [string]$g) {
+    $par = [ordered]@{ path = $p; regex = $r }
+    if ($g -ne '-') { $par['file_pattern'] = $g }
+    J ([ordered]@{ preToolUse = [ordered]@{ toolName = 'search_files'; parameters = $par } })
+}
+function Lst([string]$t, [string]$p) { J ([ordered]@{ preToolUse = [ordered]@{ toolName = $t; parameters = [ordered]@{ path = $p; recursive = 'true' } } }) }
+foreach ($f in @('-', 'true')) {
+    Caso $f (Sf '.' 'JIRA_' '.env') $true "busca: file_pattern '.env'"
+    Caso $f (Sf '.' 'TOKEN' '.env*') $true "busca: file_pattern '.env*'"
+    Caso $f (Sf 'src' '\.env' '*.kt') $true "busca: regex '\.env' (mesmo com pattern seguro)"
+    Caso $f (Sf 'app\config' 'id:' '*.yaml') $true "busca: file_pattern '*.yaml' em app\config"
+    Caso $f (Sf '.' 'TODO' '-') $true 'busca: search_files na raiz sem file_pattern'
+    Caso $f (Sf 'app/config' 'x' '-') $true 'busca: app/config sem file_pattern'
+    Caso $f (Sf '.' 'x' 'papeis.yaml') $true 'busca: file_pattern papeis.yaml exato'
+    Caso $f (Sf '.' 'x' '*') $true "busca: file_pattern '*'"
+    Caso $f (Sf '.' 'x' '*.{kt,yaml}') $true 'busca: grupo com extensão insegura'
+    Caso $f (Sf '.' 'x' '!*.kt') $true 'busca: negação no pattern'
+    Caso $f (Sf 'app\.ENV' 'x' '-') $true 'busca: path .ENV'
+    Caso $f (Sf '.' 'x' 'Filtros_Status_tool.txt') $true 'busca: arquivo de filtros'
+    Caso $f (Lst 'list_files' 'app\.env') $true 'listagem: list_files em .env'
+    Caso $f (Lst 'list_code_definition_names' 'config\Papeis.YAML') $true 'listagem: definições em Papeis.YAML'
+}
+Caso '-' (Sf 'app\backend\src' 'fun ' '*.kt') $false "não regressão: buscar em src com '*.kt'"
+Caso '-' (Sf '.' 'TODO:' '*.{kt,tsx,md}') $false "não regressão: grupo de extensões seguras (regex com ':')"
+Caso '-' (Sf 'app\config' 'id' '*.exemplo.yaml') $false 'não regressão: modelos .exemplo.yaml'
+Caso '-' (Sf '.' 'JIRA_' '.env.example') $false 'não regressão: buscar só no .env.example'
+Caso '-' (Sf 'docs\README.md' 'x' '-') $false 'não regressão: busca num arquivo .md sem pattern'
+Caso '-' (Lst 'list_files' '.') $false 'não regressão: list_files na raiz (só nomes)'
+Caso '-' (Lst 'list_code_definition_names' 'app\backend\src') $false 'não regressão: definições do código'
+Caso '-' (Ler 'reports\Filtros JQL para cards Jira.md') $false 'não regressão: relatório com Filtros no nome'
+
+# ---------- 2) e 3) maiúsculas e aliases do Windows (escrita, leitura e comandos) ----------
+foreach ($f in @('-', 'true')) {
+    Caso $f (Esc 'write_to_file' '.ENV') $true "escrita: '.ENV'"
+    Caso $f (Esc 'write_to_file' '.Env.') $true "escrita: '.Env.' (ponto final ignorado no Windows)"
+    Caso $f (Esc 'replace_in_file' 'Papeis.YAML') $true "escrita: 'Papeis.YAML'"
+    Caso $f (Esc 'write_to_file' 'app\config\EQUIPES.yaml ') $true 'escrita: EQUIPES.yaml com espaço final'
+    Caso $f (Esc 'write_to_file' '.env::$DATA') $true "escrita: '.env::`$DATA' (fluxo alternativo)"
+    Caso $f (Esc 'write_to_file' 'README.md:oculto') $true "escrita: ':' depois da unidade"
+    Caso $f (Esc 'write_to_file' '.env.') $true "escrita: '.env.'"
+    Caso $f (Esc 'write_to_file' 'app\ENV~1') $true "escrita: nome curto 'ENV~1'"
+    Caso $f (Esc 'write_to_file' '\\?\C:\x\.env') $true "escrita: prefixo '\\?\'"
+    Caso $f (Esc 'write_to_file' '\\.\C:\x\.env') $true "escrita: prefixo '\\.\'"
+    Caso $f (Esc 'write_to_file' 'app\x\..\..\.env') $true "escrita: '..' resolvido"
+    Caso $f (Ler '..\.env') $true "leitura: '..\.env'"
+    Caso $f (Ler 'C:/x\app/.ENV.local') $true 'leitura: barras mistas e maiúsculas'
+    Caso $f (Ler 'Filtros_Status_tool.txt.bak') $true 'leitura: arquivo de filtros'
+    Caso $f (Ler 'C:\x\.env::$DATA') $true 'leitura: fluxo alternativo'
+    Caso $f (Cmd 'cat .ENV') $true 'comando: cat .ENV'
+    Caso $f (Cmd 'echo x > Papeis.YAML') $true 'comando: redirecionar para Papeis.YAML'
+    Caso $f (Cmd 'type .env::$DATA') $true "comando: type .env::`$DATA"
+    Caso $f (Cmd 'type ENV~1') $true 'comando: type ENV~1'
+}
+Caso '-' (Esc 'write_to_file' '\\?\C:\x\README.md') $false "não regressão: prefixo '\\?\' em arquivo comum"
+Caso '-' (Esc 'write_to_file' 'C:\x\app\.env.example') $false 'não regressão: escrever .env.example com unidade'
+Caso '-' (Ler '.env.example') $false 'não regressão: ler .env.example'
+Caso '-' (Cmd 'git log HEAD~1') $false 'não regressão: HEAD~1 não é nome curto protegido'
+
+# ---------- 4) falha fechada ----------
+Caso '-' '{"tool_call":"x"}' $true 'falha fechada: tool_call em formato inesperado'
+Caso '-' '{"preToolUse":{"toolName":"read_file","parameters":7}}' $false 'falha fechada: parâmetros numéricos (sem caminho, nada a proteger)'
+Caso '-' '{"preToolUse":{"toolName":"search_files","parameters":"{nao json"}}' $true 'falha fechada: search_files com parâmetros ilegíveis'
+# comando grande (espelho do teste do bash, onde o SIGPIPE virava liberação)
+$grande = (@('x') * 150000) -join "`n"
+Caso '-' (Cmd ("cat .env`n" + $grande)) $true 'falha fechada: comando grande lendo .env'
+Caso 'true' (Cmd ('echo $JIRA_SAMSUNG_TOKEN' + "`n" + $grande)) $true 'falha fechada: token em comando grande'
+Caso '-' (Esc 'write_to_file' 'C:\Users\THIAGO~1\x\README.md') $false 'não regressão: pasta com nome curto 8.3 (TEMP do Windows)'
 Caso '-' 'isto não é json' $true 'falha fechada: entrada inválida'
 Caso '-' '' $true 'falha fechada: entrada vazia'
 Caso '-' '[1,2]' $true 'falha fechada: JSON que não é objeto'

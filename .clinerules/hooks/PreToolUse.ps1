@@ -26,7 +26,18 @@
 #     exibir token ou senha do Jira no terminal (Plano 4A, Decisão 10).
 # Valem SEMPRE, com qualquer valor da flag: escrever, versionar ou LER `.env` e `config/{equipes,ausencias,
 # papeis,squads}.yaml` (os modelos `.env.example`, `.env.sample` e `*.exemplo.yaml` ficam liberados),
-# `git add -f` e listar todas as variáveis de ambiente (expõe tokens).
+# `git add -f` e listar todas as variáveis de ambiente (expõe tokens). As configs reais e o
+# Filtros_Status_tool.txt* são protegidos pelo NOME, em qualquer pasta.
+#
+# Busca e listagem (search_files, list_files, list_code_definition_names e equivalentes da CLI): o caminho
+# passa por Caminho-Protegido; a busca de conteúdo só é liberada com escopo seguro (Padrao-Seguro), porque
+# o resultado traz linhas dos arquivos (.env e configs reais iriam para o modelo). Regra em hooks.md.
+#
+# Normalização de caminhos (ler, escrever e buscar), só com operações de texto (o pwsh no macOS/Linux não
+# trata `\` como separador em [IO.Path]): minúsculas, `\` -> `/`, sem prefixo de dispositivo (\\?\, \\.\,
+# \??\), sem letra de unidade, qualquer `:` restante bloqueia (fluxo alternativo `.env::$DATA`), `..`
+# resolvido, pontos e espaços do fim de cada segmento removidos (`.env.` = `.env`) e segmento com nome
+# curto 8.3 (`ENV~1`) bloqueia.
 #
 # Limite honesto (igual ao guard.sh): trava contra acidente do assistente, não contra má-fé.
 # Falha fechada: JSON ilegível ou qualquer erro interno cancela a ferramenta.
@@ -104,8 +115,15 @@ $PADRAO_EXIBIR = '(^|[^A-Za-z0-9_-])(echo|printf|printenv|env|set|declare|typese
 # listar todo o ambiente mostra os tokens: barrado com qualquer valor da flag
 $PADRAO_LISTAR_AMBIENTE = '(^\s*|[;&|(]\s*|cmd(\.exe)?\s+/c\s+)(env|printenv|set|export\s+-p|declare\s+-[px]|compgen\s+-v)\s*($|[;&|>)])|\b(get-childitem|gci|dir|ls|get-item|gi)\s+(-path\s+)?env:[\\/]?\*?\s*($|[;&|>)])|\[(system\.)?environment\]::getenvironmentvariables'
 
-# caminhos protegidos (com ou sem barra inicial, barra normal ou invertida)
-$PADRAO_PROTEGIDOS = '(^|[\s"''=/\\:])(\.env(\.[A-Za-z0-9_-]+)?|config[/\\](equipes|ausencias|papeis|squads)\.yaml)([\s"'';|&)]|$)'
+# protegidos em comandos (igual ao PreToolUse do bash): .env e .env.*, as configs reais em qualquer pasta,
+# o arquivo de filtros e os nomes curtos 8.3 deles (ENV~1, PAPEIS~1.YAM...; prefixos específicos para não
+# pegar HEAD~1). Terminadores incluem ':' (.env::$DATA) e '.' (.env. = .env no Windows).
+$PADRAO_PROTEGIDOS = '(^|[\s"''=/\\:])(\.env(\.[A-Za-z0-9_-]+)?|(equipes|ausencias|papeis|squads)\.ya?ml|(env|equipe|ausenc|papeis|squads|filtro)[A-Za-z0-9_]{0,6}~[0-9]+[^\s"'';|&)]*)([\s"'';|&):.]|$)|filtros_status_tool\.txt'
+# extensões seguras para buscas de conteúdo (ver Padrao-Seguro e hooks.md)
+$PADRAO_EXT_SEGURA = '\.(kt|kts|java|gradle|ts|tsx|js|jsx|mjs|cjs|json|css|scss|html|md|sql|py|sh|ps1|xml|svg|toml|exemplo\.ya?ml|demo\.ya?ml|example|sample)$'
+# nome protegido citado num texto qualquer (regex de busca); modelos .env.example/.env.sample retirados antes
+$PADRAO_NOME_PROTEGIDO = '(^|[^a-z0-9_])\.env(\.[a-z0-9_*-]+)?([^a-z0-9_]|$)|(equipes|ausencias|papeis|squads)\.ya?ml|filtros_status_tool'
+$MSG_BUSCA = "Forma permitida (documentada em docs/ferramentas-claude-para-o-cline/hooks.md, não é contorno): refazer a busca com file_pattern restrito a extensões seguras (ex.: '*.kt', '*.tsx', '*.md', '*.exemplo.yaml') ou a um nome de arquivo exato não protegido. Qualquer outra busca: pergunte ao usuário, só ele autoriza (rodando a busca fora do Cline)."
 $PADRAO_MODELOS = '(^|[\s"''=/\\])\.env\.(example|sample)([\s"'';|&)]|$)'
 $PADRAO_ESCRITA = '(>|>>|tee\s|sed\s+(-[a-z]*i|--in-place)|(^|[\s;&|(])(cp|mv|rm|ln|truncate|dd|install|chmod|set-content|sc|add-content|ac|out-file|copy-item|copy|cpi|move-item|move|mi|remove-item|del|erase|ri|rd|rmdir|new-item|ni|rename-item|ren|rni|clear-content|clc|tee-object|xcopy|robocopy|icacls|attrib)\s|git\s+(add|commit|stash|checkout|restore|rm|mv))'
 # leitura (extra do Cline: o texto lido iria para o modelo de linguagem)
@@ -154,16 +172,124 @@ function Regra-Ambiente([string]$cmd) {
 }
 
 function Caminho-Protegido([string]$caminho) {
+    # devolve o motivo (texto) se o caminho for protegido, ou $null se liberado. Ler, escrever e buscar.
     if ([string]::IsNullOrWhiteSpace($caminho)) { return $null }
-    $norm = $caminho.Trim() -replace '\\', '/'
-    $base = ($norm -split '/')[-1]
-    if ((Casa $base '^\.env(\..*)?$') -and -not (@('.env.example', '.env.sample') -contains $base.ToLowerInvariant())) {
-        return "arquivo de ambiente ($base): contém segredos."
+    if ($caminho -match "[`r`n]") { return 'caminho com quebra de linha.' }
+    # minúsculas, barras normais, sem prefixo de dispositivo (\\?\UNC\, \\?\, \\.\, \??\) e sem letra de unidade
+    $n = $caminho.ToLowerInvariant().Replace('\', '/')
+    $n = [regex]::Replace($n, '^//[?.]/unc/', '//')
+    $n = [regex]::Replace($n, '^(//[?.]/|/[?][?]/)', '')
+    $n = [regex]::Replace($n, '^[a-z]:', '')
+    # ':' depois da unidade: fluxo alternativo do NTFS (.env::$DATA) ou caminho de dispositivo
+    if ($n.Contains(':')) { return "caminho com ':' (fluxo alternativo do NTFS, como .env::`$DATA, ou dispositivo): $caminho." }
+    $partes = New-Object System.Collections.ArrayList
+    foreach ($seg in $n.Split('/')) {
+        # espaços nas pontas; '.' e vazio somem; '..' volta um nível
+        $s = $seg.Trim()
+        if ($s -eq '' -or $s -eq '.') { continue }
+        if ($s -eq '..') {
+            if ($partes.Count -gt 0) { $partes.RemoveAt($partes.Count - 1) }
+            continue
+        }
+        # o Windows ignora pontos e espaços no fim do nome (.env. e ".env " = .env)
+        $s = $s.TrimEnd([char[]]@('.', ' ', "`t"))
+        if ($s -eq '') { continue }
+        [void]$partes.Add($s)
     }
-    if (Casa $norm '(^|/)config/(equipes|ausencias|papeis|squads)\.yaml$') {
+    if ($partes.Count -eq 0) { return $null }
+    $base = [string]$partes[$partes.Count - 1]
+    # nome curto 8.3 só importa no último segmento (a proteção é pelo nome do arquivo; pastas como
+    # C:\Users\THIAGO~1\... continuam liberadas)
+    if ($base -match '~[0-9]') { return "nome curto 8.3 ($base) pode apontar para .env ou config real." }
+    if (@('.env.example', '.env.sample') -contains $base) { return $null }
+    if ($base -match '^\.env(\..*)?$') { return "arquivo de ambiente ($base): contém segredos." }
+    if ($base -match '^(equipes|ausencias|papeis|squads)\.ya?ml$') {
         return "config com dados pessoais reais ($base). Use só os modelos .exemplo/.demo."
     }
+    if ($base -match '^filtros_status_tool\.txt') { return "arquivo de filtros do Jira ($base)." }
     return $null
+}
+
+function Nome-Protegido([string]$texto) {
+    # texto (regex de busca) que cita nome protegido
+    if ([string]::IsNullOrEmpty($texto)) { return $false }
+    $t = $texto.ToLowerInvariant().Replace('\', '')
+    $t = [regex]::Replace($t, '\.env\.(example|sample)', '')
+    return [regex]::IsMatch($t, $PADRAO_NOME_PROTEGIDO)
+}
+
+function Padrao-Seguro([string]$padrao) {
+    # file_pattern de busca seguro? Aceita: nome exato não protegido, ou glob terminado numa extensão
+    # segura ($PADRAO_EXT_SEGURA), com no máximo um grupo {a,b}. Negação (!), ':' e o resto: inseguros.
+    $p = $padrao.Replace('\', '/').ToLowerInvariant()
+    if ($p -eq '' -or $p.StartsWith('!') -or $p.Contains(':')) { return $false }
+    $alts = New-Object System.Collections.ArrayList
+    if ($p -match '[{}]') {
+        $i = $p.IndexOf('{')
+        $j = $p.IndexOf('}')
+        if ($i -lt 0 -or $j -lt $i) { return $false }
+        $pre = $p.Substring(0, $i)
+        $meio = $p.Substring($i + 1, $j - $i - 1)
+        $pos = $p.Substring($j + 1)
+        # um único grupo, sem aninhamento
+        if (($pre + $meio + $pos) -match '[{}]') { return $false }
+        foreach ($a in $meio.Split(',')) { [void]$alts.Add($pre + $a + $pos) }
+    }
+    else { [void]$alts.Add($p) }
+    if ($alts.Count -eq 0) { return $false }
+    foreach ($alt in $alts) {
+        $base = ($alt -split '/')[-1]
+        if ([string]::IsNullOrEmpty($base)) { return $false }
+        if ($base -match '[*?\[\]]') {
+            # glob: precisa terminar numa extensão segura e não citar nome protegido (.env*.md...)
+            if (-not [regex]::IsMatch($base, $PADRAO_EXT_SEGURA)) { return $false }
+            if (Nome-Protegido $base) { return $false }
+        }
+        elseif (Caminho-Protegido $alt) { return $false }
+    }
+    return $true
+}
+
+function Primeiro-Texto($obj, [string[]]$campos) {
+    foreach ($c in $campos) {
+        $v = Ler-Prop $obj $c
+        if ($v -is [string] -and $v -ne '') { return $v }
+    }
+    return ''
+}
+
+function Checar-Busca([string]$ferramenta, $parametros) {
+    # busca de conteúdo (search_files e equivalentes): devolve o motivo do bloqueio ou $null se liberada
+    $caminho = ''
+    $padrao = ''
+    $regex = ''
+    if ($parametros -is [System.Management.Automation.PSCustomObject]) {
+        $caminho = Primeiro-Texto $parametros @('path', 'directory', 'cwd')
+        $padrao = Primeiro-Texto $parametros @('file_pattern', 'filePattern', 'glob', 'include')
+        $textos = New-Object System.Collections.ArrayList
+        foreach ($c in @('regex', 'query', 'pattern', 'queries')) { Coletar-Textos (Ler-Prop $parametros $c) $textos 0 }
+        $regex = $textos -join ' '
+    }
+    elseif ($parametros -is [string]) { $regex = $parametros }
+    if ($caminho -ne '') {
+        $m = Caminho-Protegido $caminho
+        if ($m) { return "$ferramenta em caminho protegido ($caminho): $m" }
+    }
+    if ($regex -ne '' -and (Nome-Protegido $regex)) {
+        return "$ferramenta com regex que cita .env, config real ou Filtros_Status_tool.txt (o resultado mostraria esses arquivos). Pergunte ao usuário."
+    }
+    if ($padrao -ne '') {
+        if (Padrao-Seguro $padrao) { return $null }
+        return "$ferramenta com file_pattern '$padrao', que pode incluir .env ou configs reais (papeis/equipes/ausencias/squads.yaml, Filtros_Status_tool.txt). $MSG_BUSCA"
+    }
+    # sem file_pattern: só um arquivo único com extensão segura
+    if ($caminho -ne '') {
+        $base = ($caminho.Replace('\', '/') -split '/')[-1].ToLowerInvariant()
+        if ([regex]::IsMatch($base, $PADRAO_EXT_SEGURA) -and -not (Nome-Protegido $base)) { return $null }
+    }
+    $onde = $caminho
+    if ($onde -eq '') { $onde = '.' }
+    return "$ferramenta sem file_pattern em '$onde': a busca abrangeria .env e configs reais e mostraria o conteúdo ao modelo. $MSG_BUSCA"
 }
 
 function Regra-Arquivos([string]$cmd) {
@@ -200,6 +326,7 @@ try {
     $pre = Ler-Prop $entrada 'preToolUse'
     $ferramenta = [string](Ler-Prop $chamada 'name')
     if ([string]::IsNullOrEmpty($ferramenta)) { $ferramenta = [string](Ler-Prop $pre 'toolName') }
+    if ([string]::IsNullOrEmpty($ferramenta)) { Bloquear 'BLOQUEADO: entrada sem nome de ferramenta reconhecível (falha fechada).' }
     $parametros = Ler-Prop $chamada 'input'
     if ($null -eq $parametros) { $parametros = Ler-Prop $pre 'parameters' }
     $parametros = Desfazer-Json $parametros
@@ -278,13 +405,37 @@ try {
             }
             Liberar
         }
-        '^(read_file|write_to_file|replace_in_file|editor|new_rule)$' {
-            foreach ($campo in @('path', 'file_path', 'filePath')) {
-                $m = Caminho-Protegido ([string](Ler-Prop $parametros $campo))
+        '^(read_file|read_many_files|write_to_file|replace_in_file|editor|new_rule)$' {
+            $lidos = New-Object System.Collections.ArrayList
+            if ($parametros -is [string]) { [void]$lidos.Add($parametros) }
+            else {
+                foreach ($campo in @('path', 'file_path', 'filePath', 'paths')) { Coletar-Textos (Ler-Prop $parametros $campo) $lidos 0 }
+            }
+            foreach ($p in $lidos) {
+                $m = Caminho-Protegido ([string]$p)
                 if ($m) {
-                    if ($ferramenta -eq 'read_file') { Bloquear "BLOQUEADO: leitura de $m" }
-                    Bloquear "BLOQUEADO: edição de $m"
+                    if ($ferramenta -match '^read_') { Bloquear "BLOQUEADO: leitura de arquivo protegido ($p): $m" }
+                    Bloquear "BLOQUEADO: escrita em arquivo protegido ($p): $m"
                 }
+            }
+            Liberar
+        }
+        '^(search_files|grep|grep_search|codebase_search|search_codebase)$' {
+            # busca de conteúdo: o resultado traz linhas dos arquivos (regra em hooks.md)
+            $m = Checar-Busca $ferramenta $parametros
+            if ($m) { Bloquear "BLOQUEADO: $m" }
+            Liberar
+        }
+        '^(list_files|list_code_definition_names|glob|list_dir|list_directory)$' {
+            # listagem: só nomes (list_code_definition_names só lê código-fonte); o caminho não pode ser protegido
+            $alvos = New-Object System.Collections.ArrayList
+            if ($parametros -is [string]) { [void]$alvos.Add($parametros) }
+            else {
+                foreach ($campo in @('path', 'directory', 'cwd', 'pattern', 'glob')) { Coletar-Textos (Ler-Prop $parametros $campo) $alvos 0 }
+            }
+            foreach ($p in $alvos) {
+                $m = Caminho-Protegido ([string]$p)
+                if ($m) { Bloquear "BLOQUEADO: $ferramenta em caminho protegido ($p): $m" }
             }
             Liberar
         }
@@ -301,13 +452,13 @@ try {
                 $mm = [regex]::Match($linha, '^\*\*\* (Add File|Update File|Delete File|Move to): (.+)$')
                 if ($mm.Success) {
                     $m = Caminho-Protegido $mm.Groups[2].Value
-                    if ($m) { Bloquear "BLOQUEADO: edição de $m" }
+                    if ($m) { Bloquear "BLOQUEADO: escrita em arquivo protegido ($($mm.Groups[2].Value)): $m" }
                 }
             }
             Liberar
         }
         default {
-            # busca (search_files, web_search), listagem e demais ferramentas: liberadas
+            # web_search e demais ferramentas: liberadas
             Liberar
         }
     }
