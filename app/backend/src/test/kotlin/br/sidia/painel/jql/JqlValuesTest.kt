@@ -220,4 +220,22 @@ class JqlValuesTest {
         val e = assertFailsWith<InvalidJqlValueException> { JqlValues.username("A".repeat(100_000)) }
         assertEquals("Valor inválido para username: ".length + 80, e.message!!.length)
     }
+
+    @Test
+    fun dataHoraNoFusoDoServidor() {
+        val instante = java.time.Instant.parse("2026-10-30T12:05:59Z")
+        assertEquals("2026-10-30 08:05", JqlValues.jqlDateTime(instante, java.time.ZoneId.of("America/Manaus")))
+        assertEquals("2026-10-30 12:05", JqlValues.jqlDateTime(instante, java.time.ZoneOffset.UTC))
+    }
+
+    @Test
+    fun chaveDeIssueAceitaSoOFormatoDoJira() {
+        assertEquals("TG-1", JqlValues.issueKey("TG-1"))
+        assertEquals("TG_BASIC2-123456789", JqlValues.issueKey("TG_BASIC2-123456789"))
+        listOf("tg-1", "TG-0", "TG-01", "TG-", "-1", "TG-1) or (1=1", "TG-1234567890", "1TG-1", "TG--1", "A-B-1", "", "TG-1\n")
+            .forEach { assertFailsWith<InvalidJqlValueException>(it) { JqlValues.issueKey(it) } }
+        // projeto com mais de 20 caracteres é recusado; com 20 passa
+        assertFailsWith<InvalidJqlValueException> { JqlValues.issueKey("A".repeat(21) + "-1") }
+        assertEquals("A".repeat(20) + "-1", JqlValues.issueKey("A".repeat(20) + "-1"))
+    }
 }

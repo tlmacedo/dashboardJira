@@ -86,6 +86,78 @@ class CardQueryFactoryTest {
         )
     }
 
+    private val fichaSync get() = CardSpecs.fromYaml(TestPaths.configDir.resolve("cards/sincronizacao.card.yaml"), dict)
+    private val desde = AtualizadoDesde(java.time.Instant.parse("2026-10-30T12:05:59Z"), java.time.ZoneId.of("America/Manaus"))
+    private val jqlSync = "project in (\"TG-Basic\") AND issuetype in (\"Checklist\", \"Checklist TG\", " +
+        "\"Checklist Review\", \"Feature check\", \"TG Feature check\", \"Task\") AND updated >= \"2026-10-30 08:05\""
+
+    @Test
+    fun fichaSincronizacaoGeraJqlEsperado() {
+        val q = fabrica.build(fichaSync, mapOf("desde" to desde))
+        assertEquals("$jqlSync ORDER BY updated ASC, key ASC", q.jql)
+        assertTrue(q.expandChangelog)
+        assertEquals("samsung", q.instance)
+        // sem filtrosExcluidos: canceladas entram
+        assertTrue("not in" !in q.jql)
+    }
+
+    @Test
+    fun fichaSincronizacaoPedeCustomfieldQuandoHaId() {
+        val d = FieldDictionary(
+            listOf(
+                FieldDef("project", FieldType.SELECT, "samsung", "x"),
+                FieldDef(
+                    "issuetype", FieldType.SELECT, "samsung", "x",
+                    listOf("Checklist", "Checklist TG", "Checklist Review", "Feature check", "TG Feature check", "Task"),
+                ),
+                FieldDef("updated", FieldType.DATE, "samsung", "x"),
+                FieldDef("key", FieldType.TEXT, "samsung", "x"),
+                FieldDef("OS Version", FieldType.SELECT, "samsung", "x", customId = "cf[12416]"),
+                FieldDef("SKU Type", FieldType.SELECT, "samsung", "x"),
+                FieldDef("Checklist Type", FieldType.SELECT, "samsung", "x"),
+            ),
+        )
+        val s = CardSpecs.fromYaml(TestPaths.configDir.resolve("cards/sincronizacao.card.yaml"), d)
+        val fields = CardQueryFactory(d).build(s, mapOf("desde" to desde)).fields
+        assertTrue("customfield_12416" in fields && "OS Version" !in fields, fields.toString())
+    }
+
+    @Test
+    fun fichaComChavesAcrescentaKeyIn() {
+        val q = fabrica.build(fichaSync, mapOf("desde" to desde, "chaves" to listOf("TG-1", "TG-20")))
+        assertEquals("$jqlSync AND key in (\"TG-1\", \"TG-20\") ORDER BY updated ASC, key ASC", q.jql)
+    }
+
+    @Test
+    fun parametrosDaSincronizacaoRejeitamValorRuim() {
+        assertFailsWith<IllegalArgumentException> { fabrica.build(fichaSync, mapOf("desde" to "2026-10-30")) }
+        assertFailsWith<IllegalArgumentException> { fabrica.build(fichaSync, emptyMap()) }
+        assertFailsWith<InvalidJqlValueException> {
+            fabrica.build(fichaSync, mapOf("desde" to desde, "chaves" to listOf("TG-1) or (1=1")))
+        }
+        assertFailsWith<IllegalArgumentException> { fabrica.build(fichaSync, mapOf("desde" to desde, "chaves" to "TG-1")) }
+    }
+
+    @Test
+    fun buildLeveSoPedeKeyEUpdated() {
+        val q = fabrica.buildLeve(fichaSync, mapOf("desde" to desde))
+        assertEquals("$jqlSync ORDER BY updated ASC, key ASC", q.jql)
+        assertEquals(listOf("key", "updated"), q.fields)
+        assertEquals(false, q.expandChangelog)
+    }
+
+    @Test
+    fun ordenarPorAtualizacaoExigeUpdatedEKeyNoDicionario() {
+        val semKey = FieldDictionary(
+            listOf(
+                FieldDef("project", FieldType.SELECT, "samsung", "x"),
+                FieldDef("updated", FieldType.DATE, "samsung", "x"),
+            ),
+        )
+        val f = fichaTemp(campos = "[]", extra = "ordenarPorAtualizacao: true\n")
+        assertFailsWith<UnknownFieldException> { CardSpecs.fromYaml(f, semKey) }
+    }
+
     @Test
     fun periodoAceitaLocalDateEPar() {
         val a = fabrica.build(spec, mapOf("squad" to squad, "periodo" to Periodo(LocalDate.of(2026, 7, 26), LocalDate.of(2026, 10, 24))))

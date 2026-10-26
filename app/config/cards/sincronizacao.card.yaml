@@ -1,0 +1,44 @@
+# Ficha da sincronização periódica (não é um card de tela): define QUAIS issues o painel espelha do Jira.
+# Estrita: chave desconhecida falha ao carregar. Todo campo citado precisa existir no dicionário (jira_campos).
+
+id: sincronizacao
+titulo: Sincronização de issues
+
+instancia: samsung
+
+# Campos do dicionário lidos além dos mínimos (summary, issuetype, status, assignee, reporter, created,
+# updated, resolutiondate, duedate, labels, parent, project, sempre pedidos).
+campos:
+  - OS Version
+  - SKU Type
+  - Checklist Type
+
+# Tipos espelhados. Epic fica de fora (decisão do usuário em 25/10).
+filtrosFixos:
+  project: ["TG-Basic"]
+  issuetype: ["Checklist", "Checklist TG", "Checklist Review", "Feature check", "TG Feature check", "Task"]
+
+# SEM filtrosExcluidos de propósito: as canceladas também entram, porque a auditoria precisa delas.
+
+parametros:
+  - nome: desde       # instante de corte (fuso do servidor do Jira) -> updated >= "aaaa-MM-dd HH:mm"
+    tipo: atualizadoDesde
+  - nome: chaves      # opcional: lista de chaves (TG-123) para buscar só essas issues -> key in (...)
+    tipo: chaves
+    obrigatorio: false
+
+formula: >-
+  Traz as issues do TG-Basic atualizadas desde o corte, em ordem de atualização e chave
+  (updated ASC, key ASC), com o changelog, para a sincronização incremental.
+
+exemplo: >-
+  desde=2026-10-30 08:05 (fuso do servidor), chaves não informado.
+
+aceite:
+  - Só entram issues do projeto TG-Basic dos tipos Checklist, Checklist TG, Checklist Review, Feature check, TG Feature check e Task.
+  - Epics ficam de fora.
+  - Issues canceladas entram (a auditoria precisa delas).
+  - A ordem é updated crescente e, no empate, key crescente.
+
+expandChangelog: true
+ordenarPorAtualizacao: true

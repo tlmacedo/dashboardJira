@@ -20,7 +20,9 @@ fun testContextComBanco(
     container: PostgreSQLContainer,
     roles: RoleDirectory = RoleDirectory.fromYaml(TestPaths.configDir.resolve("papeis.exemplo.yaml")),
     clock: Clock = Clock.system(settings.zone),
+    jira: JiraClientFactory = JiraClientFactory(settings),
 ): AppContext {
+    val campos = camposDeTeste()
     val ds = Database.connect(container.jdbcUrl, container.username, container.password, poolSize = 4)
     ds.connection.use { it.createStatement().execute("DROP SCHEMA public CASCADE; CREATE SCHEMA public;") }
     Database.migrate(ds)
@@ -29,8 +31,10 @@ fun testContextComBanco(
         calendar = BusinessCalendar.fromYaml(TestPaths.configDir.resolve("calendario.exemplo.yaml"), settings.zone),
         roles = roles,
         dataSource = ds,
-        jira = JiraClientFactory(settings),
+        jira = jira,
         statusMap = StatusMap.fromYaml(TestPaths.configDir.resolve("status_map.exemplo.yaml")),
+        campos = campos,
+        fichas = fichasDeTeste(campos),
         clock = clock,
     )
 }

@@ -134,6 +134,41 @@ class JiraClientRobustezTest {
     }
 
     @Test
+    fun tetoDeItensEhJiraException() = runBlocking {
+        val e = assertFailsWith<TetoDeItensExcedidoException> { cliente(jiraComTotal(500)).searchAll(req, maxItens = 100).toList() }
+        assertTrue(e is JiraException)
+        assertEquals(100, e.limite)
+        assertEquals(500, e.total)
+    }
+
+    @Test
+    fun orcamentoBarraAQuartaRequisicao() = runBlocking {
+        var chamadas = 0
+        val engine = MockEngine { chamadas++; respond("{}", HttpStatusCode.ServiceUnavailable, json) }
+        val orcamento = OrcamentoDeRequisicoes(3)
+        // 5 retentativas permitidas, mas o orçamento corta na quarta tentativa (inclusive retry conta).
+        val c = cliente(engine, r = retry(5))
+        assertFailsWith<OrcamentoEsgotadoException> { kotlinx.coroutines.withContext(orcamento) { c.search(req) } }
+        assertEquals(3, chamadas)
+        assertEquals(3, orcamento.usadas)
+    }
+
+    @Test
+    fun semOrcamentoNoContextoNadaMuda() = runBlocking {
+        val engine = jiraComTotal(5)
+        assertEquals(5, cliente(engine).count("x"))
+    }
+
+    @Test
+    fun orcamentoContaUmaPorRequisicaoBemSucedida() = runBlocking {
+        val engine = jiraComTotal(5)
+        val orcamento = OrcamentoDeRequisicoes(10)
+        val c = cliente(engine)
+        kotlinx.coroutines.withContext(orcamento) { c.count("x"); c.count("y") }
+        assertEquals(2, orcamento.usadas)
+    }
+
+    @Test
     fun maxItensNaoEcoaOJql() = runBlocking {
         val q = SearchRequest("assignee = segredo.da.silva", listOf("key"))
         val e = assertFailsWith<JiraException> { cliente(jiraComTotal(500)).searchAll(q, maxItens = 100).toList() }

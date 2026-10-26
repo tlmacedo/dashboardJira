@@ -85,6 +85,63 @@ class AppContextTest {
         Files.writeString(pasta.resolve("calendario.yaml"), calendarioTeste)
         Files.writeString(pasta.resolve("papeis.yaml"), papeisTeste)
         escreverMapaDeStatus()
+        Files.copy(TestPaths.configDir.resolve("jira_campos.exemplo.yaml"), pasta.resolve("jira_campos.yaml"))
+        copiarFichas()
+    }
+
+    /** Copia as fichas versionadas (arquivos `.card.yaml` da pasta cards) para a pasta de configuração do teste. */
+    private fun copiarFichas() {
+        val destino = Files.createDirectories(pasta.resolve("cards"))
+        Files.list(TestPaths.configDir.resolve("cards")).use { fichas ->
+            fichas.forEach { Files.copy(it, destino.resolve(it.fileName.toString())) }
+        }
+    }
+
+    @Test
+    fun appContextCarregaDicionarioEFichas() {
+        // dev sem arquivos reais: modelos de exemplo; as fichas versionadas vêm de cards/
+        listOf("papeis", "calendario", "status_map", "jira_campos").forEach {
+            Files.copy(TestPaths.configDir.resolve("$it.exemplo.yaml"), pasta.resolve("$it.exemplo.yaml"))
+        }
+        copiarFichas()
+        val s = Settings(
+            dashboardDevMode = true,
+            configDir = pasta,
+            databaseUrl = pg.jdbcUrl,
+            databaseUser = pg.username,
+            databasePassword = pg.password,
+        )
+        AppContext.load(s).use { ctx ->
+            assertTrue(ctx.fichas.keys.containsAll(listOf("tempo-em-status", "sincronizacao")), ctx.fichas.keys.toString())
+            assertEquals("samsung", ctx.fichas.getValue("sincronizacao").instancia)
+            assertTrue(ctx.campos.forInstance("samsung").has("key"))
+        }
+        assertTrue(avisos().any { "jira_campos.exemplo.yaml" in it }, avisos().toString())
+    }
+
+    @Test
+    fun producaoComFlagLigadaExigeDicionarioReal() {
+        escreverArquivosReais()
+        Files.delete(pasta.resolve("jira_campos.yaml"))
+        // o modelo existe, mas com o Jira ligado em produção só o arquivo real vale
+        Files.copy(TestPaths.configDir.resolve("jira_campos.exemplo.yaml"), pasta.resolve("jira_campos.exemplo.yaml"))
+        val s = producao(senha = pg.password).copy(
+            jiraLiveEnabled = true,
+            jiraInstances = mapOf(
+                "samsung" to JiraInstanceSettings("https://jira.exemplo.invalid/", JiraAuthKind.BEARER, null, "tk-12345"),
+            ),
+        )
+        val e = assertFailsWith<IllegalStateException> { AppContext.load(s) }
+        assertTrue(pasta.resolve("jira_campos.yaml").toString() in e.message.orEmpty(), e.message)
+    }
+
+    @Test
+    fun fichaInvalidaFalhaNaSubidaSemVazarConteudo() {
+        escreverArquivosReais()
+        Files.writeString(pasta.resolve("cards/quebrada.card.yaml"), "id: q\nchaveInventada: segredo-xyz\n")
+        val e = assertFailsWith<IllegalStateException> { AppContext.load(producao(senha = pg.password)) }
+        assertTrue("quebrada.card.yaml" in e.message.orEmpty(), e.message)
+        assertFalse("segredo-xyz" in e.stackTraceToString())
     }
 
     private fun escreverMapaDeStatus() {
@@ -121,6 +178,8 @@ class AppContextTest {
         Files.copy(TestPaths.configDir.resolve("papeis.exemplo.yaml"), pasta.resolve("papeis.exemplo.yaml"))
         Files.copy(TestPaths.configDir.resolve("calendario.exemplo.yaml"), pasta.resolve("calendario.exemplo.yaml"))
         Files.copy(TestPaths.configDir.resolve("status_map.exemplo.yaml"), pasta.resolve("status_map.exemplo.yaml"))
+        Files.copy(TestPaths.configDir.resolve("jira_campos.exemplo.yaml"), pasta.resolve("jira_campos.exemplo.yaml"))
+        copiarFichas()
         val s = Settings(
             dashboardDevMode = true,
             configDir = pasta,

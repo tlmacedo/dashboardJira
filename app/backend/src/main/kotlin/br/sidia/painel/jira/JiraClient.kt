@@ -220,11 +220,7 @@ class JiraClient internal constructor(
             while (true) {
                 val pagina = search(req.copy(startAt = inicio, maxResults = pageSize))
                 if (pagina.total > maxItens || emitidos + pagina.issues.size > maxItens) {
-                    throw JiraException(
-                        0,
-                        "Busca excedeu o limite de $maxItens itens (total informado: ${pagina.total}); refine o filtro",
-                        null,
-                    )
+                    throw TetoDeItensExcedidoException(maxItens, pagina.total)
                 }
                 pagina.issues.forEach { emit(it) }
                 emitidos += pagina.issues.size
@@ -340,6 +336,8 @@ class JiraClient internal constructor(
         var tentativa = 0
         while (true) {
             guard.check()
+            // Orçamento do trecho (se houver): conta cada tentativa, inclusive as do retry.
+            currentCoroutineContext()[OrcamentoDeRequisicoes]?.consumir()
             val resposta = try {
                 chamada()
             } catch (e: Exception) {

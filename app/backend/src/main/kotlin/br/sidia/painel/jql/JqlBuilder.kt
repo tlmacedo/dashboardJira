@@ -1,5 +1,8 @@
 package br.sidia.painel.jql
 
+import java.time.Instant
+import java.time.ZoneId
+
 /**
  * Construtor de JQL: a ÚNICA forma de gerar texto JQL no projeto.
  *
@@ -48,6 +51,31 @@ class JqlBuilder(dict: FieldDictionary, instance: String) {
     /** `campo < "aaaa-mm-dd"` (exclusivo). Só em campo do tipo DATE. */
     fun dateBefore(field: String, isoDate: String): JqlBuilder = data(field, isoDate, "<", "dateBefore")
 
+    /**
+     * `campo >= "aaaa-MM-dd HH:mm"` no [zone] (fuso do servidor do Jira), minuto truncado para baixo.
+     * Só em campo do tipo DATE.
+     */
+    fun dateTimeAtLeast(field: String, at: Instant, zone: ZoneId): JqlBuilder {
+        val def = dict.get(field)
+        exigirTipo(def, "dateTimeAtLeast", FieldType.DATE)
+        clausulas += "${JqlValues.quotedField(def.name)} >= \"${JqlValues.jqlDateTime(at, zone)}\""
+        return this
+    }
+
+    /**
+     * `key in ("TG-1", "TG-20")`: de 1 a [MAX_CHAVES] chaves de issue validadas (valor suspeito é
+     * rejeitado, nunca escapado). Exige o campo `key` (tipo TEXT) no dicionário.
+     */
+    fun keysIn(keys: List<String>): JqlBuilder {
+        val def = dict.get("key")
+        exigirTipo(def, "keysIn", FieldType.TEXT)
+        exigirNaoVazia(def, keys)
+        require(keys.size <= MAX_CHAVES) { "keysIn aceita no máximo $MAX_CHAVES chaves (recebeu ${keys.size})" }
+        val itens = keys.joinToString(", ") { "\"${JqlValues.issueKey(it)}\"" }
+        clausulas += "${JqlValues.quotedField(def.name)} in ($itens)"
+        return this
+    }
+
     /** `campo >= startOfDay(-N)`. Só em campo do tipo DATE. */
     fun relativeDaysAtLeast(field: String, days: Int): JqlBuilder {
         val def = dict.get(field)
@@ -82,6 +110,11 @@ class JqlBuilder(dict: FieldDictionary, instance: String) {
     }
 
     // --- internos ---
+
+    private companion object {
+        /** Máximo de chaves numa cláusula `key in (...)`. */
+        const val MAX_CHAVES = 100
+    }
 
     private fun lista(field: String, values: List<String>, operador: String): JqlBuilder {
         val def = campoDeValores(field, if (operador == "in") "inList" else "notInList")
