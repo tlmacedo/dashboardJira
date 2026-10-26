@@ -29,8 +29,8 @@ Testes: `sh .claude/hooks/test-guard.sh`. O Plano 4A, Tarefa 11, ainda vai torna
 
 | Claude | Cline | Situação |
 |---|---|---|
-| `guard.sh jira` + `guard.sh arquivos` (macOS/Linux) | `.clinerules/hooks/PreToolUse` (bash, executável): adaptador que chama o `guard.sh` e acrescenta os extras do Cline | **Testado no macOS** (`sh .clinerules/hooks/test-PreToolUse.sh`, 94 casos, 0 falhas em 25/10/2026) |
-| `guard.sh` (Windows) | `.clinerules/hooks/PreToolUse.ps1`: as regras do `guard.sh` **reescritas** em PowerShell, mais os extras do Cline, sem `jq`, `sh` nem `bash` | **Não executado no Windows.** Rodado só com PowerShell 7.5 no macOS (`test-PreToolUse.ps1`, 176 casos, 0 falhas em 25/10/2026). PowerShell 5.1 e Windows 11: **o ClineSR roda o teste primeiro** (abaixo) |
+| `guard.sh jira` + `guard.sh arquivos` (macOS/Linux) | `.clinerules/hooks/PreToolUse` (bash, executável): adaptador que chama o `guard.sh` e acrescenta os extras do Cline | **Testado no macOS** (`sh .clinerules/hooks/test-PreToolUse.sh`, 181 casos, 0 falhas em 26/10/2026) |
+| `guard.sh` (Windows) | `.clinerules/hooks/PreToolUse.ps1`: as regras do `guard.sh` **reescritas** em PowerShell, mais os extras do Cline, sem `jq`, `sh` nem `bash` | **Não executado no Windows.** Rodado só com PowerShell 7.5 no macOS (`test-PreToolUse.ps1`, 260 casos, 0 falhas em 26/10/2026). PowerShell 5.1 e Windows 11: **o ClineSR roda o teste primeiro** (abaixo) |
 | `ensure-docker.sh` no início da sessão e antes de `gradlew`/`docker` | Passo do workflow `/continuar.md` e de `/executar-plano.md` | Checklist manual. No Windows o script `.sh` não abre o Docker Desktop: veja o comando PowerShell no `README.md` |
 
 ### O que os hooks do Cline bloqueiam (os dois, `PreToolUse` e `PreToolUse.ps1`)
@@ -48,15 +48,28 @@ Testes: `sh .claude/hooks/test-guard.sh`. O Plano 4A, Tarefa 11, ainda vai torna
 **Com qualquer valor da flag:**
 - O modo `arquivos` do `guard.sh`: escrever, copiar, remover ou versionar `.env` e `config/{equipes,ausencias,papeis,squads}.yaml` (inclusive `Set-Content`, `Out-File`, `Copy-Item`, `Remove-Item`... e caminhos com barra invertida); `git add -f`.
 - **Ler** `.env` (exceto `.env.example`/`.env.sample`) e as configs reais, por `read_file` ou por comando (`cat`, `type`, `Get-Content`, `Select-String`, `findstr`...): o conteúdo iria para o modelo. Os modelos `*.exemplo.yaml` continuam liberados. *Extra do Cline: o Claude não bloqueava leitura.*
+- **Configs reais protegidas pelo nome, em qualquer pasta** (não só `config/`): `equipes`, `ausencias`, `papeis` e `squads` com `.yaml` ou `.yml`, e `Filtros_Status_tool.txt*` (este agora também para `read_file` e escrita). Um relatório como `reports/Filtros JQL para cards Jira.md` não é afetado.
 - Listar todo o ambiente (`env`, `printenv`, `set` sozinhos, `Get-ChildItem env:`, `[Environment]::GetEnvironmentVariables()`): mostraria os tokens.
 
-**Liberados:** leitura de arquivos comuns, `search_files`, `list_files`, `web_search`, navegador e `web_fetch` fora do Jira, outros servidores MCP.
+**Busca e listagem (com qualquer valor da flag; desde 26/10).** O resultado de `search_files` traz linhas dos arquivos, então uma busca sem filtro exporia `.env` e as configs reais.
+- **Busca de conteúdo** (`search_files` e equivalentes da CLI: `grep`, `grep_search`, `codebase_search`) só é liberada quando **todas** as condições valem:
+  1. o `path` não é protegido (normalização abaixo);
+  2. o `regex` não cita `.env`/`.env.*` (exceto `.env.example`/`.env.sample`), os YAML protegidos nem `filtros_status_tool` (só a checagem de nome: `TODO:` e outras regex com `:` continuam válidas);
+  3. **há `file_pattern` seguro**: um nome exato não protegido (por exemplo `.env.example`, `build.gradle.kts`) ou um glob cujo nome termina numa extensão segura — `.kt .kts .java .gradle .ts .tsx .js .jsx .mjs .cjs .json .css .scss .html .md .sql .py .sh .ps1 .xml .svg .toml .exemplo.yaml .demo.yaml .example .sample` — com no máximo um grupo `{a,b}` em que todas as alternativas são seguras (`*.{kt,tsx,md}`). Negação (`!`), `:`, `*`, `*.yaml`, `*.txt`, `.env*` e grupos com extensão insegura bloqueiam;
+  4. ou, sem `file_pattern`, o `path` é um único arquivo com extensão segura (`docs/README.md`).
+  Sem `file_pattern` em pasta (inclusive a raiz ou `app/config`): **bloqueado**.
+- **Listagem** (`list_files`, `list_code_definition_names`, `glob`, `list_dir`): mostra só nomes (e definições de código-fonte), então fica liberada, exceto se o `path`/padrão for protegido (`list_files app/.env`).
+- **Como autorizar uma busca bloqueada:** refazer a busca com `file_pattern` restrito a extensões seguras é a **forma permitida e documentada aqui**, não um contorno da regra 5 abaixo; a mensagem do hook diz isso. Qualquer outra busca (por exemplo, dentro de arquivos `.yaml` ou `.txt` em geral) vai para o usuário como pergunta: só ele autoriza, rodando a busca fora do Cline e colando o trecho relevante.
+
+**Normalização de caminhos (ler, escrever, buscar e listar; macOS e Windows não diferenciam maiúsculas).** Antes de casar o nome, nesta ordem: minúsculas; `\` vira `/`; remove o prefixo de dispositivo (`\\?\`, `\\?\UNC\`, `\\.\`, `\??\`); remove a letra da unidade (`C:`); **qualquer `:` restante bloqueia** (fluxo alternativo do NTFS `.env::$DATA`, `README.md:oculto`); resolve `..` e ignora `.` e segmentos vazios; tira espaços das pontas e **pontos e espaços do fim de cada segmento** (`.Env.`, `.env `, `EQUIPES.yaml ` = o original no Windows); **nome de arquivo (último segmento) em forma curta 8.3** (`~` seguido de dígito, como `ENV~1`) bloqueia; pastas como `C:\Users\THIAGO~1\...` continuam liberadas. Assim `.ENV`, `Papeis.YAML`, `..\.env`, `\\?\C:\x\.env` e caminhos com barras mistas (Git Bash) são barrados. No `.ps1` a normalização usa só operações de texto (o `[IO.Path]` do pwsh no macOS/Linux não trata `\` como separador). Em comandos, a expressão dos protegidos também casa `.env::...`, `.env.` e nomes curtos com prefixo de nome protegido (`ENV~1`, `PAPEIS~1.YAM`), sem pegar `HEAD~1`; no `.sh`, a escrita por comando passou a ser checada também sem diferenciar maiúsculas (o `guard.sh` diferencia).
+
+**Liberados:** leitura de arquivos comuns, buscas com escopo seguro (acima), listagens fora de caminhos protegidos, `web_search`, navegador e `web_fetch` fora do Jira, outros servidores MCP.
 
 **Flag:** lida do ambiente do processo do Cline (do VS Code), **não** do `app\.env` nem do comando. No Windows, só o usuário a define (por exemplo, variável de usuário nas Configurações do Windows) e depois reabre o VS Code.
 
 **`.clineignore`:** o arquivo `.clineignore` na raiz impede o Cline de ler segredos e dados pessoais (`.env`, arquivos de `config/` com dados reais, chaves) e reforça o hook, sem substituí-lo.
 
-**Falha fechada:** JSON ilegível, entrada vazia ou erro interno cancelam a ferramenta. No macOS/Linux, sem `jq` ou sem o `guard.sh`, também.
+**Falha fechada:** JSON ilegível, entrada vazia, JSON que não é objeto, entrada sem nome de ferramenta ou erro interno cancelam a ferramenta. No macOS/Linux, sem `jq` ou sem o `guard.sh`, também. No `.sh`: `set -o pipefail`, cada leitura com `jq` checada (`|| bloquear`), as decisões de bloqueio usam `grep` com here-string (sem pipe: com `printf | grep -q` e `pipefail`, um comando grande gerava SIGPIPE e virava liberação), erro do `grep` (código 2) conta como protegido e uma `trap` de saída imprime `cancel: true` com código 0 se o script terminar sem responder (por exemplo, variável não definida com `set -u`). No `.ps1`: `try/catch` em volta de tudo, com JSON fixo como último recurso.
 
 **Duas cópias das regras:** o `.sh` chama o `guard.sh`; o `.ps1` reescreve as mesmas regras. Ao mudar o `guard.sh` (Plano 4A, Tarefa 11, por exemplo), mude também o `PreToolUse.ps1` e o `test-PreToolUse.ps1` (que espelha caso a caso o `test-guard.sh`). Pendência da Tarefa 11: no `.sh`, remover o atalho `jira_livre` e a expressão de token duplicada e chamar sempre o `guard.sh jira`.
 
@@ -86,7 +99,7 @@ Testes: `sh .claude/hooks/test-guard.sh`. O Plano 4A, Tarefa 11, ainda vai torna
 O hook pode estar desligado, não existir no ClineSR, ou ser contornado por acidente. Estas regras valem sempre, e quem as vigia é a própria IA:
 
 > 1. Com `JIRA_LIVE_ENABLED` diferente de `true`, é proibido acessar qualquer servidor Jira por qualquer caminho: app, `curl`, `Invoke-WebRequest`, navegador, `web_fetch`, script, MCP da Atlassian. Nesse período, nem a documentação pública em endereços com `jira`/`atlassian`: peça um trecho ao usuário ou use a busca genérica. Só o usuário muda a flag; nunca a ligue, nem dentro de um comando.
-> 2. Nunca edite, leia nem commite `.env`, `config/papeis.yaml`, `config/equipes.yaml`, `config/ausencias.yaml`, `config/squads.yaml`; nunca edite nem commite `Filtros_Status_tool.txt`. Use os modelos `.exemplo`/`.demo`.
+> 2. Nunca edite, leia nem commite `.env`, `config/papeis.yaml`, `config/equipes.yaml`, `config/ausencias.yaml`, `config/squads.yaml` (nem por busca: `search_files` só com `file_pattern` seguro); nunca edite nem commite `Filtros_Status_tool.txt` (o hook também barra lê-lo). Use os modelos `.exemplo`/`.demo`.
 > 3. Nunca use `git add -A`, `git add .` sem conferir, nem `git add -f`/`--force`.
 > 4. Nunca exiba token, senha ou URL com credencial no terminal, em log, em erro ou em commit; nunca liste todas as variáveis de ambiente.
 > 5. Nunca reescreva um comando bloqueado para ele passar. Pare e relate ao usuário.
