@@ -28,6 +28,13 @@ As PRs #5, #6, #7 e #8 (planejamento, Planos 1, 2 e 3A) foram **mescladas na `ma
 
 Commits do Plano 3A: `9cd22aa` (plano) até `8e84a31` (ajustes de identidade). Plano 2: `b734dea` até `9fceb8b`. Plano 1: `87a12db` até `8202fcb`.
 
+## Plano 4A (sincronização periódica), estado em 25/10 (branch `feat/sincronizacao`)
+
+- Tarefas 1 a 8 prontas e revisadas (estado, gate, cursor, carga, reconciliação, agendador, retenção, `GET /api/sync/status` e tela Sincronização). Tarefa 9 (esta): runbook em `docs/jira/runbook-sincronizacao.md`, variáveis `SYNC_*` no README, `.gitignore` de `status_map.yaml` e `jira_campos.yaml`.
+- Restam: Tarefa 10 (dados de demonstração; o runbook tem um marcador "ver Tarefa 10"), Tarefa 11 (reescrita do checklist e do teste `cadaPassoDoChecklistExigeAutorizacaoExpressa` para `cadaPassoDoChecklistConfirmaAFlag`), Tarefa 12 (vínculo `Blocks`) e a onda final de Minor (ledger em `.superpowers/sdd/2026-10-25-plano-04a-sincronizacao/progress.md`).
+- **Nenhum acesso ao Jira foi feito.** O primeiro ciclo real é do usuário: liga `JIRA_LIVE_ENABLED=true` e segue o runbook (Etapa 1 com `SYNC_MAX_ITENS=50` e `SYNC_MAX_REQUISICOES=5`).
+- Pendências do primeiro ciclo: formato de `from/to` do assignee (`JIRAUSER*`), fuso do `updated >=`, `key in (...)`, tipo e direção do link `Blocks` (linhas na matriz de compatibilidade).
+
 ## Próximos passos, em ordem
 
 1. **Plano 3 concluído:** aguardar o usuário mandar mesclar a PR; depois `git checkout main && git pull` e apagar a branch local e a remota. Pendências que ficaram sem dono (ver `final-review.md`): montar o `Syncer` em produção e a sincronização periódica (nenhum plano a assume ainda), retenção de `issue` e `access_log` e agendar a limpeza, avisos do backend só em pt-BR, filtros do frontend em texto livre, `status_map.yaml` real fora do `.gitignore`.

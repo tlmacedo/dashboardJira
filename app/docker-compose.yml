@@ -18,7 +18,7 @@ services:
       DATABASE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-painel}
       DATABASE_USER: ${POSTGRES_USER:-painel}
       DATABASE_PASSWORD: ${POSTGRES_PASSWORD:?defina POSTGRES_PASSWORD}
-      # Instâncias do Jira NÃO entram por padrão. Para habilitar (com autorização), acrescente aqui,
+      # Instâncias do Jira NÃO entram por padrão. Para habilitar (depois que o usuário ligar a flag), acrescente aqui,
       # sem valores no arquivo, as variáveis listadas no .env.example (instância samsung usa Bearer;
       # instância sidia usa Basic), no formato NOME: ${NOME:-}. A instância só ativa quando completa.
       # Sincronização periódica: ajustes opcionais (SYNC_INSTANCIAS, SYNC_INTERVALO_MIN, SYNC_HORA_RECONCILIACAO,

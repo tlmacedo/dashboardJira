@@ -81,3 +81,4 @@ Regra de ouro do projeto: nenhuma consulta ao Jira da empresa sem **autorizaçã
 2. Não copiar para o repositório dados pessoais, tokens nem respostas brutas do Jira.
 3. Desligar `JIRA_LIVE_ENABLED` (o usuário) e encerrar a sessão com o token fora do ambiente.
 4. Qualquer chamada nova (outra ficha, outra issue, paginação, leitura de filtro salvo) volta ao início: **peça autorização expressa antes**.
+5. Para ligar a sincronização periódica (primeiro ciclo pequeno, limites padrão, reconciliação, como desligar e ler o status), siga o [runbook da sincronização](runbook-sincronizacao.md). A flag `JIRA_LIVE_ENABLED` continua sendo a única trava e só o usuário a muda.

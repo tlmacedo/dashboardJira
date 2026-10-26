@@ -43,6 +43,16 @@ Itens levantados pelas revisões do Plano 1 e do Plano 2. O bscbi-web não os co
 | `total` da resposta | **Não validado** em casos de borda: o documento só lê `total` (§6) e o fixa como `0` em falha de contagem (§9 item 11). | Em aberto: `total` pode vir truncado ou exigir cuidado com `maxResults=1`; um erro nunca deve virar contagem 0. | Passo 3: a contagem de `maxResults=1` deve bater com a de uma busca paginada pequena e com a contagem na tela do Jira. |
 | Teto de páginas do `searchAll` e limite de `maxResults` | **Não validado.** O documento não diz se o Jira DC da empresa limita `maxResults` por requisição. | Assumido: o teto de 10.000 itens vira `10.000 / pageSize` páginas e supõe que o servidor honra o `pageSize` pedido. Se o Jira limitar `maxResults` (ex.: 1000), uma busca grande estoura o teto com `JiraException`: decisão a revisar na 1ª conexão. | Passo 3: pedir `maxResults` alto e comparar `maxResults` devolvido com o pedido; se menor, ajustar o `pageSize` padrão e o teto. |
 
+## Itens da sincronização periódica
+
+Itens que a sincronização (Plano 4A) assume. Nenhum foi confirmado no Jira da empresa; o runbook está em [runbook-sincronizacao.md](runbook-sincronizacao.md).
+
+| Item | Validado no bscbi-web | Neste app | Como confirmar |
+|---|---|---|---|
+| `updated >= "aaaa-MM-dd HH:mm"` no fuso do usuário do token | **Não validado.** | Assumido: o cursor do incremental vira JQL no fuso do servidor (`SYNC_FUSO_SERVIDOR`), com sobreposição de `SYNC_SOBREPOSICAO_MIN`. Fuso errado desloca o cursor e pula ou repete issues. | Passo 1 do checklist (`timeZone` do `/myself`) e conferência do primeiro incremental: `cursor` e contagem em `/api/sync/status`. |
+| Chave `JIRAUSER*` no `from/to` do assignee do changelog | **Não validado.** | Assumido: o changelog pode trazer a chave interna do usuário em vez do username; o app tenta resolvê-la e conta o resto em `usuariosNaoResolvidos`. | Passo 4 do checklist (itens `assignee` do changelog) e `usuariosNaoResolvidos` do primeiro ciclo: maior que 0 sem explicação = parar. |
+| `key in (...)` para rebuscar issues em lote | **Não validado.** | Assumido: a reconciliação rebusca divergentes e ausentes em lotes de 100 chaves por requisição. | Primeira reconciliação (Etapa 3 do runbook): sem erro 400 e `removidas` coerente. |
+
 ## Como usar esta matriz
 
 1. Antes de qualquer chamada, reler o checklist e **pedir autorização expressa** ao usuário para a pesquisa seguinte.

@@ -75,6 +75,34 @@ class PreparacaoDocsTest {
     }
 
     @Test
+    fun runbookAvisaQueAFlagEhAUnicaTrava() {
+        val texto = ler("docs/jira/runbook-sincronizacao.md")
+        assertTrue(texto.contains("única trava"), "Runbook sem o aviso 'única trava'")
+        assertTrue(texto.contains("JIRA_LIVE_ENABLED"), "Runbook sem a flag")
+        assertTrue(!texto.contains("autorização expressa"), "Runbook não deve citar a regra antiga")
+    }
+
+    @Test
+    fun runbookCitaOChecklist() {
+        assertTrue(ler("docs/jira/runbook-sincronizacao.md").contains("checklist-primeira-conexao.md"))
+    }
+
+    @Test
+    fun runbookSoLigaPelaFlag() {
+        val texto = ler("docs/jira/runbook-sincronizacao.md")
+        assertTrue(texto.contains("JIRA_LIVE_ENABLED"))
+        assertTrue(!texto.contains("SYNC_MODE"), "Nenhuma variável SYNC_MODE existe")
+        assertTrue(!texto.contains("SYNC_AUTORIZACAO"), "Nenhuma variável SYNC_AUTORIZACAO existe")
+    }
+
+    @Test
+    fun readmeSemRegraAntiga() {
+        for (arquivo in listOf("app/README.md", "app/.env.example")) {
+            assertTrue(!ler(arquivo).contains("autorização expressa"), "$arquivo ainda cita a regra antiga")
+        }
+    }
+
+    @Test
     fun matrizTemALinhaDeFieldsPorId() {
         val texto = ler("docs/jira/matriz-compatibilidade.md")
         val linha = texto.lines().firstOrNull { it.startsWith("|") && it.contains("`fields` por id") }
