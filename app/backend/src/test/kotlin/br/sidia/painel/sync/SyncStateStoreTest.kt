@@ -3,6 +3,8 @@ package br.sidia.painel.sync
 import br.sidia.painel.db.Database
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitCancellation
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.runBlocking
 import org.flywaydb.core.Flyway
 import org.testcontainers.postgresql.PostgreSQLContainer
@@ -12,6 +14,7 @@ import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -148,12 +151,131 @@ class SyncStateStoreTest {
         val id = store.iniciar("samsung", SyncKind.INCREMENTAL, t("2026-10-30T12:00:00Z"))
         val ok = store.iniciar("samsung", SyncKind.RECONCILIACAO, t("2026-10-30T12:00:00Z"))
         store.concluir(ok, RunStatus.OK, RunResumo(), null, null, t("2026-10-30T12:00:10Z"))
-        assertEquals(1, store.fecharOrfas(t("2026-10-30T13:00:00Z")))
+        val inicio = t("2026-10-30T13:00:00Z")
+        // iniciada no/depois do início do processo atual: não é órfã
+        val nova = store.iniciar("samsung", SyncKind.INCREMENTAL, inicio)
+        assertEquals(1, store.fecharOrfas(inicio, inicio))
         val r = store.ultimas("samsung").single { it.id == id }
         assertEquals(RunStatus.FALHA, r.status)
         assertEquals("INTERROMPIDA", r.codigoErro)
-        assertEquals(t("2026-10-30T13:00:00Z"), r.finishedAt)
-        assertEquals(0, store.fecharOrfas(t("2026-10-30T13:00:00Z")))
+        assertEquals(inicio, r.finishedAt)
+        assertEquals(RunStatus.EM_ANDAMENTO, store.ultimas("samsung").single { it.id == nova }.status)
+        assertEquals(0, store.fecharOrfas(inicio, inicio))
+    }
+
+    @Test
+    fun outraReplicaViva_naoEhFechada_eConcluiNormalmente() = runBlocking {
+        val dentro = CompletableDeferred<Long>()
+        val liberar = CompletableDeferred<Unit>()
+        val replicaA = PostgresSyncStateStore(ds)
+        val a = async {
+            replicaA.comTrava("samsung") {
+                val id = replicaA.iniciar("samsung", SyncKind.INCREMENTAL, t("2026-10-30T12:00:00Z"))
+                dentro.complete(id)
+                liberar.await()
+                replicaA.concluir(id, RunStatus.OK, RunResumo(issues = 1), null, null, t("2026-10-30T12:05:00Z"))
+            }
+        }
+        val idA = dentro.await()
+        // réplica B sobe depois e roda a limpeza enquanto A segura a trava
+        val replicaB = PostgresSyncStateStore(ds)
+        assertEquals(0, replicaB.fecharOrfas(t("2026-10-30T12:02:00Z"), t("2026-10-30T12:02:00Z")))
+        assertEquals(RunStatus.EM_ANDAMENTO, store.ultimas("samsung").single { it.id == idA }.status)
+        liberar.complete(Unit)
+        assertEquals(true, a.await())
+        val r = store.ultimas("samsung").single { it.id == idA }
+        assertEquals(RunStatus.OK, r.status)
+        assertNull(r.codigoErro)
+    }
+
+    @Test
+    fun concluirNaoSobrescreveExecucaoJaInterrompida() {
+        val id = store.iniciar("samsung", SyncKind.INCREMENTAL, t("2026-10-30T12:00:00Z"))
+        assertEquals(1, store.fecharOrfas(t("2026-10-30T13:00:00Z"), t("2026-10-30T13:00:00Z")))
+        assertEquals(false, store.concluir(id, RunStatus.OK, RunResumo(issues = 9), null, null, t("2026-10-30T13:05:00Z")))
+        val r = store.ultimas("samsung").single()
+        assertEquals(RunStatus.FALHA, r.status)
+        assertEquals("INTERROMPIDA", r.codigoErro)
+        assertEquals(0, r.resumo.issues)
+    }
+
+    private fun falha(instance: String = "samsung", kind: SyncKind = SyncKind.INCREMENTAL, codigo: String = "HTTP_503"): Long {
+        val id = store.iniciar(instance, kind, t("2026-10-30T12:00:00Z"))
+        store.concluir(id, RunStatus.FALHA, RunResumo(), codigo, null, t("2026-10-30T12:00:30Z"))
+        return id
+    }
+
+    @Test
+    fun reinicioZeraContagemDeFalhas() {
+        repeat(3) { falha() }
+        assertEquals(3, store.falhasSeguidas("samsung", SyncKind.INCREMENTAL))
+        store.suspender("samsung", "FALHAS_SEGUIDAS", t("2026-10-30T12:10:00Z"))
+        assertEquals(1, store.limparSuspensoes())
+        assertEquals(0, store.falhasSeguidas("samsung", SyncKind.INCREMENTAL))
+        falha()
+        assertEquals(1, store.falhasSeguidas("samsung", SyncKind.INCREMENTAL))
+        assertNull(store.suspensa("samsung"))
+    }
+
+    @Test
+    fun reinicioZeraContagemMesmoSemSuspensao() {
+        falha()
+        falha()
+        store.limparSuspensoes()
+        assertEquals(0, store.falhasSeguidas("samsung", SyncKind.INCREMENTAL))
+    }
+
+    @Test
+    fun interrompidaCanceladaEEmAndamentoNaoContamNemZeram() {
+        falha()
+        falha(codigo = "INTERROMPIDA")
+        val canc = store.iniciar("samsung", SyncKind.INCREMENTAL, t("2026-10-30T12:00:00Z"))
+        store.concluir(canc, RunStatus.CANCELADA, RunResumo(), null, null, t("2026-10-30T12:00:10Z"))
+        store.iniciar("samsung", SyncKind.INCREMENTAL, t("2026-10-30T12:00:00Z"))
+        assertEquals(1, store.falhasSeguidas("samsung", SyncKind.INCREMENTAL))
+        falha()
+        assertEquals(2, store.falhasSeguidas("samsung", SyncKind.INCREMENTAL))
+    }
+
+    @Test
+    fun falhasIsoladasPorTipoEInstancia() {
+        falha()
+        falha(kind = SyncKind.RECONCILIACAO)
+        falha(instance = "main")
+        val ok = store.iniciar("main", SyncKind.INCREMENTAL, t("2026-10-30T12:00:00Z"))
+        store.concluir(ok, RunStatus.OK, RunResumo(), null, null, t("2026-10-30T12:00:10Z"))
+        // OK de outro tipo/instância não zera
+        assertEquals(1, store.falhasSeguidas("samsung", SyncKind.INCREMENTAL))
+        assertEquals(1, store.falhasSeguidas("samsung", SyncKind.RECONCILIACAO))
+        assertEquals(0, store.falhasSeguidas("main", SyncKind.INCREMENTAL))
+        assertNull(store.cursor("main"))
+        store.avancarCursor("samsung", t("2026-10-30T12:20:00Z"))
+        assertNull(store.cursor("main"))
+        store.suspender("samsung", "HTTP_401", t("2026-10-30T12:00:00Z"))
+        assertNull(store.suspensa("main"))
+    }
+
+    @Test
+    fun codigoLivreEhRejeitado() {
+        val id = store.iniciar("samsung", SyncKind.INCREMENTAL, t("2026-10-30T12:00:00Z"))
+        assertFailsWith<IllegalArgumentException> {
+            store.concluir(id, RunStatus.FALHA, RunResumo(), "erro https://jira/x?token=abc", null, t("2026-10-30T12:01:00Z"))
+        }
+        assertFailsWith<IllegalArgumentException> { store.suspender("samsung", "http 401", t("2026-10-30T12:01:00Z")) }
+        assertEquals(RunStatus.EM_ANDAMENTO, store.ultimas("samsung").single().status)
+    }
+
+    @Test
+    fun travaLiberadaAposExcecaoEAposCancelamento() = runBlocking {
+        assertFailsWith<IllegalStateException> { store.comTrava("samsung") { error("falha do bloco") } }
+        assertEquals("a", store.comTrava("samsung") { "a" })
+
+        val dentro = CompletableDeferred<Unit>()
+        val job = async { store.comTrava("samsung") { dentro.complete(Unit); awaitCancellation() } }
+        dentro.await()
+        assertNull(store.comTrava("samsung") { "x" })
+        job.cancelAndJoin()
+        assertEquals("b", store.comTrava("samsung") { "b" })
     }
 
     @Test
