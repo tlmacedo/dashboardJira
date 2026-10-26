@@ -37,7 +37,12 @@
 # trata `\` como separador em [IO.Path]): minúsculas, `\` -> `/`, sem prefixo de dispositivo (\\?\, \\.\,
 # \??\), sem letra de unidade, qualquer `:` restante bloqueia (fluxo alternativo `.env::$DATA`), `..`
 # resolvido, pontos e espaços do fim de cada segmento removidos (`.env.` = `.env`) e segmento com nome
-# curto 8.3 (`ENV~1`) bloqueia.
+# curto 8.3 (`ENV~1`) bloqueia. Também bloqueiam: `CLAUDE~1` (a pasta .claude) e 8.3 dentro de .claude.
+#
+# Arquivos que só o usuário altera (ligam a flag; ler continua liberado), casados DEPOIS da normalização:
+# `.claude/settings*.json`, `*compose*override*` e todo `*compose*.y*ml` (inclusive app/docker-compose.yml).
+# Comandos que citam esses arquivos: negados por padrão; só passa leitura conhecida (Regra-SoUsuario,
+# espelho do guard.sh). Conteúdo: escrever texto que liga a flag em QUALQUER arquivo é bloqueado.
 #
 # Limite honesto (igual ao guard.sh): trava contra acidente do assistente, não contra má-fé.
 # Falha fechada: JSON ilegível ou qualquer erro interno cancela a ferramenta.
@@ -129,6 +134,23 @@ $PADRAO_ESCRITA = '(>|>>|tee\s|sed\s+(-[a-z]*i|--in-place)|(^|[\s;&|(])(cp|mv|rm
 # leitura (extra do Cline: o texto lido iria para o modelo de linguagem)
 $PADRAO_LEITURA = '(^|[\s;&|(])(cat|type|get-content|gc|more|less|head|tail|select-string|sls|findstr|grep|egrep|rg|bat|nl|od|xxd|strings|source|import-csv|format-hex|notepad|code)(\.exe)?\s|(^|[;&|]\s*)\.\s+\S*\.env'
 $PADRAO_GIT_ADD_FORCADO = 'git\s+add\s([^;&|]*\s)?(-[A-Za-z]*f[A-Za-z]*|--fo[a-z]*)([\s=]|$)'
+# interpretadores e outras ferramentas que escrevem arquivos (somam-se a $PADRAO_ESCRITA para .env e configs)
+$PADRAO_ESCRITA_EXTRA = '(^|[\s;&|(])(python[0-9.]*|perl|node|ruby|php|pwsh|powershell|patch|rsync)(\.exe)?\s|git\s+apply'
+# texto que liga a flag (comando, conteúdo gravado); espelho de LIGAR_FLAG_EXTRA do PreToolUse do bash
+$PADRAO_LIGA_FLAG = 'JIRA_LIVE_ENABLED[\]"''\s,:=]+(-value\s+)?["'']?\s*(1|true)'
+# arquivos que só o usuário altera, citados num comando já normalizado (minúsculas, '/', sem '//' nem '/./'):
+# qualquer settings*.json (inclusive .vscode/settings.json: falso positivo aceito), .claude junto de settings
+# (cd .claude e depois settings.local.json), compose *.y*ml e override, e nomes curtos 8.3 deles
+$PADRAO_CITA_SETTINGS = 'settings[^\s"'';|&)<>/]*\.json'
+$PADRAO_CITA_CLAUDE = '\.claude|claude~[0-9]'
+$PADRAO_CITA_SETTINGS_NOME = 'settings|settin~[0-9]'
+$PADRAO_CITA_COMPOSE = 'compose[^\s"'';|&)<>/]*(\.y[a-z]*ml|override)|(docker|compos)[a-z0-9_-]{0,6}~[0-9]'
+# comandos de leitura conhecidos (o resto é negado por padrão quando o comando cita esses arquivos)
+$LEITORES = @('cat', 'ls', 'grep', 'egrep', 'fgrep', 'rg', 'head', 'tail', 'diff', 'wc', 'stat', 'file', 'more',
+    'jq', 'cmp', 'readlink', 'realpath', 'basename', 'dirname', 'nl', 'shasum', 'sha256sum', 'md5', 'md5sum',
+    'cd', 'pushd', 'popd', 'echo', 'printf', 'true', 'test',
+    'type', 'get-content', 'gc', 'select-string', 'sls', 'findstr')
+$GIT_LEITURA = @('diff', 'log', 'show', 'status', 'blame', 'ls-files', 'grep', 'rev-parse', 'cat-file', 'shortlog')
 
 function Regra-Jira([string]$cmd) {
     # 1) variáveis de conexão do Jira (exceto a própria flag). Duas leituras:
@@ -173,6 +195,8 @@ function Regra-Ambiente([string]$cmd) {
 
 function Caminho-Protegido([string]$caminho) {
     # devolve o motivo (texto) se o caminho for protegido, ou $null se liberado. Ler, escrever e buscar.
+    # Deixa em $script:norm o caminho normalizado (segmentos unidos por '/'), usado por So-Usuario-Altera.
+    $script:norm = ''
     if ([string]::IsNullOrWhiteSpace($caminho)) { return $null }
     if ($caminho -match "[`r`n]") { return 'caminho com quebra de linha.' }
     # minúsculas, barras normais, sem prefixo de dispositivo (\\?\UNC\, \\?\, \\.\, \??\) e sem letra de unidade
@@ -197,6 +221,14 @@ function Caminho-Protegido([string]$caminho) {
         [void]$partes.Add($s)
     }
     if ($partes.Count -eq 0) { return $null }
+    # nome curto 8.3 da pasta .claude (CLAUDE~1) ou de qualquer segmento dentro dela (SETTIN~1.JSO)
+    $sobClaude = $false
+    foreach ($s in $partes) {
+        if ($s -match '^claude~[0-9]') { return "nome curto 8.3 ($s) pode ser a pasta .claude." }
+        if ($sobClaude -and $s -match '~[0-9]') { return "nome curto 8.3 ($s) dentro de .claude." }
+        if ($s -eq '.claude') { $sobClaude = $true }
+    }
+    $script:norm = ($partes -join '/')
     $base = [string]$partes[$partes.Count - 1]
     # nome curto 8.3 só importa no último segmento (a proteção é pelo nome do arquivo; pastas como
     # C:\Users\THIAGO~1\... continuam liberadas)
@@ -304,17 +336,92 @@ function Checar-Busca([string]$ferramenta, $parametros) {
     return "$ferramenta sem file_pattern em '$onde': a busca abrangeria .env e configs reais e mostraria o conteúdo ao modelo. $MSG_BUSCA"
 }
 
+function So-Usuario-Altera([string]$norm) {
+    # caminho JÁ normalizado por Caminho-Protegido: settings do Claude, compose e override do compose
+    if ([string]::IsNullOrEmpty($norm)) { return $false }
+    $base = ($norm -split '/')[-1]
+    if (('/' + $norm) -like '*/.claude/settings*.json') { return $true }
+    if (($base -like '*compose*override*') -or ($base -like '*compose*.y*ml')) { return $true }
+    return $false
+}
+
+function Tirar-Redirecoes-Inofensivas([string]$t) {
+    # 2>&1, >&2 e saída para /dev/null não gravam arquivo
+    $t = [regex]::Replace($t, '[0-9]*>&[0-9-]+', ' ')
+    return [regex]::Replace($t, '[0-9&]*>>?\s*/dev/null', ' ')
+}
+
+function Regra-SoUsuario([string]$cmd) {
+    # Nega por padrão: se o comando cita settings do Claude, compose ou override, só passa leitura conhecida.
+    # Espelho do guard.sh (modo arquivos). Devolve o motivo ou $null.
+    $t = $cmd.ToLowerInvariant().Replace('\', '/')
+    $t = [regex]::Replace($t, '/+', '/')
+    $t = [regex]::Replace($t, '/\./', '/')
+    $t = [regex]::Replace($t, '/\./', '/')
+    $cita = (Casa $t $PADRAO_CITA_SETTINGS) -or ((Casa $t $PADRAO_CITA_CLAUDE) -and (Casa $t $PADRAO_CITA_SETTINGS_NOME)) -or (Casa $t $PADRAO_CITA_COMPOSE)
+    if (-not $cita) { return $null }
+    $msg = 'comando cita settings do Claude, compose ou override do compose e não é leitura conhecida: só o usuário altera esses arquivos'
+    $s = Tirar-Redirecoes-Inofensivas $t
+    if ($s.Contains('>')) { return "$msg (redirecionamento)." }
+    # chaves não separam (não partir scripts de awk); `{ cp ...; }` começa por '{' e é negado
+    foreach ($seg in [regex]::Split($s, '[;&|()`\r\n]')) {
+        $g = $seg.Trim()
+        if ($g -eq '' -or $g -eq '$') { continue }
+        # atribuições no início (VAR=valor cmd) não são o comando
+        $g = [regex]::Replace($g, '^([a-z_][a-z0-9_]*=\S*\s+)+', '')
+        if ($g -eq '') { continue }
+        $w = ($g -split '\s+')[0]
+        $w = $w.Trim('"', "'").TrimStart('\')
+        $w = ($w -split '/')[-1]
+        if ($w.EndsWith('.exe')) { $w = $w.Substring(0, $w.Length - 4) }
+        if ($w -eq '' -or $w -eq '$') { continue }
+        if ($LEITORES -contains $w) { continue }
+        if ($w -eq 'less') {
+            if ($g -match '(^|\s)(-[a-z]*o|--log-file)') { return "$msg (less -o grava arquivo)." }
+            continue
+        }
+        if ($w -eq 'sed') {
+            if ($g -match '(^|\s)(-[a-z]*i|--in-place)') { return "$msg (sed -i)." }
+            # comandos w/W (grava) e e (executa) no script, depois de tirar as opções
+            $sc = [regex]::Replace($g, '\s-[a-z]+', ' ')
+            if ($sc -match '[;{}/0-9$\s''"][we]([\s''"]|$)') { return "$msg (sed com w ou e)." }
+            continue
+        }
+        if ($w -eq 'awk' -or $w -eq 'gawk' -or $w -eq 'nawk') {
+            if ($g -match 'system|inplace|(^|\s)-i') { return "$msg (awk com system ou -i)." }
+            continue
+        }
+        if ($w -eq 'git') {
+            if ($g -match '--output') { return "$msg (git --output)." }
+            $r = [regex]::Replace($g, '^git', '')
+            $r = [regex]::Replace($r, '^(\s+(-c\s+\S+|-\S+))*', '')
+            $sub = ($r.Trim() -split '\s+')[0]
+            if ($GIT_LEITURA -contains $sub) { continue }
+            return "$msg (git $sub)."
+        }
+        if ($w -eq 'docker' -or $w -eq 'docker-compose') {
+            if ($g -match '(^|\s)(cp|-o|--output)(\s|=|$)') { return "$msg (docker cp/-o)." }
+            continue
+        }
+        return "$msg ($w)."
+    }
+    return $null
+}
+
 function Regra-Arquivos([string]$cmd) {
     # tokens exatamente iguais aos modelos não contam como protegidos
     $semModelos = [regex]::Replace($cmd, $PADRAO_MODELOS, '$1 $3', $OPC_I)
     if (Casa $semModelos $PADRAO_PROTEGIDOS) {
-        if (Casa $semModelos $PADRAO_ESCRITA) { return 'comando altera ou versiona segredo/config com dados reais.' }
+        if ((Casa $semModelos $PADRAO_ESCRITA) -or (Casa $semModelos $PADRAO_ESCRITA_EXTRA)) { return 'comando altera ou versiona segredo/config com dados reais.' }
         if (Casa $semModelos $PADRAO_LEITURA) { return 'comando lê segredo/config com dados reais (o conteúdo iria para o modelo).' }
     }
-    # settings do Claude e override do compose: escrever por comando é barrado (ler continua liberado)
-    $cmdBarras = $cmd -replace '\\', '/'
-    if ((Casa $cmdBarras '\.claude/settings[^\s"'';|&)]*\.json|compose[^\s"'';|&)]*override') -and (Casa $cmd $PADRAO_ESCRITA)) {
-        return 'comando escreve em settings do Claude ou override do compose: só o usuário altera esse arquivo.'
+    # settings do Claude, compose e override: nega por padrão (só leitura conhecida passa)
+    $m = Regra-SoUsuario $cmd
+    if ($m) { return $m }
+    # gravar texto que liga a flag em qualquer arquivo (vale com qualquer valor da flag)
+    $semRedir = Tirar-Redirecoes-Inofensivas $cmd
+    if ((Casa $cmd $PADRAO_LIGA_FLAG) -and ((Casa $semRedir $PADRAO_ESCRITA) -or (Casa $semRedir $PADRAO_ESCRITA_EXTRA))) {
+        return 'comando grava texto que liga JIRA_LIVE_ENABLED num arquivo. Só o usuário liga a flag.'
     }
     $semAspas = $cmd -replace '["'']', ''
     if (Casa $semAspas $PADRAO_GIT_ADD_FORCADO) { return 'git add forçado ignora o .gitignore (segredos e configs reais).' }
@@ -429,6 +536,16 @@ try {
             else {
                 foreach ($campo in @('path', 'file_path', 'filePath', 'paths')) { Coletar-Textos (Ler-Prop $parametros $campo) $lidos 0 }
             }
+            if ($ferramenta -notmatch '^read_') {
+                # conteúdo gravado (content, diff, replace, new_str...): ligar a flag é barrado em qualquer arquivo
+                $textos = New-Object System.Collections.ArrayList
+                Coletar-Textos $parametros $textos 0
+                # também o texto cru (Coletar-Textos desfaz JSON e separaria chave e valor de {"chave": "valor"})
+                foreach ($pp in $parametros.PSObject.Properties) { if ($pp.Value -is [string]) { [void]$textos.Add($pp.Value) } }
+                foreach ($t in $textos) {
+                    if (Casa $t $PADRAO_LIGA_FLAG) { Bloquear "BLOQUEADO: $ferramenta grava texto que liga JIRA_LIVE_ENABLED (em qualquer arquivo). Só o usuário liga a flag." }
+                }
+            }
             foreach ($p in $lidos) {
                 $m = Caminho-Protegido ([string]$p)
                 if ($m) {
@@ -436,10 +553,9 @@ try {
                     Bloquear "BLOQUEADO: escrita em arquivo protegido ($p): $m"
                 }
                 if ($ferramenta -notmatch '^read_') {
-                    # settings do Claude e override do compose ligam a flag: só o usuário escreve neles
-                    $pn = (([string]$p) -replace '\\', '/').ToLowerInvariant().TrimEnd('.', ' ')
-                    if (($pn -like '*compose*override*') -or ($pn -like '.claude/settings*.json') -or ($pn -like '*/.claude/settings*.json')) {
-                        Bloquear "BLOQUEADO: escrita em ${p}: só o usuário altera esse arquivo (settings do Claude e override do compose podem ligar JIRA_LIVE_ENABLED)."
+                    # settings do Claude, compose e override ligam a flag: só o usuário escreve neles (caminho normalizado)
+                    if (So-Usuario-Altera $script:norm) {
+                        Bloquear "BLOQUEADO: escrita em ${p}: só o usuário altera esse arquivo (settings do Claude, compose e override do compose podem ligar JIRA_LIVE_ENABLED)."
                     }
                 }
             }
@@ -473,14 +589,15 @@ try {
                 if ($null -eq $patch) { $patch = Ler-Prop $parametros 'patch' }
                 $patch = [string]$patch
             }
+            # conteúdo do patch: ligar a flag é barrado em qualquer arquivo
+            if (Casa $patch $PADRAO_LIGA_FLAG) { Bloquear 'BLOQUEADO: apply_patch grava texto que liga JIRA_LIVE_ENABLED (em qualquer arquivo). Só o usuário liga a flag.' }
             foreach ($linha in ($patch -split "`r?`n")) {
                 $mm = [regex]::Match($linha, '^\*\*\* (Add File|Update File|Delete File|Move to): (.+)$')
                 if ($mm.Success) {
                     $m = Caminho-Protegido $mm.Groups[2].Value
                     if ($m) { Bloquear "BLOQUEADO: escrita em arquivo protegido ($($mm.Groups[2].Value)): $m" }
-                    $pn = ($mm.Groups[2].Value -replace '\\', '/').ToLowerInvariant().TrimEnd('.', ' ')
-                    if (($pn -like '*compose*override*') -or ($pn -like '.claude/settings*.json') -or ($pn -like '*/.claude/settings*.json')) {
-                        Bloquear "BLOQUEADO: escrita em $($mm.Groups[2].Value): só o usuário altera esse arquivo (settings do Claude e override do compose podem ligar JIRA_LIVE_ENABLED)."
+                    if (So-Usuario-Altera $script:norm) {
+                        Bloquear "BLOQUEADO: escrita em $($mm.Groups[2].Value): só o usuário altera esse arquivo (settings do Claude, compose e override do compose podem ligar JIRA_LIVE_ENABLED)."
                     }
                 }
             }
