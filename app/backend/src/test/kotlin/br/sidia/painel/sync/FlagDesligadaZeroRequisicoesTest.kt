@@ -1,0 +1,71 @@
+package br.sidia.painel.sync
+
+import br.sidia.painel.config.JiraInstanceSettings
+import br.sidia.painel.config.Settings
+import br.sidia.painel.jira.JiraAuthKind
+import br.sidia.painel.jira.JiraClientFactory
+import br.sidia.painel.jira.JiraLiveDisabledException
+import io.ktor.client.HttpClient
+import io.ktor.client.engine.mock.MockEngine
+import io.ktor.client.engine.mock.respond
+import io.ktor.http.HttpStatusCode
+import kotlinx.coroutines.runBlocking
+import java.util.concurrent.atomic.AtomicInteger
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
+
+/** Prova de que, com a flag `false`, nenhum caminho da sincronização fala com o Jira. */
+class FlagDesligadaZeroRequisicoesTest {
+    @Test
+    fun nenhumaVariavelSyncLigaASincronizacao() {
+        val env = mapOf(
+            "SYNC_INSTANCIAS" to "samsung,sidia",
+            "SYNC_INTERVALO_MIN" to "15",
+            "SYNC_HORA_RECONCILIACAO" to "02:30",
+            "SYNC_HORA_RETENCAO" to "05:00",
+            "SYNC_MAX_ITENS" to "1000",
+            "SYNC_MAX_REQUISICOES" to "100",
+            "SYNC_SOBREPOSICAO_MIN" to "10",
+            "SYNC_FUSO_SERVIDOR" to "America/Sao_Paulo",
+            "SYNC_TEMPO_MAX_MIN" to "30",
+            "SYNC_MODE" to "periodico",
+            "SYNC_AUTORIZACAO_REF" to "x",
+        )
+        val s = Settings.fromEnv(env)
+        assertEquals(false, s.jiraLiveEnabled)
+        val gate = SyncGate(s.jiraLiveEnabled, s.sync)
+        assertEquals(SyncMode.DESLIGADO, gate.modo)
+        assertEquals(false, gate.podeAgendar())
+        for (kind in listOf(SyncKind.INCREMENTAL, SyncKind.RECONCILIACAO)) {
+            for (inst in listOf("samsung", "sidia")) {
+                assertEquals(
+                    GateDecision.Negada(MotivoNegacao.DESLIGADO_PELA_FLAG),
+                    gate.avaliar(kind, inst, false),
+                )
+            }
+        }
+    }
+
+    @Test
+    fun fabricaComFlagFalseNaoFazRequisicao() {
+        val contador = AtomicInteger(0)
+        val provedorChamado = AtomicInteger(0)
+        val settings = Settings(
+            jiraLiveEnabled = false,
+            jiraInstances = mapOf(
+                "samsung" to JiraInstanceSettings("https://jira.exemplo.invalid", JiraAuthKind.BEARER, null, "token-de-teste-123"),
+            ),
+        )
+        val fabrica = JiraClientFactory(settings, {
+            provedorChamado.incrementAndGet()
+            HttpClient(MockEngine { contador.incrementAndGet(); respond("{}", HttpStatusCode.OK) })
+        })
+        fabrica.use {
+            val cliente = it.create("samsung")
+            assertFailsWith<JiraLiveDisabledException> { runBlocking { cliente.count("project = X") } }
+        }
+        assertEquals(0, contador.get())
+        assertEquals(0, provedorChamado.get())
+    }
+}

@@ -21,6 +21,10 @@ services:
       # Instâncias do Jira NÃO entram por padrão. Para habilitar (com autorização), acrescente aqui,
       # sem valores no arquivo, as variáveis listadas no .env.example (instância samsung usa Bearer;
       # instância sidia usa Basic), no formato NOME: ${NOME:-}. A instância só ativa quando completa.
+      # Sincronização periódica: ajustes opcionais (SYNC_INSTANCIAS, SYNC_INTERVALO_MIN, SYNC_HORA_RECONCILIACAO,
+      # SYNC_HORA_RETENCAO, SYNC_MAX_ITENS, SYNC_MAX_REQUISICOES, SYNC_SOBREPOSICAO_MIN, SYNC_FUSO_SERVIDOR,
+      # SYNC_TEMPO_MAX_MIN; veja o .env.example). Para usar, acrescente aqui no formato NOME: ${NOME:-}.
+      # NENHUMA delas liga a sincronização: quem liga é só JIRA_LIVE_ENABLED=true.
     # PRODUÇÃO (DASHBOARD_DEV_MODE=false): a imagem só traz os modelos .exemplo, que não bastam.
     # Os YAML reais (com pessoas) ficam fora da imagem e entram por volume SOMENTE LEITURA.
     # Descomente e ajuste os caminhos do servidor; sem papeis.yaml, calendario.yaml e status_map.yaml o painel não sobe.

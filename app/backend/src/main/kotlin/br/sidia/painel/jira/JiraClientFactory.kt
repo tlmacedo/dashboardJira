@@ -11,6 +11,9 @@ import io.ktor.utils.io.InternalAPI
 import java.net.URI
 import java.net.URISyntaxException
 
+/** Ids de instâncias Jira conhecidas (também usados para validar `SYNC_INSTANCIAS`). */
+internal val INSTANCIAS_CONHECIDAS = setOf("samsung", "sidia")
+
 /**
  * Fábrica ÚNICA de [JiraClient]: nenhum outro ponto do código de produção deve construir o cliente.
  * O `internal` só protege de OUTROS módulos; dentro deste módulo a garantia vem da fábrica única mais o
@@ -153,7 +156,6 @@ class JiraClientFactory internal constructor(
     }
 
     private companion object {
-        val INSTANCIAS_CONHECIDAS = setOf("samsung", "sidia")
         const val TOKEN_TAMANHO_MINIMO = 8
         val HOSTS_LOCAIS = setOf("localhost", "127.0.0.1", "[::1]")
     }

@@ -2,7 +2,10 @@ package br.sidia.painel.config
 
 import br.sidia.painel.jira.JiraAuthKind
 import java.nio.file.Path
+import br.sidia.painel.sync.SyncSettings
+import java.time.LocalTime
 import java.time.ZoneId
+import kotlin.time.Duration.Companion.minutes
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -227,5 +230,62 @@ class SettingsTest {
             Settings.fromEnv(mapOf("RETENTION_MONTHS" to "abc"))
         }
         assertTrue(e.message!!.contains("RETENTION_MONTHS"))
+    }
+
+    @Test
+    fun syncLeTodasAsVariaveis() {
+        val s = Settings.fromEnv(
+            mapOf(
+                "SYNC_INSTANCIAS" to " samsung , sidia ",
+                "SYNC_INTERVALO_MIN" to "15",
+                "SYNC_HORA_RECONCILIACAO" to "02:30",
+                "SYNC_HORA_RETENCAO" to "05:15",
+                "SYNC_MAX_ITENS" to "1000",
+                "SYNC_MAX_REQUISICOES" to "100",
+                "SYNC_SOBREPOSICAO_MIN" to "10",
+                "SYNC_FUSO_SERVIDOR" to "America/Sao_Paulo",
+                "SYNC_TEMPO_MAX_MIN" to "30",
+            ),
+        ).sync
+        assertEquals(listOf("samsung", "sidia"), s.instancias)
+        assertEquals(15.minutes, s.intervalo)
+        assertEquals(LocalTime.of(2, 30), s.horaReconciliacao)
+        assertEquals(LocalTime.of(5, 15), s.horaRetencao)
+        assertEquals(1000, s.maxItens)
+        assertEquals(100, s.maxRequisicoes)
+        assertEquals(10.minutes, s.sobreposicao)
+        assertEquals(ZoneId.of("America/Sao_Paulo"), s.fusoDoServidor)
+        assertEquals(30.minutes, s.tempoMaximo)
+        // vazio = padrão
+        assertEquals(SyncSettings(), Settings.fromEnv(mapOf("SYNC_INTERVALO_MIN" to " ")).sync)
+    }
+
+    @Test
+    fun limitesForaDoIntervaloFalham() {
+        val casos = listOf(
+            "SYNC_INTERVALO_MIN" to "4", "SYNC_INTERVALO_MIN" to "1441",
+            "SYNC_MAX_ITENS" to "200001", "SYNC_MAX_ITENS" to "0",
+            "SYNC_MAX_REQUISICOES" to "20001", "SYNC_SOBREPOSICAO_MIN" to "61",
+            "SYNC_TEMPO_MAX_MIN" to "241", "SYNC_TEMPO_MAX_MIN" to "abc",
+        )
+        for ((nome, valor) in casos) {
+            val e = assertFailsWith<IllegalArgumentException> { Settings.fromEnv(mapOf(nome to valor)) }
+            assertTrue(e.message!!.contains(nome), "mensagem deve citar $nome")
+            // a mensagem cita só o nome da variável, nunca o valor informado
+            assertFalse(e.message!!.contains("'$valor'"), "mensagem não deve ecoar o valor de $nome")
+        }
+    }
+
+    @Test
+    fun instanciaDesconhecidaFalha() {
+        val e = assertFailsWith<IllegalArgumentException> { Settings.fromEnv(mapOf("SYNC_INSTANCIAS" to "samsung,xpto")) }
+        assertTrue(e.message!!.contains("SYNC_INSTANCIAS"))
+    }
+
+    @Test
+    fun horaInvalidaFalha() {
+        val e = assertFailsWith<IllegalArgumentException> { Settings.fromEnv(mapOf("SYNC_HORA_RECONCILIACAO" to "25:00")) }
+        assertTrue(e.message!!.contains("SYNC_HORA_RECONCILIACAO"))
+        assertFailsWith<IllegalArgumentException> { Settings.fromEnv(mapOf("SYNC_HORA_RETENCAO" to "3h")) }
     }
 }

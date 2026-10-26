@@ -3,8 +3,14 @@ package br.sidia.painel.config
 import br.sidia.painel.jira.JiraAuthKind
 import java.nio.file.InvalidPathException
 import java.nio.file.Path
+import br.sidia.painel.jira.INSTANCIAS_CONHECIDAS
+import br.sidia.painel.sync.SyncSettings
 import java.time.DateTimeException
+import java.time.LocalTime
 import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+import java.time.format.ResolverStyle
+import kotlin.time.Duration.Companion.minutes
 
 /** Conexão com uma instância do Jira. O `token` nunca aparece em `toString`. */
 data class JiraInstanceSettings(
@@ -41,6 +47,8 @@ data class Settings(
     val databasePoolSize: Int = 10,
     /** Instâncias do Jira configuradas (`samsung`, `sidia`); só entram quando completas. */
     val jiraInstances: Map<String, JiraInstanceSettings> = emptyMap(),
+    /** Ajustes da sincronização (`SYNC_*`). Só intervalos e limites: o modo vem da flag do Jira. */
+    val sync: SyncSettings = SyncSettings(),
 ) {
     /** Sem segredos: senha vira `***` e `usuario:senha@` e `password=` da URL são mascarados. */
     override fun toString(): String =
@@ -83,8 +91,55 @@ data class Settings(
                     instancia(env, "samsung", "JIRA_SAMSUNG", JiraAuthKind.BEARER),
                     instancia(env, "sidia", "JIRA_SIDIA", JiraAuthKind.BASIC),
                 ).toMap(),
+                sync = lerSync(env),
             )
         }
+
+        /** Lê as `SYNC_*`; vazio = padrão. Mensagens citam só o NOME da variável, nunca o valor. */
+        private fun lerSync(env: Map<String, String>): SyncSettings {
+            val p = SyncSettings()
+            fun inteiro(nome: String, faixa: IntRange, padrao: Int): Int =
+                texto(env, nome)?.let {
+                    it.toIntOrNull()?.takeIf { n -> n in faixa }
+                        ?: throw IllegalArgumentException("$nome inválido (esperado inteiro de ${faixa.first} a ${faixa.last})")
+                } ?: padrao
+
+            fun hora(nome: String, padrao: LocalTime): LocalTime =
+                texto(env, nome)?.let {
+                    try {
+                        LocalTime.parse(it, FORMATO_HORA)
+                    } catch (e: DateTimeException) {
+                        throw IllegalArgumentException("$nome inválido (esperado HH:mm)")
+                    }
+                } ?: padrao
+
+            val instancias = texto(env, "SYNC_INSTANCIAS")?.let { bruto ->
+                val ids = bruto.split(',').map { it.trim() }.filter { it.isNotEmpty() }.distinct()
+                require(ids.isNotEmpty() && ids.all { it in INSTANCIAS_CONHECIDAS }) {
+                    "SYNC_INSTANCIAS inválido (esperado ids de instâncias conhecidas separados por vírgula)"
+                }
+                ids
+            } ?: p.instancias
+            return SyncSettings(
+                instancias = instancias,
+                intervalo = inteiro("SYNC_INTERVALO_MIN", 5..1440, p.intervalo.inWholeMinutes.toInt()).minutes,
+                horaReconciliacao = hora("SYNC_HORA_RECONCILIACAO", p.horaReconciliacao),
+                horaRetencao = hora("SYNC_HORA_RETENCAO", p.horaRetencao),
+                maxItens = inteiro("SYNC_MAX_ITENS", 1..200_000, p.maxItens),
+                maxRequisicoes = inteiro("SYNC_MAX_REQUISICOES", 1..20_000, p.maxRequisicoes),
+                sobreposicao = inteiro("SYNC_SOBREPOSICAO_MIN", 1..60, p.sobreposicao.inWholeMinutes.toInt()).minutes,
+                fusoDoServidor = texto(env, "SYNC_FUSO_SERVIDOR")?.let {
+                    try {
+                        ZoneId.of(it)
+                    } catch (e: DateTimeException) {
+                        throw IllegalArgumentException("SYNC_FUSO_SERVIDOR inválido")
+                    }
+                } ?: p.fusoDoServidor,
+                tempoMaximo = inteiro("SYNC_TEMPO_MAX_MIN", 1..240, p.tempoMaximo.inWholeMinutes.toInt()).minutes,
+            )
+        }
+
+        private val FORMATO_HORA = DateTimeFormatter.ofPattern("HH:mm").withResolverStyle(ResolverStyle.STRICT)
 
         /** Valor sem espaços nas pontas; ausente, vazio ou só espaços = null (usar o padrão). */
         private fun texto(env: Map<String, String>, nome: String): String? =
