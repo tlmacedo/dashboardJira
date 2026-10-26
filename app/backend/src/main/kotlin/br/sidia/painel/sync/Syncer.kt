@@ -19,6 +19,9 @@ const val CAMPO_OS_VERSION = "OS Version"
 /** Resultado de uma sincronização: issues gravadas e eventos de changelog processados (já existentes contam). */
 data class SyncSummary(val issues: Int, val events: Int, val incompletas: Int = 0, val usuariosNaoResolvidos: Int = 0)
 
+/** Issue com data ou usuário malformado; o serviço a registra como `DADO_MALFORMADO` (continua sendo um IllegalStateException). */
+class DadoMalformadoException(mensagem: String) : IllegalStateException(mensagem)
+
 /** Issue já gravada (commit feito); entregue ao `aoGravar` do [Syncer]. */
 data class IssueGravada(val key: String, val updated: java.time.Instant?)
 
@@ -109,7 +112,7 @@ class Syncer(
 
     /** Só a chave da issue vai na mensagem: o valor malformado (e a causa) ficam de fora. */
     private fun dadoMalformado(chave: String) =
-        IllegalStateException("Issue $chave com dado malformado (data ou usuário); sincronização interrompida")
+        DadoMalformadoException("Issue $chave com dado malformado (data ou usuário); sincronização interrompida")
 
     private fun embutidos(issue: JsonObject): List<JsonObject> =
         ((issue["changelog"] as? JsonObject)?.get("histories") as? JsonArray)?.mapNotNull { it as? JsonObject }.orEmpty()

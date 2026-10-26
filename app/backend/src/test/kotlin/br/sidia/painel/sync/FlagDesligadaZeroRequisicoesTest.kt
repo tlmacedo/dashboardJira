@@ -17,6 +17,52 @@ import kotlin.test.assertFailsWith
 
 /** Prova de que, com a flag `false`, nenhum caminho da sincronização fala com o Jira. */
 class FlagDesligadaZeroRequisicoesTest {
+    companion object {
+        private val pg = org.testcontainers.postgresql.PostgreSQLContainer("postgres:16").apply { start() }
+
+        @JvmStatic
+        @org.junit.jupiter.api.AfterAll
+        fun pararContainer() {
+            pg.stop()
+        }
+    }
+
+    @Test
+    fun cargaInicialEIncrementalComFlagFalse() = runBlocking {
+        val contador = AtomicInteger(0)
+        val provedor = AtomicInteger(0)
+        val settings = Settings(
+            jiraLiveEnabled = false,
+            jiraInstances = mapOf(
+                "samsung" to JiraInstanceSettings("https://jira.exemplo.invalid", JiraAuthKind.BEARER, null, "token-de-teste-123"),
+            ),
+        )
+        val fabrica = JiraClientFactory(settings, {
+            provedor.incrementAndGet()
+            HttpClient(MockEngine { contador.incrementAndGet(); respond("{}", HttpStatusCode.OK) })
+        })
+        val ctx = br.sidia.painel.testContextComBanco(settings, pg, jira = fabrica)
+        ctx.use {
+            val ds = requireNotNull(ctx.dataSource)
+            val estado = PostgresSyncStateStore(ds)
+            val servico = SyncService(ctx, PostgresIssueStore(ds), estado, SyncGate(false, settings.sync), ctx.clock)
+            val negada = ResultadoExecucao.Negada(MotivoNegacao.DESLIGADO_PELA_FLAG)
+            // carga inicial (sem cursor)
+            assertEquals(negada, servico.incremental("samsung"))
+            // incremental (com cursor)
+            val cursor = java.time.Instant.parse("2026-10-30T12:05:00Z")
+            estado.avancarCursor("samsung", cursor)
+            assertEquals(negada, servico.incremental("samsung"))
+            assertEquals(0, contador.get())
+            assertEquals(0, provedor.get())
+            assertEquals(cursor, estado.cursor("samsung"))
+            val linhas = ds.connection.use { c ->
+                c.createStatement().executeQuery("SELECT count(*) FROM sync_run").use { it.next(); it.getInt(1) }
+            }
+            assertEquals(0, linhas)
+        }
+    }
+
     @Test
     fun nenhumaVariavelSyncLigaASincronizacao() {
         val env = mapOf(
