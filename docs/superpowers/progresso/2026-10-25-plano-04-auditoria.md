@@ -7,11 +7,13 @@ Branch de trabalho: `feat/auditoria` (a partir da `main` com o Plano 4A mesclado
 | Tarefa | Estado | Commit | Observações |
 |---|---|---|---|
 | 1 Labels de atraso e regras da auditoria em YAML | Concluída, revisão aprovada | `bfdaea1` | `labels_atraso.yaml` e `auditoria.yaml` reais passam a ser obrigatórios em produção (modelos `.exemplo` só em dev) |
-| 2 Linha do tempo de auditoria e quem pode alterar | Concluída; revisão em andamento no momento da publicação | `f01edb5` | `AuditModel`, `AuditTimeline`, `Autorizacao`; `duedate` no `ChangelogParser` |
-| 3 Sinais de vencimento, responsável e cancelamento | Em implementação no momento da publicação | (ver `git log feat/auditoria`) | Se não houver commit da Tarefa 3, comece por ela |
-| 4 a 9 | Não iniciadas | | Ordem do plano |
+| 2 Linha do tempo de auditoria e quem pode alterar | Concluída, revisão aprovada | `f01edb5` | `AuditModel`, `AuditTimeline`, `Autorizacao`; `duedate` no `ChangelogParser` |
+| 3 Sinais de vencimento, responsável, passa-bola e cancelamento | Concluída. A revisão reprovou 1 Important (DoS na contagem de dias úteis com datas absurdas), corrigido na rodada seguinte | `0e34a05` + `35d7326` | A contagem em `UTIL` para ao passar de `pertoDoVencimentoDias + 1`; anos fora de 2000..2100 são ilegíveis; sem re-revisão separada (o teste de tempo passaria também no código antigo: pega só regressão grosseira) |
+| 4 a 9 | Não iniciadas (decisão do usuário em 26/10: parar após a Tarefa 3) | | Ordem do plano; **comece pela Tarefa 4** |
 
-Testes no último ponto verde conhecido: backend 702, 0 falhas (PostgreSQL real). Confirme com `cd app/backend && ./gradlew test` antes de seguir.
+Testes no último ponto verde conhecido: backend 744, 0 falhas (PostgreSQL real). Confirme com `cd app/backend && ./gradlew test` antes de seguir.
+
+**Minor da revisão da Tarefa 3:** `JIRAUSER*`/conta de serviço saem `NAO_AUTORIZADO` (o brief fixa isso; decidir se a Tarefa 4 ou a tela rotula como autor desconhecido); empate de instante usa `<` estrito e a ordem do empate depende da entrada; texto ilegível de `VENCIMENTO_REMOVIDO` sem limite de tamanho; em `UTIL`, sábado com vencimento na sexta anterior dá distância 0 e conta como "perto"; `from=" "` contra `to=null` conta como troca; autorização avaliada duas vezes por sinal (duplicação trivial); faltam testes de vigência, de empate, de feriado em `UTIL` e de `to` ilegível.
 
 ## Como continuar (passo a passo)
 
