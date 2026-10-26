@@ -112,6 +112,23 @@ Caso '-' (Cmd 'echo $JIRA_TOKEN') $true 'trava: variável de conexão do Jira'
 Caso '-' (Mcp 'jira-local' 'search') $true 'trava: servidor MCP com jira no nome'
 Caso '-' (Mcp 'fetch' 'fetch' '{"url":"https://x.atlassian.net/wiki"}') $true 'trava: MCP de fetch com URL da Atlassian'
 Caso 'false' (Cmd 'JIRA_LIVE_ENABLED=false ./gradlew test') $false 'liberado: flag false no comando não liga nada'
+# coerência com o guard.sh da Tarefa 11 (mesma leitura da flag, mesmas bordas)
+Caso ' true ' (Cmd "curl -s $URL") $false 'liberado: espaços nas pontas são ignorados'
+Caso 'True' (Cmd "curl -s $URL") $false 'liberado: True (maiúscula inicial)'
+foreach ($f in @('tr ue', 'true;', 'yes', 'sim', '0', 'truee')) {
+    Caso $f (Cmd "curl -s $URL") $true "trava: flag '$f' não libera (só true libera)"
+    Caso $f (Mcp 'claude_ai_Atlassian_MCP' 'searchJiraIssuesUsingJql') $true "trava: MCP com flag '$f'"
+}
+Caso 'false' (Cmd 'env JIRA_LIVE_ENABLED=true curl -s https://x.invalid/a') $true 'trava: env liga a flag dentro do comando'
+Caso 'false' (Cmd 'export JIRA_LIVE_ENABLED=true') $true 'trava: export liga a flag dentro do comando'
+Caso 'false' (Cmd '(JIRA_LIVE_ENABLED=true curl -s https://x.invalid/a)') $true 'trava: ligar a flag em subshell'
+Caso 'false' (Cmd 'JIRA_LIVE_ENABLED="true" curl -s https://x.invalid/a') $true 'trava: ligar a flag com aspas'
+Caso '-' (Cmd 'JIRA_LIVE_ENABLED=true curl -s https://x.invalid/a') $true 'trava: flag ausente, ligar dentro do comando'
+Caso 'true' (Cmd 'curl -s -H "Authorization: Bearer $JIRA_SAMSUNG_TOKEN" https://jira.exemplo.invalid/rest/api/2/myself') $false 'liberado: token como argumento de outro comando com a flag true'
+Caso 'true' (Cmd 'JIRA_LIVE_ENABLED=true ./gradlew test') $false 'liberado: ligar a flag no comando com a flag true no ambiente (igual ao guard.sh)'
+Caso 'true' (Cmd 'ls && echo $JIRA_SAMSUNG_TOKEN') $true 'trava mesmo com true: exibir token depois de &&'
+Caso 'true' (Cmd 'env | grep -i jira') $true 'trava mesmo com true: env canalizado para grep de jira'
+Caso ' TRUE ' (Cmd 'echo $JIRA_SAMSUNG_TOKEN') $true 'trava mesmo com TRUE e espaços: exibir token'
 # extras do Windows/PowerShell
 Caso '-' (Cmd "Invoke-WebRequest -Uri $URL") $true 'trava: Invoke-WebRequest'
 Caso '-' (Cmd 'iwr jira.exemplo.invalid') $true 'trava: iwr sem esquema na URL'

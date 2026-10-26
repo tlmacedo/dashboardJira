@@ -11,8 +11,8 @@
 #
 # Diferença para o hook do macOS/Linux (`PreToolUse`, bash): lá o adaptador chama o `.claude/hooks/guard.sh`.
 # Aqui não há `sh` nem `jq` garantidos, então as regras do guard.sh foram REESCRITAS em PowerShell.
-# São duas cópias: ao mudar o guard.sh (por exemplo, Plano 4A, Tarefa 11), atualize também este arquivo
-# e o `test-PreToolUse.ps1` (os casos espelham o `.claude/hooks/test-guard.sh`).
+# São duas cópias: ao mudar o guard.sh, atualize também este arquivo e o `test-PreToolUse.ps1` (os casos
+# espelham o `.claude/hooks/test-guard.sh`). Verificado contra o guard.sh da Tarefa 11 do Plano 4A (26/10/2026).
 #
 # Entrada aceita (JSON no stdin):
 #   - extensão VS Code: .preToolUse.toolName + .preToolUse.parameters (valores podem vir como texto JSON)
@@ -331,7 +331,8 @@ try {
     if ($null -eq $parametros) { $parametros = Ler-Prop $pre 'parameters' }
     $parametros = Desfazer-Json $parametros
 
-    $flag = ([string]$env:JIRA_LIVE_ENABLED) -replace '\s', ''
+    # mesma leitura do guard.sh e do Settings.kt: espaços só nas pontas ("tr ue" não vira true)
+    $flag = ([string]$env:JIRA_LIVE_ENABLED).Trim()
     $jiraLivre = [string]::Equals($flag, 'true', [System.StringComparison]::OrdinalIgnoreCase)
 
     switch -Regex ($ferramenta) {

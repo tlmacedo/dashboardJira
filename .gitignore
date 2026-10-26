@@ -1,4 +1,6 @@
 .superpowers/
+# Configurações locais do Claude Code (podem ligar a flag do hook; nunca versionar)
+.claude/settings.local.json
 __pycache__/
 app/data/
 app/.env

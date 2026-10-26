@@ -42,6 +42,8 @@ application {
 
 tasks.test {
     useJUnitPlatform()
+    // Isolamento: a suíte nunca herda a flag do Jira ligada no terminal (testes usam MockEngine, sem rede).
+    environment("JIRA_LIVE_ENABLED", "false")
     // Pasta dos YAML de exemplo, por caminho absoluto (não depende do diretório de trabalho).
     systemProperty("painel.configDir", rootProject.layout.projectDirectory.dir("../config").asFile.canonicalPath)
     // Fontes de produção, por caminho absoluto: usado pelo teste que varre quem constrói o cliente Jira.

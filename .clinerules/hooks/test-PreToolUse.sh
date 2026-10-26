@@ -69,6 +69,24 @@ caso true "$(cmd 'echo $JIRA_SAMSUNG_TOKEN')" true "trava mesmo com true: exibir
 caso true "$(cmd 'printenv JIRA_SIDIA_PASSWORD')" true "trava mesmo com true: exibir senha"
 caso true "$(cmd 'cd app/backend && ./gradlew run')" false "liberado: subir o app com a flag true"
 
+# --- coerência com o guard.sh da Tarefa 11 (mesma leitura da flag, mesmas bordas) ---
+caso " true " "$(cmd "curl -s $URL")" false "liberado: espaços nas pontas são ignorados"
+caso True "$(cmd "curl -s $URL")" false "liberado: True (maiúscula inicial)"
+for f in "tr ue" "true;" yes sim 0 truee; do
+  caso "$f" "$(cmd "curl -s $URL")" true "trava: flag '$f' não libera (só true libera)"
+  caso "$f" "$(mcp 'claude_ai_Atlassian_MCP' 'searchJiraIssuesUsingJql')" true "trava: MCP com flag '$f'"
+done
+caso false "$(cmd 'env JIRA_LIVE_ENABLED=true curl -s https://x.invalid/a')" true "trava: env liga a flag dentro do comando"
+caso false "$(cmd 'export JIRA_LIVE_ENABLED=true')" true "trava: export liga a flag dentro do comando"
+caso false "$(cmd '(JIRA_LIVE_ENABLED=true curl -s https://x.invalid/a)')" true "trava: ligar a flag em subshell"
+caso false "$(cmd 'JIRA_LIVE_ENABLED="true" curl -s https://x.invalid/a')" true "trava: ligar a flag com aspas"
+caso - "$(cmd 'JIRA_LIVE_ENABLED=true curl -s https://x.invalid/a')" true "trava: flag ausente, ligar dentro do comando"
+caso true "$(cmd 'curl -s -H "Authorization: Bearer $JIRA_SAMSUNG_TOKEN" https://jira.exemplo.invalid/rest/api/2/myself')" false "liberado: token como argumento de outro comando com a flag true"
+caso true "$(cmd 'JIRA_LIVE_ENABLED=true ./gradlew test')" false "liberado: ligar a flag no comando com a flag true no ambiente (igual ao guard.sh)"
+caso true "$(cmd 'ls && echo $JIRA_SAMSUNG_TOKEN')" true "trava mesmo com true: exibir token depois de &&"
+caso true "$(cmd 'env | grep -i jira')" true "trava mesmo com true: env canalizado para grep de jira"
+caso " TRUE " "$(cmd 'echo $JIRA_SAMSUNG_TOKEN')" true "trava mesmo com TRUE e espaços: exibir token"
+
 # --- comandos comuns sempre liberados ---
 caso - "$(cmd 'ls -la')" false "liberado: ls"
 caso - "$(cmd 'cd app/backend && ./gradlew test')" false "liberado: testes do backend"

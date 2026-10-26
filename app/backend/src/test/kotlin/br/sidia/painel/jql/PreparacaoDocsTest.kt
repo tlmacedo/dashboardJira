@@ -28,8 +28,15 @@ class PreparacaoDocsTest {
         for (chamada in chamadas) {
             assertTrue(texto.contains(chamada), "Checklist sem a chamada $chamada")
         }
-        val ocorrencias = Regex(Regex.escape("autorização expressa")).findAll(texto).count()
-        assertTrue(ocorrencias >= 5, "Esperadas ao menos 5 menções a 'autorização expressa', achadas $ocorrencias")
+        val ocorrencias = Regex(Regex.escape("Confirme `JIRA_LIVE_ENABLED=true`")).findAll(texto).count()
+        assertTrue(ocorrencias >= 5, "Esperadas ao menos 5 menções a 'Confirme `JIRA_LIVE_ENABLED=true`', achadas $ocorrencias")
+    }
+
+    @Test
+    fun checklistSemRegraAntiga() {
+        val texto = ler("docs/jira/checklist-primeira-conexao.md")
+        assertTrue(!texto.contains("autorização expressa"), "Checklist ainda cita 'autorização expressa'")
+        assertTrue(!texto.contains("por pesquisa"), "Checklist ainda cita 'por pesquisa'")
     }
 
     /** Seções de passo do checklist: do título `## Passo`/`### Passo` até o próximo título de mesmo nível ou acima. */
@@ -47,12 +54,14 @@ class PreparacaoDocsTest {
     }
 
     @Test
-    fun cadaPassoDoChecklistExigeAutorizacaoExpressa() {
+    fun cadaPassoDoChecklistConfirmaAFlag() {
         val secoes = secoesDePasso(ler("docs/jira/checklist-primeira-conexao.md"))
         assertEquals(5, secoes.size, "Esperadas 5 seções de passo")
         for (secao in secoes) {
-            // Grafia exata (sem ignoreCase): os documentos escrevem "autorização expressa" em minúsculas.
-            assertTrue(secao.contains("autorização expressa"), "Seção sem 'autorização expressa': ${secao.lines().first()}")
+            assertTrue(
+                secao.contains("Confirme `JIRA_LIVE_ENABLED=true`"),
+                "Seção sem 'Confirme `JIRA_LIVE_ENABLED=true`': ${secao.lines().first()}",
+            )
         }
     }
 

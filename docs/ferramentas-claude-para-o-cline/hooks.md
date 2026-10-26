@@ -13,7 +13,7 @@ Configurados em `.claude/settings.json` (versionado):
 | `PreToolUse` em ferramentas MCP `*tlassian*` e `Bash` | Antes de cada comando | `.claude/hooks/guard.sh jira` | Bloqueia: ferramentas MCP do Atlassian; qualquer variável `JIRA_*` (exceto a própria flag); URL com `jira`/`atlassian`; ferramenta de rede (`curl`, `wget`, `ssh`...) junto da palavra Jira; `jiradash check`, `sync` ou `serve`; ligar `JIRA_LIVE_ENABLED` dentro do comando |
 | `PreToolUse` em `Write`, `Edit`, `NotebookEdit`, `Bash` | Antes de escrever ou rodar | `.claude/hooks/guard.sh arquivos` | Bloqueia editar `.env` (exceto `.env.example`/`.env.sample`) e `config/{equipes,ausencias,papeis,squads}.yaml`; bloqueia comandos que escrevem, copiam, removem ou versionam esses arquivos; bloqueia `git add -f`/`--force` |
 
-Testes: `sh .claude/hooks/test-guard.sh`. O Plano 4A, Tarefa 11, ainda vai tornar o `guard.sh` consciente da flag.
+Testes: `sh .claude/hooks/test-guard.sh`. O `guard.sh jira` lê `JIRA_LIVE_ENABLED` do ambiente do Claude Code: com a flag `true` (espaços nas pontas ignorados, sem diferenciar maiúsculas) as regras de acesso ao Jira deixam de bloquear e só continua barrado exibir token ou senha no terminal; ausente, vazia, `false` ou inválida mantém tudo barrado, inclusive ligar a flag dentro do comando. O modo `arquivos` não depende da flag. Como o usuário liga a flag do hook: `HANDOFF.md` ("Dica do hook").
 
 ## O que o Cline oferece (verificado em 25/10/2026, código da branch `main` de github.com/cline/cline)
 
@@ -71,7 +71,7 @@ Testes: `sh .claude/hooks/test-guard.sh`. O Plano 4A, Tarefa 11, ainda vai torna
 
 **Falha fechada:** JSON ilegível, entrada vazia, JSON que não é objeto, entrada sem nome de ferramenta ou erro interno cancelam a ferramenta. No macOS/Linux, sem `jq` ou sem o `guard.sh`, também. No `.sh`: `set -o pipefail`, cada leitura com `jq` checada (`|| bloquear`), as decisões de bloqueio usam `grep` com here-string (sem pipe: com `printf | grep -q` e `pipefail`, um comando grande gerava SIGPIPE e virava liberação), erro do `grep` (código 2) conta como protegido e uma `trap` de saída imprime `cancel: true` com código 0 se o script terminar sem responder (por exemplo, variável não definida com `set -u`). No `.ps1`: `try/catch` em volta de tudo, com JSON fixo como último recurso.
 
-**Duas cópias das regras:** o `.sh` chama o `guard.sh`; o `.ps1` reescreve as mesmas regras. Ao mudar o `guard.sh` (Plano 4A, Tarefa 11, por exemplo), mude também o `PreToolUse.ps1` e o `test-PreToolUse.ps1` (que espelha caso a caso o `test-guard.sh`). Pendência da Tarefa 11: no `.sh`, remover o atalho `jira_livre` e a expressão de token duplicada e chamar sempre o `guard.sh jira`.
+**Duas cópias das regras:** o `.sh` chama sempre o `guard.sh jira` e o `guard.sh arquivos` (a expressão de token do Cline é só um reforço mais estrito); o `.ps1` reescreve as mesmas regras. Ao mudar o `guard.sh`, mude também o `PreToolUse.ps1` e o `test-PreToolUse.ps1` (que espelha caso a caso o `test-guard.sh`). **Verificado em 26/10/2026** contra o `guard.sh` consciente da flag (Plano 4A, Tarefa 11): mesma leitura da flag (espaços só nas pontas, sem diferenciar maiúsculas, só `true` libera; `tr ue`, `true;`, `yes`, `1`, vazia e ausente travam), mesmo bloqueio de exibir segredo com a flag `true` e ligar a flag dentro do comando continua barrado com a flag diferente de `true`.
 
 ### Instalar no PC com Windows 11 (ClineSR)
 

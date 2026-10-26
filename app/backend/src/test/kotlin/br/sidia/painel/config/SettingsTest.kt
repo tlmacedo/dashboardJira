@@ -13,6 +13,12 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class SettingsTest {
+    /** A tarefa `test` do Gradle fixa a flag em `false`: a suíte não herda a flag ligada no terminal. */
+    @Test
+    fun suiteNaoHerdaAFlagDoAmbiente() {
+        assertEquals("false", System.getenv("JIRA_LIVE_ENABLED"))
+    }
+
     @Test
     fun padroesSaoSeguros() {
         val s = Settings.fromEnv(emptyMap())

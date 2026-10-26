@@ -8,7 +8,7 @@
 # Instalação (macOS/Linux): este arquivo já está no lugar certo (`.clinerules/hooks/PreToolUse`, sem
 # extensão e executável). No Cline, ligue "Enable Hooks" nas configurações de recursos (Features).
 # Windows: o Cline só executa `.clinerules/hooks/PreToolUse.ps1` (PowerShell), que reescreve estas regras;
-# ao mudar uma regra aqui ou no guard.sh, mude também o .ps1 e os dois testes.
+# ao mudar uma regra aqui ou no guard.sh, mude também o .ps1 e os dois testes (verificado em 26/10/2026).
 # Ver docs/ferramentas-claude-para-o-cline/hooks.md.
 #
 # Formatos de entrada aceitos (JSON no stdin):
@@ -19,10 +19,10 @@
 # Flag JIRA_LIVE_ENABLED (lida do ambiente do processo do Cline, NÃO do app/.env nem do comando):
 #   - ausente, false ou inválida  -> trava do Jira ATIVA (tudo o que o guard.sh barra continua barrado,
 #     inclusive ligar a flag dentro de um comando);
-#   - true (sem diferenciar maiúsculas, como o Settings.kt do app) -> o modo `jira` é dispensado,
-#     exceto exibir token ou senha do Jira no terminal, que continua barrado (Plano 4A, Decisão 10).
-#   PENDÊNCIA: quando a Tarefa 11 do Plano 4A for mesclada (guard.sh lendo a flag do ambiente), remover o
-#   atalho `jira_livre` e a expressão de token abaixo e chamar sempre `guard.sh jira` (fonte única).
+#   - true (sem diferenciar maiúsculas, espaços só nas pontas, como o Settings.kt do app) -> o guard.sh
+#     (que lê a mesma flag do mesmo ambiente) dispensa o modo `jira`, exceto exibir token ou senha do Jira
+#     no terminal, que continua barrado (Plano 4A, Decisão 10). Este adaptador chama SEMPRE `guard.sh jira`
+#     (Tarefa 11); a expressão de token abaixo é um reforço mais estrito do Cline.
 # Extras do Cline (além do guard.sh), só com a flag diferente de true: navegador (`browser_action`) e
 #   `web_fetch` para URL com jira/atlassian (decisão do usuário em 25/10: inclui a documentação pública do
 #   Jira; `web_search` continua liberado), cmdlets de rede do PowerShell (Invoke-WebRequest, iwr, irm...)
@@ -88,7 +88,8 @@ ferramenta=$(printf '%s' "$entrada" | jq -r '((.tool_call | objects | .name) // 
   bloquear "BLOQUEADO: erro ao ler o nome da ferramenta (falha fechada)."
 [ -n "$ferramenta" ] || bloquear "BLOQUEADO: entrada sem nome de ferramenta reconhecível (falha fechada)."
 
-flag=$(printf '%s' "${JIRA_LIVE_ENABLED:-}" | tr -d '[:space:]' | tr '[:upper:]' '[:lower:]')
+# mesma leitura do guard.sh e do Settings.kt: espaços só nas pontas (espaço no meio, como "tr ue", não vira true)
+flag=$(printf '%s' "${JIRA_LIVE_ENABLED:-}" | sed -E 's/^[[:space:]]+//; s/[[:space:]]+$//' | tr '[:upper:]' '[:lower:]')
 jira_livre=false
 [ "$flag" = "true" ] && jira_livre=true
 
@@ -298,7 +299,8 @@ case "$ferramenta" in
         fi
       fi
       extras_comando "$(printf '%s' "$c_json" | jq -r '.')"
-      [ "$jira_livre" = true ] || chamar_guard jira "$payload"
+      # o guard.sh lê a flag do mesmo ambiente: com true ele só barra exibir segredo (fonte única das regras)
+      chamar_guard jira "$payload"
       chamar_guard arquivos "$payload"
     done <<< "$comandos"
     liberar
