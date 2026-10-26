@@ -18,9 +18,7 @@ casov() { # valor da flag, modo, JSON, esperado, descrição (a flag é definida
 bash_json() { jq -nc --arg c "$1" '{tool_name:"Bash",tool_input:{command:$c}}'; }
 j() { caso jira "$(bash_json "$1")" "$2" "jira: $1"; }
 a() { caso arquivos "$(bash_json "$1")" "$2" "arquivos: $1"; }
-jf() { casov false jira "$(bash_json "$1")" "$2" "jira [flag=false]: $1"; }   # flag false
 jt() { casov true jira "$(bash_json "$1")" "$2" "jira [flag=true]: $1"; }     # flag true
-jx() { casov sim jira "$(bash_json "$1")" "$2" "jira [flag=sim, inválida]: $1"; } # flag inválida
 
 j 'curl -s https://jira.exemplo.com/rest/api/2/search' 2
 j 'python3 -c "import urllib.request as u;u.urlopen(\"https://x.atlassian.net/a\")"' 2
@@ -107,6 +105,28 @@ for v in true false sim ""; do
   casov "$v" arquivos '{"tool_name":"Edit","tool_input":{"file_path":".env"}}' 2 "arquivos [flag='$v']: Edit .env"
   casov "$v" arquivos "$(bash_json 'git add .env.example')" 0 "arquivos [flag='$v']: git add .env.example"
 done
+
+# Ligar a flag por JSON/YAML/dotenv e escrever em settings do Claude / override do compose (qualquer flag)
+JSON_ON='printf '"'"'{"env":{"JIRA_LIVE_ENABLED":"true"}}'"'"' > .claude/settings.local.json'
+for v in false true ""; do
+  casov "$v" arquivos "$(bash_json "$JSON_ON")" 2 "arquivos [flag='$v']: printf JSON liga a flag em settings.local.json"
+  casov "$v" arquivos '{"tool_name":"Write","tool_input":{"file_path":".claude/settings.local.json"}}' 2 "arquivos [flag='$v']: Write em settings.local.json"
+  casov "$v" arquivos '{"tool_name":"Edit","tool_input":{"file_path":"/x/y/.claude/settings.json"}}' 2 "arquivos [flag='$v']: Edit em settings.json"
+  casov "$v" arquivos '{"tool_name":"Write","tool_input":{"file_path":"app/docker-compose.override.yml"}}' 2 "arquivos [flag='$v']: Write em docker-compose.override.yml"
+  casov "$v" arquivos '{"tool_name":"Write","tool_input":{"file_path":"app/compose.override.yaml"}}' 2 "arquivos [flag='$v']: Write em compose.override.yaml"
+  casov "$v" arquivos "$(bash_json 'tee app/docker-compose.override.yml < x.yml')" 2 "arquivos [flag='$v']: tee no override"
+  casov "$v" arquivos "$(bash_json 'cp x.json .claude/settings.local.json')" 2 "arquivos [flag='$v']: cp para settings.local.json"
+  casov "$v" arquivos "$(bash_json 'sed -i s/a/b/ .claude/settings.json')" 2 "arquivos [flag='$v']: sed -i em settings.json"
+  casov "$v" arquivos "$(bash_json 'cat .claude/settings.json')" 0 "arquivos [flag='$v']: ler settings.json continua liberado"
+  casov "$v" arquivos '{"tool_name":"Write","tool_input":{"file_path":"docs/x.json"}}' 0 "arquivos [flag='$v']: Write em docs/x.json liberado"
+  casov "$v" arquivos '{"tool_name":"Write","tool_input":{"file_path":"app/docker-compose.yml"}}' 0 "arquivos [flag='$v']: Write em docker-compose.yml liberado"
+done
+for v in false sim ""; do
+  casov "$v" jira "$(bash_json "$JSON_ON")" 2 "trava [flag='$v']: forma JSON liga a flag no comando"
+  casov "$v" jira "$(bash_json 'echo "JIRA_LIVE_ENABLED: true" >> x.yml')" 2 "trava [flag='$v']: forma YAML liga a flag"
+  casov "$v" jira "$(bash_json 'echo JIRA_LIVE_ENABLED = "true" >> x.env')" 2 "trava [flag='$v']: forma dotenv liga a flag"
+done
+casov false jira "$(bash_json 'echo "JIRA_LIVE_ENABLED: false" >> x.yml')" 0 "trava [flag=false]: escrever false é liberado"
 
 a 'echo x > .env' 2
 a 'git add .env' 2

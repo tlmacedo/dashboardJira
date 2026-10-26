@@ -23,6 +23,11 @@
 #
 # Limite honesto: é uma proteção contra ações acidentais do assistente, não uma fronteira de segurança contra
 # quem quer burlar. Controle de rede de verdade exige sandbox ou lista de destinos permitidos no ambiente.
+# Limites que NÃO serão fechados: (1) com a flag true, formas indiretas de exibir segredo (bash -c, env sem
+# pipe, set -x, cat .env etc.) não são todas cobertas; (2) o WebFetch do Claude não passa por este hook;
+# (3) com a flag false, atribuição calculada da flag (=$'true', ${X:-true}) não é coberta.
+# Escrita em .claude/settings*.json e em overrides do compose é barrada por caminho (modo arquivos), pois
+# esses arquivos ligam a flag; só o usuário os edita.
 modo="$1"
 payload=$(cat)
 negar() { echo "BLOQUEADO: $1" >&2; exit 2; }
@@ -68,7 +73,8 @@ jira)
       negar "comando de rede para o Jira: $MSG_TRAVA."
     fi
     # 4) comandos do app que conectam ao Jira real e ligar a flag dentro do comando
-    if printf '%s' "$cmd" | grep -Eiq 'jiradash[[:space:]]+(check|sync|serve)|JIRA_LIVE_ENABLED[[:space:]]*=[[:space:]]*["'"'"']?[[:space:]]*(1|true)'; then
+    #    Reconhece também as formas JSON/YAML/dotenv ("JIRA_LIVE_ENABLED": "true", JIRA_LIVE_ENABLED: true).
+    if printf '%s' "$cmd" | grep -Eiq 'jiradash[[:space:]]+(check|sync|serve)|JIRA_LIVE_ENABLED["'"'"']?[[:space:]]*[:=][[:space:]]*["'"'"']?[[:space:]]*(1|true)'; then
       negar "comando que conecta ao Jira real ou liga a flag: $MSG_TRAVA."
     fi
   fi
@@ -77,6 +83,12 @@ arquivos)
   caminho=$(printf '%s' "$payload" | jq -r '.tool_input.file_path // .tool_input.notebook_path // ""')
   if [ -n "$caminho" ]; then
     base=$(basename "$caminho")
+    # arquivos que ligam a flag (settings do Claude e override do compose): só o usuário edita, com qualquer conteúdo
+    baixo=$(printf '%s' "$caminho" | tr '[:upper:]' '[:lower:]')
+    case "$baixo" in
+      .claude/settings*.json|*/.claude/settings*.json|*compose*override*|*compose*.override*)
+        negar "escrita em $base: só o usuário altera esse arquivo (ele pode ligar JIRA_LIVE_ENABLED)." ;;
+    esac
     if ! eh_modelo "$base"; then
       case "$base" in
         .env|.env.*) negar "edição de arquivo de ambiente ($base): contém segredos." ;;
@@ -95,6 +107,12 @@ arquivos)
       # escrita, cópia, remoção ou versionamento dos protegidos
       if printf '%s' "$sem_modelos" | grep -Eq '(>|>>|tee[[:space:]]|sed[[:space:]]+(-[a-z]*i|--in-place)|(^|[[:space:];&|])(cp|mv|rm|ln|truncate|dd|install|chmod)[[:space:]]|git[[:space:]]+(add|commit|stash|checkout|restore|rm|mv))'; then
         negar "comando altera ou versiona segredo/config com dados reais."
+      fi
+    fi
+    # settings do Claude e override do compose: qualquer escrita por comando é barrada (ler continua liberado)
+    if printf '%s' "$cmd" | grep -Eiq '\.claude/settings[^[:space:]"'"'"';|&)]*\.json|compose[^[:space:]"'"'"';|&)]*override'; then
+      if printf '%s' "$cmd" | grep -Eq '(>|>>|tee[[:space:]]|sed[[:space:]]+(-[a-z]*i|--in-place)|(^|[[:space:];&|(])(cp|mv|rm|ln|truncate|dd|install|chmod|touch)[[:space:]])'; then
+        negar "comando escreve em settings do Claude ou override do compose: só o usuário altera esse arquivo."
       fi
     fi
     # git add forçado ignora o .gitignore

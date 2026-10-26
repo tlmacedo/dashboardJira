@@ -96,7 +96,7 @@ jira_livre=false
 # extras do Cline (ver cabeçalho); grep -Ei = sem diferenciar maiúsculas
 Q="'"
 REDE_WINDOWS='(^|[^[:alnum:]_-])(invoke-webrequest|invoke-restmethod|iwr|irm|start-bitstransfer|bitsadmin|certutil|test-netconnection|tnc|resolve-dnsname|nslookup|ping|curl\.exe|wget\.exe)([^[:alnum:]_-]|$)|webclient|httpclient|xmlhttp|winhttp|start-process'
-LIGAR_FLAG_EXTRA="JIRA_LIVE_ENABLED[\"$Q[:space:],]+(-value[[:space:]]+)?[\"$Q]?[[:space:]]*(1|true)"
+LIGAR_FLAG_EXTRA="JIRA_LIVE_ENABLED[\"$Q[:space:],:=]+(-value[[:space:]]+)?[\"$Q]?[[:space:]]*(1|true)"
 LISTAR_AMBIENTE='(^[[:space:]]*|[;&|(][[:space:]]*|cmd(\.exe)?[[:space:]]+/c[[:space:]]+)(env|printenv|set|export[[:space:]]+-p|declare[[:space:]]+-[px]|compgen[[:space:]]+-v)[[:space:]]*($|[;&|>)])|(get-childitem|gci|dir|ls|get-item|gi)[[:space:]]+(-path[[:space:]]+)?env:[\/]?\*?[[:space:]]*($|[;&|>)])|\[(system\.)?environment\]::getenvironmentvariables'
 URL_JIRA="https?://[^[:space:]\"$Q]*(jira|atlassian)"
 # protegidos em comandos (sem diferenciar maiúsculas): .env e .env.*, as configs reais em qualquer pasta, o
@@ -160,6 +160,17 @@ caminho_protegido() {
       motivo="config com dados pessoais reais ($base); use só os modelos .exemplo/.demo"; return 0 ;;
     filtros_status_tool.txt*) motivo="arquivo de filtros do Jira ($base)"; return 0 ;;
   esac
+  return 1
+}
+
+# arquivos que ligam a flag (.claude/settings*.json e override do compose): só o usuário ESCREVE neles, com
+# qualquer conteúdo; ler continua liberado. 0 = só o usuário altera. Barras do Windows viram '/', sem maiúsculas.
+so_usuario_altera() {
+  local n base
+  n=$(printf '%s' "$1" | LC_ALL=C tr '\\' '/' | minusculas | LC_ALL=C sed -E 's#[.[:space:]]+$##') || return 0
+  base="${n##*/}"
+  case "$base" in *compose*override*) return 0 ;; esac
+  case "$n" in .claude/settings*.json|*/.claude/settings*.json) return 0 ;; esac
   return 1
 }
 
@@ -265,6 +276,11 @@ extras_comando() {
     if casa "$sem_modelos" "$LEITURA"; then
       bloquear "BLOQUEADO: comando lê segredo/config com dados reais (o conteúdo iria para o modelo)."
     fi
+  fi
+  # settings do Claude e override do compose: escrever por comando é barrado com qualquer flag (ler é liberado)
+  if casa "$(printf '%s' "$1" | LC_ALL=C tr '\\' '/')" '\.claude/settings[^[:space:]"'"'"';|&)]*\.json|compose[^[:space:]"'"'"';|&)]*override' &&
+     casa "$1" "$ESCRITA"; then
+    bloquear "BLOQUEADO: comando escreve em settings do Claude ou override do compose: só o usuário altera esse arquivo."
   fi
   if [ "$jira_livre" != true ]; then
     if casa "$1" "$REDE_WINDOWS" && casa "$1" 'jira|atlassian'; then
@@ -396,6 +412,7 @@ if [ -n "${caminhos:-}" ]; then
   while IFS= read -r p; do
     [ -n "$p" ] || continue
     if caminho_protegido "$p"; then bloquear "BLOQUEADO: escrita em arquivo protegido ($p): $motivo."; fi
+    if so_usuario_altera "$p"; then bloquear "BLOQUEADO: escrita em $p: só o usuário altera esse arquivo (settings do Claude e override do compose podem ligar JIRA_LIVE_ENABLED)."; fi
     payload=$(jq -nc --arg p "$p" '{tool_name: "Write", tool_input: {file_path: $p}}') || bloquear "BLOQUEADO: erro ao montar o payload (falha fechada)."
     chamar_guard arquivos "$payload"
   done <<< "$caminhos"

@@ -28,7 +28,7 @@ Une gestão de fluxo (tempo em status, previsão, capacidade) a auditoria de int
 
 ## Operating Context
 
-- Fonte de dados: Jira DC da Samsung (Bearer PAT) e Jira da Sidia (Basic, projeto CAT). Nenhuma consulta real ao Jira sem autorização expressa; a flag `JIRA_LIVE_ENABLED=false` é o padrão.
+- Fonte de dados: Jira DC da Samsung (Bearer PAT) e Jira da Sidia (Basic, projeto CAT). A flag `JIRA_LIVE_ENABLED` é a única trava do acesso ao Jira e só o usuário a muda; `false` é o padrão.
 - Ausências, feriados, papéis, squads e pesos de cálculo vêm de arquivos YAML versionados.
 - Fuso único America/Manaus; dias úteis como padrão, com opção de dias corridos.
 - Cada número é clicável e abre as tasks que o compõem (janela, nova aba, CSV).

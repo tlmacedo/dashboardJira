@@ -69,6 +69,21 @@ caso true "$(cmd 'echo $JIRA_SAMSUNG_TOKEN')" true "trava mesmo com true: exibir
 caso true "$(cmd 'printenv JIRA_SIDIA_PASSWORD')" true "trava mesmo com true: exibir senha"
 caso true "$(cmd 'cd app/backend && ./gradlew run')" false "liberado: subir o app com a flag true"
 
+# --- ligar a flag por arquivo de configuração: só o usuário escreve em settings do Claude e override do compose ---
+JSON_ON='printf '"'"'{"env":{"JIRA_LIVE_ENABLED":"true"}}'"'"' > .claude/settings.local.json'
+for f in - false true; do
+  caso "$f" "$(cmd "$JSON_ON")" true "settings: printf JSON liga a flag"
+  caso "$f" "$(esc write_to_file '.claude/settings.local.json')" true "settings: write_to_file em settings.local.json"
+  caso "$f" "$(esc replace_in_file 'C:\x\.claude\settings.json')" true "settings: replace_in_file em settings.json (barras do Windows)"
+  caso "$f" "$(esc write_to_file 'app/docker-compose.override.yml')" true "compose: write_to_file no override"
+  caso "$f" "$(cmd 'tee app/docker-compose.override.yml < x.yml')" true "compose: tee no override"
+  caso "$f" "$(cmd 'cp x.json .claude/settings.local.json')" true "settings: cp para settings.local.json"
+  caso "$f" "$(ler '.claude/settings.json')" false "settings: ler settings.json liberado"
+  caso "$f" "$(cmd 'cat .claude/settings.json')" false "settings: cat settings.json liberado"
+  caso "$f" "$(esc write_to_file 'docs/x.json')" false "settings: docs/x.json liberado"
+done
+caso false "$(cmd 'echo "JIRA_LIVE_ENABLED: true" >> x.yml')" true "trava: forma YAML liga a flag"
+
 # --- coerência com o guard.sh da Tarefa 11 (mesma leitura da flag, mesmas bordas) ---
 caso " true " "$(cmd "curl -s $URL")" false "liberado: espaços nas pontas são ignorados"
 caso True "$(cmd "curl -s $URL")" false "liberado: True (maiúscula inicial)"

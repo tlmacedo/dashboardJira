@@ -109,7 +109,7 @@ $PADRAO_URL_JIRA = 'https?://[^\s"'']*(jira|atlassian)'
 $PADRAO_REDE_CLASSICA = '(^|[^A-Za-z0-9_-])(curl|wget|http|https|httpie|xh|nc|ncat|telnet|ssh|ftp|openssl)(\.exe)?(\s|$)'
 # extras do Windows/PowerShell (não existem no guard.sh)
 $PADRAO_REDE_WINDOWS = '\b(invoke-webrequest|invoke-restmethod|iwr|irm|start-bitstransfer|bitsadmin|certutil|test-netconnection|tnc|resolve-dnsname|nslookup|ping|webclient|httpclient|xmlhttp|winhttp|start-process)\b'
-$PADRAO_LIGAR_FLAG = 'jiradash\s+(check|sync|serve)|JIRA_LIVE_ENABLED\s*=\s*["'']?\s*(1|true)|JIRA_LIVE_ENABLED["''\s,]+(-value\s+)?["'']?\s*(1|true)'
+$PADRAO_LIGAR_FLAG = 'jiradash\s+(check|sync|serve)|JIRA_LIVE_ENABLED\s*=\s*["'']?\s*(1|true)|JIRA_LIVE_ENABLED["''\s,:=]+(-value\s+)?["'']?\s*(1|true)'
 $PADRAO_TOKEN = 'JIRA_[A-Za-z0-9_]*(TOKEN|PASS|SENHA|SECRET|PAT)'
 $PADRAO_EXIBIR = '(^|[^A-Za-z0-9_-])(echo|printf|printenv|env|set|declare|typeset|export|cat|type|write-output|write-host|write-information|out-host|out-string|get-childitem|gci|dir|ls|get-item|gi|get-content|gc)(\s|$)'
 # listar todo o ambiente mostra os tokens: barrado com qualquer valor da flag
@@ -311,6 +311,11 @@ function Regra-Arquivos([string]$cmd) {
         if (Casa $semModelos $PADRAO_ESCRITA) { return 'comando altera ou versiona segredo/config com dados reais.' }
         if (Casa $semModelos $PADRAO_LEITURA) { return 'comando lê segredo/config com dados reais (o conteúdo iria para o modelo).' }
     }
+    # settings do Claude e override do compose: escrever por comando é barrado (ler continua liberado)
+    $cmdBarras = $cmd -replace '\\', '/'
+    if ((Casa $cmdBarras '\.claude/settings[^\s"'';|&)]*\.json|compose[^\s"'';|&)]*override') -and (Casa $cmd $PADRAO_ESCRITA)) {
+        return 'comando escreve em settings do Claude ou override do compose: só o usuário altera esse arquivo.'
+    }
     $semAspas = $cmd -replace '["'']', ''
     if (Casa $semAspas $PADRAO_GIT_ADD_FORCADO) { return 'git add forçado ignora o .gitignore (segredos e configs reais).' }
     return $null
@@ -430,6 +435,13 @@ try {
                     if ($ferramenta -match '^read_') { Bloquear "BLOQUEADO: leitura de arquivo protegido ($p): $m" }
                     Bloquear "BLOQUEADO: escrita em arquivo protegido ($p): $m"
                 }
+                if ($ferramenta -notmatch '^read_') {
+                    # settings do Claude e override do compose ligam a flag: só o usuário escreve neles
+                    $pn = (([string]$p) -replace '\\', '/').ToLowerInvariant().TrimEnd('.', ' ')
+                    if (($pn -like '*compose*override*') -or ($pn -like '.claude/settings*.json') -or ($pn -like '*/.claude/settings*.json')) {
+                        Bloquear "BLOQUEADO: escrita em ${p}: só o usuário altera esse arquivo (settings do Claude e override do compose podem ligar JIRA_LIVE_ENABLED)."
+                    }
+                }
             }
             Liberar
         }
@@ -466,6 +478,10 @@ try {
                 if ($mm.Success) {
                     $m = Caminho-Protegido $mm.Groups[2].Value
                     if ($m) { Bloquear "BLOQUEADO: escrita em arquivo protegido ($($mm.Groups[2].Value)): $m" }
+                    $pn = ($mm.Groups[2].Value -replace '\\', '/').ToLowerInvariant().TrimEnd('.', ' ')
+                    if (($pn -like '*compose*override*') -or ($pn -like '.claude/settings*.json') -or ($pn -like '*/.claude/settings*.json')) {
+                        Bloquear "BLOQUEADO: escrita em $($mm.Groups[2].Value): só o usuário altera esse arquivo (settings do Claude e override do compose podem ligar JIRA_LIVE_ENABLED)."
+                    }
                 }
             }
             Liberar

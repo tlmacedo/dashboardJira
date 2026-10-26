@@ -112,6 +112,20 @@ Caso '-' (Cmd 'echo $JIRA_TOKEN') $true 'trava: variável de conexão do Jira'
 Caso '-' (Mcp 'jira-local' 'search') $true 'trava: servidor MCP com jira no nome'
 Caso '-' (Mcp 'fetch' 'fetch' '{"url":"https://x.atlassian.net/wiki"}') $true 'trava: MCP de fetch com URL da Atlassian'
 Caso 'false' (Cmd 'JIRA_LIVE_ENABLED=false ./gradlew test') $false 'liberado: flag false no comando não liga nada'
+# ligar a flag por arquivo de configuração: só o usuário escreve em settings do Claude e override do compose
+$JsonOn = 'printf ''{"env":{"JIRA_LIVE_ENABLED":"true"}}'' > .claude/settings.local.json'
+foreach ($f in @('-', 'false', 'true')) {
+    Caso $f (Cmd $JsonOn) $true 'settings: printf JSON liga a flag'
+    Caso $f (Esc 'write_to_file' '.claude/settings.local.json') $true 'settings: write_to_file em settings.local.json'
+    Caso $f (Esc 'replace_in_file' 'C:\x\.claude\settings.json') $true 'settings: replace_in_file em settings.json (barras do Windows)'
+    Caso $f (Esc 'write_to_file' 'app/docker-compose.override.yml') $true 'compose: write_to_file no override'
+    Caso $f (Cmd 'tee app/docker-compose.override.yml < x.yml') $true 'compose: tee no override'
+    Caso $f (Cmd 'cp x.json .claude/settings.local.json') $true 'settings: cp para settings.local.json'
+    Caso $f (Ler '.claude/settings.json') $false 'settings: ler settings.json liberado'
+    Caso $f (Cmd 'cat .claude/settings.json') $false 'settings: cat settings.json liberado'
+    Caso $f (Esc 'write_to_file' 'docs/x.json') $false 'settings: docs/x.json liberado'
+}
+Caso 'false' (Cmd 'echo "JIRA_LIVE_ENABLED: true" >> x.yml') $true 'trava: forma YAML liga a flag'
 # coerência com o guard.sh da Tarefa 11 (mesma leitura da flag, mesmas bordas)
 Caso ' true ' (Cmd "curl -s $URL") $false 'liberado: espaços nas pontas são ignorados'
 Caso 'True' (Cmd "curl -s $URL") $false 'liberado: True (maiúscula inicial)'
