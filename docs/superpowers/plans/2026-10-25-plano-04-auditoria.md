@@ -4,11 +4,13 @@
 
 **Objetivo (Goal):** Detectar, a partir do changelog sincronizado (`change_event`), as alterações de responsável, vencimento e labels de atraso feitas por quem não podia fazê-las (spec seção 7), e mostrá-las em telas restritas, com gaveta de histórico campo a campo, o card Task × Review e as métricas "no prazo" e "no prazo ajustado".
 
-**Arquitetura (Architecture):** Um domínio puro reconstrói o estado de cada issue em qualquer instante (`AuditTimeline`) e decide quem estava autorizado na data civil de Manaus de cada alteração (`Autorizacao`, sobre o `RoleDirectory` com vigência). Detectores puros transformam a linha do tempo em `Sinal`; o `AuditCalculator` junta sinais, Task × Review e no prazo. Os achados são **calculados na leitura** (sem tabela nova): o `PostgresAuditStore` lê `issue` e `change_event`. As rotas `/api/auditoria/*` e `/api/cards/task-review` exigem coordenador ou gerente, gravam toda consulta em `access_log` e alimentam duas telas React densas.
+**Arquitetura (Architecture):** Um domínio puro reconstrói o estado de cada issue em qualquer instante (`AuditTimeline`) e decide quem estava autorizado na data civil de Manaus de cada alteração (`Autorizacao`, sobre o `RoleDirectory` com vigência). Detectores puros transformam a linha do tempo em `Sinal`; o `AuditCalculator` junta sinais, Task × Review e no prazo. Os achados são **calculados na leitura** (sem tabela nova): o `PostgresAuditStore` lê `issue`, `change_event` e `issue_link` (vínculos "Blocks" do 4A, Tarefa 12, para os pares Task × Review). As rotas `/api/auditoria/*` e `/api/cards/task-review` exigem coordenador ou gerente, gravam toda consulta em `access_log` e alimentam duas telas React densas.
 
 **Stack (Tech Stack):** Kotlin 2 + Ktor 3.3.1, kaml (YAML estrito), PostgreSQL + Testcontainers 2.0.3; React + TypeScript (Vite, Vitest, Testing Library, TanStack Query).
 
-**Spec:** `docs/superpowers/specs/2026-10-24-painel-squads-kotlin-react-design.md` (seções 4.2 "Atraso justificado", 4.3, 7.1, 7.2, 7.3, 9 e 10). Depende só de interfaces do Plano 3, já na `main`: `ChangeEventRecord`, `ChangelogParser`, `IssueStore`/`PostgresIssueStore` (só como modelo de SQL), `StatusMap`, `BusinessCalendar`, `RoleDirectory`, `Visibility`, `AccessLog`, `AvisoDto`, `requireRole`, `testContextComBanco`, `ORDEM_NATURAL_DE_CHAVES`. Do Plano 4A depende **só pelos dados reais**; executa-se 100% offline com fixtures.
+**Spec:** `docs/superpowers/specs/2026-10-24-painel-squads-kotlin-react-design.md` (seções 4.2 "Atraso justificado", 4.3, 7.1, 7.2, 7.3, 9 e 10). Depende só de interfaces do Plano 3, já na `main`: `ChangeEventRecord`, `ChangelogParser`, `IssueStore`/`PostgresIssueStore` (só como modelo de SQL), `StatusMap`, `BusinessCalendar`, `RoleDirectory`, `Visibility`, `AccessLog`, `AvisoDto`, `requireRole`, `testContextComBanco`, `ORDEM_NATURAL_DE_CHAVES`. **Executar depois do Plano 4A** (dependência de código, não só de dados): este plano usa `JqlValues.issueKey` (4A, Tarefa 3; validação da chave na T7), `AvisoDto.params` (4A, Tarefa 8; avisos `REPORTER_ALTERADO`/`VENCIMENTO_ILEGIVEL` na T5), a coluna `issue.removida_em` (4A, Tarefas 2 e 6; filtro na T6), `DadosDeDemonstracao`/`DASHBOARD_DEMO_DATA` (4A, Tarefa 10) o teste `PreparacaoDocsTest.cadaPassoDoChecklistConfirmaAFlag` (4A, Tarefa 11; T9) e os vínculos entre issues `issue_link`/`IssueLinkStore`, `VinculosConfig` (`ctx.vinculos`), `ParesTaskReview.resolver` e `ParDeChaves` (4A, Tarefa 12; pareamento Task × Review nas T1, T5, T6 e T7). **Executar depois do 4A completo, inclusive a Tarefa 12.** Sem o 4A na `main`, este plano não compila. Executa-se 100% offline com fixtures.
+
+**Pareamento Task × Review (Decisão do usuário, 25/10):** a Review (`Checklist Review`) se liga à task pelo link de issue **"Blocks / is blocked by"** (`issue_link`, gravado pelo 4A, Tarefa 12), nas duas direções; **não** pelo campo `parent`. `AuditIssue.parentKey` continua existindo só para hierarquia/Epic e não define par. Se a base não tiver nenhum vínculo ativo do tipo configurado (por exemplo, issues gravadas antes da Tarefa 12 do 4A e ainda não ressincronizadas), o card Task × Review responde vazio (`pares = 0`, `percentual = null`) com o aviso informativo `VINCULOS_INDISPONIVEIS`, sem erro.
 
 ## Dados disponíveis e o que fica de fora
 
@@ -28,7 +30,7 @@ O Plano 3 grava em `change_event` o valor de/para **só** de `status`, `assignee
 - Sem ranking de pessoas: listas por data e chave; nenhuma contagem agregada por pessoa; filtros de pessoa em ordem alfabética.
 - Cor nunca é o único sinal: `✓` autorizado, `▲` auditoria/não autorizado, `●` alerta, sempre com texto. pt-BR e inglês.
 - Fuso America/Manaus para todo "dia"; limites de dias em YAML versionado; a versão das regras sai em toda resposta.
-- **Sem migração** neste plano. Não referenciar colunas do Plano 4A (`removida_em`, `jira_id`): se o 4A já estiver na `main`, a Tarefa 6 acrescenta `removida_em IS NULL` e o teste `auditoriaIgnoraIssueRemovida`; senão a Tarefa 6 do 4A o faz.
+- **Sem migração** neste plano. O 4A já está na `main` (pré-requisito): a Tarefa 6 sempre acrescenta `removida_em IS NULL` e o teste `auditoriaIgnoraIssueRemovida`.
 - Configs reais fora do git; versionar só `*.exemplo.yaml`. Comentários em pt-BR; commits Conventional Commits pt-BR (`feat(auditoria): ...`).
 
 ## Foco da revisão (Review Focus)
@@ -80,11 +82,12 @@ docs/analise/diferencas-esperadas-auditoria.md
   data class RegrasDeAuditoria(val versao: Int, val pertoDoVencimentoDias: Int, val posseAntesDoVencimentoDias: Int,
       val passaBolaTrocas: Int, val unidade: UnidadeDias, val statusCancelamento: Set<String>,
       val tiposReview: Set<String>, val sinais: Map<CodigoSinal, RegraSinal>) {
-      companion object { fun fromYaml(path: Path): RegrasDeAuditoria }
+      companion object { fun fromYaml(path: Path, vinculos: VinculosConfig): RegrasDeAuditoria }   // tiposReview = vinculos.tiposReview
   }
   ```
+  `tiposReview` tem **uma fonte só**: o `vinculos.yaml` do 4A (Tarefa 12). A propriedade continua em `RegrasDeAuditoria` (o Plano 7 a cita), preenchida a partir de `ctx.vinculos`; o `auditoria.yaml` não tem a chave (se tiver, falha por ser estrito).
   (`CodigoSinal` é definido na Tarefa 3; nesta tarefa crie já o `enum` em `auditoria/Sinais.kt` com os 11 códigos listados lá.)
-  `labels_atraso.exemplo.yaml`: `versao: 1`, `justificativas: ["ONHOLDBY-*", "LATE_SENT", "LATE_REVIEW", "DUEDATE_NEGOTIATED", "BI-CONSIDERCANCELLED"]`, `tardias: ["LATE_SENT", "LATE_REVIEW"]`. `auditoria.exemplo.yaml`: `versao: 1`, `pertoDoVencimentoDias: 2`, `posseAntesDoVencimentoDias: 2`, `passaBolaTrocas: 3`, `unidade: corrido`, `statusCancelamento: [Cancelled, Canceled, Dropped]`, `tiposReview: ["Checklist Review"]`, e `sinais:` com gravidade de cada código (3 para os de vencimento, responsável não autorizado, passa-bola e label após vencimento; 2 para os demais; 1 para `VENCIMENTO_TASK_REVIEW_DIVERGENTE`). Ambos estritos (chave desconhecida falha).
+  `labels_atraso.exemplo.yaml`: `versao: 1`, `justificativas: ["ONHOLDBY-*", "LATE_SENT", "LATE_REVIEW", "DUEDATE_NEGOTIATED", "BI-CONSIDERCANCELLED"]`, `tardias: ["LATE_SENT", "LATE_REVIEW"]`. `auditoria.exemplo.yaml`: `versao: 1`, `pertoDoVencimentoDias: 2`, `posseAntesDoVencimentoDias: 2`, `passaBolaTrocas: 3`, `unidade: corrido`, `statusCancelamento: [Cancelled, Canceled, Dropped]` e `sinais:` com gravidade de cada código (3 para os de vencimento, responsável não autorizado, passa-bola e label após vencimento; 2 para os demais; 1 para `VENCIMENTO_TASK_REVIEW_DIVERGENTE`). Ambos estritos (chave desconhecida falha).
 
 - [ ] **Passo 1: Testes que falham:**
   - `curingaSoNoFim`: `ONHOLDBY-*` casa `ONHOLDBY-PL` e `onholdby-x`, não casa `XONHOLDBY-PL`; padrões `*X` e `A*B` falham na carga.
@@ -92,6 +95,7 @@ docs/analise/diferencas-esperadas-auditoria.md
   - `tardiaPrecisaSerJustificativa` (tardia fora de `justificativas` → `IllegalArgumentException`).
   - `arquivoEstrito`; `limitesValidos` (`pertoDoVencimentoDias` 0..30, `passaBolaTrocas` 2..10, gravidade 1..3; fora → falha citando a chave).
   - `todoCodigoTemRegra` (código ausente em `sinais` → falha citando o código; código desconhecido → falha).
+  - `tiposReviewVemDosVinculos` (`RegrasDeAuditoria.tiposReview == ctx.vinculos.tiposReview`; `tiposReview` no `auditoria.yaml` → falha por chave desconhecida).
   - `appContextCarregaComFallbackDeDev`; `producaoSemArquivoRealFalha` (mensagem com o caminho esperado).
 - [ ] **Passo 2: Rodar** `cd app/backend && ./gradlew test --tests '*LabelsDeAtrasoTest*' --tests '*RegrasDeAuditoriaTest*' --tests '*AppContextTest*'` → FALHA. **Passo 3: Implementar.** **Passo 4: Rodar** → PASSA e suíte completa (conferir os XML). **Passo 5: Commit** `feat(auditoria): labels de atraso e regras da auditoria em YAML versionado`.
 
@@ -105,7 +109,8 @@ docs/analise/diferencas-esperadas-auditoria.md
 - Consome: `ChangeEventRecord`, `StatusMap`, `RoleDirectory` (`rolesOf`, `squadOf`, `squadsLedBy`, `isReporterAuthorized`).
 - Produz:
   ```kotlin
-  data class AuditIssue(val instance: String, val key: String, val summary: String, val issueType: String, val parentKey: String?,
+  data class AuditIssue(val instance: String, val key: String, val summary: String, val issueType: String,
+      val parentKey: String?,   // só hierarquia/Epic; NÃO define o par Task × Review (vem de issue_link, 4A T12)
       val reporter: String?, val assignee: String?, val duedate: LocalDate?, val created: Instant, val resolved: Instant?,
       val resolution: String?, val status: String, val labels: List<String>, val events: List<ChangeEventRecord>)
   object Vencimentos { fun ler(valor: String?): LocalDate? }   // "2026-10-15" e "2026-10-15 00:00:00.0" → 2026-10-15; outro → null
@@ -221,8 +226,11 @@ docs/analise/diferencas-esperadas-auditoria.md
   ```kotlin
   data class ParTaskReview(val task: AuditIssue, val review: AuditIssue) { val divergente: Boolean }  // vencimentos diferentes; um nulo e outro não = divergente; ambos nulos = não
   data class ResumoTaskReview(val pares: Int, val divergentes: Int, val percentual: Double?)        // null sem pares; 25.0 = 25%
+  data class ParesLidos(val issues: List<AuditIssue>, val vinculos: List<ParDeChaves>, val ambiguas: Int, val semVinculos: Boolean)
   object TaskReview {
-      fun pares(issues: List<AuditIssue>, tiposReview: Set<String>): List<ParTaskReview>   // review = tipo em tiposReview com parentKey presente na lista
+      // pares JÁ resolvidos pelo 4A (ParesTaskReview.resolver sobre issue_link, link Blocks nas duas direções);
+      // vínculo cuja task ou review não está em `issues` (ausente ou removida) é ignorado; parentKey não é lido
+      fun pares(issues: List<AuditIssue>, vinculos: List<ParDeChaves>): List<ParTaskReview>
       fun resumo(pares: List<ParTaskReview>): ResumoTaskReview
       fun sinais(par: ParTaskReview, ctx: ContextoDeteccao): List<Sinal>                // VENCIMENTO_TASK_REVIEW_DIVERGENTE (ALERTA) no evento de duedate que deixa as datas diferentes
   }
@@ -235,14 +243,15 @@ docs/analise/diferencas-esperadas-auditoria.md
       val taskReview: ResumoTaskReview, val pares: List<ParTaskReview>, val noPrazo: NoPrazoResultado, val avisos: List<AvisoDto>)
   class AuditCalculator(private val ctx: ContextoDeteccao,
       private val detectores: List<Detector> = DetectoresDeVencimento.todos + DetectoresDeResponsavel.todos + DetectoresDeLabels.todos) {
-      fun calcular(comEventos: List<AuditIssue>, concluidas: List<AuditIssue>, paresBase: List<AuditIssue>,
+      fun calcular(comEventos: List<AuditIssue>, concluidas: List<AuditIssue>, paresBase: ParesLidos,
                    de: Instant, ate: Instant, diaDe: LocalDate, diaAte: LocalDate): ResultadoAuditoria
   }
   ```
-  `NoPrazo`: universo = concluídas (categoria `DONE` **e** `resolution`) com vencimento em `[de, ate]`; no prazo = dia de Manaus de `resolved` ≤ vencimento; ajustado = no prazo **ou** alguma label atual que `justifica`; `justificadasSobAuditoria` = atrasadas ajustadas cuja label tem sinal `LABEL_*` (continuam contando no ajustado; ver Decisões). `AuditCalculator`: só sinais com `at` em `[de, ate)`; ordem por `at` decrescente, depois `ORDEM_NATURAL_DE_CHAVES`, depois o código (nunca por pessoa); `versaoRegras = "regras v{n}, labels v{m}"`; avisos informativos com `params`: `REPORTER_ALTERADO` (`n`), `VENCIMENTO_ILEGIVEL` (`n`), `ISSUES_IGNORADAS_STATUS` (`status`, `n`: issue com status fora do mapa é ignorada, sem derrubar a tela).
+  `NoPrazo`: universo = concluídas (categoria `DONE` **e** `resolution`) com vencimento em `[de, ate]` (o Plano 5, Tarefa 7, consolida esta regra como a única do painel, `NoPrazo.noUniverso`, excluindo também resoluções negativas e `Epic`; a assinatura de `calcular` não muda); no prazo = dia de Manaus de `resolved` ≤ vencimento; ajustado = no prazo **ou** alguma label atual que `justifica`; `justificadasSobAuditoria` = atrasadas ajustadas cuja label tem sinal `LABEL_*` (continuam contando no ajustado; ver Decisões). `AuditCalculator`: só sinais com `at` em `[de, ate)`; ordem por `at` decrescente, depois `ORDEM_NATURAL_DE_CHAVES`, depois o código (nunca por pessoa); `versaoRegras = "regras v{n}, labels v{m}"`; avisos informativos com `params`: `REPORTER_ALTERADO` (`n`), `VENCIMENTO_ILEGIVEL` (`n`), `ISSUES_IGNORADAS_STATUS` (`status`, `n`: issue com status fora do mapa é ignorada, sem derrubar a tela), `VINCULO_AMBIGUO` (`n` = `paresBase.ambiguas`: Review ligada a mais de uma task, ou task com mais de uma Review; ficou o par de menor chave natural, decidido no 4A) e `VINCULOS_INDISPONIVEIS` (sem `params`; quando `paresBase.semVinculos`: card vazio, sem erro).
 
 - [ ] **Passo 1: Testes que falham:**
-  - `quatroParesUmDivergente` → `ResumoTaskReview(4, 1, 25.0)`; `reviewSemPaiNaListaIgnorada`; `ambosSemVencimentoNaoDiverge`; `semParesPercentualNulo`.
+  - `quatroParesUmDivergente` (quatro `ParDeChaves`, dois com a Review bloqueando a task e dois com a task bloqueando a Review) → `ResumoTaskReview(4, 1, 25.0)`; `reviewSemTaskLigadaIgnorada` (Review sem vínculo, ou com vínculo para task ausente da lista → nenhum par); `parentKeyNaoFormaPar` (Review com `parentKey` da task e sem vínculo → nenhum par); `ambosSemVencimentoNaoDiverge`; `semParesPercentualNulo`.
+  - `vinculoAmbiguoViraAviso` (`ParesLidos.ambiguas = 2` → aviso `VINCULO_AMBIGUO` com `n="2"`); `semVinculosCardVazioComAviso` (`semVinculos = true` → `ResumoTaskReview(0, 0, null)` e aviso `VINCULOS_INDISPONIVEIS`).
   - `sinalNoEventoQueDiverge`: task 15/10; review muda `15/10→18/10` em `2026-10-10T12:00Z` → 1 ALERTA; a task muda depois para `18/10` → nenhum sinal novo (as datas voltam a ser iguais).
   - `noPrazoEAjustado` (período 01/10 a 31/10): TG-21 resolvida 14/10, vence 15/10 (no prazo); TG-22 resolvida `2026-10-16T03:30Z` (15/10 23:30 Manaus), vence 15/10 (no prazo); TG-23 resolvida 17/10 com `LATE_SENT`, vence 15/10 (só ajustada); TG-24 resolvida 17/10 sem label (atrasada); TG-25 `DONE` sem `resolution` (fora) → `concluidas=4`, `noPrazo=2`, `noPrazoAjustado=3`, `taxa=0.5`, `taxaAjustada=0.75`.
   - `justificadaSobAuditoriaContaNoAjustado` (TG-23 com sinal `LABEL_APOS_VENCIMENTO` → `justificadasSobAuditoria=1`, `noPrazoAjustado` continua 3).
@@ -265,18 +274,19 @@ docs/analise/diferencas-esperadas-auditoria.md
   interface AuditStore {
       fun comEventos(instance: String, de: Instant, ate: Instant): List<AuditIssue>    // issues com evento de CAMPOS_AUDITADOS em [de, ate), com TODOS os seus eventos
       fun concluidasComVencimento(instance: String, de: LocalDate, ate: LocalDate): List<AuditIssue>
-      fun paresTaskReview(instance: String, tiposReview: Set<String>): List<AuditIssue> // reviews com parent_key e as tasks pai
+      fun paresTaskReview(instance: String, vinculos: VinculosConfig): ParesLidos     // pares pelo issue_link (4A T12), não pelo parent_key
       fun issue(instance: String, key: String): AuditIssue?
   }
   class PostgresAuditStore(private val ds: DataSource) : AuditStore
   ```
   Campo comparado sem diferenciar maiúsculas (`lower(field)`); `summary` de `raw->'fields'->>'summary'`; eventos em lote por `issue_id = ANY(?)` ordenados por `(at, id)`; tudo parametrizado.
+  `paresTaskReview`: lê `IssueLinkStore.ativos(instance, vinculos.tipoDeLink)` (4A, Tarefa 12), monta `tipoDe` com o `issue_type` das issues da instância com `removida_em IS NULL` (as duas pontas precisam estar ativas), chama `ParesTaskReview.resolver(...)` e carrega as `AuditIssue` das duas pontas de cada par com todos os eventos. `semVinculos = true` quando não há nenhum vínculo ativo do tipo configurado na instância. O `parent_key` não entra nesta consulta.
 
 - [ ] **Passo 1: Testes que falham:**
   - `devolveIssuesComEventoAuditadoNoPeriodo` (evento de `duedate` em 10/10 entra; issue só com evento de `description` não entra).
   - `trazTodosOsEventosDaIssue` (evento de 01/10, fora do período, vem junto para reconstruir o estado).
   - `fronteiraDoPeriodo` (`at == de` entra, `at == ate` fica fora).
-  - `paresPeloParentKey`; `summaryDoRaw`; `instanciaSeparada` (TG-1 da `sidia` não aparece na `samsung`).
+  - `paresPeloVinculoBlocks` (dados gravados com `upsert(..., vinculos = ...)` do 4A: um par com a Review bloqueando a task e outro com a task bloqueando a Review → 2 pares; uma Review com `parent_key` da task e sem vínculo → fora); `pontaRemovidaNaoFormaPar` (task com `removida_em` → par fora); `semVinculosSinalizaIndisponivel`; `summaryDoRaw`; `instanciaSeparada` (TG-1 da `sidia` não aparece na `samsung`, inclusive os vínculos).
   - `concluidasComVencimentoNoPeriodo` (vencimento 31/10 entra com `ate=31/10`).
   - `issueInexistenteEhNula`.
 - [ ] **Passo 2: Rodar** `./gradlew test --tests '*AuditStoreTest*'` → FALHA. **Passo 3: Implementar.** **Passo 4: Rodar** → PASSA. **Passo 5: Commit** `feat(auditoria): leitura das issues e do changelog para a auditoria`.
@@ -311,8 +321,10 @@ docs/analise/diferencas-esperadas-auditoria.md
       val autorizado: Boolean?, val motivo: String?, val valorGuardado: Boolean)
   @Serializable data class TaskReviewDto(val pares: Int, val divergentes: Int, val percentual: Double?, val avisos: List<AvisoDto>)
   @Serializable data class TaskReviewLinhaDto(val task: String, val review: String, val vencimentoTask: String?, val vencimentoReview: String?,
-      val responsavelTask: String?, val responsavelReview: String?, val divergente: Boolean)
+      val responsavelTask: String?, val responsavelReview: String?, val divergente: Boolean,
+      val urlTask: String?, val urlReview: String?)   // link direto para a issue no Jira; null sem URL configurada
   ```
+  **Link direto para o Jira, sem correção pelo painel:** `urlTask`/`urlReview` = URL base da instância na configuração (`settings.jiraInstances[instance].baseUrl`) remontada por `java.net.URI` só com esquema, host, porta e caminho (sem userinfo, query nem fragmento; barra final normalizada, para não sair `//browse`) + `/browse/` + chave validada por `JqlValues.issueKey`. **Nunca** usar a string de `Settings.mascararUrl` como link (ela troca credenciais por `***@` e quebraria o `href`); teste `divergenciaTrazUrlDaInstancia` cobre base com barra final e com userinfo. **Nunca hardcoded**; instância sem URL configurada → `null` (a tela mostra só a chave). A URL é montada, não acessada: nenhuma requisição ao Jira, com a flag `false` ou `true`. **Não há botão nem rota de correção** (escrita no Jira pelo painel é o Plano 16, `2026-10-25-plano-16-escrita-no-jira-pelo-painel.md`, futuro). A gaveta universal e as listas genéricas são do Plano 10; aqui só a lista de divergências.
   `pessoa` casa o responsável no instante **ou** o autor; `squad` = squad do responsável na data do evento (`RoleDirectory.squadOf`); squad inexistente, data inválida, `de > ate` ou período > 180 dias → 400. `porSinal` na ordem do enum; nenhuma agregação por pessoa. No histórico, campo fora da lista de permissão sai com `de`/`para` nulos e `valorGuardado=false`; chave fora do padrão `JqlValues.issueKey` → 400; inexistente → 404.
 
 - [ ] **Passo 1: Testes que falham** (contexto com banco; papéis do cenário AUD-1; relógio fixo `2026-10-30T15:00Z`):
@@ -324,7 +336,8 @@ docs/analise/diferencas-esperadas-auditoria.md
   - `filtroPessoaPorResponsavelOuAutor`; `squadPelaDataDoEvento`.
   - `historicoCampoACampoSemTextoLivre` (evento `description` → `valorGuardado=false`, `de`/`para` nulos; `TG-1;drop` → 400; `TG-999` → 404).
   - `ordenadoPorDataSemRanking` (sinais por `at` decrescente; o DTO não tem lista por pessoa).
-  - `cardTaskReviewQuatroParesVinteECincoPorcento` (`percentual == 25.0`).
+  - `cardTaskReviewQuatroParesVinteECincoPorcento` (`percentual == 25.0`; pares gravados como vínculos `Blocks` nas duas direções).
+  - `divergenciaTrazUrlDaInstancia` (com `baseUrl` `https://jira.exemplo.invalid` → `urlTask == "https://jira.exemplo.invalid/browse/TG-1"`; instância sem URL → `null`; 0 requisições no MockEngine); `semRotaDeCorrecao` (nenhuma rota `POST`/`PUT`/`PATCH` sob `/api/auditoria` nem `/api/cards/task-review`).
   - `semDadosRespondeVazio` (200 com listas vazias, `taxa == null`).
   - `devModeSemLogin` (com `DASHBOARD_DEV_MODE=true`, o principal `dev`, GERENTE, vê as 5 rotas com 200; com o dev mode ligado, um principal USUARIO ou SQUAD_LEADER injetado continua com 403).
 - [ ] **Passo 2: Rodar** `./gradlew test --tests '*AuditoriaRoutesTest*' --tests '*TempoEmStatusRoutesTest*'` → FALHA. **Passo 3: Implementar.** **Passo 4: Rodar** → PASSA e suíte completa. **Passo 5: Commit** `feat(auditoria): API de auditoria com drill, gaveta de histórico e card Task × Review`.
@@ -338,7 +351,7 @@ docs/analise/diferencas-esperadas-auditoria.md
 **Interfaces:**
 - Consome: rotas e DTOs da Tarefa 7; `t()`, `Shell`, `DrillDrawer`, `linhaFiltrosCsv`, `format.ts` (Plano 3).
 - Produz: `export function Auditoria(): JSX.Element`, `export function Divergencia(): JSX.Element`, `fetchSinais(params)`, `fetchHistorico(key)`, `fetchTaskReview(params)`; tipos espelhando os DTOs.
-  Layout **denso**: faixa fixa `role="note"` "Indício, não prova: a tela mostra alterações para conferir, não conclusões sobre pessoas." (en: "Evidence, not proof: ..."); filtros (período, squad, pessoa em ordem alfabética, sinal, resultado) na URL; KPIs: sinais de auditoria (`▲`), alertas (`●`), "No prazo" e "No prazo ajustado" lado a lado, justificadas sob auditoria; tabela de contagem por sinal (ordem fixa do catálogo, gravidade em texto "Gravidade 3"); lista de sinais (data, issue, campo, de → para, autor, `✓ autorizado` ou `▲ não autorizado` com o motivo); clicar abre `HistoricoDrawer` campo a campo ("valor não guardado (privacidade)" quando `valorGuardado=false`); CSV da lista e da gaveta com a linha de filtros. Divergência: KPI "% de pares divergentes", lista clicável (`kind=divergentes`).
+  Layout **denso**: faixa fixa `role="note"` "Indício, não prova: a tela mostra alterações para conferir, não conclusões sobre pessoas." (en: "Evidence, not proof: ..."); filtros (período, squad, pessoa em ordem alfabética, sinal, resultado) na URL; KPIs: sinais de auditoria (`▲`), alertas (`●`), "No prazo" e "No prazo ajustado" lado a lado, justificadas sob auditoria; tabela de contagem por sinal (ordem fixa do catálogo, gravidade em texto "Gravidade 3"); lista de sinais (data, issue, campo, de → para, autor, `✓ autorizado` ou `▲ não autorizado` com o motivo); clicar abre `HistoricoDrawer` campo a campo ("valor não guardado (privacidade)" quando `valorGuardado=false`); CSV da lista e da gaveta com a linha de filtros. Divergência: KPI "% de pares divergentes", lista clicável (`kind=divergentes`); cada linha mostra a chave da task como link para `urlTask` (abre em nova aba, `rel="noopener noreferrer"`, texto "abrir no Jira" além do ícone), e a da Review para `urlReview`; com URL `null`, só a chave em texto. Sem botão de correção (Plano 16).
 
 - [ ] **Passo 1: Testes que falham** (Vitest + Testing Library, `fetch` simulado):
   - `mostraAvisoFixo` (pt e en).
@@ -349,6 +362,7 @@ docs/analise/diferencas-esperadas-auditoria.md
   - `csvNeutralizaFormulas` (autor `=HYPERLINK("x")` e ` =1+1` saem neutralizados; teste movido para `shared/csv.test.ts`).
   - `semPermissao403MostraMensagemDePapel`; `semRankingDePessoas` (nenhuma coluna de contagem por pessoa; opções do filtro de pessoa em ordem alfabética).
   - `divergenciaMostraPercentual` (`25%`) e `divergenciaAbreLista`.
+  - `divergenciaLinkParaATaskNoJira` (`href` == `urlTask` do DTO, `target="_blank"`, `rel` com `noopener`; `urlTask` nulo → texto sem link; nenhum botão "corrigir").
 - [ ] **Passo 2: Rodar** `cd app/frontend && pnpm vitest run src/screens/Auditoria src/screens/Divergencia src/shared` → FALHA. **Passo 3: Implementar** com TanStack Query. **Passo 4: Rodar** → PASSA, a suíte inteira do frontend e `pnpm build` sem erros.
 - [ ] **Passo 5: Captura de verificação:** uma rodada (Chrome headless, 1440 e 390 px, temas Claro, Escuro e Sidia, modo demo); corrigir tudo de uma vez; no máximo mais uma rodada.
 - [ ] **Passo 6: Commit** `feat(auditoria): telas de auditoria e de divergência Task × Review`.
@@ -369,6 +383,7 @@ docs/analise/diferencas-esperadas-auditoria.md
 ## Autoavaliação
 
 - **Cobertura da spec:** 7.1 (quem pode alterar, vigência por data: T2), 7.2 (11 dos 12 itens da tabela: T3, T4, T5; "estimativa reduzida ou worklog retroativo" declarado fora por falta de dado), 7.3 (aviso fixo, consulta auditada, coordenação e gerente: T7 e T8), 4.2 (duas métricas lado a lado, labels em YAML: T1 e T5), 9 (gravidade e "perto do vencimento" configuráveis: T1), 10 (todo sinal detectado em fixture com fronteiras de 2 dias, fuso e autorizado × não autorizado: T3 a T5). Integridade (12 sinais) fica na Fase 7.
+- **Pareamento Task × Review:** só pelo link "Blocks / is blocked by" (`issue_link`, `ParesTaskReview.resolver` e `VinculosConfig` do 4A, Tarefa 12), nas duas direções; `parentKey` fica só para hierarquia/Epic (T5 `parentKeyNaoFormaPar`, T6 `paresPeloVinculoBlocks`). `tiposReview` tem uma fonte só (`vinculos.yaml`).
 - **Consistência de tipos:** `AuditIssue` (T2) é produzido pelo `PostgresAuditStore` (T6) e consumido por `AuditTimeline`, detectores (T3, T4), `TaskReview`/`NoPrazo`/`AuditCalculator` (T5) e rotas (T7); `CodigoSinal` nasce completo na T1 (as regras do YAML o referenciam) e `Sinal` na T3; `ResultadoAuditoria` (T5) vira `AuditoriaDto` (T7), espelhado no frontend (T8).
 - **Pendências deliberadas:** formato real de `duedate`, `labels` e do `from/to` do assignee só na 1ª conexão autorizada (checklist, Passo 4); o leitor aceita os dois formatos conhecidos.
 
@@ -382,3 +397,5 @@ docs/analise/diferencas-esperadas-auditoria.md
 6. **Decisão do usuário (25/10): primeira definição do vencimento.** Vazio → data não conta como alteração (T3 `definidoPelaPrimeiraVezNaoGera`).
 7. **Decisão do usuário (25/10): estimativa e worklog fora.** Sinais de estimativa reduzida e worklog retroativo ficam fora desta fase.
 8. **Decisão do usuário (25/10): LGPD.** Confirmar a base legal com o DPO antes de usar com dados reais; até lá, só fixtures e modo demonstração (Restrições globais; registrado no HANDOFF na T9).
+9. **Decisão do usuário (25/10): Review ligada à task pelo link "Blocks / is blocked by".** O par Task × Review vem de `issue_link` (4A, Tarefa 12), nas duas direções, e não do campo `parent`; ambiguidade vira aviso `VINCULO_AMBIGUO` e fica o par de menor chave natural (decidido no 4A); base sem vínculos → card vazio com `VINCULOS_INDISPONIVEIS` (T1, T5, T6, T7).
+10. **Decisão do usuário (25/10): ação no painel.** A lista de divergências mostra link direto para a task (e para a Review) no Jira, com a URL base da configuração (nunca hardcoded); não há botão de correção: escrita no Jira pelo painel é futura (Plano 16) (T7, T8).

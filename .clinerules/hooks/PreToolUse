@@ -1,0 +1,219 @@
+#!/usr/bin/env bash
+# Hook PreToolUse do Cline (extensão VS Code) para o Painel de Squads.
+#
+# É um ADAPTADOR, não uma cópia: traduz o JSON do Cline para o formato do Claude Code e chama a
+# trava única do projeto, `.claude/hooks/guard.sh` (modos `jira` e `arquivos`). Assim existe uma só
+# fonte de verdade para as regras, e o `test-guard.sh` continua valendo.
+#
+# Instalação (macOS/Linux): este arquivo já está no lugar certo (`.clinerules/hooks/PreToolUse`, sem
+# extensão e executável). No Cline, ligue "Enable Hooks" nas configurações de recursos (Features).
+# Windows: o Cline só executa `.clinerules/hooks/PreToolUse.ps1` (PowerShell), que reescreve estas regras;
+# ao mudar uma regra aqui ou no guard.sh, mude também o .ps1 e os dois testes.
+# Ver docs/ferramentas-claude-para-o-cline/hooks.md.
+#
+# Formatos de entrada aceitos (JSON no stdin):
+#   - extensão VS Code: .preToolUse.toolName + .preToolUse.parameters (valores podem vir como texto JSON)
+#   - CLI/SDK do Cline: .tool_call.name + .tool_call.input
+# Saída (stdout): {"cancel": bool, "contextModification": "", "errorMessage": "..."}; sempre exit 0.
+#
+# Flag JIRA_LIVE_ENABLED (lida do ambiente do processo do Cline, NÃO do app/.env nem do comando):
+#   - ausente, false ou inválida  -> trava do Jira ATIVA (tudo o que o guard.sh barra continua barrado,
+#     inclusive ligar a flag dentro de um comando);
+#   - true (sem diferenciar maiúsculas, como o Settings.kt do app) -> o modo `jira` é dispensado,
+#     exceto exibir token ou senha do Jira no terminal, que continua barrado (Plano 4A, Decisão 10).
+#   PENDÊNCIA: quando a Tarefa 11 do Plano 4A for mesclada (guard.sh lendo a flag do ambiente), remover o
+#   atalho `jira_livre` e a expressão de token abaixo e chamar sempre `guard.sh jira` (fonte única).
+# Extras do Cline (além do guard.sh), só com a flag diferente de true: navegador (`browser_action`) e
+#   `web_fetch` para URL com jira/atlassian (decisão do usuário em 25/10: inclui a documentação pública do
+#   Jira; `web_search` continua liberado), cmdlets de rede do PowerShell (Invoke-WebRequest, iwr, irm...)
+#   junto de jira/atlassian, ligar a flag com setx/SetEnvironmentVariable/Set-Item e MCP com URL do Jira
+#   nos argumentos.
+# Valem SEMPRE, com qualquer valor da flag: o modo `arquivos` (segredos e configs com dados reais), LER
+# `.env` e configs reais (read_file e cat/type/Get-Content...; o conteúdo iria para o modelo) e listar
+# todo o ambiente (`env`, `printenv`, `set` sozinhos; expõe tokens).
+#
+# Limite honesto (igual ao guard.sh): trava contra acidente do assistente, não contra má-fé.
+# Falha fechada: sem jq, JSON ilegível ou guard.sh ausente, a ferramenta é cancelada.
+
+set -u
+
+responder() { # cancel(true|false), mensagem
+  if command -v jq >/dev/null 2>&1; then
+    jq -nc --argjson c "$1" --arg m "$2" '{cancel: $c, contextModification: "", errorMessage: $m}'
+  else
+    # sem jq a mensagem é fixa (não há como escapar com segurança)
+    if [ "$1" = true ]; then
+      echo '{"cancel":true,"contextModification":"","errorMessage":"BLOQUEADO: jq ausente; o hook do projeto falha fechado."}'
+    else
+      echo '{"cancel":false,"contextModification":"","errorMessage":""}'
+    fi
+  fi
+  exit 0
+}
+bloquear() { responder true "$1"; }
+liberar() { responder false ""; }
+
+command -v jq >/dev/null 2>&1 || bloquear "jq ausente"
+
+entrada=$(cat)
+printf '%s' "$entrada" | jq -e . >/dev/null 2>&1 || bloquear "BLOQUEADO: entrada do hook não é JSON válido (falha fechada)."
+
+# raiz do projeto: a do Cline, senão a deste arquivo (.clinerules/hooks -> ../..)
+raiz=$(printf '%s' "$entrada" | jq -r '.workspaceRoots[0] // empty')
+if [ -z "$raiz" ] || [ ! -f "$raiz/.claude/hooks/guard.sh" ]; then
+  raiz=$(cd "$(dirname "$0")/../.." && pwd)
+fi
+guard="$raiz/.claude/hooks/guard.sh"
+[ -f "$guard" ] || bloquear "BLOQUEADO: .claude/hooks/guard.sh não encontrado (falha fechada)."
+
+# normalização: ferramenta e parâmetros (desfaz valores que vieram como texto JSON)
+prelude='def dejson: if type == "string" then (fromjson? // .) else . end;
+  ((.tool_call.input // .preToolUse.parameters // {}) | dejson) as $in |'
+ferramenta=$(printf '%s' "$entrada" | jq -r '.tool_call.name // .preToolUse.toolName // ""')
+
+flag=$(printf '%s' "${JIRA_LIVE_ENABLED:-}" | tr -d '[:space:]' | tr '[:upper:]' '[:lower:]')
+jira_livre=false
+[ "$flag" = "true" ] && jira_livre=true
+
+# extras do Cline (ver cabeçalho); grep -Ei = sem diferenciar maiúsculas
+Q="'"
+REDE_WINDOWS='(^|[^[:alnum:]_-])(invoke-webrequest|invoke-restmethod|iwr|irm|start-bitstransfer|bitsadmin|certutil|test-netconnection|tnc|resolve-dnsname|nslookup|ping|curl\.exe|wget\.exe)([^[:alnum:]_-]|$)|webclient|httpclient|xmlhttp|winhttp|start-process'
+LIGAR_FLAG_EXTRA="JIRA_LIVE_ENABLED[\"$Q[:space:],]+(-value[[:space:]]+)?[\"$Q]?[[:space:]]*(1|true)"
+LISTAR_AMBIENTE='(^[[:space:]]*|[;&|(][[:space:]]*|cmd(\.exe)?[[:space:]]+/c[[:space:]]+)(env|printenv|set|export[[:space:]]+-p|declare[[:space:]]+-[px]|compgen[[:space:]]+-v)[[:space:]]*($|[;&|>)])|(get-childitem|gci|dir|ls|get-item|gi)[[:space:]]+(-path[[:space:]]+)?env:[\/]?\*?[[:space:]]*($|[;&|>)])|\[(system\.)?environment\]::getenvironmentvariables'
+URL_JIRA="https?://[^[:space:]\"$Q]*(jira|atlassian)"
+PROTEGIDOS_CLINE="(^|[[:space:]\"$Q=/\\:])(\.env(\.[A-Za-z0-9_-]+)?|config[/\\](equipes|ausencias|papeis|squads)\.yaml)([[:space:]\"$Q;|&)]|\$)"
+MODELOS="(^|[[:space:]\"$Q=/\\])\.env\.(example|sample)([[:space:]\"$Q;|&)]|\$)"
+LEITURA='(^|[[:space:];&|(])(cat|type|get-content|gc|more|less|head|tail|select-string|sls|findstr|grep|egrep|rg|bat|nl|od|xxd|strings|source|import-csv|format-hex|notepad|code)(\.exe)?[[:space:]]|(^|[;&|][[:space:]]*)\.[[:space:]]+[^[:space:]]*\.env'
+
+# caminho protegido para leitura (barra normal ou invertida, sem diferenciar maiúsculas); 0 = protegido
+caminho_protegido() {
+  norm=$(printf '%s' "$1" | tr '\\' '/')
+  base_min=$(printf '%s' "${norm##*/}" | tr '[:upper:]' '[:lower:]')
+  case "$base_min" in
+    .env.example|.env.sample) return 1 ;;
+    .env|.env.*) return 0 ;;
+  esac
+  printf '%s' "$norm" | grep -Eiq '(^|/)config/(equipes|ausencias|papeis|squads)\.yaml$'
+}
+
+# regras extras de comando (as duas primeiras valem com qualquer valor da flag)
+extras_comando() {
+  if printf '%s' "$1" | grep -Eiq "$LISTAR_AMBIENTE"; then
+    bloquear "BLOQUEADO: comando lista todas as variáveis de ambiente (expõe tokens)."
+  fi
+  sem_modelos=$(printf '%s' "$1" | sed -E "s#$MODELOS#\1 \3#g")
+  if printf '%s' "$sem_modelos" | grep -Eiq "$PROTEGIDOS_CLINE" && printf '%s' "$sem_modelos" | grep -Eiq "$LEITURA"; then
+    bloquear "BLOQUEADO: comando lê segredo/config com dados reais (o conteúdo iria para o modelo)."
+  fi
+  if [ "$jira_livre" != true ]; then
+    if printf '%s' "$1" | grep -Eiq "$REDE_WINDOWS" && printf '%s' "$1" | grep -Eiq 'jira|atlassian'; then
+      bloquear "BLOQUEADO: comando de rede (PowerShell/Windows) para o Jira com JIRA_LIVE_ENABLED diferente de true."
+    fi
+    if printf '%s' "$1" | grep -Eiq "$LIGAR_FLAG_EXTRA"; then
+      bloquear "BLOQUEADO: comando liga JIRA_LIVE_ENABLED. Só o usuário muda a flag."
+    fi
+  fi
+}
+
+# roda o guard.sh com um payload no formato do Claude; exit 2 (ou qualquer erro) = bloquear
+chamar_guard() { # modo, payload
+  saida=$(printf '%s' "$2" | sh "$guard" "$1" 2>&1 >/dev/null)
+  r=$?
+  if [ "$r" -ne 0 ]; then
+    [ -n "$saida" ] || saida="BLOQUEADO: guard.sh saiu com código $r (falha fechada)."
+    bloquear "$saida"
+  fi
+}
+
+case "$ferramenta" in
+  execute_command|run_commands)
+    # um ou vários comandos; cada um passa pelos dois modos
+    comandos=$(printf '%s' "$entrada" | jq -r "$prelude"'
+      (if ($in|type) == "string" then [$in]
+       elif ($in|type) == "array" then $in
+       elif ($in|type) == "object" then [($in.command // $in.commands // $in.cmd // empty) | dejson] | flatten
+       else [] end)
+      | .[] | if type == "object" then ([.command // empty] + ((.args // []) | dejson)) | join(" ") else . end
+      | strings | @json')
+    [ -n "$comandos" ] || liberar
+    # `<<<` mantém o laço no shell atual: um bloqueio encerra o hook com a resposta já impressa
+    while IFS= read -r c_json; do
+      [ -n "$c_json" ] || continue
+      payload=$(jq -nc --argjson c "$c_json" '{tool_name: "Bash", tool_input: {command: $c}}')
+      if [ "$jira_livre" = true ]; then
+        # Plano 4A, Decisão 10: mesmo com a flag ligada, exibir token ou senha do Jira continua barrado
+        c_txt=$(printf '%s' "$c_json" | jq -r '.')
+        if printf '%s' "$c_txt" | grep -Eq 'JIRA_[A-Za-z0-9_]*(TOKEN|PASS|SENHA|SECRET|PAT)' &&
+           printf '%s' "$c_txt" | grep -Eq '(^|[^[:alnum:]_])(echo|printf|printenv|env|set|declare|typeset|export|cat)([[:space:]]|$)'; then
+          bloquear "BLOQUEADO: comando exibe token ou senha do Jira (vale mesmo com a flag true)."
+        fi
+      fi
+      extras_comando "$(printf '%s' "$c_json" | jq -r '.')"
+      [ "$jira_livre" = true ] || chamar_guard jira "$payload"
+      chamar_guard arquivos "$payload"
+    done <<< "$comandos"
+    liberar
+    ;;
+  use_mcp_tool|access_mcp_resource|load_mcp_documentation)
+    if [ "$jira_livre" != true ]; then
+      alvo=$(printf '%s' "$entrada" | jq -r "$prelude"'[$in.server_name?, $in.tool_name?, $in.uri?] | map(strings) | join(" ")' 2>/dev/null)
+      if printf '%s' "$alvo" | grep -Eiq 'atlassian|jira'; then
+        bloquear "BLOQUEADO: ferramenta MCP do Atlassian/Jira ($alvo) com JIRA_LIVE_ENABLED diferente de true."
+      fi
+      # argumentos com URL do Jira (ex.: servidor MCP de 'fetch')
+      args_txt=$(printf '%s' "$entrada" | jq -r "$prelude"'[($in.arguments? // "") | dejson | .. | strings] | join(" ")' 2>/dev/null)
+      if printf '%s' "$args_txt" | grep -Eiq "$URL_JIRA"; then
+        bloquear "BLOQUEADO: ferramenta MCP com URL do Jira/Atlassian e JIRA_LIVE_ENABLED diferente de true."
+      fi
+    fi
+    liberar
+    ;;
+  browser_action|web_fetch)
+    # decisão do usuário (25/10): com a flag diferente de true, nenhuma URL com jira/atlassian, nem a
+    # documentação pública do Jira (o usuário cola trechos ou usa web_search)
+    if [ "$jira_livre" != true ]; then
+      url=$(printf '%s' "$entrada" | jq -r "$prelude"'[$in.url?, $in.uri?, $in.href?, $in.link?] | map(strings) | join(" ")' 2>/dev/null)
+      if printf '%s' "$url" | grep -Eiq 'jira|atlassian'; then
+        bloquear "BLOQUEADO: $ferramenta para URL com jira/atlassian e JIRA_LIVE_ENABLED diferente de true. Para documentação pública do Jira, peça ao usuário um trecho ou use web_search."
+      fi
+      todos=$(printf '%s' "$entrada" | jq -r "$prelude"'[$in | .. | strings] | join(" ")' 2>/dev/null)
+      if printf '%s' "$todos" | grep -Eiq "$URL_JIRA"; then
+        bloquear "BLOQUEADO: $ferramenta com URL que cita jira/atlassian e JIRA_LIVE_ENABLED diferente de true."
+      fi
+    fi
+    liberar
+    ;;
+  read_file)
+    # extra do Cline: ler segredo/config real mandaria o conteúdo ao modelo (vale com qualquer flag)
+    lidos=$(printf '%s' "$entrada" | jq -r "$prelude"'[$in.path?, $in.file_path?, $in.filePath?] | map(strings) | .[]')
+    while IFS= read -r p; do
+      [ -n "$p" ] || continue
+      if caminho_protegido "$p"; then bloquear "BLOQUEADO: leitura de arquivo protegido ($p): segredo ou config com dados reais."; fi
+    done <<< "$lidos"
+    liberar
+    ;;
+  write_to_file|replace_in_file|editor|new_rule)
+    caminhos=$(printf '%s' "$entrada" | jq -r "$prelude"'
+      [$in.path?, $in.file_path?, $in.filePath?] | map(strings) | .[]')
+    ;;
+  apply_patch)
+    # caminhos nos cabeçalhos do patch
+    caminhos=$(printf '%s' "$entrada" | jq -r "$prelude"'
+      (if ($in|type) == "string" then $in elif ($in|type) == "object" then ($in.input // $in.patch // "" | dejson) else "" end) | strings' \
+      | sed -n -e 's/^\*\*\* Add File: //p' -e 's/^\*\*\* Update File: //p' -e 's/^\*\*\* Delete File: //p' -e 's/^\*\*\* Move to: //p')
+    ;;
+  *)
+    # busca (search_files, web_search), listagem e demais ferramentas: liberadas
+    liberar
+    ;;
+esac
+
+# escrita/edição: cada caminho passa pelo modo `arquivos`
+if [ -n "${caminhos:-}" ]; then
+  while IFS= read -r p; do
+    [ -n "$p" ] || continue
+    payload=$(jq -nc --arg p "$p" '{tool_name: "Write", tool_input: {file_path: $p}}')
+    chamar_guard arquivos "$payload"
+  done <<< "$caminhos"
+fi
+liberar

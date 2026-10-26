@@ -1,6 +1,12 @@
 # Guia de execução para outra IA (ClineSR e similares)
 
-Objetivo: quem continuar a execução dos planos (a partir do Plano 4A) deve ter **o mesmo entendimento de projeto e as mesmas regras** de quem os escreveu (o Claude Code). Este guia substitui o que o Claude tem de ferramentas próprias (hooks, skills, subagentes), que o Cline não possui. Nada aqui contradiz o `CLAUDE.md`; havendo conflito, vale o `CLAUDE.md`, depois este guia, depois o plano.
+Objetivo: quem continuar a execução dos planos (a partir do Plano 4A) deve ter **o mesmo entendimento de projeto e as mesmas regras** de quem os escreveu (o Claude Code). Este guia substitui o que o Claude tem de ferramentas próprias (subagentes, skills de terceiros, revisores) e que o Cline não tem do mesmo jeito. O porte dessas ferramentas (workflows, skills do projeto e o hook `PreToolUse` do Cline) está em `docs/ferramentas-claude-para-o-cline/`. Nada aqui contradiz o `CLAUDE.md`; havendo conflito, vale o `CLAUDE.md`, depois este guia, depois o plano.
+
+**Workflows do Cline** (`.clinerules/workflows/`, digite `/nome.md`): `/continuar.md` (início de sessão), `/executar-plano.md` (seção 4 deste guia), `/revisar-tarefa.md` (seção 5), `/fim-de-branch.md` (seções 4, 6 e 8), `/perguntar-ao-usuario.md` (seção 7) e `/escrever-plano.md`.
+
+**Executor:** o **ClineSR** (variante Samsung do Cline, com o modelo Gauss 3.7) num **PC com Windows 11**. Comandos no PowerShell (equivalentes na seção 3); prepare o PC e rode o teste do hook (`.clinerules\hooks\test-PreToolUse.ps1`) seguindo `docs/ferramentas-claude-para-o-cline/README.md` e `hooks.md` antes da primeira tarefa. Com o Gauss 3.7, trabalhe em tarefas pequenas, releia o plano a cada tarefa e releia as regras no original em vez de resumi-las.
+
+**Dúvida ou falta de direção SEMPRE vira pergunta ao usuário** com 2 a 4 opções: a recomendada primeiro, marcada "(Recomendada)", e cada opção com o porquê e a consequência. Nunca siga no palpite nem pergunte em prosa.
 
 ## 1. Ordem de leitura (obrigatória antes de escrever código)
 
@@ -34,6 +40,7 @@ Planos 1, 2, 3A e 3 estão **mesclados na `main`** (PRs #5 a #9). Há backend Kt
 - Subir tudo: ver `app/README.md` (`POSTGRES_PASSWORD` obrigatória e descartável, nunca em arquivo versionado).
 - Flags: `JIRA_LIVE_ENABLED=false` e `DASHBOARD_DEV_MODE=true` por padrão. `DASHBOARD_DEV_MODE=true` = sem login, principal `dev` com papel GERENTE, faixa vermelha na tela.
 - Se o Docker travar (daemon responde 500): peça ao usuário autorização antes de reiniciar o Docker Desktop (isso derruba outros contêineres dele).
+- **Windows 11 (PowerShell):** backend `cd app\backend; .\gradlew.bat test`; frontend `cd app\frontend; pnpm install; pnpm vitest run; if ($?) { pnpm build }`; Docker `docker info` (o `ensure-docker.sh` não roda no Windows: abra o Docker Desktop e espere); senha do banco só na sessão (`$env:POSTGRES_PASSWORD='<descartável>'`). No PowerShell 5.1 não há `&&`: use `;` e confira `$?`. `~` = `%USERPROFILE%`. Lista completa em `docs/ferramentas-claude-para-o-cline/README.md`.
 
 ## 4. Como executar um plano (substitui as skills/subagentes do Claude)
 
@@ -85,4 +92,4 @@ Atualize o `HANDOFF.md` (estado, próximo passo, pendências), faça push da bra
 
 ## 9. Ordem dos planos e dependências
 
-Veja o índice. Em resumo: **4A Sincronização** → **4 Auditoria** → **5 Cards de trabalho e prazos** → **6 Pessoas, planejamento e ausências** → **7 Checklist × Review, Integridade, Distribuição e Governança** → **8 Preparação final e remoção do `legacy/`**. Cada plano é executável offline com fixtures; dados reais só depois que o usuário ligar `JIRA_LIVE_ENABLED` e seguir o checklist da primeira conexão.
+A ordem de execução e as dependências estão no índice (`docs/superpowers/plans/2026-10-24-indice-dos-planos.md`), que é a fonte única: ele lista as fases 4A a 15 (o Plano 4 depende do 4A; a 14 começa em parte logo após o 4A, quando o usuário ligar a flag). Cada plano é executável offline com fixtures; dados reais só depois que o usuário ligar `JIRA_LIVE_ENABLED` e seguir o checklist da primeira conexão.

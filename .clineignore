@@ -1,0 +1,18 @@
+# Segredos e dados pessoais: o Cline não deve ler (reforça o hook PreToolUse)
+.env
+.env.*
+!.env.example
+**/config/papeis.yaml
+**/config/equipes.yaml
+**/config/ausencias.yaml
+**/config/squads.yaml
+Filtros_Status_tool.txt*
+*.pem
+*.key
+
+# Artefatos de build e dependências
+build/
+node_modules/
+.gradle/
+.kotlin/
+dist/

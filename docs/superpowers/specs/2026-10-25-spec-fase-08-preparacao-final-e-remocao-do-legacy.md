@@ -133,7 +133,7 @@ O teste de carga leva `@Tag("carga")` e fica fora da suíte padrão.
 | D2 | **Oráculo de equivalência:** cenários pequenos por card, com a fórmula do app atual conferida no código (`CompatLegado*Test`) | [valor padrão 25/10, reversível] |
 | D3 | **Desempenho:** primeiro índices, depois consultas em lote e *code splitting*. Cache só se ainda faltar, com chave pelo escopo visível do principal, filtros e versão das regras, registrado como `Ruling:` | [valor padrão 25/10, reversível] |
 | D4 | **Rede para registros de pacotes e imagens: permitida, nunca ao Jira.** Inclui imagens base do Docker e dependências Maven/Gradle (`ktor-server-auth`, `-auth-jwt`, `-sessions`) e npm | [valor padrão 25/10, reversível] |
-| D5 | Os documentos de `docs/jira/` passam da regra antiga para a flag única. `PreparacaoDocsTest.cadaPassoDoChecklistExigeAutorizacaoExpressa` é substituído por `cadaPassoDoChecklistExigeAFlag` | [decorre de U5] |
+| D5 | Os documentos de `docs/jira/` ficam na regra da flag única. O teste do checklist tem um nome só em todos os planos: `PreparacaoDocsTest.cadaPassoDoChecklistConfirmaAFlag` (Plano 4A, T11, que substituiu `cadaPassoDoChecklistExigeAutorizacaoExpressa`); esta fase só confere que ele passa e acrescenta `documentosDeJiraSemRegraAntiga` | [decorre de U5] |
 
 ## 5. O que fica para quem implementa
 
@@ -173,7 +173,7 @@ O teste de carga leva `@Tag("carga")` e fica fora da suíte padrão.
    - `ComposeTest` passa: `perfilProdEndurecido`, `prodSemDevMode`, `semValoresDeSegredoNoCompose`, `portaSoLocalhost` e `documentoDeImplantacaoCitaBackupERestauracao`.
    - `sh app/scripts/verificar-imagem.sh` mostra: nenhuma config real, `id -u` = 10001 e nenhum `.env`.
    - `docker compose --profile prod up -d` recusa subir sem `OIDC_ISSUER`.
-8. **Documentos do Jira (T8).** `PreparacaoDocsTest` passa: `checklistCitaCadaCampoAConfirmar`, `matrizCitaCadaEndpoint`, `cadaFichaUsaSoCamposDoDicionario`, `cadaPassoDoChecklistExigeAFlag`, `semHostRealNemToken` e `testesNaoAcessamOJiraReal`. Nenhum documento de `docs/jira/` mantém a regra antiga.
+8. **Documentos do Jira (T8).** `PreparacaoDocsTest` passa: `checklistCitaCadaCampoAConfirmar`, `matrizCitaCadaEndpoint`, `cadaFichaUsaSoCamposDoDicionario`, `cadaPassoDoChecklistConfirmaAFlag` (do 4A), `documentosDeJiraSemRegraAntiga`, `semHostRealNemToken` e `testesNaoAcessamOJiraReal`. Nenhum documento de `docs/jira/` mantém a regra antiga.
 9. **Remoção (T9), só com aprovação.** Antes, existe a tag `legacy-final`. `ReferenciasLegacyTest` passa: `nadaReferenciaLegacy` e `nenhumCodigoLeLegacy`. Também passam as suítes completas, `pnpm build`, `sh .claude/hooks/test-guard.sh` e `docker compose build`.
 10. **Guia (T10).** `GuiaDoPainelDocTest` passa: `guiaCitaCadaItemDoMenu`, `guiaCitaCadaFicha` e `claudeMdSemCaminhoInexistente`. O índice dos planos mostra o estado final.
 11. **Fim.** Varrer dados pessoais antes do push. Confirmar que o repositório é PRIVADO. Abrir PR para a `main` e não mesclar sem o usuário mandar.
@@ -215,7 +215,7 @@ Legenda:
 | `module(settings, context, authenticator)` | `.../Application.kt` | [main] |
 | `AccessLog` (`record`, `listar`) | `.../db/AccessLog.kt` | [main]; `listar` no Plano 7 |
 | `JiraClientFactory`, `LiveGuard`, teste `SomenteAFabricaCriaClientesJira` | `.../jira/`, `src/test/.../jira/` | [main] |
-| `PreparacaoDocsTest` (contém hoje `cadaPassoDoChecklistExigeAutorizacaoExpressa`, a substituir) | `app/backend/src/test/kotlin/br/sidia/painel/jql/PreparacaoDocsTest.kt` | [main] Plano 2 |
+| `PreparacaoDocsTest` (com `cadaPassoDoChecklistConfirmaAFlag` e `checklistSemRegraAntiga` desde o Plano 4A, T11) | `app/backend/src/test/kotlin/br/sidia/painel/jql/PreparacaoDocsTest.kt` | [main] Plano 2; [Plano 4A] T11 |
 | `docs/jira/checklist-primeira-conexao.md`, `docs/jira/matriz-compatibilidade.md` | `docs/jira/` | [main] Plano 2 |
 | `docs/jira/runbook-sincronizacao.md`, `FlagDesligadaZeroRequisicoesTest`, `SyncGate` | `docs/jira/`, `.../sync/` | [Plano 4A] |
 | `executarAuditado` | `.../cards/RotaAuditada.kt` | [Plano 4] |

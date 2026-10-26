@@ -1,6 +1,15 @@
-# Retomada: Painel de Squads (atualizado em 25/10/2026, fim do Plano 3A)
+# Retomada: Painel de Squads (atualizado em 25/10/2026, noite)
 
-Para continuar: abrir a sessão com `claude --advisor opus --subagents haiku` na pasta do projeto e digitar **`/continuar`**.
+## COMECE AQUI (ClineSR, outro PC, clone do GitHub)
+
+1. Leia, nesta ordem: `.clinerules/00-regras-do-projeto.md` → `docs/guia-execucao-outra-ia.md` → `docs/ferramentas-claude-para-o-cline/README.md` → `CLAUDE.md` → este arquivo → o índice `docs/superpowers/plans/2026-10-24-indice-dos-planos.md`.
+2. **Estado do código:** Planos 1, 2, 3A e 3 estão na `main`. O **Plano 4A (sincronização periódica, 12 tarefas)** e o **Plano 4 (Auditoria, 9 tarefas)** eram a missão da noite de 25/10; veja a seção "Onde paramos" abaixo e o arquivo de progresso `docs/superpowers/progresso/` para saber até onde foram. Os planos 5 a 16 e suas specs (`docs/superpowers/specs/2026-10-25-spec-fase-*.md`) estão escritos e aguardam execução, na ordem do índice.
+3. **Jira:** a flag `JIRA_LIVE_ENABLED` é a única trava (`false` = proibido para todos; `true` = liberado). Só o usuário a muda. O primeiro uso real segue `docs/jira/checklist-primeira-conexao.md` e o Plano 14a.
+4. **Dúvida ou falta de direção = pergunta ao usuário** com opções (recomendada primeiro, cada opção com porquê e consequência). Workflows do Cline em `.clinerules/workflows/`.
+5. **Clone o projeto numa pasta SEM "jira" no nome** (o hook de proteção bloqueia a palavra), no Windows 11 use os comandos PowerShell dos workflows, e rode primeiro o teste do hook (`docs/ferramentas-claude-para-o-cline/hooks.md`). Instalar as skills de terceiros: `scripts/instalar-skills-cline.ps1`.
+6. Configs reais (`.env`, `papeis.yaml`, `status_map.yaml`, `jira_campos.yaml`) **não** estão no GitHub: crie a partir dos `.exemplo`; nunca as commite.
+
+(Quando o Claude Code for usado: abrir com `claude --advisor opus --subagents haiku` e digitar **`/continuar`**.)
 
 ## Onde paramos
 

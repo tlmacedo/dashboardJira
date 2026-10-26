@@ -1,11 +1,26 @@
 # Regras do projeto Painel de Squads (para o Cline e qualquer IA)
 
-Este arquivo é lido automaticamente pelo Cline. A fonte da verdade do projeto é o `CLAUDE.md` na raiz (escrito para outra IA, o Claude Code, mas as regras valem para todos). O guia completo de execução está em `docs/guia-execucao-outra-ia.md`: **leia-o inteiro antes de qualquer ação**, depois o `HANDOFF.md` e o plano a executar.
+Este arquivo é lido automaticamente pelo Cline. **O executor é o ClineSR (com o modelo Gauss 3.7) num PC com Windows 11:** os comandos do terminal são PowerShell; os equivalentes dos comandos dos documentos (`.\gradlew.bat test`, `;` no lugar de `&&`, `%USERPROFILE%` no lugar de `~`) estão em `docs/ferramentas-claude-para-o-cline/README.md`, seção "Windows 11". Trabalhe em tarefas pequenas, releia o plano a cada tarefa e releia estas regras no original em vez de resumi-las de memória. A fonte da verdade do projeto é o `CLAUDE.md` na raiz (escrito para outra IA, o Claude Code, mas as regras valem para todos). O guia completo de execução está em `docs/guia-execucao-outra-ia.md`: **leia-o inteiro antes de qualquer ação**, depois o `HANDOFF.md` e o plano a executar.
 
-## Proibições absolutas (nenhum hook protege você; vigie a si mesmo)
+## Ferramentas do Claude portadas para o Cline
 
-1. **A única trava de acesso ao Jira é a flag `JIRA_LIVE_ENABLED`.** Com `false` (padrão), **nunca acesse um servidor Jira**, por nenhum caminho: nem pelo app, nem por `curl`/`wget`/`httpie`, navegador, script, MCP da Atlassian ou qualquer ferramenta. Com `true`, o acesso está liberado (app, sincronização periódica e ferramentas), seguindo `docs/jira/checklist-primeira-conexao.md` na primeira conexão. **Só o usuário muda a flag** (ele pretende liberar o ClineSR a partir de 26/10); nunca a ligue por conta própria. Testes automáticos usam sempre fixtures e `MockEngine`, mesmo com a flag `true`. Se um comando seu citar uma URL ou host do Jira da empresa com a flag `false`, pare.
-2. **Nunca edite nem commite** `.env`, `config/papeis.yaml`, `config/equipes.yaml`, `config/ausencias.yaml`, `config/squads.yaml`, nem o arquivo `Filtros_Status_tool.txt` (tem usernames reais). Use sempre os modelos `.exemplo`/`.demo`.
+Tudo o que o Claude Code usava aqui (regras, skills, hooks, comandos, memória, modelos) e o equivalente no Cline está em `docs/ferramentas-claude-para-o-cline/` (comece pelo `README.md`; regras consolidadas em `regras.md`). Workflows deste projeto (digite `/nome.md` no chat):
+
+- `/continuar.md`: início de toda sessão (HANDOFF, git, PRs, Docker, próximo passo).
+- `/executar-plano.md`: executar um plano tarefa a tarefa.
+- `/revisar-tarefa.md`: checklist de revisão com mutação mental.
+- `/fim-de-branch.md`: verificação, varredura de dados pessoais, push, PR, volta à `main`.
+- `/perguntar-ao-usuario.md`: como levar dúvidas ao usuário.
+- `/escrever-plano.md`: escrever um plano no padrão do projeto.
+
+Skills do projeto em `.cline/skills/`: `convencoes-painel-squads` e `novo-card-painel`.
+
+## Proibições absolutas (vigie a si mesmo; o hook é só uma rede de proteção)
+
+No Windows o hook é `.clinerules/hooks/PreToolUse.ps1` (no macOS/Linux, `.clinerules/hooks/PreToolUse`, que reaproveita o `.claude/hooks/guard.sh`). Ele só protege se "Enable Hooks" estiver ligado no Cline, e **antes de usá-lo rode o teste** `powershell.exe -NoProfile -ExecutionPolicy Bypass -File .clinerules\hooks\test-PreToolUse.ps1` (ver `docs/ferramentas-claude-para-o-cline/hooks.md`). Com ou sem ele, as regras abaixo valem.
+
+1. **A única trava de acesso ao Jira é a flag `JIRA_LIVE_ENABLED`.** Com `false` (padrão), **nunca acesse um servidor Jira**, por nenhum caminho: nem pelo app, nem por `curl`/`wget`/`httpie`, navegador, script, MCP da Atlassian ou qualquer ferramenta. Com `true`, o acesso está liberado (app, sincronização periódica e ferramentas), seguindo `docs/jira/checklist-primeira-conexao.md` na primeira conexão. **Só o usuário muda a flag** (ele pretende liberar o ClineSR a partir de 26/10); nunca a ligue por conta própria. Testes automáticos usam sempre fixtures e `MockEngine`, mesmo com a flag `true`. Se um comando seu citar uma URL ou host do Jira da empresa com a flag `false`, pare. Com a flag diferente de `true`, o navegador e o `web_fetch` não abrem **nenhuma** URL com `jira` ou `atlassian`, nem a documentação pública (decisão do usuário em 25/10): peça ao usuário um trecho ou use a busca genérica (`web_search`).
+2. **Nunca edite, leia nem commite** `.env`, `config/papeis.yaml`, `config/equipes.yaml`, `config/ausencias.yaml`, `config/squads.yaml`. **Nunca edite nem commite** o arquivo `Filtros_Status_tool.txt` (tem usernames reais; lê-lo como vocabulário é permitido). Use sempre os modelos `.exemplo`/`.demo`.
 3. **Dados pessoais:** em fixtures, testes, docs e mensagens de commit use só nomes fictícios (`ana.silva`, `bruno`, domínio `.invalid`). Antes de qualquer `git push`, varra o que vai ser publicado em busca de usernames reais, e-mails, hosts internos, tokens e segredos. Em dúvida, pare e pergunte.
 4. **Nunca mescle PR** nem apague branch com código fora da `main` sem o usuário mandar.
 5. **Nunca troque o PostgreSQL real por H2 ou mock** nos testes de banco; use Testcontainers (Docker precisa estar ativo: `docker info`; se parado, abra o Docker Desktop e espere).
@@ -14,7 +29,8 @@ Este arquivo é lido automaticamente pelo Cline. A fonte da verdade do projeto �
 ## Como conversar e decidir
 
 - Converse em **português do Brasil**. Comentários de código em pt-BR. Código pode ser em inglês ou pt-BR (siga o arquivo vizinho).
-- **Toda dúvida, pendência ou aprovação** vai ao usuário como **pergunta com 2 a 4 opções**, a recomendada primeiro e marcada "(Recomendada)", cada opção com o porquê e a consequência. Nunca como lista solta ou pergunta em prosa.
+- Precedência: `CLAUDE.md` > estas regras > workflows e skills do projeto > skills de terceiros (superpowers, mattpocock-skills, impeccable). Em conflito, vale o projeto.
+- **Toda dúvida, pendência, falta de direção ou aprovação SEMPRE** vai ao usuário como **pergunta com 2 a 4 opções**, a recomendada primeiro e marcada "(Recomendada)", cada opção com o porquê e a consequência. Nunca como lista solta ou pergunta em prosa. Use `ask_followup_question` com `options`, como em `/perguntar-ao-usuario.md`.
 - Onde o plano deixa uma escolha em aberto, decida a mais segura e reversível, registre como "Ruling" no ledger do plano e siga; só pare para: ação irreversível, algo de segurança, efeito fora do repositório (merge, push em branch compartilhada, publicação) ou plano quebrado.
 
 ## Fluxo de trabalho (resumo; detalhes no guia)

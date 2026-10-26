@@ -2,7 +2,7 @@
 
 > **Para executores:** USE superpowers:subagent-driven-development (recomendado) ou superpowers:executing-plans. Os passos usam caixas `- [ ]`.
 
-**Objetivo (Goal):** Montar o `Syncer` em produção com **toda** a sincronização (carga inicial, incremental, reconciliação diária, retenção, agendador no ciclo de vida do Ktor e status), tendo como **única trava** de acesso ao Jira DC a flag `JIRA_LIVE_ENABLED` (o `LiveGuard` já existente): com `false` (padrão) nenhum caminho fala com o Jira (cliente, agendador, carga, reconciliação) e o status mostra "desligado pela flag"; só o usuário muda a flag para `true`, e então a sincronização periódica roda sozinha pelo agendador. A execução deste plano é 100% offline (MockEngine e fixtures), com prova de 0 requisições com a flag `false`, inclusive pelo agendador. Fecha com dois complementos: **dados de demonstração** fictícios para ver o painel com números sem Jira, só em desenvolvimento (Tarefa 10), e o **hook do Claude e o checklist alinhados à flag** (Tarefa 11).
+**Objetivo (Goal):** Montar o `Syncer` em produção com **toda** a sincronização (carga inicial, incremental, reconciliação diária, retenção, agendador no ciclo de vida do Ktor e status), tendo como **única trava** de acesso ao Jira DC a flag `JIRA_LIVE_ENABLED` (o `LiveGuard` já existente): com `false` (padrão) nenhum caminho fala com o Jira (cliente, agendador, carga, reconciliação) e o status mostra "desligado pela flag"; só o usuário muda a flag para `true`, e então a sincronização periódica roda sozinha pelo agendador. A execução deste plano é 100% offline (MockEngine e fixtures), com prova de 0 requisições com a flag `false`, inclusive pelo agendador. Fecha com três complementos: **dados de demonstração** fictícios para ver o painel com números sem Jira, só em desenvolvimento (Tarefa 10), o **hook do Claude e o checklist alinhados à flag** (Tarefa 11) e os **vínculos entre issues** "Blocks / is blocked by" (`fields.issuelinks`) gravados em `issue_link`, que ligam cada Review (`Checklist Review`) à sua task para o card Task × Review do Plano 4 (Tarefa 12, executada por último). São 12 tarefas.
 
 **Arquitetura (Architecture):** Um `SyncGate` puro decide se uma execução pode falar com o Jira (flag, instância configurada, suspensão por erro); o modo (`DESLIGADO`/`PERIODICO`) é **derivado da flag**, nunca de outra variável. O `SyncService` orquestra trava entre réplicas, registro em `sync_run`, cursor em `sync_state` e o `Syncer` (agora em fluxo, sem carregar tudo em memória). Um `Agendador` único por processo roda as tarefas devidas em sequência (sem sobreposição), com relógio e espera injetáveis, e é iniciado/cancelado pelos eventos do Ktor. Toda consulta sai de `CardQueryFactory` com a ficha `sincronizacao.card.yaml`.
 
@@ -21,8 +21,8 @@
 - `sync_run`, logs e respostas guardam só **códigos** (`HTTP_401`, `REDE`, `DADO_MALFORMADO`...), nunca texto de exceção, token, URL, JQL ou usernames.
 - Fuso America/Manaus para dias; retenção `RETENTION_MONTHS` (padrão 24).
 - Docker ativo (`sh .claude/hooks/ensure-docker.sh`); banco real por Testcontainers, nunca H2 ou mock.
-- **Migração:** use o próximo número livre na hora da execução (`V4` se o Plano 4 ainda não tiver mesclado uma migração; senão `V5`). Nunca editar migração já mesclada.
-- **Ordem com o Plano 4:** os planos são independentes. Se o Plano 4 já estiver na `main`, a Tarefa 6 aplica o filtro `removida_em IS NULL` também em `PostgresAuditStore`.
+- **Migrações:** este plano tem duas. `V4__sincronizacao.sql` (Tarefa 2) e `V5__marcador_de_falhas.sql` (correção da Tarefa 2, já na branch de implementação) existem; a Tarefa 12 cria `V6__vinculos_entre_issues.sql`. **Regra que vale sempre:** confirmar a próxima numeração livre em `src/main/resources/db/migration` na hora da execução (se outro plano tiver mesclado uma migração antes, a da Tarefa 12 sobe para o número seguinte; os Planos 5, 6 e 8 já usam `V{n}` e seguem a mesma regra). Nunca editar migração já mesclada.
+- **Ordem com o Plano 4:** o Plano 4 depende deste (usa `JqlValues.issueKey`, `AvisoDto.params`, `removida_em`, os dados de demonstração, o teste renomeado na Tarefa 11 e `issue_link`/`IssueLinkStore`/`ParesTaskReview` da Tarefa 12) e é executado **depois do 4A completo, inclusive a Tarefa 12**; é o Plano 4 que aplica `removida_em IS NULL` no `PostgresAuditStore`.
 - Commits em Conventional Commits pt-BR (`feat(sync): ...`, `fix(sync): ...`, `docs(jira): ...`); comentários em pt-BR.
 
 ## Foco da revisão (Review Focus)
@@ -35,6 +35,7 @@
 6. **Flag `false` = 0 requisições por qualquer caminho**, inclusive o agendador rodando um dia simulado: só a retenção executa, o provedor CIO nunca é invocado → `agendadorComFlagFalseUmDiaSimulado` (Tarefa 7), somando aos casos de `FlagDesligadaZeroRequisicoesTest` das Tarefas 1, 5 e 6.
 7. **Dados de demonstração nunca em produção nem misturados com dados reais:** `DASHBOARD_DEMO_DATA=true` com `DASHBOARD_DEV_MODE=false` (ou com `JIRA_LIVE_ENABLED=true`) derruba a subida; o carregador não usa cliente Jira (0 requisições) e recusa banco com issues que não são de demonstração → `demoEmProducaoDerrubaSubida`, `demoComFlagLigadaDerrubaSubida`, `demoNaoFazRequisicao`, `demoRecusaBancoComDadosReais` (Tarefa 10).
 8. **Hook do Claude travado por padrão:** com a flag ausente, `false` ou inválida no ambiente do hook, tudo o que o hook barra hoje continua barrado (inclusive ligar a flag dentro do comando); só `true` libera → casos `trava:` e `liberado:` de `test-guard.sh` (Tarefa 11).
+9. **Vínculo que pertence às duas pontas** (o mesmo link chega pelo JSON da task e pelo da Review, em direções opostas; uma issue sincronizada sem o campo `issuelinks`; Review ligada a duas tasks): uma linha só por link, campo ausente nunca apaga vínculo, desempate pela ordem natural de chaves (TG-9 antes de TG-10) → `linkVistoPelasDuasPontasEhUmaLinha`, `campoAusenteNaoApagaVinculos`, `ambiguidadeUsaChaveNaturalMenor` (Tarefa 12).
 
 ---
 
@@ -52,7 +53,10 @@ app/backend/src/main/kotlin/br/sidia/painel/
   jira/OrcamentoDeRequisicoes.kt             # teto de requisições por execução
   jql/JqlValues.kt, JqlBuilder.kt, CardSpec.kt, CardQueryFactory.kt
   db/Retention.kt, AppContext.kt, Application.kt, config/Settings.kt
-app/backend/src/main/resources/db/migration/V4__sincronizacao.sql
+app/backend/src/main/resources/db/migration/V4__sincronizacao.sql      # Tarefa 2 (V5__marcador_de_falhas.sql: correção da Tarefa 2)
+app/backend/src/main/resources/db/migration/V6__vinculos_entre_issues.sql   # Tarefa 12 (número livre confirmado na execução)
+app/backend/src/main/kotlin/br/sidia/painel/sync/{IssueLinks.kt,IssueLinkStore.kt,VinculosTaskReview.kt}  # Tarefa 12
+app/config/vinculos.exemplo.yaml                                         # Tarefa 12: tipo de link e tipos Review
 app/config/cards/sincronizacao.card.yaml, app/config/jira_campos.exemplo.yaml
 app/frontend/src/screens/Sincronizacao/{Sincronizacao.tsx,api.ts,Sincronizacao.test.tsx}
 docs/jira/runbook-sincronizacao.md
@@ -420,7 +424,7 @@ docs/jira/checklist-primeira-conexao.md                                  # Taref
   - trocas de responsável: uma por usuário comum (não autorizado), uma pelo Squad Leader do squad (autorizado), um passa-bola (3 trocas a até 2 dias do vencimento) e uma volta a quem já teve;
   - trocas de vencimento: uma pelo próprio responsável, uma pelo Reporter, uma remoção, uma primeira definição; itens de `duedate` com `from` `aaaa-mm-dd` **e** `fromString` `aaaa-mm-dd 00:00:00.0` (os dois formatos que o Plano 4 lê);
   - labels de atraso: uma colocada depois do fechamento por não autorizado, uma pelo próprio responsável depois do fechamento, uma depois do vencimento e uma `LATE_SENT` com posse antecipada;
-  - um par Task × `Checklist Review` (campo `parent`) com vencimentos iguais e outro divergente;
+  - dois pares Task × `Checklist Review` ligados pelo link `Blocks` em `fields.issuelinks` (nunca pelo campo `parent`), um em cada direção (a Review bloqueia a task; a task bloqueia a Review), um com vencimentos iguais e outro divergente (a Tarefa 12 grava esses links e acrescenta a conferência ao `cenarioCobreAuditoriaETempoEmStatus`);
   - uma chave `JIRAUSER*` resolvida pelo objeto da issue e outra sem resolução.
   Instância `sidia`, projeto `CAT`, 5 issues `DEMOCAT-1..5` só para provar o isolamento por instância (nenhum card lê a `sidia` ainda; ela não aparece nas telas).
 
@@ -465,12 +469,89 @@ docs/jira/checklist-primeira-conexao.md                                  # Taref
 
 ---
 
+### Tarefa 12: Vínculos entre issues (Blocks / is blocked by)
+
+**Por quê:** Decisão do usuário (25/10): a Review (`Checklist Review`) se liga à sua task pelo **link de issue "Blocks / is blocked by"** (`fields.issuelinks` do Jira), e **não** pelo campo `parent`. O card Task × Review do Plano 4 (e, depois dele, o Checklist × Review do Plano 7) lê os pares desta tarefa. `issue.parent_key` continua gravado, mas só para hierarquia/Epic: não define par. Executada **por último no 4A** (depois da Tarefa 11), porque estende o que as Tarefas 3, 4, 6, 7 e 10 criaram.
+
+**Arquivos:** Criar `resources/db/migration/V6__vinculos_entre_issues.sql` (número livre confirmado na execução; ver Restrições globais), `sync/IssueLinks.kt`, `sync/IssueLinkStore.kt`, `sync/VinculosTaskReview.kt`, `app/config/vinculos.exemplo.yaml`, `src/test/resources/fixtures/dc/search-issuelinks.json`; Modificar `jql/CardQueryFactory.kt` (`issuelinks` na lista `minimos` de `build`; `buildLeve` não muda), `sync/Syncer.kt` e `sync/IssueStore.kt` (`upsert` grava os vínculos na mesma transação; `renomear` da Tarefa 6 atualiza as pontas), `db/Retention.kt` (Tarefa 7), `demo/DadosDeDemonstracao.kt` e `resources/demo/samsung.json` (Tarefa 10), `AppContext.kt` (`vinculos`), `TestContext.kt`, `TestContextComBanco.kt`, `.gitignore` (`**/config/vinculos.yaml`, se ausente), `docs/jira/checklist-primeira-conexao.md` (um item no Passo 4), `docs/jira/matriz-compatibilidade.md` (linha de `issuelinks`); Teste `sync/IssueLinksTest.kt`, `sync/IssueLinkStoreTest.kt`, `sync/VinculosTaskReviewTest.kt`, `sync/SyncerTest.kt`, `sync/ReconciliacaoTest.kt`, `db/RetentionTest.kt`, `jql/CardQueryFactoryTest.kt`, `AppContextTest.kt`, `demo/DadosDeDemonstracaoTest.kt`, `demo/FixturesDeDemoTest.kt`.
+
+**Interfaces:**
+- **Migração** (sem FK para `issue`: a outra ponta pode não estar na base, por exemplo fora da ficha ou de outro projeto):
+  ```sql
+  CREATE TABLE issue_link (
+      instance    text NOT NULL,
+      from_key    text NOT NULL,              -- ponta outward ("blocks"); em tipo simétrico, a menor chave natural
+      to_key      text NOT NULL,              -- ponta inward ("is blocked by")
+      link_type   text NOT NULL,              -- type.name do Jira (ex.: "Blocks")
+      direction   text NOT NULL CHECK (direction IN ('OUTWARD', 'SIMETRICO')),
+      visto_em    timestamptz NOT NULL,
+      removida_em timestamptz,
+      PRIMARY KEY (instance, from_key, to_key, link_type),
+      CHECK (from_key <> to_key)
+  );
+  CREATE INDEX issue_link_to ON issue_link (instance, to_key);
+  CREATE INDEX issue_link_tipo_ativo ON issue_link (instance, link_type) WHERE removida_em IS NULL;
+  ```
+  **Uma linha por link do Jira.** O link pertence às **duas pontas**: chegue pelo JSON da task ou pelo da Review, vira a mesma linha (chave natural `(instance, from_key, to_key, link_type)`, sempre normalizada com `from_key` = ponta outward). `direction` registra a convenção: `OUTWARD` = "`from_key` [type.outward] `to_key`" (ex.: "TG-2 blocks TG-1"); `SIMETRICO` = tipo cujo `inward` é igual ao `outward` (ex.: "relates to"), em que `from_key` é a menor chave por `ORDEM_NATURAL_DE_CHAVES`.
+- **Semântica do DC (por extenso):** em `fields.issuelinks[]`, cada item traz `type {name, inward, outward}` e **uma** das pontas: `outwardIssue {key}` presente = "**esta issue** [type.outward] `outwardIssue`" → `(from = esta, to = outwardIssue.key)`; `inwardIssue {key}` presente = "`inwardIssue` [type.outward] **esta issue**" → `(from = inwardIssue.key, to = esta)`. Ex.: TG-2 (Review) com `outwardIssue TG-1` e TG-1 (task) com `inwardIssue TG-2`, tipo `Blocks` → a mesma linha `(TG-2, TG-1, Blocks, OUTWARD)`.
+- Produz:
+  ```kotlin
+  enum class DirecaoVinculo { OUTWARD, SIMETRICO }
+  data class VinculoRecord(val fromKey: String, val toKey: String, val tipo: String, val direcao: DirecaoVinculo)
+  object IssueLinks {
+      // null = campo `issuelinks` ausente no JSON (não mexe nos vínculos gravados); lista vazia = a issue não tem vínculos
+      fun ler(issueKey: String, issue: JsonObject): List<VinculoRecord>?
+  }
+  interface IssueLinkStore {
+      fun ativos(instance: String, tipo: String): List<VinculoRecord>              // removida_em IS NULL; tipo sem diferenciar maiúsculas
+      fun daIssue(instance: String, key: String): List<VinculoRecord>              // ativos em que a issue é qualquer ponta
+  }
+  class PostgresIssueLinkStore(private val ds: DataSource) : IssueLinkStore {
+      internal fun substituir(conn: Connection, instance: String, issueKey: String, vinculos: List<VinculoRecord>, at: Instant)
+  }
+  data class VinculosConfig(val versao: Int, val tipoDeLink: String = "Blocks", val tiposReview: Set<String>,
+                            val tiposTask: Set<String> = emptySet()) {  // vazio = todo tipo fora de tiposReview
+      fun ehReview(tipo: String): Boolean; fun ehTask(tipo: String): Boolean
+      companion object { fun fromYaml(path: Path): VinculosConfig }  // estrito; tiposReview vazio falha; tipo em Review e Task ao mesmo tempo falha
+  }
+  data class ParDeChaves(val task: String, val review: String)
+  data class ResolucaoDePares(val pares: List<ParDeChaves>, val ambiguas: Int, val ignorados: Int)
+  object ParesTaskReview {
+      // tipoDe: chave -> issuetype das issues ATIVAS da instância; ponta ausente do mapa = ignorada
+      fun resolver(vinculos: List<VinculoRecord>, tipoDe: Map<String, String>, cfg: VinculosConfig): ResolucaoDePares
+  }
+  ```
+  `IssueLinks.ler` lê o JSON **recebido**, antes do `SanitizadorRaw` (como `ChavesDeUsuario`), e guarda **só** chaves e `type.name`: nada de `summary`, `status`, `priority` nem outro dado da outra ponta (nenhum dado pessoal). Item malformado (sem `type.name`, sem nenhuma ou com as duas pontas, chave fora do padrão de `JqlValues.issueKey`, vínculo da issue com ela mesma) é ignorado, sem exceção; o log leva só a contagem. `PostgresIssueStore.upsert` ganha o parâmetro `vinculos: List<VinculoRecord>? = null` e chama `substituir` **na mesma transação** da issue: com `null`, não mexe; com lista, as linhas ativas em que a issue é **qualquer ponta** e que não estão na lista recebem `removida_em = at` (o link sumiu no Jira); as da lista são inseridas ou reativadas (`ON CONFLICT ... DO UPDATE SET removida_em = NULL, visto_em = at, direction = EXCLUDED.direction`). Idempotente: o mesmo JSON duas vezes não muda nada além de `visto_em`. Na reconciliação (Tarefa 6), `IssueIndex.renomear(instance, jiraId, novaChave)` passa a atualizar também `from_key`/`to_key` de `issue_link`, na mesma transação. A retenção (Tarefa 7) apaga os vínculos em que uma ponta foi purgada nessa execução e os com `removida_em < limite`. A recarga da demonstração (Tarefa 10) apaga, na mesma transação, os vínculos com pontas de prefixo `DEMO-`/`DEMOCAT-` (não há cascata) e, ao regravar cada issue, chama `IssueLinks.ler` sobre o JSON da fixture e passa o resultado ao `upsert(..., vinculos = ...)` (sem isso a demo ficaria sem pares e o card cairia em `VINCULOS_INDISPONIVEIS`). Instâncias isoladas: nenhuma operação cruza `instance`.
+  `issuelinks` entra na lista `minimos` de `CardQueryFactory.build` (é campo de sistema; não vai em `campos:` da ficha, que só aceita nomes do dicionário), então a ficha `sincronizacao` passa a pedi-lo; `buildLeve` continua `["key", "updated"]`.
+- **Configuração** `app/config/vinculos.exemplo.yaml` (versionado; o real `vinculos.yaml` fica fora do git; fallback `.exemplo` só em dev, como os demais; `AppContext` ganha `val vinculos: VinculosConfig`):
+  ```yaml
+  versao: 1
+  tipoDeLink: Blocks              # type.name do link no Jira; confirmar na 1ª conexão (checklist, Passo 4)
+  tiposReview: ["Checklist Review"]
+  tiposTask: []                   # vazio = qualquer tipo da ficha de sincronização fora de tiposReview
+  ```
+  **As duas direções valem:** a Review pode ser a que bloqueia ou a bloqueada. Regras do `resolver`, nesta ordem: (1) só vínculos do `tipoDeLink` (sem diferenciar maiúsculas); (2) as duas pontas precisam estar em `tipoDe` (issue ativa na base), senão `ignorados += 1`; (3) é candidato **só** o vínculo com exatamente uma ponta Review e a outra task: Review × Review e task × task (um bloqueio de verdade entre tasks) são ignorados; (4) **desempate:** para cada Review, fica a task de **menor chave por `ORDEM_NATURAL_DE_CHAVES`** (nunca ordem de texto: TG-9 vem antes de TG-10); depois, para cada task que sobrou com mais de uma Review, fica a Review de menor chave; cada candidato descartado soma 1 em `ambiguas`; (5) nunca dois pares iguais. O consumidor (Plano 4) transforma `ambiguas > 0` no aviso informativo `VINCULO_AMBIGUO` (`params["n"]`). Valor padrão recomendado (25/10, reversível).
+
+- [ ] **Passo 1: Fixture** `search-issuelinks.json` (instância `samsung`, só `.invalid`, sem dados pessoais): TG-1 (Task) e TG-2 (Checklist Review) com `Blocks` visto pelas duas pontas (TG-2 `outwardIssue TG-1`; TG-1 `inwardIssue TG-2`); TG-3 (Task) bloqueia TG-4 (Checklist Review) (direção oposta); TG-5 e TG-6 (duas Tasks) com `Blocks`; TG-7 com `Relates` (`inward == outward`); um item malformado; TG-8 sem o campo `issuelinks`.
+- [ ] **Passo 2: Testes que falham:**
+  - `IssueLinksTest`: `outwardIssueViraOrigem` (TG-2 com `outwardIssue TG-1` → `(TG-2, TG-1, Blocks, OUTWARD)`); `inwardIssueViraDestino` (TG-1 com `inwardIssue TG-2` → o mesmo registro); `tipoSimetricoOrdenaPelaChaveNatural` (`Relates` entre TG-10 e TG-9 → `from = TG-9`, `SIMETRICO`); `campoAusenteDevolveNulo` e `listaVaziaDevolveVazia`; `itemMalformadoIgnorado` (sem `type.name`, sem ponta, chave `TG-1) or (1=1`, auto-vínculo → nada, sem exceção); `naoGuardaDadosDaOutraPonta` (o registro só tem chaves, tipo e direção).
+  - `IssueLinkStoreTest` (Testcontainers): `linkVistoPelasDuasPontasEhUmaLinha` (upsert de TG-1 e de TG-2 → 1 linha); `vinculosIdempotentes` (mesmo JSON duas vezes → mesma contagem e nenhuma `removida_em`); `linkRemovidoGanhaRemovidaEm` (TG-2 volta sem o link → `removida_em = agora`, fora de `ativos`); `linkQueVoltaLimpaRemocao`; `campoAusenteNaoApagaVinculos` (upsert de TG-1 com JSON sem `issuelinks` → vínculo continua ativo); `vinculosPorInstanciaIsolados` (o mesmo par na `sidia` não aparece na `samsung`, e remover na `samsung` não toca a `sidia`).
+  - `VinculosTaskReviewTest`: `reviewQueBloqueiaATask` (TG-2 bloqueia TG-1 → `ParDeChaves(TG-1, TG-2)`); `reviewBloqueadaPelaTask` (TG-3 bloqueia TG-4 → `ParDeChaves(TG-3, TG-4)`); `blocksEntreDuasTasksIgnorado`; `reviewComReviewIgnorado`; `outroTipoDeLinkIgnorado` (`Relates`); `pontaForaDaBaseIgnorada` (`ignorados == 1`); `ambiguidadeUsaChaveNaturalMenor` (Review TG-50 ligada a TG-9 e TG-10 → par com TG-9, `ambiguas == 1`); `taskComDuasReviewsUsaChaveMenor` (task TG-1 com TG-20 e TG-3 Reviews → par com TG-3, `ambiguas == 1`); `semDuplicar`; `vinculosEstrito` (chave desconhecida, `tiposReview` vazio e tipo nas duas listas → falha citando a chave); `appContextCarregaVinculosComFallbackDeDev`.
+  - `SyncerTest.syncerGravaVinculosDaFixture` (contagens esperadas em `issue_link`; `issue.raw` igual ao de antes); `CardQueryFactoryTest.fichaSincronizacaoPedeIssuelinks` (o snapshot de `fields` de `fichaSincronizacaoGeraJqlEsperado` passa a conter `issuelinks`; `buildLeveSoPedeKeyEUpdated` continua).
+  - `ReconciliacaoTest.renomearAtualizaAsPontasDoVinculo` (`jira_id 10004` era TG-4, volta como TG-40 → o vínculo com TG-3 passa a TG-40); `RetentionTest.retencaoApagaVinculosDaIssuePurgada`.
+  - `DadosDeDemonstracaoTest.carregaVinculosDaDemo` (depois de `carregar`, `issue_link` tem os dois pares `Blocks` da demo, um em cada direção, e `ParesTaskReview.resolver` devolve 2 pares); `DadosDeDemonstracaoTest.recarregarEhIdempotente` passa a contar também `issue_link` (contagem > 0, igual nas duas cargas); `FixturesDeDemoTest.cenarioCobreAuditoriaETempoEmStatus` confere os dois pares `Blocks` da demo (um em cada direção, um divergente) e nenhum par pelo `parent`.
+  - `FlagDesligadaZeroRequisicoesTest` segue verde (nada aqui faz requisição).
+- [ ] **Passo 3: Rodar** `./gradlew test --tests '*IssueLinks*' --tests '*IssueLinkStore*' --tests '*VinculosTaskReview*' --tests '*SyncerTest*' --tests '*CardQueryFactoryTest*' --tests '*ReconciliacaoTest*' --tests '*RetentionTest*' --tests '*DadosDeDemonstracao*' --tests '*FixturesDeDemo*' --tests '*AppContextTest*'` → FALHA. **Passo 4: Implementar** (SQL parametrizado). **Passo 5: Documentos:** no `checklist-primeira-conexao.md`, **dentro do Passo 4** (a issue com changelog já traz `issuelinks`; não criar seção "Passo" nova, para o `cadaPassoDoChecklistConfirmaAFlag` seguir verde), um item "conferir em `fields.issuelinks` o nome exato do tipo (`type.name`, esperado `Blocks`), os textos `inward`/`outward` (esperados `is blocked by`/`blocks`) e em que direção a Review aparece em relação à task; se criar ou remover um link altera o `updated` das **duas** issues (se não alterar, o incremental não percebe a mudança: registrar e tratar como divergência na matriz); se o nome diferir, ajustar o `vinculos.yaml` real; registrar só o tipo e a direção na matriz, sem chaves nem resumo de issues reais"; na matriz, a linha de `issuelinks` ("não validado"). **Passo 6: Rodar** → PASSA, suíte completa e `PreparacaoDocsTest`. **Passo 7: Commit** `feat(sync): vínculos entre issues (Blocks) para ligar Review e task`.
+
+---
+
 ## Autoavaliação
 
 - **Cobertura:** spec 5.4 (incremental com marca d'água, reconciliação diária, retenção de 24 meses agendada), 4.6 (10 minutos e reconciliação diária, dezenas de milhares de issues: fluxo, teto de itens e de requisições), 5.3 (retry e `Retry-After` do cliente, mantidos), 3 e 10 (nenhuma requisição com a flag `false` por nenhum caminho, provada em `FlagDesligadaZeroRequisicoesTest`; a flag é a única trava). Final review: M3 (montagem), M4 (retenção de `issue` e `access_log` e agendamento), M5 (drill), M7 (ficha × vocabulário, via filtro de leitura); Minor da Tarefa 4 (JIRAUSER, memória, `aberta` × done+resolution, `summary/created` ausentes) e avisos por código com parâmetros. M1, M2, M6, I1 e I2 já corrigidos na PR #9 (M6 vira regra de commit).
 - **Consistência:** `SyncKind`, `SyncMode`, `MotivoNegacao` (`DESLIGADO_PELA_FLAG`), `RunStatus`, `RunResumo` e `RegistroDeExecucao` (T1/T2) são os mesmos no serviço (T5/T6), no agendador (T7) e no DTO (T8); `AtualizadoDesde` e a ficha `sincronizacao` (T3) são a única fonte do JQL de T5 e T6.
-- **Dados de demonstração e hook (T10, T11):** a T10 reaproveita o caminho real de gravação (T4) sem cliente Jira e não cria migração (a única do plano continua sendo a da T2); a T11 troca, no `PreparacaoDocsTest`, `cadaPassoDoChecklistExigeAutorizacaoExpressa` por `cadaPassoDoChecklistConfirmaAFlag` (o Plano 4, Tarefa 9, que ainda cita o nome antigo, deve usar o novo).
-- **Fora deste plano:** escrita no Jira; worklog (sem dado sincronizado); `jira_sidia` para usernames diferentes na Sidia; múltiplas instâncias além de `samsung` (a configuração aceita, os testes cobrem só uma).
+- **Vínculos (T12):** `issue_link` (migração `V6`, número livre confirmado na execução) é escrito só pelo `upsert` (T4), por `renomear` (T6), pela retenção (T7) e pela recarga da demo (T10); `ParesTaskReview.resolver` e `VinculosConfig` são a única fonte do pareamento Task × Review do Plano 4 (e, por ele, do Plano 7). `parent_key` segue gravado só para hierarquia/Epic. O plano tem 12 tarefas.
+- **Dados de demonstração e hook (T10, T11):** a T10 reaproveita o caminho real de gravação (T4) sem cliente Jira e não cria migração (as migrações do plano são a da T2, `V4`, sua correção `V5` e a da T12); a T11 troca, no `PreparacaoDocsTest`, `cadaPassoDoChecklistExigeAutorizacaoExpressa` por `cadaPassoDoChecklistConfirmaAFlag`, nome único usado também pelos Planos 4 (Tarefa 9) e 8 (Tarefa 8).
+- **Fora deste plano:** escrita no Jira (Plano 16, `2026-10-25-plano-16-escrita-no-jira-pelo-painel.md`); worklog (sem dado sincronizado); `jira_sidia` para usernames diferentes na Sidia; múltiplas instâncias além de `samsung` (a configuração aceita, os testes cobrem só uma).
 
 ## Decisões
 
@@ -484,3 +565,4 @@ docs/jira/checklist-primeira-conexao.md                                  # Taref
 8. **Decisão do usuário (25/10): proteção na reconciliação.** Nunca remover mais de 50% da base local numa reconciliação; acima disso, `RECONCILIACAO_SUSPEITA` e nada é removido (T6).
 9. **Decisão do usuário (25/10): dados de demonstração.** Com `DASHBOARD_DEV_MODE=true` e `DASHBOARD_DEMO_DATA=true` (padrão `false`), o painel carrega na subida, sem tocar no Jira, issues e changelog fictícios (duas instâncias, dois squads, cenário rico), de forma idempotente; `DASHBOARD_DEV_MODE=false` com demo `true` derruba a subida; teste com banco real; README com os 3 comandos (T10). **Valores padrão recomendados (25/10, reversíveis):** demo com a flag do Jira `true` também derruba a subida; datas deslocadas em semanas inteiras até hoje; substituição pelo prefixo `DEMO`/`DEMOCAT`; recusa de banco com issues reais; com a flag ligada e dados de demonstração no banco, a subida falha (nada é apagado sozinho); faixa "dados fictícios de demonstração".
 10. **Decisão do usuário (25/10): hook do Claude consciente da flag.** `guard.sh` libera o acesso ao Jira só com `JIRA_LIVE_ENABLED=true` no ambiente do hook e continua bloqueando com `false` ou ausente; o checklist troca "peça autorização expressa" por "confirme `JIRA_LIVE_ENABLED=true` e rode o passo", mantendo ordem e cuidados (T11). **Valores padrão recomendados (25/10, reversíveis):** valor inválido = travado; ligar a flag dentro de um comando continua barrado com a trava fechada; com a flag ligada, exibir token ou senha no terminal continua barrado; a flag do hook fica no ambiente de abertura do Claude Code ou no `.claude/settings.local.json` git-ignorado, nunca no `settings.json` versionado (e, por herança, também liga a flag do app no que o Claude Code lançar); a tarefa `test` do Gradle fixa a flag em `false`.
+11. **Decisão do usuário (25/10): Review ligada à task pelo link "Blocks / is blocked by".** O par Task × Review vem de `fields.issuelinks` (tabela `issue_link`), não do campo `parent` (`parent_key` fica só para hierarquia/Epic); as duas direções valem; no painel, a ação é a lista de divergências com link direto para a task no Jira (Plano 4); escrita no Jira pelo painel é futura (Plano 16) (T12). **Valores padrão recomendados (25/10, reversíveis):** tipo `Blocks` e tipos Review (`Checklist Review`) em `vinculos.yaml`; uma linha por link, normalizada pela ponta outward; campo `issuelinks` ausente não apaga vínculo; ambiguidade (Review com mais de uma task, ou task com mais de uma Review) gera aviso informativo e fica o par de menor chave natural, sem duplicar; o nome exato do tipo e a direção se confirmam na primeira conexão (checklist, Passo 4).
