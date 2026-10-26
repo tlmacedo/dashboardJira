@@ -13,6 +13,17 @@ class ArquivoEnvTest {
     }
 
     @Test
+    fun flagDoJiraVemSoDoArquivo() {
+        val arq = mapOf("JIRA_LIVE_ENABLED" to "true", "X" to "a")
+        assertEquals("true", ArquivoEnv.combinarComFlagSoDoArquivo(arq, mapOf("JIRA_LIVE_ENABLED" to "false"))["JIRA_LIVE_ENABLED"])
+        val sem = ArquivoEnv.combinarComFlagSoDoArquivo(mapOf("X" to "a"), mapOf("JIRA_LIVE_ENABLED" to "true", "Y" to "b"))
+        assertEquals(null, sem["JIRA_LIVE_ENABLED"])
+        assertEquals("b", sem["Y"])
+        val desligada = ArquivoEnv.combinarComFlagSoDoArquivo(mapOf("JIRA_LIVE_ENABLED" to "false"), mapOf("JIRA_LIVE_ENABLED" to "true"))
+        assertEquals("false", desligada["JIRA_LIVE_ENABLED"])
+    }
+
+    @Test
     fun ambienteDoProcessoVenceOArquivoMasVazioNao() {
         val r = ArquivoEnv.combinar(mapOf("A" to "arq", "B" to "arq"), mapOf("A" to "env", "B" to ""))
         assertEquals("env", r["A"])

@@ -27,7 +27,7 @@ DASHBOARD_DEMO_DATA=true sh iniciar.sh        # PowerShell: $env:DASHBOARD_DEMO_
 
 - Os dados são **100% fictícios** (issues `DEMO-n` e `DEMOCAT-n`, pessoas dos modelos `.exemplo`) e a faixa vermelha avisa. As datas se ajustam em semanas inteiras até hoje. Nenhuma requisição ao Jira é feita.
 - Apagar `data/painel.db` é obrigatório **antes de ligar a flag do Jira**: o painel recusa subir com a flag ligada e dados de demonstração no banco. Um banco que já tem issues reais também recusa a demonstração.
-- Se `JIRA_LIVE_ENABLED` estiver ligada no terminal (ou no ambiente do Claude Code), a subida com demonstração **falha de propósito**: desligue-a nesse terminal antes.
+- Se a flag `JIRA_LIVE_ENABLED` estiver ligada no arquivo `app/.env`, a subida com demonstração **falha de propósito**: volte-a para `false` antes. A flag vale só nesse arquivo; variável de mesmo nome no terminal é ignorada.
 
 ## Flags
 
