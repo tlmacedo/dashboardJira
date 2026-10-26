@@ -70,7 +70,7 @@ Na subida o painel carrega o calendário e o diretório de papéis, abre o pool 
 - Nenhum **GERENTE** com papel vigente hoje no `papeis.yaml`.
 - `DATABASE_PASSWORD` vazia.
 - Banco indisponível ou migração que falha (a mensagem cita o destino sem credenciais).
-- Com `JIRA_LIVE_ENABLED=true`, instância do Jira mal configurada (a mensagem cita só o id e a regra).
+- Com a flag `JIRA_LIVE_ENABLED` ligada, instância do Jira mal configurada (a mensagem cita só o id e a regra).
 
 **YAML reais em produção.** A imagem leva apenas os modelos (`*.exemplo.yaml`, `*.demo.yaml`) e `cards/`; os arquivos com pessoas ficam fora dela (`.dockerignore`). Monte-os somente leitura, no `docker-compose.yml` (há um bloco comentado pronto):
 

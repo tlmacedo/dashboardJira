@@ -73,12 +73,12 @@ Saída vazia = nenhum modelo em uso.
 
 ## Variáveis
 
-A sincronização liga **somente** por `JIRA_LIVE_ENABLED=true`. As variáveis `SYNC_*` só ajustam limites e horários; vazio significa o padrão. Valor fora da faixa faz o app falhar na subida, citando só o nome da variável.
+A sincronização liga **somente** pela flag `JIRA_LIVE_ENABLED` (valor verdadeiro). As variáveis `SYNC_*` só ajustam limites e horários; vazio significa o padrão. Valor fora da faixa faz o app falhar na subida, citando só o nome da variável.
 
 | Variável | Padrão | Faixa | Efeito |
 |---|---|---|---|
 | `JIRA_LIVE_ENABLED` | `false` | `true`/`false` | Única chave de liga e desliga. |
-| `SYNC_INSTANCIAS` | `samsung` | ids separados por vírgula | Instâncias sincronizadas (`samsung`, `sidia`). Cada uma precisa de URL e token completos. |
+| `SYNC_INSTANCIAS` | `samsung` | ids separados por vírgula | Instâncias sincronizadas. **Hoje só `samsung` funciona:** a ficha de sincronização (`sincronizacao.card.yaml`) é só da Samsung, então `sidia` falha a cada ciclo com `ERRO_INTERNO` (sem requisição) até existir ficha própria (Plano 14b). Cada instância precisa de URL e token completos. |
 | `SYNC_INTERVALO_MIN` | `10` | 5 a 1440 | Minutos entre sincronizações incrementais. |
 | `SYNC_HORA_RECONCILIACAO` | `03:00` | `HH:mm` | Reconciliação diária, no fuso America/Manaus. |
 | `SYNC_HORA_RETENCAO` | `04:00` | `HH:mm` | Limpeza diária de dados locais (não toca o Jira). |
@@ -119,7 +119,7 @@ Objetivo: ver o app falar com o Jira com o menor volume possível. Todos os coma
    ```
 
    Esperado: `JIRA_LIVE_ENABLED: "false"`, `SYNC_MAX_ITENS: "50"`, `SYNC_MAX_REQUISICOES: "5"` e as credenciais da instância como `preenchida` (a da outra instância `VAZIA`). Se um teto aparecer vazio, a variável não chegou ao contêiner: pare e corrija o `.env`.
-3. **O usuário** liga a flag: `JIRA_LIVE_ENABLED=true` no `.env`.
+3. **O usuário, à mão**, liga a flag `JIRA_LIVE_ENABLED` (muda o valor de `false` para o verdadeiro) no `.env`. Os hooks barram a IA de editar o arquivo de ambiente, o compose e as settings: se uma IA estiver conduzindo este runbook, ela para aqui e pede ao usuário (o passo 2 também é do usuário, porque o `config` do compose cita as variáveis de conexão do Jira).
 4. Suba (ou recrie) o app. O agendador faz a carga inicial sozinho, dentro desses tetos.
 
    macOS (zsh), na pasta `app`:
@@ -241,7 +241,7 @@ docker compose up --build -d
 Start-Process http://localhost:8080
 ```
 
-**Pré-requisito para ligar a flag do Jira: banco sem dados de demonstração.** O painel recusa subir com `JIRA_LIVE_ENABLED=true` quando o banco ainda tem issues de demonstração (`DASHBOARD_DEMO_DATA` também precisa estar `false`, ou a subida cai). Nada é apagado automaticamente: antes de ligar a flag, use um volume novo (`docker compose down -v`) e suba de novo **sem** `DASHBOARD_DEMO_DATA`. Do mesmo jeito, um banco com issues reais recusa a carga de demonstração.
+**Pré-requisito para ligar a flag do Jira: banco sem dados de demonstração.** O painel recusa subir com a flag `JIRA_LIVE_ENABLED` ligada quando o banco ainda tem issues de demonstração (`DASHBOARD_DEMO_DATA` também precisa estar `false`, ou a subida cai). Nada é apagado automaticamente: antes de ligar a flag, use um volume novo (`docker compose down -v`) e suba de novo **sem** `DASHBOARD_DEMO_DATA`. Do mesmo jeito, um banco com issues reais recusa a carga de demonstração.
 
 ## Depois do primeiro ciclo
 

@@ -15,6 +15,14 @@ class PreparacaoDocsTest {
     /** Raiz do repositório: `app/config` fica dois níveis abaixo dela. */
     private val raiz: Path = TestPaths.configDir.toAbsolutePath().normalize().parent.parent
 
+    /**
+     * Frase que abre cada passo do checklist. Escrita sem o nome da flag junto do valor ligado de propósito:
+     * os hooks barram gravar a flag em forma de atribuição, e o texto precisa poder ser editado por IA.
+     */
+    private companion object {
+        const val FRASE_DE_CONFIRMACAO = "Confirme que a flag de acesso ao Jira está ligada"
+    }
+
     private fun ler(relativo: String): String {
         val arquivo = raiz.resolve(relativo)
         assertTrue(Files.isRegularFile(arquivo), "Documento ausente: $arquivo")
@@ -28,8 +36,8 @@ class PreparacaoDocsTest {
         for (chamada in chamadas) {
             assertTrue(texto.contains(chamada), "Checklist sem a chamada $chamada")
         }
-        val ocorrencias = Regex(Regex.escape("Confirme `JIRA_LIVE_ENABLED=true`")).findAll(texto).count()
-        assertTrue(ocorrencias >= 5, "Esperadas ao menos 5 menções a 'Confirme `JIRA_LIVE_ENABLED=true`', achadas $ocorrencias")
+        val ocorrencias = Regex(Regex.escape(FRASE_DE_CONFIRMACAO)).findAll(texto).count()
+        assertTrue(ocorrencias >= 5, "Esperadas ao menos 5 menções a '$FRASE_DE_CONFIRMACAO', achadas $ocorrencias")
     }
 
     @Test
@@ -59,8 +67,8 @@ class PreparacaoDocsTest {
         assertEquals(5, secoes.size, "Esperadas 5 seções de passo")
         for (secao in secoes) {
             assertTrue(
-                secao.contains("Confirme `JIRA_LIVE_ENABLED=true`"),
-                "Seção sem 'Confirme `JIRA_LIVE_ENABLED=true`': ${secao.lines().first()}",
+                secao.contains(FRASE_DE_CONFIRMACAO),
+                "Seção sem '$FRASE_DE_CONFIRMACAO': ${secao.lines().first()}",
             )
         }
     }

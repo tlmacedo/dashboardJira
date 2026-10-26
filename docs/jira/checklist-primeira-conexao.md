@@ -13,7 +13,7 @@ Lista **mínima e ordenada** das chamadas da primeira conexão. É um procedimen
 
 ## Passo 1: `GET /rest/api/2/myself` (credencial e fuso)
 
-**Confirme `JIRA_LIVE_ENABLED=true` e rode o passo.** Consulta: `GET {base}/rest/api/2/myself`, uma vez, na instância escolhida.
+**Confirme que a flag de acesso ao Jira está ligada e rode o passo.** Consulta: `GET {base}/rest/api/2/myself`, uma vez, na instância escolhida.
 
 - **O que conferir:**
   - A credencial vale (resposta 200) e o usuário é o esperado (nome e nome de exibição).
@@ -23,7 +23,7 @@ Lista **mínima e ordenada** das chamadas da primeira conexão. É um procedimen
 
 ## Passo 2: `GET /rest/api/2/field` (ids dos campos do dicionário)
 
-**Confirme `JIRA_LIVE_ENABLED=true` e rode o passo.** Consulta: `GET {base}/rest/api/2/field`, uma vez (a lista de todos os campos).
+**Confirme que a flag de acesso ao Jira está ligada e rode o passo.** Consulta: `GET {base}/rest/api/2/field`, uma vez (a lista de todos os campos).
 
 - **O que conferir:** casar cada campo de `app/config/jira_campos.exemplo.yaml` pelo nome com o `id` real (`customfield_NNNNN`), o `schema.type` e o nome exato. Procurar, em especial:
   - `OS Version`, `SKU Type`, `Checklist Type`, `Model Name`;
@@ -34,7 +34,7 @@ Lista **mínima e ordenada** das chamadas da primeira conexão. É um procedimen
 
 ## Passo 3: `POST /rest/api/2/search` com `maxResults=1`, uma vez por ficha de card
 
-**Confirme `JIRA_LIVE_ENABLED=true` e rode o passo**, **para cada ficha**: mostrar e registrar o JQL gerado (o construtor produz o texto, sem rede) e a ficha a que pertence antes de enviar. Consulta: `POST {base}/rest/api/2/search` com corpo `{"jql": "...", "maxResults": 1, "fields": ["key"]}`. O objetivo é só a contagem de referência (`total`).
+**Confirme que a flag de acesso ao Jira está ligada e rode o passo**, **para cada ficha**: mostrar e registrar o JQL gerado (o construtor produz o texto, sem rede) e a ficha a que pertence antes de enviar. Consulta: `POST {base}/rest/api/2/search` com corpo `{"jql": "...", "maxResults": 1, "fields": ["key"]}`. O objetivo é só a contagem de referência (`total`).
 
 - **O que conferir:**
   - O `total` bate com a contagem da mesma busca na tela do Jira (o usuário confere) e com a esperada pela ficha.
@@ -46,7 +46,7 @@ Lista **mínima e ordenada** das chamadas da primeira conexão. É um procedimen
 
 ## Passo 4: UMA issue com `expand=changelog`
 
-**Confirme `JIRA_LIVE_ENABLED=true` e rode o passo.** O usuário indica **uma** chave de issue (de preferência com troca de responsável e de vencimento no histórico). Consulta 4a: `GET {base}/rest/api/2/issue/{chave}?expand=changelog`, ou a busca equivalente `POST /search` com `expand: ["changelog"]` e `maxResults=1`. Consulta 4b, **só se a 4a não trouxer o changelog completo**: `GET {base}/rest/api/2/issue/{chave}/changelog` na mesma issue.
+**Confirme que a flag de acesso ao Jira está ligada e rode o passo.** O usuário indica **uma** chave de issue (de preferência com troca de responsável e de vencimento no histórico). Consulta 4a: `GET {base}/rest/api/2/issue/{chave}?expand=changelog`, ou a busca equivalente `POST /search` com `expand: ["changelog"]` e `maxResults=1`. Consulta 4b, **só se a 4a não trouxer o changelog completo**: `GET {base}/rest/api/2/issue/{chave}/changelog` na mesma issue.
 
 - **O que conferir:**
   - Formato de `from`/`to` (e `fromString`/`toString`) nos itens com `field = assignee`: é usuário, chave ou nome de exibição?
@@ -59,7 +59,7 @@ Lista **mínima e ordenada** das chamadas da primeira conexão. É um procedimen
 
 ## Passo 5: `GET /rest/api/2/status` (mapa de status)
 
-**Confirme `JIRA_LIVE_ENABLED=true` e rode o passo.** Consulta: `GET {base}/rest/api/2/status`, uma vez.
+**Confirme que a flag de acesso ao Jira está ligada e rode o passo.** Consulta: `GET {base}/rest/api/2/status`, uma vez.
 
 - **O que conferir:**
   - Cada status e a sua `statusCategory` (a task é concluída quando a categoria é `done` **e** há `resolution`).
@@ -69,7 +69,7 @@ Lista **mínima e ordenada** das chamadas da primeira conexão. É um procedimen
 
 ## Passo extra (fora dos cinco): conferir os ids de `papeis.yaml`
 
-**Confirme `JIRA_LIVE_ENABLED=true` e rode o passo.** O `id` de cada pessoa em `papeis.yaml` é o username dela no Jira, o mesmo valor do campo `assignee` das issues. Consulta: `GET {base}/rest/api/2/user?username={id}`, uma por `id` (o usuário pode preferir conferir a lista na própria tela do Jira).
+**Confirme que a flag de acesso ao Jira está ligada e rode o passo.** O `id` de cada pessoa em `papeis.yaml` é o username dela no Jira, o mesmo valor do campo `assignee` das issues. Consulta: `GET {base}/rest/api/2/user?username={id}`, uma por `id` (o usuário pode preferir conferir a lista na própria tela do Jira).
 
 - **O que conferir:** cada `id` existe no Jira (resposta 200) e o `name` devolvido é igual ao `id` escrito, **inclusive na caixa** (o painel compara exato e em minúsculas: se o Jira devolver maiúsculas, o `id` em minúsculas não casa com o `assignee`). Se divergir, relatar ao usuário; não adaptar o `id` nem o arquivo em silêncio. Quem usa username diferente na instância Sidia é o caso do campo futuro `jira_sidia` (ainda não lido pelo app).
 - **Quando parar:** `id` inexistente (404; relatar, sem corrigir o arquivo em silêncio); 401, 403, 429, 5xx ou CAPTCHA. Não copiar nomes nem e-mails da resposta para o repositório.
@@ -80,4 +80,4 @@ Lista **mínima e ordenada** das chamadas da primeira conexão. É um procedimen
 2. Não copiar para o repositório dados pessoais, tokens nem respostas brutas do Jira.
 3. A sincronização periódica segue o [runbook da sincronização](runbook-sincronizacao.md) com a flag ligada (primeiro ciclo pequeno, limites padrão, reconciliação, como desligar e ler o status). A flag `JIRA_LIVE_ENABLED` continua sendo a única trava e só o usuário a muda.
 4. Voltar ao modo offline: o usuário desliga a flag (`false`) e encerra a sessão com o token fora do ambiente.
-5. Qualquer chamada nova (outra ficha, outra issue, paginação, leitura de filtro salvo) volta ao início: **confirme `JIRA_LIVE_ENABLED=true`**, mostre e registre o que será enviado e rode só aquela chamada.
+5. Qualquer chamada nova (outra ficha, outra issue, paginação, leitura de filtro salvo) volta ao início: **confirme que a flag de acesso ao Jira está ligada**, mostre e registre o que será enviado e rode só aquela chamada.

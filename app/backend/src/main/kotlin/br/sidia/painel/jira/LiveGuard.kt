@@ -4,7 +4,7 @@ package br.sidia.painel.jira
 class JiraLiveDisabledException(message: String) : RuntimeException(message)
 
 /**
- * Trava de segurança: sem `JIRA_LIVE_ENABLED=true`, nenhuma requisição ao Jira pode sair.
+ * Trava de segurança: sem a flag `JIRA_LIVE_ENABLED` ligada, nenhuma requisição ao Jira pode sair.
  * O cliente chama `check()` antes de TODA requisição (inclusive antes de cada nova tentativa).
  *
  * O estado é lido a cada `check()`, então a trava pode ser desligada no meio de um retry

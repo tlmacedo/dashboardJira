@@ -120,7 +120,7 @@ private val logMontagem = LoggerFactory.getLogger("br.sidia.painel.sync.Agendado
 /**
  * Monta o agendador do app. Sem banco devolve null. A retenção entra SEMPRE (só apaga dados locais).
  * As tarefas do Jira (incremental e reconciliação, por instância de `SYNC_INSTANCIAS`) só entram se
- * [SyncGate.podeAgendar], ou seja, com `JIRA_LIVE_ENABLED=true`. Com a flag desligada nada fala com o Jira.
+ * [SyncGate.podeAgendar], ou seja, com a flag `JIRA_LIVE_ENABLED` ligada. Com a flag desligada nada fala com o Jira.
  * Mesmo montada por engano, a tarefa passa pelo gate do `SyncService` a cada execução e pelo `LiveGuard` do cliente.
  * Instância listada sem credencial configurada vira execução FALHA `INSTANCIA_SEM_CREDENCIAL`, sem derrubar nada.
  */
