@@ -20,9 +20,10 @@ O Plano 3 grava em `change_event` o valor de/para **só** de `status`, `assignee
 ## Restrições globais (Global Constraints)
 
 - Nenhuma chamada ao Jira; só fixtures e builders em memória. `JIRA_LIVE_ENABLED=false`.
-- **Indício, não prova:** aviso fixo em toda tela e em toda resposta (`aviso = "INDICIO_NAO_PROVA"`). Validação com o DPO antes do uso real.
+- **Indício, não prova:** aviso fixo em toda tela e em toda resposta (`aviso = "INDICIO_NAO_PROVA"`). **LGPD:** confirmar a base legal com o DPO antes de usar com dados reais; até lá, só fixtures e modo demonstração.
 - **Quem pode alterar** (spec 7.1): Reporter (PL), coordenadores e gerente, ou Squad Leader do squad do responsável, **com os papéis vigentes na data civil de Manaus da alteração**.
-- Telas e rotas de auditoria: só `COORDENADOR` e `GERENTE` (spec 7.3; o menu já tem `auditoria` e `divergencia` para esses papéis). Integridade é da Fase 7.
+- Telas e rotas de auditoria: só `COORDENADOR` e `GERENTE` (spec 7.3; o menu já tem `auditoria` e `divergencia` para esses papéis). Com `DASHBOARD_DEV_MODE=true`, o usuário local de desenvolvimento (principal `dev`, que já é `GERENTE`) também vê, **sem ramo especial no código**: vale a mesma checagem de papel. `USUARIO` e `SQUAD_LEADER` não veem sinais de auditoria em nenhuma rota nem tela. Integridade continua só do gerente (Fase 7).
+- **Sinais calculados na consulta:** sem tabela de achados, sem migração para sinais e sem triagem.
 - Toda consulta (200, 400, 403, 404) grava `access_log`; falha ao gravar → 503 sem dados (mesma regra do Plano 3).
 - Sem ranking de pessoas: listas por data e chave; nenhuma contagem agregada por pessoa; filtros de pessoa em ordem alfabética.
 - Cor nunca é o único sinal: `✓` autorizado, `▲` auditoria/não autorizado, `●` alerta, sempre com texto. pt-BR e inglês.
@@ -325,7 +326,7 @@ docs/analise/diferencas-esperadas-auditoria.md
   - `ordenadoPorDataSemRanking` (sinais por `at` decrescente; o DTO não tem lista por pessoa).
   - `cardTaskReviewQuatroParesVinteECincoPorcento` (`percentual == 25.0`).
   - `semDadosRespondeVazio` (200 com listas vazias, `taxa == null`).
-  - `devModeSemLogin` (principal `dev` como GERENTE vê a auditoria).
+  - `devModeSemLogin` (com `DASHBOARD_DEV_MODE=true`, o principal `dev`, GERENTE, vê as 5 rotas com 200; com o dev mode ligado, um principal USUARIO ou SQUAD_LEADER injetado continua com 403).
 - [ ] **Passo 2: Rodar** `./gradlew test --tests '*AuditoriaRoutesTest*' --tests '*TempoEmStatusRoutesTest*'` → FALHA. **Passo 3: Implementar.** **Passo 4: Rodar** → PASSA e suíte completa. **Passo 5: Commit** `feat(auditoria): API de auditoria com drill, gaveta de histórico e card Task × Review`.
 
 ---
@@ -360,8 +361,8 @@ docs/analise/diferencas-esperadas-auditoria.md
 
 **Conteúdo:** o app atual não tem os sinais da seção 7.2 (só a Integridade, Fase 7, com "vencimento prorrogado" e "troca de responsável ≤ 2 h antes de fechar", e o AU-02 é registro de acesso, relatório seção 4.13/QD); tabela com cada `CodigoSinal`, a regra, o limite configurável e o equivalente no app atual (ou "novo"); o que fica de fora (estimativa, worklog, histórico de reporter, Integridade); diferenças de fuso (Manaus × UTC), de "concluída" (categoria + `resolution`) e de "no prazo ajustado" (ausente no app atual, relatório seção 5).
 
-- [ ] **Passo 1: Teste que falha:** `documentoCitaTodosOsCodigos` (o documento contém o nome de cada valor de `CodigoSinal`); `PreparacaoDocsTest` continua passando (`cadaPassoDoChecklistExigeAutorizacaoExpressa`, sem host real nem token).
-- [ ] **Passo 2: Rodar** `./gradlew test --tests '*DiferencasAuditoriaDocTest*' --tests '*PreparacaoDocsTest*'` → FALHA. **Passo 3: Escrever** os documentos e o HANDOFF. **Passo 4: Rodar** → PASSA e suítes completas (backend e frontend). **Passo 5: Commit** `docs(auditoria): diferenças esperadas com o app atual e itens da 1ª conexão`.
+- [ ] **Passo 1: Teste que falha:** `documentoCitaTodosOsCodigos` (o documento contém o nome de cada valor de `CodigoSinal`); `PreparacaoDocsTest` continua passando (o `PreparacaoDocsTest` do checklist, que a Tarefa 11 do Plano 4A renomeia para `cadaPassoDoChecklistConfirmaAFlag`; sem host real nem token).
+- [ ] **Passo 2: Rodar** `./gradlew test --tests '*DiferencasAuditoriaDocTest*' --tests '*PreparacaoDocsTest*'` → FALHA. **Passo 3: Escrever** os documentos e o HANDOFF (pendência aberta: confirmar a base legal com o DPO antes de usar com dados reais; até lá só fixtures e demo). **Passo 4: Rodar** → PASSA e suítes completas (backend e frontend). **Passo 5: Commit** `docs(auditoria): diferenças esperadas com o app atual e itens da 1ª conexão`.
 
 ---
 
@@ -371,13 +372,13 @@ docs/analise/diferencas-esperadas-auditoria.md
 - **Consistência de tipos:** `AuditIssue` (T2) é produzido pelo `PostgresAuditStore` (T6) e consumido por `AuditTimeline`, detectores (T3, T4), `TaskReview`/`NoPrazo`/`AuditCalculator` (T5) e rotas (T7); `CodigoSinal` nasce completo na T1 (as regras do YAML o referenciam) e `Sinal` na T3; `ResultadoAuditoria` (T5) vira `AuditoriaDto` (T7), espelhado no frontend (T8).
 - **Pendências deliberadas:** formato real de `duedate`, `labels` e do `from/to` do assignee só na 1ª conexão autorizada (checklist, Passo 4); o leitor aceita os dois formatos conhecidos.
 
-## Decisões que precisam do usuário
+## Decisões
 
-1. **Visibilidade da auditoria:** só coordenador e gerente, como na spec 7.3 e no menu atual (recomendada), ou o usuário e o Squad Leader também veem os sinais sobre si/seu squad.
-2. **Próprio responsável que é Squad Leader do squad** e altera o próprio vencimento: não autorizado (recomendada, spec "inclui o próprio responsável") ou autorizado pelo papel.
-3. **Unidade de "perto do vencimento" e dos "2 dias de posse":** dias corridos (recomendada) ou dias úteis (a configuração aceita os dois).
-4. **Label de justificativa sob auditoria no "no prazo ajustado":** continua contando, com o contador "justificadas sob auditoria" ao lado (recomendada), ou deixa de contar.
-5. **Achados calculados na leitura** (recomendada, sem tabela) ou persistidos com triagem pelo gerente (exige migração e tela de triagem).
-6. **Sinais de estimativa e worklog:** fora agora (recomendada) ou ampliar a lista de permissão do changelog (`timeoriginalestimate`, `timeestimate`) e sincronizar worklog num plano próprio.
-7. **"Vencimento alterado" na primeira definição** (sem vencimento → com vencimento): não conta (recomendada) ou conta.
-8. **Base legal (LGPD):** confirmar com o DPO antes de usar a tela com dados reais; até lá, só fixtures e demo.
+1. **Decisão do usuário (25/10): visibilidade.** Telas e rotas de auditoria para coordenador e gerente; com `DASHBOARD_DEV_MODE=true`, também o usuário local de desenvolvimento (principal `dev`, já GERENTE). Usuário comum e Squad Leader não veem sinais de auditoria. Integridade continua só do gerente (Restrições globais; T7 `soCoordenacaoEGerente` e `devModeSemLogin`).
+2. **Decisão do usuário (25/10): sinais calculados na consulta.** Sem tabela nova de achados, sem migração para sinais e sem triagem (Arquitetura; T6, T7).
+3. **Decisão do usuário (25/10): auto-alteração do Squad Leader.** Quando o Squad Leader é o responsável da task e altera o próprio vencimento ou a própria posse, conta como não autorizada (`PROPRIO_RESPONSAVEL`; T2 `proprioResponsavelNaoAutorizadoMesmoSendoLider`).
+4. **Decisão do usuário (25/10): dias corridos.** "Perto do vencimento" e "2 dias de posse" em dias corridos (`unidade: corrido` no YAML; T1, T3, T4); a configuração continua aceitando dias úteis.
+5. **Decisão do usuário (25/10): label sob auditoria no "no prazo ajustado".** Continua contando, com o contador "justificadas sob auditoria" ao lado (T5 `justificadaSobAuditoriaContaNoAjustado`, T8).
+6. **Decisão do usuário (25/10): primeira definição do vencimento.** Vazio → data não conta como alteração (T3 `definidoPelaPrimeiraVezNaoGera`).
+7. **Decisão do usuário (25/10): estimativa e worklog fora.** Sinais de estimativa reduzida e worklog retroativo ficam fora desta fase.
+8. **Decisão do usuário (25/10): LGPD.** Confirmar a base legal com o DPO antes de usar com dados reais; até lá, só fixtures e modo demonstração (Restrições globais; registrado no HANDOFF na T9).
