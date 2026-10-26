@@ -32,12 +32,27 @@
 # `.env` e configs reais (read_file e cat/type/Get-Content...; o conteúdo iria para o modelo) e listar
 # todo o ambiente (`env`, `printenv`, `set` sozinhos; expõe tokens).
 #
+# Busca e listagem (search_files, list_files, list_code_definition_names e equivalentes da CLI): o caminho
+# passa por caminho_protegido; a busca de conteúdo só é liberada com escopo seguro (padrao_seguro), porque
+# o resultado traz linhas dos arquivos (.env e configs reais iriam para o modelo). Regra em hooks.md.
+#
+# Normalização de caminhos (vale para ler, escrever e buscar; macOS e Windows não diferenciam maiúsculas):
+# minúsculas, `\` -> `/`, sem prefixo de dispositivo (\\?\, \\.\, \??\), sem letra de unidade, qualquer `:`
+# restante bloqueia (fluxo alternativo NTFS `.env::$DATA`), `..` resolvido, pontos e espaços do fim de cada
+# segmento removidos (`.env.` = `.env` no Windows) e segmento com nome curto 8.3 (`ENV~1`) bloqueia.
+#
 # Limite honesto (igual ao guard.sh): trava contra acidente do assistente, não contra má-fé.
-# Falha fechada: sem jq, JSON ilegível ou guard.sh ausente, a ferramenta é cancelada.
+# Falha fechada: sem jq, JSON ilegível, guard.sh ausente ou QUALQUER erro interno cancela a ferramenta
+# (trap de saída: se o script terminar sem responder, imprime cancel true e sai com 0).
 
 set -u
+set -o pipefail
+
+respondido=
+trap '[ -n "$respondido" ] || printf "%s\n" "{\"cancel\":true,\"contextModification\":\"\",\"errorMessage\":\"BLOQUEADO: erro interno do hook (falha fechada).\"}"; exit 0' EXIT
 
 responder() { # cancel(true|false), mensagem
+  respondido=1
   if command -v jq >/dev/null 2>&1; then
     jq -nc --argjson c "$1" --arg m "$2" '{cancel: $c, contextModification: "", errorMessage: $m}'
   else
@@ -56,10 +71,10 @@ liberar() { responder false ""; }
 command -v jq >/dev/null 2>&1 || bloquear "jq ausente"
 
 entrada=$(cat)
-printf '%s' "$entrada" | jq -e . >/dev/null 2>&1 || bloquear "BLOQUEADO: entrada do hook não é JSON válido (falha fechada)."
+printf '%s' "$entrada" | jq -e 'type == "object"' >/dev/null 2>&1 || bloquear "BLOQUEADO: entrada do hook não é um objeto JSON válido (falha fechada)."
 
 # raiz do projeto: a do Cline, senão a deste arquivo (.clinerules/hooks -> ../..)
-raiz=$(printf '%s' "$entrada" | jq -r '.workspaceRoots[0] // empty')
+raiz=$(printf '%s' "$entrada" | jq -r '.workspaceRoots[0]? // empty') || bloquear "BLOQUEADO: erro ao ler workspaceRoots (falha fechada)."
 if [ -z "$raiz" ] || [ ! -f "$raiz/.claude/hooks/guard.sh" ]; then
   raiz=$(cd "$(dirname "$0")/../.." && pwd)
 fi
@@ -69,7 +84,9 @@ guard="$raiz/.claude/hooks/guard.sh"
 # normalização: ferramenta e parâmetros (desfaz valores que vieram como texto JSON)
 prelude='def dejson: if type == "string" then (fromjson? // .) else . end;
   ((.tool_call.input // .preToolUse.parameters // {}) | dejson) as $in |'
-ferramenta=$(printf '%s' "$entrada" | jq -r '.tool_call.name // .preToolUse.toolName // ""')
+ferramenta=$(printf '%s' "$entrada" | jq -r '((.tool_call | objects | .name) // (.preToolUse | objects | .toolName) // "") | strings') ||
+  bloquear "BLOQUEADO: erro ao ler o nome da ferramenta (falha fechada)."
+[ -n "$ferramenta" ] || bloquear "BLOQUEADO: entrada sem nome de ferramenta reconhecível (falha fechada)."
 
 flag=$(printf '%s' "${JIRA_LIVE_ENABLED:-}" | tr -d '[:space:]' | tr '[:upper:]' '[:lower:]')
 jira_livre=false
@@ -81,35 +98,167 @@ REDE_WINDOWS='(^|[^[:alnum:]_-])(invoke-webrequest|invoke-restmethod|iwr|irm|sta
 LIGAR_FLAG_EXTRA="JIRA_LIVE_ENABLED[\"$Q[:space:],]+(-value[[:space:]]+)?[\"$Q]?[[:space:]]*(1|true)"
 LISTAR_AMBIENTE='(^[[:space:]]*|[;&|(][[:space:]]*|cmd(\.exe)?[[:space:]]+/c[[:space:]]+)(env|printenv|set|export[[:space:]]+-p|declare[[:space:]]+-[px]|compgen[[:space:]]+-v)[[:space:]]*($|[;&|>)])|(get-childitem|gci|dir|ls|get-item|gi)[[:space:]]+(-path[[:space:]]+)?env:[\/]?\*?[[:space:]]*($|[;&|>)])|\[(system\.)?environment\]::getenvironmentvariables'
 URL_JIRA="https?://[^[:space:]\"$Q]*(jira|atlassian)"
-PROTEGIDOS_CLINE="(^|[[:space:]\"$Q=/\\:])(\.env(\.[A-Za-z0-9_-]+)?|config[/\\](equipes|ausencias|papeis|squads)\.yaml)([[:space:]\"$Q;|&)]|\$)"
+# protegidos em comandos (sem diferenciar maiúsculas): .env e .env.*, as configs reais em qualquer pasta, o
+# arquivo de filtros e os nomes curtos 8.3 deles (ENV~1, PAPEIS~1.YAM...; prefixos específicos para não
+# pegar HEAD~1). Terminadores incluem ':' (.env::$DATA) e '.' (.env. = .env no Windows).
+PROTEGIDOS_CLINE="(^|[[:space:]\"$Q=/\\:])(\.env(\.[A-Za-z0-9_-]+)?|(equipes|ausencias|papeis|squads)\.ya?ml|(env|equipe|ausenc|papeis|squads|filtro)[A-Za-z0-9_]{0,6}~[0-9]+[^[:space:]\"$Q;|&)]*)([[:space:]\"$Q;|&):.]|\$)|filtros_status_tool\.txt"
 MODELOS="(^|[[:space:]\"$Q=/\\])\.env\.(example|sample)([[:space:]\"$Q;|&)]|\$)"
 LEITURA='(^|[[:space:];&|(])(cat|type|get-content|gc|more|less|head|tail|select-string|sls|findstr|grep|egrep|rg|bat|nl|od|xxd|strings|source|import-csv|format-hex|notepad|code)(\.exe)?[[:space:]]|(^|[;&|][[:space:]]*)\.[[:space:]]+[^[:space:]]*\.env'
+# escrita (igual ao PreToolUse.ps1; o guard.sh também barra, mas diferencia maiúsculas)
+ESCRITA='(>|>>|tee[[:space:]]|sed[[:space:]]+(-[a-z]*i|--in-place)|(^|[[:space:];&|(])(cp|mv|rm|ln|truncate|dd|install|chmod|set-content|sc|add-content|ac|out-file|copy-item|copy|cpi|move-item|move|mi|remove-item|del|erase|ri|rd|rmdir|new-item|ni|rename-item|ren|rni|clear-content|clc|tee-object|xcopy|robocopy|icacls|attrib)[[:space:]]|git[[:space:]]+(add|commit|stash|checkout|restore|rm|mv))'
+# extensões seguras para buscas de conteúdo (ver padrao_seguro e hooks.md)
+EXT_SEGURA='\.(kt|kts|java|gradle|ts|tsx|js|jsx|mjs|cjs|json|css|scss|html|md|sql|py|sh|ps1|xml|svg|toml|exemplo\.ya?ml|demo\.ya?ml|example|sample)$'
+# nome protegido citado num texto qualquer (regex de busca); modelos .env.example/.env.sample retirados antes
+NOME_PROTEGIDO='(^|[^a-z0-9_])\.env(\.[a-z0-9_*-]+)?([^a-z0-9_]|$)|(equipes|ausencias|papeis|squads)\.ya?ml|filtros_status_tool'
 
-# caminho protegido para leitura (barra normal ou invertida, sem diferenciar maiúsculas); 0 = protegido
+minusculas() { LC_ALL=C tr '[:upper:]' '[:lower:]'; }
+
+# casa texto x expressão para decisões de BLOQUEIO. Sem pipe: com `printf | grep -q` e pipefail, um texto
+# grande faz o printf receber SIGPIPE (141) e o bloqueio virar liberação. A here-string não tem esse risco.
+# Casou OU erro do grep (código 2+) = verdadeiro (falha fechada).
+casa() { LC_ALL=C grep -Eiq -- "$2" <<< "$1"; [ $? -ne 1 ]; }     # sem diferenciar maiúsculas
+casa_c() { LC_ALL=C grep -Eq -- "$2" <<< "$1"; [ $? -ne 1 ]; }     # diferenciando maiúsculas
+
+# caminho protegido para ler, escrever ou buscar; 0 = protegido (motivo em $motivo), 1 = liberado.
+# Qualquer erro na normalização conta como protegido (falha fechada).
 caminho_protegido() {
-  norm=$(printf '%s' "$1" | tr '\\' '/')
-  base_min=$(printf '%s' "${norm##*/}" | tr '[:upper:]' '[:lower:]')
-  case "$base_min" in
+  motivo=""
+  local n seg base k
+  local -a brutos partes
+  case "$1" in *$'\n'*|*$'\r'*) motivo="caminho com quebra de linha"; return 0 ;; esac
+  # minúsculas, barras normais, sem prefixo de dispositivo (\\?\UNC\, \\?\, \\.\, \??\) e sem letra de unidade
+  n=$(printf '%s' "$1" | LC_ALL=C tr '\\' '/' | minusculas | LC_ALL=C sed -E 's#^//[?.]/unc/#//#; s#^(//[?.]/|/[?][?]/)##; s#^[a-z]:##') ||
+    { motivo="erro ao normalizar o caminho (falha fechada)"; return 0; }
+  # ':' depois da unidade: fluxo alternativo do NTFS (.env::$DATA) ou caminho de dispositivo
+  case "$n" in *:*) motivo="caminho com ':' (fluxo alternativo do NTFS, como .env::\$DATA, ou dispositivo)"; return 0 ;; esac
+  IFS=/ read -r -a brutos <<< "$n" || true
+  k=0
+  for seg in ${brutos[@]+"${brutos[@]}"}; do
+    # espaços nas pontas; '.' e vazio somem; '..' volta um nível
+    seg="${seg#"${seg%%[![:space:]]*}"}"
+    seg="${seg%"${seg##*[![:space:]]}"}"
+    case "$seg" in
+      ''|.) continue ;;
+      ..) [ "$k" -gt 0 ] && k=$((k-1)); continue ;;
+    esac
+    # o Windows ignora pontos e espaços no fim do nome (.env. e ".env " = .env)
+    while :; do case "$seg" in *[.[:space:]]) seg="${seg%?}" ;; *) break ;; esac; done
+    [ -n "$seg" ] || continue
+    partes[k]="$seg"
+    k=$((k+1))
+  done
+  [ "$k" -gt 0 ] || return 1
+  base="${partes[k-1]}"
+  # nome curto 8.3 só importa no último segmento (a proteção é pelo nome do arquivo; pastas como
+  # C:\Users\THIAGO~1\... continuam liberadas)
+  case "$base" in *~[0-9]*) motivo="nome curto 8.3 ($base) pode apontar para .env ou config real"; return 0 ;; esac
+  case "$base" in
     .env.example|.env.sample) return 1 ;;
-    .env|.env.*) return 0 ;;
+    .env|.env.*) motivo="arquivo de ambiente ($base): contém segredos"; return 0 ;;
+    equipes.yaml|ausencias.yaml|papeis.yaml|squads.yaml|equipes.yml|ausencias.yml|papeis.yml|squads.yml)
+      motivo="config com dados pessoais reais ($base); use só os modelos .exemplo/.demo"; return 0 ;;
+    filtros_status_tool.txt*) motivo="arquivo de filtros do Jira ($base)"; return 0 ;;
   esac
-  printf '%s' "$norm" | grep -Eiq '(^|/)config/(equipes|ausencias|papeis|squads)\.yaml$'
+  return 1
+}
+
+# texto (regex de busca) que cita nome protegido; 0 = cita
+nome_protegido() {
+  local t
+  t=$(printf '%s' "$1" | minusculas | LC_ALL=C tr -d '\\' | LC_ALL=C sed -E 's/\.env\.(example|sample)//g') || return 0
+  casa_c "$t" "$NOME_PROTEGIDO"   # erro do grep também conta como protegido
+}
+
+# file_pattern de busca seguro? 0 = seguro. Aceita: nome exato não protegido, ou glob terminado numa
+# extensão segura (EXT_SEGURA), com no máximo um grupo {a,b}. Negação (!), ':' e o resto: inseguros.
+padrao_seguro() {
+  local p alts alt pre meio pos base
+  local -a lista
+  p=$(printf '%s' "$1" | LC_ALL=C tr '\\' '/' | minusculas) || return 1
+  case "$p" in ''|'!'*|*:*) return 1 ;; esac
+  case "$p" in
+    *[{}]*)
+      pre="${p%%\{*}"; meio="${p#*\{}"; pos="${meio#*\}}"; meio="${meio%%\}*}"
+      # um único grupo, sem aninhamento
+      case "$pre$meio$pos" in *[{}]*) return 1 ;; esac
+      [ "$pre{$meio}$pos" = "$p" ] || return 1
+      IFS=, read -r -a lista <<< "$meio" || true
+      alts=()
+      for alt in ${lista[@]+"${lista[@]}"}; do alts+=("$pre$alt$pos"); done
+      ;;
+    *) alts=("$p") ;;
+  esac
+  [ "${#alts[@]}" -gt 0 ] || return 1
+  for alt in "${alts[@]}"; do
+    base="${alt##*/}"
+    [ -n "$base" ] || return 1
+    case "$base" in
+      *[*?\[\]]*)
+        # glob: precisa terminar numa extensão segura e não citar nome protegido (.env*.md...)
+        printf '%s' "$base" | LC_ALL=C grep -Eq "$EXT_SEGURA" || return 1
+        if nome_protegido "$base"; then return 1; fi
+        ;;
+      *)
+        # nome exato: seguro se não for protegido
+        if caminho_protegido "$alt"; then return 1; fi
+        ;;
+    esac
+  done
+  return 0
+}
+
+# busca de conteúdo (search_files e equivalentes): bloqueia se o escopo pode incluir arquivo protegido
+MSG_BUSCA="Forma permitida (documentada em docs/ferramentas-claude-para-o-cline/hooks.md, não é contorno): refazer a busca com file_pattern restrito a extensões seguras (ex.: '*.kt', '*.tsx', '*.md', '*.exemplo.yaml') ou a um nome de arquivo exato não protegido. Qualquer outra busca: pergunte ao usuário, só ele autoriza (rodando a busca fora do Cline)."
+checar_busca() { # ferramenta
+  local caminho padrao regex escopo
+  escopo=$(printf '%s' "$entrada" | jq -c "$prelude"'
+    if ($in|type) == "object" then
+      {path: ([$in.path?, $in.directory?, $in.cwd?] | map(strings) | first // ""),
+       pattern: ([$in.file_pattern?, $in.filePattern?, $in.glob?, $in.include?] | map(strings) | first // ""),
+       regex: ([$in.regex?, $in.query?, $in.pattern?, (($in.queries? // []) | if type == "array" then .[] else . end)] | map(strings) | join(" "))}
+    else {path: "", pattern: "", regex: (if ($in|type) == "string" then $in else "" end)} end') ||
+    bloquear "BLOQUEADO: erro ao ler os parâmetros de $1 (falha fechada)."
+  caminho=$(printf '%s' "$escopo" | jq -r '.path') || bloquear "BLOQUEADO: erro ao ler o caminho de $1 (falha fechada)."
+  padrao=$(printf '%s' "$escopo" | jq -r '.pattern') || bloquear "BLOQUEADO: erro ao ler o file_pattern de $1 (falha fechada)."
+  regex=$(printf '%s' "$escopo" | jq -r '.regex') || bloquear "BLOQUEADO: erro ao ler a regex de $1 (falha fechada)."
+  if [ -n "$caminho" ] && caminho_protegido "$caminho"; then
+    bloquear "BLOQUEADO: $1 em caminho protegido ($caminho): $motivo."
+  fi
+  if [ -n "$regex" ] && nome_protegido "$regex"; then
+    bloquear "BLOQUEADO: $1 com regex que cita .env, config real ou Filtros_Status_tool.txt (o resultado mostraria esses arquivos). Pergunte ao usuário."
+  fi
+  if [ -n "$padrao" ]; then
+    padrao_seguro "$padrao" ||
+      bloquear "BLOQUEADO: $1 com file_pattern '$padrao', que pode incluir .env ou configs reais (papeis/equipes/ausencias/squads.yaml, Filtros_Status_tool.txt). $MSG_BUSCA"
+    liberar
+  fi
+  # sem file_pattern: só um arquivo único com extensão segura
+  if [ -n "$caminho" ]; then
+    base=$(printf '%s' "${caminho##*[/\\]}" | minusculas) || bloquear "BLOQUEADO: erro ao ler o caminho de $1 (falha fechada)."
+    if printf '%s' "$base" | LC_ALL=C grep -Eq "$EXT_SEGURA" && ! nome_protegido "$base"; then liberar; fi
+  fi
+  bloquear "BLOQUEADO: $1 sem file_pattern em '${caminho:-.}': a busca abrangeria .env e configs reais e mostraria o conteúdo ao modelo. $MSG_BUSCA"
 }
 
 # regras extras de comando (as duas primeiras valem com qualquer valor da flag)
 extras_comando() {
-  if printf '%s' "$1" | grep -Eiq "$LISTAR_AMBIENTE"; then
+  if casa "$1" "$LISTAR_AMBIENTE"; then
     bloquear "BLOQUEADO: comando lista todas as variáveis de ambiente (expõe tokens)."
   fi
-  sem_modelos=$(printf '%s' "$1" | sed -E "s#$MODELOS#\1 \3#g")
-  if printf '%s' "$sem_modelos" | grep -Eiq "$PROTEGIDOS_CLINE" && printf '%s' "$sem_modelos" | grep -Eiq "$LEITURA"; then
-    bloquear "BLOQUEADO: comando lê segredo/config com dados reais (o conteúdo iria para o modelo)."
+  sem_modelos=$(printf '%s' "$1" | LC_ALL=C sed -E "s#$MODELOS#\1 \3#g") || bloquear "BLOQUEADO: erro ao analisar o comando (falha fechada)."
+  if casa "$sem_modelos" "$PROTEGIDOS_CLINE"; then
+    if casa "$sem_modelos" "$ESCRITA"; then
+      bloquear "BLOQUEADO: comando altera ou versiona segredo/config com dados reais."
+    fi
+    if casa "$sem_modelos" "$LEITURA"; then
+      bloquear "BLOQUEADO: comando lê segredo/config com dados reais (o conteúdo iria para o modelo)."
+    fi
   fi
   if [ "$jira_livre" != true ]; then
-    if printf '%s' "$1" | grep -Eiq "$REDE_WINDOWS" && printf '%s' "$1" | grep -Eiq 'jira|atlassian'; then
+    if casa "$1" "$REDE_WINDOWS" && casa "$1" 'jira|atlassian'; then
       bloquear "BLOQUEADO: comando de rede (PowerShell/Windows) para o Jira com JIRA_LIVE_ENABLED diferente de true."
     fi
-    if printf '%s' "$1" | grep -Eiq "$LIGAR_FLAG_EXTRA"; then
+    if casa "$1" "$LIGAR_FLAG_EXTRA"; then
       bloquear "BLOQUEADO: comando liga JIRA_LIVE_ENABLED. Só o usuário muda a flag."
     fi
   fi
@@ -134,17 +283,17 @@ case "$ferramenta" in
        elif ($in|type) == "object" then [($in.command // $in.commands // $in.cmd // empty) | dejson] | flatten
        else [] end)
       | .[] | if type == "object" then ([.command // empty] + ((.args // []) | dejson)) | join(" ") else . end
-      | strings | @json')
+      | strings | @json') || bloquear "BLOQUEADO: erro ao ler os comandos (falha fechada)."
     [ -n "$comandos" ] || liberar
     # `<<<` mantém o laço no shell atual: um bloqueio encerra o hook com a resposta já impressa
     while IFS= read -r c_json; do
       [ -n "$c_json" ] || continue
-      payload=$(jq -nc --argjson c "$c_json" '{tool_name: "Bash", tool_input: {command: $c}}')
+      payload=$(jq -nc --argjson c "$c_json" '{tool_name: "Bash", tool_input: {command: $c}}') || bloquear "BLOQUEADO: erro ao montar o payload (falha fechada)."
       if [ "$jira_livre" = true ]; then
         # Plano 4A, Decisão 10: mesmo com a flag ligada, exibir token ou senha do Jira continua barrado
         c_txt=$(printf '%s' "$c_json" | jq -r '.')
-        if printf '%s' "$c_txt" | grep -Eq 'JIRA_[A-Za-z0-9_]*(TOKEN|PASS|SENHA|SECRET|PAT)' &&
-           printf '%s' "$c_txt" | grep -Eq '(^|[^[:alnum:]_])(echo|printf|printenv|env|set|declare|typeset|export|cat)([[:space:]]|$)'; then
+        if casa_c "$c_txt" 'JIRA_[A-Za-z0-9_]*(TOKEN|PASS|SENHA|SECRET|PAT)' &&
+           casa_c "$c_txt" '(^|[^[:alnum:]_])(echo|printf|printenv|env|set|declare|typeset|export|cat)([[:space:]]|$)'; then
           bloquear "BLOQUEADO: comando exibe token ou senha do Jira (vale mesmo com a flag true)."
         fi
       fi
@@ -157,12 +306,12 @@ case "$ferramenta" in
   use_mcp_tool|access_mcp_resource|load_mcp_documentation)
     if [ "$jira_livre" != true ]; then
       alvo=$(printf '%s' "$entrada" | jq -r "$prelude"'[$in.server_name?, $in.tool_name?, $in.uri?] | map(strings) | join(" ")' 2>/dev/null)
-      if printf '%s' "$alvo" | grep -Eiq 'atlassian|jira'; then
+      if casa "$alvo" 'atlassian|jira'; then
         bloquear "BLOQUEADO: ferramenta MCP do Atlassian/Jira ($alvo) com JIRA_LIVE_ENABLED diferente de true."
       fi
       # argumentos com URL do Jira (ex.: servidor MCP de 'fetch')
       args_txt=$(printf '%s' "$entrada" | jq -r "$prelude"'[($in.arguments? // "") | dejson | .. | strings] | join(" ")' 2>/dev/null)
-      if printf '%s' "$args_txt" | grep -Eiq "$URL_JIRA"; then
+      if casa "$args_txt" "$URL_JIRA"; then
         bloquear "BLOQUEADO: ferramenta MCP com URL do Jira/Atlassian e JIRA_LIVE_ENABLED diferente de true."
       fi
     fi
@@ -173,46 +322,68 @@ case "$ferramenta" in
     # documentação pública do Jira (o usuário cola trechos ou usa web_search)
     if [ "$jira_livre" != true ]; then
       url=$(printf '%s' "$entrada" | jq -r "$prelude"'[$in.url?, $in.uri?, $in.href?, $in.link?] | map(strings) | join(" ")' 2>/dev/null)
-      if printf '%s' "$url" | grep -Eiq 'jira|atlassian'; then
+      if casa "$url" 'jira|atlassian'; then
         bloquear "BLOQUEADO: $ferramenta para URL com jira/atlassian e JIRA_LIVE_ENABLED diferente de true. Para documentação pública do Jira, peça ao usuário um trecho ou use web_search."
       fi
       todos=$(printf '%s' "$entrada" | jq -r "$prelude"'[$in | .. | strings] | join(" ")' 2>/dev/null)
-      if printf '%s' "$todos" | grep -Eiq "$URL_JIRA"; then
+      if casa "$todos" "$URL_JIRA"; then
         bloquear "BLOQUEADO: $ferramenta com URL que cita jira/atlassian e JIRA_LIVE_ENABLED diferente de true."
       fi
     fi
     liberar
     ;;
-  read_file)
+  read_file|read_many_files)
     # extra do Cline: ler segredo/config real mandaria o conteúdo ao modelo (vale com qualquer flag)
-    lidos=$(printf '%s' "$entrada" | jq -r "$prelude"'[$in.path?, $in.file_path?, $in.filePath?] | map(strings) | .[]')
+    lidos=$(printf '%s' "$entrada" | jq -r "$prelude"'
+      if ($in|type) == "object" then [$in.path?, $in.file_path?, $in.filePath?, ($in.paths? // [] | if type == "array" then .[] else . end)]
+      elif ($in|type) == "string" then [$in] else [] end | map(strings) | .[]') ||
+      bloquear "BLOQUEADO: erro ao ler o caminho de $ferramenta (falha fechada)."
     while IFS= read -r p; do
       [ -n "$p" ] || continue
-      if caminho_protegido "$p"; then bloquear "BLOQUEADO: leitura de arquivo protegido ($p): segredo ou config com dados reais."; fi
+      if caminho_protegido "$p"; then bloquear "BLOQUEADO: leitura de arquivo protegido ($p): $motivo."; fi
     done <<< "$lidos"
+    liberar
+    ;;
+  search_files|grep|grep_search|codebase_search|search_codebase)
+    # busca de conteúdo: o resultado traz linhas dos arquivos (regra em hooks.md)
+    checar_busca "$ferramenta"
+    ;;
+  list_files|list_code_definition_names|glob|list_dir|list_directory)
+    # listagem: só nomes (list_code_definition_names só lê código-fonte); o caminho não pode ser protegido
+    alvos=$(printf '%s' "$entrada" | jq -r "$prelude"'
+      if ($in|type) == "object" then [$in.path?, $in.directory?, $in.cwd?, $in.pattern?, $in.glob?] elif ($in|type) == "string" then [$in] else [] end
+      | map(strings) | .[]') || bloquear "BLOQUEADO: erro ao ler o caminho de $ferramenta (falha fechada)."
+    while IFS= read -r p; do
+      [ -n "$p" ] || continue
+      if caminho_protegido "$p"; then bloquear "BLOQUEADO: $ferramenta em caminho protegido ($p): $motivo."; fi
+    done <<< "$alvos"
     liberar
     ;;
   write_to_file|replace_in_file|editor|new_rule)
     caminhos=$(printf '%s' "$entrada" | jq -r "$prelude"'
-      [$in.path?, $in.file_path?, $in.filePath?] | map(strings) | .[]')
+      [$in.path?, $in.file_path?, $in.filePath?] | map(strings) | .[]') ||
+      bloquear "BLOQUEADO: erro ao ler o caminho de $ferramenta (falha fechada)."
     ;;
   apply_patch)
-    # caminhos nos cabeçalhos do patch
+    # caminhos nos cabeçalhos do patch (pipefail: erro do jq não some atrás do sed)
     caminhos=$(printf '%s' "$entrada" | jq -r "$prelude"'
       (if ($in|type) == "string" then $in elif ($in|type) == "object" then ($in.input // $in.patch // "" | dejson) else "" end) | strings' \
-      | sed -n -e 's/^\*\*\* Add File: //p' -e 's/^\*\*\* Update File: //p' -e 's/^\*\*\* Delete File: //p' -e 's/^\*\*\* Move to: //p')
+      | sed -n -e 's/^\*\*\* Add File: //p' -e 's/^\*\*\* Update File: //p' -e 's/^\*\*\* Delete File: //p' -e 's/^\*\*\* Move to: //p') ||
+      bloquear "BLOQUEADO: erro ao ler o patch (falha fechada)."
     ;;
   *)
-    # busca (search_files, web_search), listagem e demais ferramentas: liberadas
+    # web_search e demais ferramentas: liberadas
     liberar
     ;;
 esac
 
-# escrita/edição: cada caminho passa pelo modo `arquivos`
+# escrita/edição: cada caminho passa pela normalização (maiúsculas, barras, aliases do Windows) e pelo modo
+# `arquivos` do guard.sh (que diferencia maiúsculas; por isso a checagem própria vem antes)
 if [ -n "${caminhos:-}" ]; then
   while IFS= read -r p; do
     [ -n "$p" ] || continue
-    payload=$(jq -nc --arg p "$p" '{tool_name: "Write", tool_input: {file_path: $p}}')
+    if caminho_protegido "$p"; then bloquear "BLOQUEADO: escrita em arquivo protegido ($p): $motivo."; fi
+    payload=$(jq -nc --arg p "$p" '{tool_name: "Write", tool_input: {file_path: $p}}') || bloquear "BLOQUEADO: erro ao montar o payload (falha fechada)."
     chamar_guard arquivos "$payload"
   done <<< "$caminhos"
 fi
