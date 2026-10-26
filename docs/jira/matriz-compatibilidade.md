@@ -52,7 +52,7 @@ Itens que a sincronização (Plano 4A) assume. Nenhum foi confirmado no Jira da 
 |---|---|---|---|
 | `updated >= "aaaa-MM-dd HH:mm"` no fuso do usuário do token | **Não validado.** | Assumido: o cursor do incremental vira JQL no fuso do servidor (`SYNC_FUSO_SERVIDOR`), com sobreposição de `SYNC_SOBREPOSICAO_MIN`. Fuso errado desloca o cursor e pula ou repete issues. | Passo 1 do checklist (`timeZone` do `/myself`) e conferência do primeiro incremental: `cursor` e contagem em `/api/sync/status`. |
 | Chave `JIRAUSER*` no `from/to` do assignee do changelog | **Não validado.** | Assumido: o changelog pode trazer a chave interna do usuário em vez do username; o app tenta resolvê-la e conta o resto em `usuariosNaoResolvidos`. | Passo 4 do checklist (itens `assignee` do changelog) e `usuariosNaoResolvidos` do primeiro ciclo: maior que 0 sem explicação = parar. |
-| `key in (...)` para rebuscar issues em lote | **Não validado.** | Assumido: a reconciliação rebusca divergentes e ausentes em lotes de 100 chaves por requisição. | Primeira reconciliação (Etapa 3 do runbook): sem erro 400 e `removidas` coerente. |
+| `key in (...)` para rebuscar issues em lote | **Não validado.** | Assumido: a reconciliação rebusca divergentes e ausentes em lotes de 100 chaves por requisição. | Primeira reconciliação (Etapa 3 do runbook): sem erro 400 e `removidas` coerente. Chave apagada: o Jira DC pode responder 400 ao lote; o app refaz a confirmação chave por chave (400/404 = ausente). Confirmar com uma chave apagada de propósito. |
 
 ## Como usar esta matriz
 

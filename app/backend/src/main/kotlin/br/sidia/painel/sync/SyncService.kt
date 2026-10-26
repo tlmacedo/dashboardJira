@@ -185,10 +185,26 @@ class SyncService(
     ): List<IndiceIssue> {
         if (candidatos.isEmpty()) return candidatos
         val presentes = HashSet<String>()
-        for (lote in candidatos.map { it.key }.chunked(TAMANHO_DO_LOTE)) {
-            val query = fabrica.buildLeve(ficha, mapOf("desde" to desde, "chaves" to lote))
+        suspend fun consultar(chaves: List<String>) {
+            val query = fabrica.buildLeve(ficha, mapOf("desde" to desde, "chaves" to chaves))
             ctx.jira.create(instance).searchAll(query, maxItens = cfg.maxItens).collect { issue ->
                 (issue["key"] as? JsonPrimitive)?.content?.let { presentes += it }
+            }
+        }
+        for (lote in candidatos.map { it.key }.chunked(TAMANHO_DO_LOTE)) {
+            try {
+                consultar(lote)
+            } catch (e: JiraException) {
+                // O Jira DC responde 400 a um `key in (...)` que cita chave inexistente (issue apagada): confirma uma a uma.
+                // 400 ou 404 numa chave sozinha = ausente. Qualquer outro erro (401/403/429/5xx/rede/orçamento) sobe.
+                if (e.status != 400) throw e
+                for (chave in lote) {
+                    try {
+                        consultar(listOf(chave))
+                    } catch (individual: JiraException) {
+                        if (individual.status != 400 && individual.status != 404) throw individual
+                    }
+                }
             }
         }
         return candidatos.filter { it.key !in presentes }

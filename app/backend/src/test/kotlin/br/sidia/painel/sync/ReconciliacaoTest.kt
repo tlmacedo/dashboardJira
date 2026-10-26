@@ -62,6 +62,11 @@ class ReconciliacaoTest {
 
     /** Issues que existem no Jira mas que a paginação por startAt "pulou" na lista leve (só aparecem em `key in`). */
     private val ocultasNaLista = mutableSetOf<String>()
+    /**
+     * Chaves apagadas no Jira -> status devolvido quando a consulta cita SÓ essa chave. Um lote (`key in`) que cita
+     * qualquer uma delas leva 400, como no Jira Data Center ("An issue with key ... does not exist for field 'key'").
+     */
+    private val apagadas = mutableMapOf<String, Int>()
     private var ctx: AppContext? = null
     private lateinit var store: PostgresIssueStore
     private lateinit var estado: PostgresSyncStateStore
@@ -105,6 +110,15 @@ class ReconciliacaoTest {
                         corpos += corpo
                         val jql = corpo.getValue("jql").jsonPrimitive.content
                         val pedidas = Regex("\"(TG-\\d+)\"").findAll(jql).map { it.groupValues[1] }.toSet()
+                        val citadasApagadas = pedidas.filter { it in apagadas }
+                        if (jql.contains("key in") && citadasApagadas.isNotEmpty()) {
+                            val status = if (pedidas.size == 1) apagadas.getValue(citadasApagadas.single()) else 400
+                            return@MockEngine respond(
+                                """{"errorMessages":["An issue with key '${citadasApagadas.first()}' does not exist for field 'key'."],"errors":{}}""",
+                                HttpStatusCode.fromValue(status),
+                                json,
+                            )
+                        }
                         val completo = corpo["expand"] != null
                         // `updated >= "aaaa-MM-dd HH:mm"` (fuso de Manaus) restringe o universo, como o Jira faria.
                         val desde = Regex("updated >= \"(\\d{4}-\\d\\d-\\d\\d \\d\\d:\\d\\d)\"").find(jql)?.groupValues?.get(1)
@@ -386,6 +400,69 @@ class ReconciliacaoTest {
         assertNull(removidaEm("TG-4"))
         val confirmacao = corpos.map { it.getValue("jql").jsonPrimitive.content }.filter { it.contains("key in") && it.contains("\"TG-4\"") }
         assertEquals(1, confirmacao.size, corpos.toString())
+    }
+
+    @Test
+    fun loteComChaveApagadaCaiNaConfirmacaoPorChaveERemove() = runBlocking {
+        val s = montar()
+        semearBase(6)
+        noJira.remove("TG-6")
+        apagadas["TG-6"] = 400
+        val r = executada(s.reconciliar("samsung"))
+        assertEquals(RunStatus.OK, r.status, r.codigoErro)
+        assertEquals(1, r.resumo.removidas)
+        assertNotNull(removidaEm("TG-6"))
+        // 1 lista leve + 1 lote (400) + 1 consulta da chave.
+        assertEquals(3, corpos.size, corpos.toString())
+        assertTrue(corpos.last().getValue("jql").jsonPrimitive.content.contains("\"TG-6\""))
+    }
+
+    @Test
+    fun chaveApagadaNaoImpedeARebuscaNemPoupaAPuladaPelaPaginacao() = runBlocking {
+        val s = montar()
+        semearBase(6)
+        noJira.remove("TG-6")
+        apagadas["TG-6"] = 404
+        // TG-5 existe, mas a lista leve a pulou; TG-10 é nova no Jira e precisa ser rebuscada.
+        ocultasNaLista += "TG-5"
+        noJira["TG-10"] = 910L to instante("11:00")
+        val r = executada(s.reconciliar("samsung"))
+        assertEquals(RunStatus.OK, r.status, r.codigoErro)
+        assertEquals(1, r.resumo.removidas)
+        assertNotNull(removidaEm("TG-6"))
+        assertNull(removidaEm("TG-5"))
+        assertEquals(1, r.resumo.issues)
+        assertEquals(1, contar("SELECT count(*) FROM issue WHERE key = 'TG-10'"))
+    }
+
+    @Test
+    fun erro5xxNaConfirmacaoPorChaveNaoRemoveNada() = runBlocking {
+        val s = montar()
+        semearBase(6)
+        noJira.remove("TG-5")
+        noJira.remove("TG-6")
+        apagadas["TG-5"] = 400
+        apagadas["TG-6"] = 503
+        val r = executada(s.reconciliar("samsung"))
+        assertEquals(RunStatus.FALHA, r.status)
+        assertEquals("HTTP_5XX", r.codigoErro)
+        assertEquals(0, contar("SELECT count(*) FROM issue WHERE removida_em IS NOT NULL"))
+        assertNull(estado.ultimaReconciliacao("samsung"))
+    }
+
+    @Test
+    fun orcamentoEsgotadoNoFallbackNaoRemoveNada() = runBlocking {
+        // Orçamento 3: lista leve, lote (400) e a primeira chave; a segunda esbarra no teto.
+        val s = montar(sync = SyncSettings(maxRequisicoes = 3))
+        semearBase(6)
+        noJira.remove("TG-5")
+        noJira.remove("TG-6")
+        apagadas["TG-5"] = 400
+        apagadas["TG-6"] = 400
+        val r = executada(s.reconciliar("samsung"))
+        assertEquals(RunStatus.FALHA, r.status)
+        assertEquals("ORCAMENTO_REQUISICOES", r.codigoErro)
+        assertEquals(0, contar("SELECT count(*) FROM issue WHERE removida_em IS NOT NULL"))
     }
 
     @Test
