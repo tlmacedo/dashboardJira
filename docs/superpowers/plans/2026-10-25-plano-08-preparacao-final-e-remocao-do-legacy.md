@@ -271,6 +271,8 @@ docs/jira/{checklist-primeira-conexao.md, matriz-compatibilidade.md}, CLAUDE.md,
 
 **Arquivos:** Modificar `app/docker-compose.yml`, `app/Dockerfile` (se preciso) e `app/.env.example`. Criar `app/scripts/verificar-imagem.sh` e `docs/implantacao.md`. Teste: `implantacao/ComposeTest.kt`, que é estático e lê o YAML do compose.
 
+**Nota (hook):** o hook bloqueia a IA de editar o compose: entregar o trecho pronto ao usuário e perguntar (pergunta com opções).
+
 **Interfaces:**
 - Produz o perfil `prod` do compose:
   - `DASHBOARD_DEV_MODE=false` e `JIRA_LIVE_ENABLED=false`;

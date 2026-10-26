@@ -209,6 +209,8 @@ HANDOFF.md, docs/superpowers/plans/2026-10-24-indice-dos-planos.md
 
 **Arquivos:** Criar `deploy/vm/compose.prod.yml` e `deploy/vm/README.md`; Teste `implantacao/DeployVmTest.kt`.
 
+**Nota (hook):** o hook bloqueia a IA de editar o compose: entregar o trecho pronto ao usuário e perguntar (pergunta com opções).
+
 **Interfaces:**
 - `compose.prod.yml` estende o perfil `prod` do Plano 8 e **não faz build**: `image: <REGISTRO>/painel@sha256:<DIGEST>` (marcadores substituídos no servidor por variável `PAINEL_IMAGEM`); `env_file: /etc/painel/painel.env` (fora do repositório, modo `600`); configs reais por volume `:ro` de `/etc/painel/config/`; porta só na interface que o proxy alcança (`${PAINEL_BIND:-127.0.0.1}:8080`); PostgreSQL sem `ports` e com volume nomeado; `restart: unless-stopped`; `read_only`, `cap_drop: [ALL]`, `no-new-privileges`, usuário `10001`.
 - O README tem as etapas da VM (instalar Docker, criar `/etc/painel`, permissões, `docker compose -f ... up -d`, como ver logs), com "como conferir" em cada uma.
