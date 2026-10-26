@@ -223,17 +223,23 @@ class DadosDeDemonstracaoTest {
         })
         contexto(relogioEm(ancora.plusDays(1)), settings, fabrica).use { ctx ->
             prepararDemonstracao(ctx)
+            // Rodar de novo (apaga e regrava) também não toca a rede.
+            carregador(ctx).carregar()
             assertTrue(contar(ctx, "SELECT count(*) FROM issue") > 0)
             assertEquals(0, requisicoes.get())
             assertEquals(0, fabricasCriadas.get())
         }
-        // O código de demo/ não conhece o cliente do Jira nem o cliente HTTP.
+        // O código de demo/ não conhece o cliente do Jira, o cliente HTTP nem qualquer API de rede.
         val pasta = TestPaths.mainSrcDir.resolve("kotlin/br/sidia/painel/demo")
         val fontes = Files.walk(pasta).use { s -> s.filter { it.extension == "kt" }.toList() }
         assertTrue(fontes.isNotEmpty())
+        val proibidos = listOf(
+            "JiraClient", "JiraClientFactory", "HttpClient", "io.ktor.client", "java.net", "javax.net", "HttpURLConnection",
+            "Socket", "URL(", "URI(", "ctx.jira", ".jira.", "LiveGuard", "OrcamentoDeRequisicoes",
+        )
         for (f in fontes) {
             val texto = Files.readString(f)
-            for (proibido in listOf("JiraClient", "JiraClientFactory", "HttpClient")) {
+            for (proibido in proibidos) {
                 assertFalse(proibido in texto, "${f.name} cita $proibido")
             }
         }
@@ -265,6 +271,49 @@ class DadosDeDemonstracaoTest {
             // A subida também cai (não só o carregador).
             assertFailsWith<DemoRecusadaException> { prepararDemonstracao(ctx) }
             assertEquals(2, contar(ctx, "SELECT count(*) FROM issue"))
+        }
+    }
+
+    @Test
+    fun demoRecusaIssueRealEmOutraInstancia() {
+        contexto(relogioEm(ancora.plusDays(1))).use { ctx ->
+            val store = PostgresIssueStore(requireNotNull(ctx.dataSource))
+            // Instância fora do manifesto, com chave real: a carga também recusa.
+            store.upsert(issueReal("TG-5"), emptyList(), "outra")
+            val e = assertFailsWith<DemoRecusadaException> { carregador(ctx).carregar() }
+            assertEquals("BANCO_COM_DADOS_REAIS", e.codigo)
+            assertEquals(1, contar(ctx, "SELECT count(*) FROM issue"))
+            // Chave de demonstração na instância errada (DEMO- em sidia) também não é demonstração.
+            store.upsert(issueReal("DEMO-7").let { JsonObject(it + ("id" to kotlinx.serialization.json.JsonPrimitive("777003"))) }, emptyList(), "sidia")
+            assertFailsWith<DemoRecusadaException> { carregador(ctx).carregar() }
+            assertEquals(2, contar(ctx, "SELECT count(*) FROM issue"))
+        }
+    }
+
+    @Test
+    fun producaoComDadosDeDemoResidualNaoSobe() {
+        contexto(relogioEm(ancora.plusDays(1))).use { demo ->
+            carregador(demo).carregar()
+            val total = contar(demo, "SELECT count(*) FROM issue")
+            fun comSettings(s: Settings) = AppContext(
+                s, demo.calendar, demo.roles, demo.dataSource, demo.jira, demo.statusMap, demo.campos, demo.fichas, demo.vinculos, demo.clock,
+            )
+            val e = assertFailsWith<DemoRecusadaException> {
+                prepararDemonstracao(comSettings(Settings(dashboardDevMode = false, dashboardDemoData = false)))
+            }
+            assertEquals("DEMO_RESIDUAL", e.codigo)
+            assertEquals(total, contar(demo, "SELECT count(*) FROM issue"))
+        }
+    }
+
+    @Test
+    fun producaoSemDadosDeDemoSobeNormalmente() {
+        contexto(relogioEm(ancora.plusDays(1)), Settings()).use { ctx ->
+            fun comSettings(s: Settings) = AppContext(
+                s, ctx.calendar, ctx.roles, ctx.dataSource, ctx.jira, ctx.statusMap, ctx.campos, ctx.fichas, ctx.vinculos, ctx.clock,
+            )
+            prepararDemonstracao(comSettings(Settings(dashboardDevMode = false, dashboardDemoData = false)))
+            assertEquals(0, contar(ctx, "SELECT count(*) FROM issue"))
         }
     }
 

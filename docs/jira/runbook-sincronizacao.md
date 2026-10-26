@@ -23,6 +23,7 @@ Todas ficam em `app/config/` (ou em `PAINEL_CONFIG_DIR`). Crie cada uma copiando
 |---|---|---|
 | `.env` (em `app/`) | `.env.example` | URL e token de cada instância, `POSTGRES_PASSWORD`, flags e `SYNC_*`. O `.env` é ignorado pelo git. |
 | `papeis.yaml` | `papeis.exemplo.yaml` | O `id` de cada pessoa é o username do Jira (igual ao `assignee`). |
+| `calendario.yaml` | `calendario.exemplo.yaml` | Feriados e dias não úteis reais; obrigatório em produção; sem dado pessoal, mas fica fora do git como os demais reais. |
 | `status_map.yaml` | `status_map.exemplo.yaml` | Nomes de status reais; obrigatório em produção. |
 | `jira_campos.yaml` | `jira_campos.exemplo.yaml` | `customId` real de cada campo (passo 2 do checklist). Sem ele o app usa o modelo, só com vocabulário de exemplo. |
 | `vinculos.yaml` | `vinculos.exemplo.yaml` | Tipo do link que liga a Review à task (`Blocks`) e os tipos de issue de Review e task (passo 4 do checklist). Obrigatório em produção; sem dado pessoal. |
@@ -33,6 +34,7 @@ macOS (zsh), a partir da raiz do repositório:
 ```sh
 cp app/.env.example app/.env
 cp app/config/papeis.exemplo.yaml app/config/papeis.yaml
+cp app/config/calendario.exemplo.yaml app/config/calendario.yaml
 cp app/config/status_map.exemplo.yaml app/config/status_map.yaml
 cp app/config/jira_campos.exemplo.yaml app/config/jira_campos.yaml
 cp app/config/vinculos.exemplo.yaml app/config/vinculos.yaml
@@ -43,6 +45,7 @@ Windows 11 (PowerShell), a partir da raiz do repositório:
 ```powershell
 Copy-Item app\.env.example app\.env
 Copy-Item app\config\papeis.exemplo.yaml app\config\papeis.yaml
+Copy-Item app\config\calendario.exemplo.yaml app\config\calendario.yaml
 Copy-Item app\config\status_map.exemplo.yaml app\config\status_map.yaml
 Copy-Item app\config\jira_campos.exemplo.yaml app\config\jira_campos.yaml
 Copy-Item app\config\vinculos.exemplo.yaml app\config\vinculos.yaml

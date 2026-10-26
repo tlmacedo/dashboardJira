@@ -16,6 +16,7 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import org.slf4j.LoggerFactory
+import java.sql.Connection
 import java.time.Clock
 import java.time.LocalDate
 import java.time.ZoneId
@@ -84,8 +85,8 @@ class DadosDeDemonstracao(
     private val pasta: String = "demo",
 ) {
     /**
-     * Apaga e regrava as issues de demonstração de cada instância (uma transação por instância). Antes de apagar
-     * qualquer linha, recusa banco com issue de chave sem o prefixo de demonstração (dados reais).
+     * Apaga e regrava as issues de demonstração de todas as instâncias numa transação só. Antes de apagar
+     * qualquer linha, recusa banco com issue que não seja de demonstração (dados reais).
      */
     fun carregar(): List<ResumoDemo> {
         val manifesto = lerManifestoDemo(pasta)
@@ -94,8 +95,22 @@ class DadosDeDemonstracao(
         val preparadas = manifesto.instancias.map { (id, inst) ->
             Triple(id, inst, lerIssuesDemo(pasta, inst.arquivo).map { deslocar(it, dias) })
         }
-        exigirSemDadosReais(manifesto)
-        return preparadas.map { (id, inst, issues) -> gravar(id, inst, issues) }
+        // Verificação e gravação na MESMA conexão e transação: nada é apagado se houver dado real, e a carga é atômica.
+        return ds.connection.use { con ->
+            val autoCommit = con.autoCommit
+            con.autoCommit = false
+            try {
+                exigirSemDadosReais(con, manifesto)
+                val resumos = preparadas.map { (id, inst, issues) -> gravar(con, id, inst, issues) }
+                con.commit()
+                resumos
+            } catch (e: Throwable) {
+                con.rollback()
+                throw e
+            } finally {
+                con.autoCommit = autoCommit
+            }
+        }
     }
 
     /** Se existe alguma issue de chave com prefixo de demonstração, em qualquer instância. */
@@ -109,60 +124,52 @@ class DadosDeDemonstracao(
         }
     }
 
-    private fun exigirSemDadosReais(manifesto: ManifestoDemo) {
-        ds.connection.use { con ->
-            for ((id, inst) in manifesto.instancias) {
-                val real = con.prepareStatement(
-                    "SELECT EXISTS (SELECT 1 FROM issue WHERE instance = ? AND key NOT LIKE ?)",
-                ).use { ps ->
-                    ps.setString(1, id)
-                    ps.setString(2, "${inst.prefixo}-%")
-                    ps.executeQuery().use { it.next() && it.getBoolean(1) }
-                }
-                if (real) throw DemoRecusadaException("BANCO_COM_DADOS_REAIS")
-            }
+    /**
+     * Na conexão da carga (mesma transação do apagar e regravar). É dado real toda issue que não seja de uma das
+     * instâncias do manifesto COM o prefixo de demonstração dela; vale também para instâncias fora do manifesto.
+     */
+    private fun exigirSemDadosReais(con: Connection, manifesto: ManifestoDemo) {
+        val instancias = manifesto.instancias.keys.toTypedArray()
+        val padroes = manifesto.instancias.values.map { "${it.prefixo}-%" }.toTypedArray()
+        val real = con.prepareStatement(
+            "SELECT EXISTS (SELECT 1 FROM issue i WHERE NOT EXISTS (" +
+                "SELECT 1 FROM unnest(?::text[], ?::text[]) AS d(inst, pat) WHERE i.instance = d.inst AND i.key LIKE d.pat))",
+        ).use { ps ->
+            ps.setArray(1, con.createArrayOf("text", instancias))
+            ps.setArray(2, con.createArrayOf("text", padroes))
+            ps.executeQuery().use { it.next() && it.getBoolean(1) }
         }
+        if (real) throw DemoRecusadaException("BANCO_COM_DADOS_REAIS")
     }
 
-    private fun gravar(instancia: String, inst: InstanciaDemo, issues: List<JsonObject>): ResumoDemo {
+    /** Grava uma instância na conexão e na transação do chamador (sem commit nem rollback aqui). */
+    private fun gravar(con: Connection, instancia: String, inst: InstanciaDemo, issues: List<JsonObject>): ResumoDemo {
         var eventos = 0
-        ds.connection.use { con ->
-            val autoCommit = con.autoCommit
-            con.autoCommit = false
-            try {
-                con.prepareStatement("DELETE FROM issue WHERE instance = ? AND key LIKE ?").use { ps ->
-                    ps.setString(1, instancia)
-                    ps.setString(2, "${inst.prefixo}-%")
-                    ps.executeUpdate()
-                }
-                // issue_link não tem FK nem cascata: os vínculos com ponta de prefixo de demonstração saem na mesma transação.
-                con.prepareStatement("DELETE FROM issue_link WHERE instance = ? AND (from_key LIKE ? OR to_key LIKE ?)").use { ps ->
-                    ps.setString(1, instancia)
-                    ps.setString(2, "${inst.prefixo}-%")
-                    ps.setString(3, "${inst.prefixo}-%")
-                    ps.executeUpdate()
-                }
-                val agora = clock.instant()
-                for (issue in issues) {
-                    val historicos = ((issue["changelog"] as? JsonObject)?.get("histories") as? JsonArray)
-                        .orEmpty().map { it.jsonObject }
-                    // A coleta das chaves JIRAUSER* roda sobre o JSON recebido, antes de qualquer sanitização.
-                    val chaves = ChavesDeUsuario.coletar(issue, historicos)
-                    val registros = ChangelogParser.toEvents(issue, historicos, chaves)
-                    // Os vínculos saem do JSON da fixture, como na sincronização (sem eles a demo ficaria sem pares).
-                    val chaveDaIssue = (issue["key"] as JsonPrimitive).content
-                    store.upsertNaTransacao(
-                        con, issue, registros, instancia, inst.osVersionCustomId, IssueLinks.ler(chaveDaIssue, issue), agora,
-                    )
-                    eventos += registros.size
-                }
-                con.commit()
-            } catch (e: Throwable) {
-                con.rollback()
-                throw e
-            } finally {
-                con.autoCommit = autoCommit
-            }
+        con.prepareStatement("DELETE FROM issue WHERE instance = ? AND key LIKE ?").use { ps ->
+            ps.setString(1, instancia)
+            ps.setString(2, "${inst.prefixo}-%")
+            ps.executeUpdate()
+        }
+        // issue_link não tem FK nem cascata: os vínculos com ponta de prefixo de demonstração saem na mesma transação.
+        con.prepareStatement("DELETE FROM issue_link WHERE instance = ? AND (from_key LIKE ? OR to_key LIKE ?)").use { ps ->
+            ps.setString(1, instancia)
+            ps.setString(2, "${inst.prefixo}-%")
+            ps.setString(3, "${inst.prefixo}-%")
+            ps.executeUpdate()
+        }
+        val agora = clock.instant()
+        for (issue in issues) {
+            val historicos = ((issue["changelog"] as? JsonObject)?.get("histories") as? JsonArray)
+                .orEmpty().map { it.jsonObject }
+            // A coleta das chaves JIRAUSER* roda sobre o JSON recebido, antes de qualquer sanitização.
+            val chaves = ChavesDeUsuario.coletar(issue, historicos)
+            val registros = ChangelogParser.toEvents(issue, historicos, chaves)
+            // Os vínculos saem do JSON da fixture, como na sincronização (sem eles a demo ficaria sem pares).
+            val chaveDaIssue = (issue["key"] as JsonPrimitive).content
+            store.upsertNaTransacao(
+                con, issue, registros, instancia, inst.osVersionCustomId, IssueLinks.ler(chaveDaIssue, issue), agora,
+            )
+            eventos += registros.size
         }
         return ResumoDemo(instancia, issues.size, eventos)
     }
@@ -243,6 +250,8 @@ fun prepararDemonstracao(ctx: AppContext) {
     val demo = DadosDeDemonstracao(ds, PostgresIssueStore(ds), ctx.clock, s.zone)
     try {
         if (!s.dashboardDemoData) {
+            // Produção (sem modo dev) nunca convive com dado fictício remanescente; com o Jira ligado também não.
+            if (!s.dashboardDevMode && demo.existemDados()) throw DemoRecusadaException("DEMO_RESIDUAL")
             if (s.jiraLiveEnabled && demo.existemDados()) throw DemoRecusadaException("BANCO_COM_DADOS_DE_DEMONSTRACAO")
             return
         }

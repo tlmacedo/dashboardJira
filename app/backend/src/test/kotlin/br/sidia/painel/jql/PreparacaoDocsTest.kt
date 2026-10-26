@@ -137,6 +137,22 @@ class PreparacaoDocsTest {
     }
 
     @Test
+    fun calendarioRealEstaNoGitignoreENoPassoDeCopiaDoRunbook() {
+        val gitignore = ler(".gitignore")
+        assertTrue(
+            Regex("^\\*\\*/config/calendario\\.yaml\\s*$", RegexOption.MULTILINE).containsMatchIn(gitignore),
+            ".gitignore sem **/config/calendario.yaml",
+        )
+        val runbook = ler("docs/jira/runbook-sincronizacao.md")
+        assertTrue(runbook.contains("cp app/config/calendario.exemplo.yaml app/config/calendario.yaml"), "Runbook sem a cópia (sh) do calendário")
+        assertTrue(
+            runbook.contains("Copy-Item app\\config\\calendario.exemplo.yaml app\\config\\calendario.yaml"),
+            "Runbook sem a cópia (PowerShell) do calendário",
+        )
+        assertTrue(Regex("^\\| `calendario.yaml` \\|", RegexOption.MULTILINE).containsMatchIn(runbook), "Runbook sem a linha do calendário na tabela")
+    }
+
+    @Test
     fun runbookNaoCitaTarefaInterna() {
         assertTrue(!Regex("Tarefa \\d+").containsMatchIn(ler("docs/jira/runbook-sincronizacao.md")))
     }

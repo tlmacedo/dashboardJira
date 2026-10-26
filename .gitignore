@@ -15,6 +15,7 @@ app/config/equipes.yaml
 **/config/equipes.yaml
 **/config/ausencias.yaml
 **/config/papeis.yaml
+**/config/calendario.yaml
 **/config/squads.yaml
 **/config/status_map.yaml
 **/config/jira_campos.yaml
