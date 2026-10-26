@@ -34,7 +34,8 @@ Dashboard de gestão do time TG-Basic sobre tasks do Jira Data Center: fluxo, pr
 | Protótipos visuais descartáveis (A densa, B editorial) | `docs/design/prototipo/` |
 | Direção visual escolhida | Híbrida: densa nas telas de trabalho, editorial nas de leitura |
 | Pesquisa e guias originais | `docs/guia/`, `reports/`, `research_notes/` |
-| Specs e planos | `docs/superpowers/` |
+| Specs e planos | `docs/superpowers/` (índice dos planos: `docs/superpowers/plans/2026-10-24-indice-dos-planos.md`; specs por fase: `docs/superpowers/specs/2026-10-25-spec-fase-*.md`) |
+| Guia para outra IA (ClineSR) | `docs/guia-execucao-outra-ia.md`, `.clinerules/`, `docs/ferramentas-claude-para-o-cline/` |
 | Backend Kotlin/Ktor (pacote `br.sidia.painel`) | `app/backend/` |
 | Frontend React + TypeScript (Vite) | `app/frontend/` |
 | Docker, compose e modelo de variáveis | `app/Dockerfile`, `app/docker-compose.yml`, `app/.env.example` |

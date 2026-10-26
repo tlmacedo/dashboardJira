@@ -1,0 +1,21 @@
+# Fim de linha fixo para arquivos que quebram ou mudam de sentido com CRLF no Windows
+# (Git for Windows usa core.autocrlf=true por padrão e converteria para CRLF no checkout).
+
+# scripts de shell e hooks sem extensão: CRLF quebra o bash ("\r: command not found")
+*.sh text eol=lf
+.clinerules/hooks/PreToolUse text eol=lf
+.claude/hooks/* text eol=lf
+gradlew text eol=lf
+
+# regras, workflows e skills lidos pelas IAs: iguais em todos os sistemas
+CLAUDE.md text eol=lf
+HANDOFF.md text eol=lf
+.clinerules/**/*.md text eol=lf
+.cline/skills/**/*.md text eol=lf
+.claude/**/*.md text eol=lf
+docs/ferramentas-claude-para-o-cline/*.md text eol=lf
+
+# scripts do Windows: CRLF (convenção do Windows; o PowerShell aceita os dois). O BOM UTF-8 é preservado.
+*.ps1 text eol=crlf
+*.bat text eol=crlf
+*.cmd text eol=crlf

@@ -48,7 +48,7 @@ Antes da Tarefa 1, o executor confere na `main` que as Fases 4A, 4, 5, 6 e 7 for
 3. **Produção sem OIDC configurado** ou com o autenticador de desenvolvimento: o serviço não sobe e cita a variável que falta → `producaoSemOidcNaoSobe` (T2).
 4. **Texto secundário e símbolo `●` de atenção no tema Escuro.** São os pares mais perto do limite → `contrasteDosTokensNosTresTemas` (T4).
 5. **Referência ao `legacy/` sobrando** em hook, Dockerfile, teste ou documento vivo depois da remoção → `nadaReferenciaLegacy` (T9).
-6. **Remoção do `legacy/` sem o "sim" do usuário** ao documento de equivalência, ou documento de `docs/jira/` que ainda segue a regra antiga de acesso (substituída em 25/10) no lugar da flag → pré-condições da T9 registradas no `HANDOFF.md` e `cadaPassoDoChecklistExigeAFlag` (T8).
+6. **Remoção do `legacy/` sem o "sim" do usuário** ao documento de equivalência, ou documento de `docs/jira/` que ainda segue a regra antiga de acesso (substituída em 25/10) no lugar da flag → pré-condições da T9 registradas no `HANDOFF.md`, e `cadaPassoDoChecklistConfirmaAFlag` e `checklistSemRegraAntiga` (Plano 4A, T11) verdes, conferidos na T8.
 
 ---
 
@@ -311,7 +311,7 @@ docs/jira/{checklist-primeira-conexao.md, matriz-compatibilidade.md}, CLAUDE.md,
 
 **Arquivos:** Modificar `docs/jira/checklist-primeira-conexao.md`, `docs/jira/matriz-compatibilidade.md`, `docs/jira/runbook-sincronizacao.md` (Plano 4A), `app/config/jira_campos.exemplo.yaml` (finalidades) e `app/backend/src/test/kotlin/br/sidia/painel/jql/PreparacaoDocsTest.kt`.
 
-**Regra de acesso nos documentos:** desde 25/10 a única trava é a flag `JIRA_LIVE_ENABLED` (regra 1 do `CLAUDE.md`). Os documentos deixam a regra antiga de acesso (substituída em 25/10): cada passo do checklist exige a flag `true`, ligada **só pelo usuário**, e segue a ordem do checklist na primeira conexão. Se uma fase anterior (4A ou 4) já tiver reescrito os documentos e o teste, esta tarefa só confere; senão, faz a troca aqui.
+**Regra de acesso nos documentos:** desde 25/10 a única trava é a flag `JIRA_LIVE_ENABLED` (regra 1 do `CLAUDE.md`). Os documentos deixam a regra antiga de acesso (substituída em 25/10): cada passo do checklist exige a flag `true`, ligada **só pelo usuário**, e segue a ordem do checklist na primeira conexão. O Plano 4A (Tarefa 11) já reescreveu o checklist e trocou o teste por `cadaPassoDoChecklistConfirmaAFlag`; esta tarefa **não cria outro nome**: confere que esse teste e `checklistSemRegraAntiga` passam e estende a checagem "sem regra antiga" aos demais `.md` de `docs/jira/`.
 
 **Interfaces:**
 - Consome o dicionário, as fichas de todos os cards e os endpoints usados pelo `JiraClient`: `search`, `changelog`, `worklog`, `field` e `myself`.
@@ -327,7 +327,8 @@ docs/jira/{checklist-primeira-conexao.md, matriz-compatibilidade.md}, CLAUDE.md,
   - `checklistCitaCadaCampoAConfirmar`: cada campo do dicionário com `finalidade` "a confirmar" aparece no checklist.
   - `matrizCitaCadaEndpoint`.
   - `cadaFichaUsaSoCamposDoDicionario`: carrega todas as `cards/*.card.yaml`.
-  - `cadaPassoDoChecklistExigeAFlag`: substitui o teste `cadaPassoDoChecklistExigeAutorizacaoExpressa` (Plano 2) e a contagem mínima de "autorização expressa" do mesmo arquivo. Cada seção de passo do checklist cita `JIRA_LIVE_ENABLED`; o documento diz que só o usuário muda a flag; nenhum documento de `docs/jira/` contém "autorização expressa" nem "por pesquisa". Se ainda existir no mesmo arquivo algum teste que exija essa expressão (por exemplo um `runbookAvisaRegraDoAssistente` de versão antiga do Plano 4A), ele é removido ou trocado pela checagem da flag.
+  - `cadaPassoDoChecklistConfirmaAFlag` (criado no Plano 4A, T11; **não** criar outro nome): continua passando. Cada seção de passo do checklist contém "Confirme `JIRA_LIVE_ENABLED=true`"; o documento diz que só o usuário muda a flag.
+  - `documentosDeJiraSemRegraAntiga` (novo; estende o `checklistSemRegraAntiga` do 4A): nenhum documento de `docs/jira/` contém "autorização expressa" nem "por pesquisa". Se ainda existir no mesmo arquivo algum teste que exija essa expressão (por exemplo um `runbookAvisaRegraDoAssistente` de versão antiga do Plano 4A), ele é removido ou trocado pela checagem da flag.
   - `semHostRealNemToken`.
   - `testesNaoAcessamOJiraReal`: os documentos dizem que testes automáticos usam só fixtures e `MockEngine`, mesmo com a flag `true` (a prova técnica continua nos testes `SomenteAFabricaCriaClientesJira` e `FlagDesligadaZeroRequisicoesTest`).
 - [ ] **Passo 2: Rodar** `./gradlew test --tests '*PreparacaoDocsTest*'`. Resultado esperado: FALHA.
