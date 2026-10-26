@@ -28,7 +28,7 @@ Porte do fluxo que o Claude Code fazia com as skills `superpowers:subagent-drive
    - backend: macOS/Linux `cd app/backend && ./gradlew test`; Windows PowerShell `cd app\backend; .\gradlew.bat test`
    - frontend: macOS/Linux `cd app/frontend && pnpm vitest run`; Windows PowerShell `cd app\frontend; pnpm vitest run`
    - (no PowerShell 5.1 use `;` no lugar de `&&` e confira `$LASTEXITCODE` após cada comando)
-5. **Revisão:** rode `/revisar-tarefa.md` sobre o diff da tarefa. Corrija tudo o que for Critical ou Important antes de commitar.
+5. **Revisão (contexto limpo):** o ideal é uma **nova tarefa** (`new_task`) só com o brief, o diff e o texto da seção 4 de `docs/ferramentas-claude-para-o-cline/processo-completo.md`; sem essa opção, rode `/revisar-tarefa.md` relendo só o diff. Corrija tudo o que for Critical ou Important (até 3 rodadas; na 4ª, pergunte ao usuário), e Minor vai para a lista "Minor adiados" do progresso. Veja o ciclo completo, a "onda final" e a revisão final em `processo-completo.md`.
 6. **Commit:** `git add` só dos arquivos da tarefa (nunca `-A` nem `-f`), mensagem Conventional Commits em pt-BR (`feat(...)`, `fix(...)`, `test(...)`, `docs(...)`), corpo curto.
 7. **Progresso:** acrescente `Tarefa N: concluída (commit <hash>; testes X/0 falhas)`. Toda escolha que o plano deixou aberta vira `Ruling: <o que> — <por quê> — <custo se errado>`.
 
@@ -43,6 +43,6 @@ Não tente remendos em série. Reproduza, leia o erro inteiro, levante uma hipó
 ## Ao fim do plano
 
 1. Suíte completa das duas camadas (macOS/Linux: `./gradlew test`; `pnpm vitest run && pnpm build`. Windows PowerShell: `.\gradlew.bat test`; `pnpm vitest run; if ($LASTEXITCODE -eq 0) { pnpm build }`). Mostre os números (testes e falhas); nada de "deve passar" sem rodar.
-2. `/revisar-tarefa.md` sobre `git diff main..HEAD` inteiro.
+2. **Onda final** dos Minor adiados e dos compromissos (seção 5 de `processo-completo.md`), depois `/revisar-tarefa.md` sobre `git diff main..HEAD` inteiro, de preferência numa nova tarefa (seção 6).
 3. Atualize `HANDOFF.md` e o índice dos planos.
 4. `/fim-de-branch.md`.

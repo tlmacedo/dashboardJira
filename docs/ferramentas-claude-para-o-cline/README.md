@@ -8,6 +8,7 @@ Para quem vai continuar o Painel de Squads com o **ClineSR** (variante Samsung d
 
 | Documento | Conteúdo |
 |---|---|
+| [processo-completo.md](processo-completo.md) | **Leia primeiro.** O ciclo completo que o Claude executou (implementar, revisar com contexto limpo, corrigir, onda final, revisão final, PR, voltar à `main` com `pull`), com os textos prontos do implementador e do revisor |
 | [regras.md](regras.md) | Todas as regras do projeto e as globais do usuário que valem aqui, deduplicadas, com a origem de cada uma e os conflitos em aberto |
 | [skills.md](skills.md) | Cada skill, comando e agente do Claude: origem (repositório público), licença, resumo, uso neste projeto e porte para o Cline |
 | [hooks.md](hooks.md) | O que cada hook do Claude faz, os hooks `PreToolUse` do Cline (bash para macOS/Linux e `PreToolUse.ps1` para Windows), como instalar e testar, e as proibições que não dependem de hook |

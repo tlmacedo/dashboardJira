@@ -1,6 +1,6 @@
 # Progresso — plano: docs/superpowers/plans/2026-10-25-plano-04-auditoria.md
 
-Branch de trabalho: `feat/auditoria` (a partir da `main` com o Plano 4A mesclado, `ecc4d98`). **Plano 4 NÃO está terminado**: este arquivo diz exatamente de onde continuar. Quem continuar deve ler antes `docs/guia-execucao-outra-ia.md` e `docs/superpowers/progresso/2026-10-25-plano-04a-sincronizacao.md` (limites aceitos, regras dos hooks, o que o 4A deixou).
+Tarefas 1 a 3 já estão na `main` (PR #15, mesclada com squash em 26/10). Continue numa **branch nova a partir da `main`** (ex.: `feat/auditoria-2`); a antiga `feat/auditoria` foi apagada. **Plano 4 NÃO está terminado**: este arquivo diz exatamente de onde continuar. Quem continuar deve ler antes `docs/guia-execucao-outra-ia.md` e `docs/superpowers/progresso/2026-10-25-plano-04a-sincronizacao.md` (limites aceitos, regras dos hooks, o que o 4A deixou).
 
 ## Estado por tarefa
 
@@ -17,7 +17,7 @@ Testes no último ponto verde conhecido: backend 744, 0 falhas (PostgreSQL real)
 
 ## Como continuar (passo a passo)
 
-1. `git checkout feat/auditoria && git pull`; confira `git log --oneline -5` e rode a suíte.
+1. `git checkout main && git pull && git checkout -b feat/auditoria-2`; confira `git log --oneline -5` e rode a suíte.
 2. Leia a próxima tarefa no plano (`### Tarefa N`) e a spec `docs/superpowers/specs/2026-10-25-spec-fase-04-auditoria.md`.
 3. Siga o fluxo do guia: testes primeiro (veja falharem), implementar, rodar, autorrevisão pelo checklist, um commit por tarefa, atualizar ESTE arquivo.
 4. Ao terminar as 9 tarefas: revisão final do conjunto, varredura de dados pessoais, PR e `main` com `pull`. Não mesclar sem o usuário mandar.
