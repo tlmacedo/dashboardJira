@@ -35,6 +35,7 @@ class CenarioAud1(
             usuario("davi", "Alfa"),
             Pessoa("lider.alfa", "x", listOf(AtribuicaoPapel(Role.SQUAD_LEADER, Vigencia(null, d("2026-10-09")), "Alfa"))),
             Pessoa("lider.alfa2", "x", listOf(AtribuicaoPapel(Role.SQUAD_LEADER, Vigencia(d("2026-10-10"), null), "Alfa"))),
+            Pessoa("coord.antigo", "x", listOf(AtribuicaoPapel(Role.COORDENADOR, Vigencia(null, d("2026-10-09"))))),
             Pessoa("coord.um", "x", listOf(AtribuicaoPapel(Role.COORDENADOR, Vigencia(null, null)))),
             Pessoa("gerente.exemplo", "x", listOf(AtribuicaoPapel(Role.GERENTE, Vigencia(null, null)))),
         ),

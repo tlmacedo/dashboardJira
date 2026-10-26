@@ -81,6 +81,29 @@ class DetectoresDeVencimentoTest {
     }
 
     @Test
+    fun removidoComTextoIlegivelGrandeEhLimitado() {
+        val enorme = "x".repeat(5000)
+        val s = detectar(c.ev("duedate", enorme, null, "2026-10-10T12:00:00Z", "ana")).single()
+        assertTrue(s.de!!.length <= 64)
+    }
+
+    @Test
+    fun toIlegivelNaoGeraAlteracao() {
+        assertTrue(detectar(c.ev("duedate", "2026-10-15", "amanhã", "2026-10-10T12:00:00Z", "ana")).isEmpty())
+    }
+
+    @Test
+    fun anoAbsurdoEhIlegivelEOrdemRapida() {
+        assertNull(br.sidia.painel.auditoria.Vencimentos.ler("9999-12-31"))
+        assertNull(br.sidia.painel.auditoria.Vencimentos.ler("0001-01-01"))
+        assertNull(br.sidia.painel.auditoria.Vencimentos.ler("1999-12-31"))
+        assertNull(br.sidia.painel.auditoria.Vencimentos.ler("2101-01-01"))
+        assertEquals(java.time.LocalDate.parse("2000-01-01"), br.sidia.painel.auditoria.Vencimentos.ler("2000-01-01"))
+        assertEquals(java.time.LocalDate.parse("2100-12-31"), br.sidia.painel.auditoria.Vencimentos.ler("2100-12-31"))
+        assertTrue(detectar(c.ev("duedate", "2026-10-15", "9999-12-31", "2026-10-10T12:00:00Z", "ana")).isEmpty())
+    }
+
+    @Test
     fun regraInativaNaoGera() {
         val inativas = c.regras.copy(sinais = c.regras.sinais.mapValues { it.value.copy(ativo = false) })
         val eventos = listOf(

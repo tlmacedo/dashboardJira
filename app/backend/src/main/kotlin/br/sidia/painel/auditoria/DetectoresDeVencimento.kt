@@ -23,7 +23,7 @@ object DetectoresDeVencimento {
     private val removido = Detector { t, ctx ->
         t.trocasDeVencimento.mapNotNull { e ->
             if (e.from.isNullOrBlank() || !e.to.isNullOrBlank()) return@mapNotNull null
-            val de = Vencimentos.ler(e.from)?.toString() ?: e.from
+            val de = Vencimentos.ler(e.from)?.toString() ?: e.from.take(LIMITE_TEXTO_SINAL)
             ctx.sinal(CodigoSinal.VENCIMENTO_REMOVIDO, t, e, t.responsavelEm(e.at), de = de, para = null)
         }
     }

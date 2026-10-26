@@ -27,6 +27,11 @@ enum class CodigoSinal {
     CANCELAMENTO_SUSPEITO,
 }
 
+private const val MAX_CORRIDOS = 1_000_000L
+
+/** Tamanho máximo de texto ilegível guardado em [Sinal.de] / [Sinal.para]. */
+internal const val LIMITE_TEXTO_SINAL = 64
+
 /** O que o sinal significa na tela: auditoria (indício de irregularidade) ou alerta (informativo). */
 enum class Resultado { AUDITORIA, ALERTA }
 
@@ -63,17 +68,23 @@ data class ContextoDeteccao(
 
     /**
      * Distância assinada de [dia] até [vencimento]: positiva quando o dia é anterior ao vencimento, negativa
-     * quando é posterior. `CORRIDO` conta dias do calendário; `UTIL` conta os dias úteis entre os dois
-     * (exclui o primeiro dia, inclui o último).
+     * quando é posterior. `CORRIDO` conta dias do calendário (exato, O(1)); `UTIL` conta os dias úteis entre
+     * os dois (exclui o primeiro dia, inclui o último) e SATURA em `pertoDoVencimentoDias + 1`: a contagem
+     * para assim que passa do limite, então o custo é limitado mesmo com datas distantes. Dois dias seguidos
+     * não úteis (sábado e vencimento na sexta anterior) dão distância 0 e contam como "perto".
      */
     fun distanciaDias(dia: LocalDate, vencimento: LocalDate): Int = when (regras.unidade) {
-        UnidadeDias.CORRIDO -> ChronoUnit.DAYS.between(dia, vencimento).toInt()
+        UnidadeDias.CORRIDO -> ChronoUnit.DAYS.between(dia, vencimento).coerceIn(-MAX_CORRIDOS, MAX_CORRIDOS).toInt()
         UnidadeDias.UTIL -> {
+            val teto = regras.pertoDoVencimentoDias + 1
             val inicio = minOf(dia, vencimento)
             val fim = maxOf(dia, vencimento)
-            val uteis = generateSequence(inicio.plusDays(1)) { it.plusDays(1) }
-                .takeWhile { !it.isAfter(fim) }
-                .count { calendario.isBusinessDay(it) }
+            var uteis = 0
+            var d = inicio.plusDays(1)
+            while (!d.isAfter(fim) && uteis < teto) {
+                if (calendario.isBusinessDay(d)) uteis++
+                d = d.plusDays(1)
+            }
             if (dia <= vencimento) uteis else -uteis
         }
     }

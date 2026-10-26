@@ -208,6 +208,72 @@ class DetectoresDeResponsavelTest {
     }
 
     @Test
+    fun vencimentoAbsurdoTerminaRapidoEDaResultadoCorreto() {
+        val util = CenarioAud1(CenarioAud1().regras.copy(unidade = UnidadeDias.UTIL))
+        val dia = LocalDate.parse("2026-10-15")
+        for (extremo in listOf(LocalDate.of(9999, 12, 31), LocalDate.of(1, 1, 1))) {
+            for (cenario in listOf(c, util)) {
+                org.junit.jupiter.api.Assertions.assertTimeout(java.time.Duration.ofSeconds(1)) {
+                    assertEquals(false, cenario.ctx.perto(dia, extremo))
+                    assertEquals(false, cenario.ctx.perto(extremo, dia))
+                    val d = cenario.ctx.distanciaDias(dia, extremo)
+                    assertEquals(extremo.isAfter(dia), d > 0)
+                }
+                val s = cenario.detectar(
+                    DetectoresDeResponsavel.todos,
+                    listOf(cenario.ev("assignee", "ana", "bruno", "2026-10-15T15:00:00Z", "carla")),
+                    duedate = extremo,
+                )
+                assertTrue(s.none { it.codigo == CodigoSinal.TROCA_PERTO_DO_VENCIMENTO })
+            }
+        }
+    }
+
+    @Test
+    fun feriadoContaComoDiaNaoUtilEmUtil() {
+        val venc = LocalDate.parse("2026-10-19") // segunda
+        val regras = c.regras.copy(unidade = UnidadeDias.UTIL, pertoDoVencimentoDias = 1)
+        val semFeriado = CenarioAud1(regras)
+        val comFeriado = CenarioAud1(regras, BusinessCalendar(ZoneId.of("America/Manaus"), movableHolidays = setOf(LocalDate.parse("2026-10-16"))))
+        val quinta = LocalDate.parse("2026-10-15")
+        assertEquals(2, semFeriado.ctx.distanciaDias(quinta, venc))
+        assertEquals(1, comFeriado.ctx.distanciaDias(quinta, venc))
+        assertEquals(false, semFeriado.ctx.perto(quinta, venc))
+        assertEquals(true, comFeriado.ctx.perto(quinta, venc))
+    }
+
+    @Test
+    fun coordenadorQueDeixouDeSerNaDataNaoAutoriza() {
+        val s = detectar(c.ev("assignee", "ana", "bruno", "2026-10-03T12:00:00Z", "coord.antigo"))
+        assertTrue(de(CodigoSinal.RESPONSAVEL_TROCADO_NAO_AUTORIZADO, s).isEmpty())
+        val antes = detectar(c.ev("assignee", "ana", "bruno", "2026-10-08T12:00:00Z", "coord.antigo"))
+        assertTrue(de(CodigoSinal.RESPONSAVEL_TROCADO_NAO_AUTORIZADO, antes).isEmpty())
+        val depois = detectar(c.ev("assignee", "ana", "bruno", "2026-10-12T12:00:00Z", "coord.antigo"))
+        assertEquals(1, de(CodigoSinal.RESPONSAVEL_TROCADO_NAO_AUTORIZADO, depois).size)
+    }
+
+    @Test
+    fun deApenasEspacosContaComoSemResponsavel() {
+        // from=" " e to=null: não há troca real
+        assertTrue(detectar(c.ev("assignee", " ", null, "2026-10-03T12:00:00Z", "carla")).isEmpty())
+        // from=" " e to=ana: referência é o novo responsável (lider.alfa2 do Alfa autoriza)
+        val s = detectar(c.ev("assignee", " ", "ana", "2026-10-11T12:00:00Z", "lider.alfa2"))
+        assertTrue(de(CodigoSinal.RESPONSAVEL_TROCADO_NAO_AUTORIZADO, s).isEmpty())
+    }
+
+    @Test
+    fun empateDeInstanteUsaOrdemEstavelDeEntrada() {
+        // mesmo instante: a consulta "em at" usa '<' estrito, então os eventos não se enxergam entre si;
+        // a ordem do empate é a de entrada (sort estável) e o passa-bola cai na terceira troca
+        val mesmo = "2026-10-14T15:00:00Z"
+        val e1 = c.ev("assignee", "ana", "bruno", mesmo, "carla")
+        val e2 = c.ev("assignee", "bruno", "carla", mesmo, "carla")
+        val e3 = c.ev("assignee", "carla", "davi", mesmo, "carla")
+        val p = de(CodigoSinal.PASSA_BOLA, detectar(e1, e2, e3)).single()
+        assertEquals(e3.changelogId, p.changelogId)
+    }
+
+    @Test
     fun regraInativaNaoGera() {
         val inativas = c.regras.copy(sinais = c.regras.sinais.mapValues { it.value.copy(ativo = false) })
         val evs = listOf(

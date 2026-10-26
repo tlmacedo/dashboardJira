@@ -11,9 +11,13 @@ object DetectoresDeResponsavel {
     /** Responsável de referência de uma troca: o anterior, ou o novo quando a task estava sem responsável. */
     private fun referencia(e: ChangeEventRecord): String? = e.from?.takeIf { it.isNotBlank() } ?: e.to?.takeIf { it.isNotBlank() }
 
-    /** Trocas reais (de valor para outro valor diferente). */
+    /**
+     * Trocas reais (de valor para outro valor diferente); texto só de espaços vale como vazio.
+     * Empate de instante: as consultas "em at" usam `<` estrito (eventos do mesmo instante não se enxergam)
+     * e a ordem entre eventos empatados é a de entrada (ordenação estável).
+     */
     private fun trocas(t: AuditTimeline): List<ChangeEventRecord> =
-        t.trocasDeResponsavel.filter { (it.from ?: "") != (it.to ?: "") }
+        t.trocasDeResponsavel.filter { (it.from?.trim() ?: "") != (it.to?.trim() ?: "") }
 
     private fun autorizado(t: AuditTimeline, ctx: ContextoDeteccao, e: ChangeEventRecord): Boolean =
         ctx.autorizacao.avaliar(e.authorRef, t.issue.reporter, referencia(e), e.at).autorizado

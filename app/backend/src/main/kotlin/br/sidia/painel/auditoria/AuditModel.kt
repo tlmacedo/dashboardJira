@@ -27,17 +27,21 @@ data class AuditIssue(
 
 /** Leitor do vencimento nos dois formatos que o Jira DC entrega. */
 object Vencimentos {
+    private const val ANO_MINIMO = 2000
+    private const val ANO_MAXIMO = 2100
     private val FORMATO = Regex("""^(\d{4}-\d{2}-\d{2})(?: 00:00:00(?:\.0+)?)?$""")
 
     /** `2026-10-15` e `2026-10-15 00:00:00.0` viram a data; qualquer outro texto (ou vazio) vira nulo. */
     fun ler(valor: String?): LocalDate? {
         val texto = valor?.trim()?.takeIf { it.isNotEmpty() } ?: return null
         val data = FORMATO.matchEntire(texto)?.groupValues?.get(1) ?: return null
-        return try {
+        val parsed = try {
             LocalDate.parse(data)
         } catch (_: java.time.format.DateTimeParseException) {
             null
         }
+        // anos fora de 2000..2100 são tratados como ilegíveis (evita datas absurdas plantadas no Jira)
+        return parsed?.takeIf { it.year in ANO_MINIMO..ANO_MAXIMO }
     }
 }
 
