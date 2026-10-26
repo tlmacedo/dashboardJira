@@ -32,6 +32,21 @@ interface IssueStore {
     fun temOsVersion(instance: String): Boolean
 }
 
+/** Linha leve de uma issue ativa (não removida), usada pela reconciliação. */
+data class IndiceIssue(val id: Long, val jiraId: Long?, val key: String, val updated: Instant?)
+
+/** Consultas e marcações que a reconciliação diária faz sobre as issues já gravadas. */
+interface IssueIndex {
+    /** Issues ativas (`removida_em IS NULL`) com `updated >= atualizadasDesde`, em ordem de chave. */
+    fun indice(instance: String, atualizadasDesde: Instant): List<IndiceIssue>
+
+    /** Remoção lógica (`removida_em = at`) das issues de [ids] (id interno) ainda ativas; devolve quantas mudaram. */
+    fun marcarRemovidas(instance: String, ids: Set<Long>, at: Instant): Int
+
+    /** A issue com este `jira_id` passa a ter [novaChave], mantendo o id interno e o histórico. */
+    fun renomear(instance: String, jiraId: Long, novaChave: String)
+}
+
 /**
  * Extrai o valor do campo "OS Version" (SELECT do Jira: objeto `{value}` ou texto) do JSON da issue.
  * Espaços são normalizados; texto vazio, campo ausente ou [customId] nulo/inválido resultam em nulo.
@@ -68,7 +83,58 @@ private val ESPACOS_OS_VERSION = Regex("[\\s\\p{Z}]+")
 fun normalizarOsVersion(valor: String): String = valor.trim().replace(ESPACOS_OS_VERSION, " ")
 
 /** Implementação sobre PostgreSQL (JDBC). Todas as consultas são parametrizadas. */
-class PostgresIssueStore(private val ds: DataSource) : IssueStore {
+class PostgresIssueStore(private val ds: DataSource) : IssueStore, IssueIndex {
+
+    override fun indice(instance: String, atualizadasDesde: Instant): List<IndiceIssue> =
+        ds.connection.use { con ->
+            con.prepareStatement(
+                "SELECT id, jira_id, key, updated FROM issue " +
+                    "WHERE instance = ? AND removida_em IS NULL AND updated >= ? ORDER BY key",
+            ).use { ps ->
+                ps.setString(1, instance)
+                ps.setTimestamp(2, Timestamp.from(atualizadasDesde))
+                ps.executeQuery().use { rs ->
+                    buildList {
+                        while (rs.next()) {
+                            val jiraId = rs.getLong(2).takeUnless { rs.wasNull() }
+                            add(IndiceIssue(rs.getLong(1), jiraId, rs.getString(3), rs.getTimestamp(4)?.toInstant()))
+                        }
+                    }
+                }
+            }
+        }
+
+    override fun marcarRemovidas(instance: String, ids: Set<Long>, at: Instant): Int {
+        if (ids.isEmpty()) return 0
+        return ds.connection.use { con ->
+            con.prepareStatement(
+                "UPDATE issue SET removida_em = ? WHERE instance = ? AND id = ANY (?) AND removida_em IS NULL",
+            ).use { ps ->
+                ps.setTimestamp(1, Timestamp.from(at))
+                ps.setString(2, instance)
+                ps.setArray(3, con.createArrayOf("bigint", ids.toTypedArray()))
+                ps.executeUpdate()
+            }
+        }
+    }
+
+    /** Se a nova chave já pertence a outra linha, não faz nada: a rebusca do upsert resolve pelo `jira_id`. */
+    override fun renomear(instance: String, jiraId: Long, novaChave: String) {
+        ds.connection.use { con ->
+            con.prepareStatement(
+                "UPDATE issue SET key = ? WHERE instance = ? AND jira_id = ? AND key <> ? " +
+                    "AND NOT EXISTS (SELECT 1 FROM issue o WHERE o.instance = ? AND o.key = ?)",
+            ).use { ps ->
+                ps.setString(1, novaChave)
+                ps.setString(2, instance)
+                ps.setLong(3, jiraId)
+                ps.setString(4, novaChave)
+                ps.setString(5, instance)
+                ps.setString(6, novaChave)
+                ps.executeUpdate()
+            }
+        }
+    }
 
     override fun upsert(issue: JsonObject, events: List<ChangeEventRecord>, instance: String, osVersionCustomId: String?) {
         val c = CamposDaIssue.de(issue)
@@ -91,7 +157,24 @@ class PostgresIssueStore(private val ds: DataSource) : IssueStore {
         }
     }
 
+    /**
+     * Issue movida ou renomeada (mesmo `jira_id`, chave nova): a linha da chave antiga é marcada como removida e
+     * perde o `jira_id` (guarda o histórico), liberando o índice único antes do INSERT da chave nova.
+     */
+    private fun liberarJiraIdDaChaveAntiga(con: Connection, c: CamposDaIssue, instance: String) {
+        val jiraId = c.jiraId ?: return
+        con.prepareStatement(
+            "UPDATE issue SET removida_em = now(), jira_id = NULL WHERE instance = ? AND jira_id = ? AND key <> ?",
+        ).use { ps ->
+            ps.setString(1, instance)
+            ps.setLong(2, jiraId)
+            ps.setString(3, c.key)
+            ps.executeUpdate()
+        }
+    }
+
     private fun gravarIssue(con: Connection, c: CamposDaIssue, instance: String, raw: String, osVersion: String?): Long {
+        liberarJiraIdDaChaveAntiga(con, c, instance)
         val sql = """
             INSERT INTO issue (key, instance, project, issue_type, status, resolution, assignee_ref, reporter_ref,
                                created, updated, resolved, duedate, labels, parent_key, estimate_s, spent_s, raw,
@@ -165,7 +248,7 @@ class PostgresIssueStore(private val ds: DataSource) : IssueStore {
 
     override fun temOsVersion(instance: String): Boolean =
         ds.connection.use { con ->
-            con.prepareStatement("SELECT EXISTS (SELECT 1 FROM issue WHERE instance = ? AND os_version IS NOT NULL)").use { ps ->
+            con.prepareStatement("SELECT EXISTS (SELECT 1 FROM issue WHERE instance = ? AND removida_em IS NULL AND os_version IS NOT NULL)").use { ps ->
                 ps.setString(1, instance)
                 ps.executeQuery().use { rs -> rs.next() && rs.getBoolean(1) }
             }
@@ -174,7 +257,7 @@ class PostgresIssueStore(private val ds: DataSource) : IssueStore {
     override fun timelines(
         instance: String, closedFrom: Instant?, closedTo: Instant?, openOnly: Boolean, osVersion: String?,
     ): List<IssueTimeline> {
-        val filtros = StringBuilder("instance = ? AND created IS NOT NULL")
+        val filtros = StringBuilder("instance = ? AND removida_em IS NULL AND created IS NOT NULL")
         val params = mutableListOf<Any>(instance)
         if (osVersion != null) {
             // Comparação exata sem diferenciar maiúsculas; o valor entra só como parâmetro.

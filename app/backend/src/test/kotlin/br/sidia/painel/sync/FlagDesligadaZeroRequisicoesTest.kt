@@ -64,6 +64,40 @@ class FlagDesligadaZeroRequisicoesTest {
     }
 
     @Test
+    fun reconciliacaoComFlagFalse() = runBlocking {
+        val contador = AtomicInteger(0)
+        val provedor = AtomicInteger(0)
+        val settings = Settings(
+            jiraLiveEnabled = false,
+            jiraInstances = mapOf(
+                "samsung" to JiraInstanceSettings("https://jira.exemplo.invalid", JiraAuthKind.BEARER, null, "token-de-teste-123"),
+            ),
+        )
+        val fabrica = JiraClientFactory(settings, {
+            provedor.incrementAndGet()
+            HttpClient(MockEngine { contador.incrementAndGet(); respond("{}", HttpStatusCode.OK) })
+        })
+        val ctx = br.sidia.painel.testContextComBanco(settings, pg, jira = fabrica)
+        ctx.use {
+            val ds = requireNotNull(ctx.dataSource)
+            val estado = PostgresSyncStateStore(ds)
+            val servico = SyncService(ctx, PostgresIssueStore(ds), estado, SyncGate(false, settings.sync), ctx.clock)
+            assertEquals(ResultadoExecucao.Negada(MotivoNegacao.DESLIGADO_PELA_FLAG), servico.reconciliar("samsung"))
+            assertEquals(0, contador.get())
+            assertEquals(0, provedor.get())
+            val (runs, removidas) = ds.connection.use { c ->
+                val r = c.createStatement().executeQuery("SELECT count(*) FROM sync_run").use { it.next(); it.getInt(1) }
+                val m = c.createStatement().executeQuery("SELECT count(*) FROM issue WHERE removida_em IS NOT NULL")
+                    .use { it.next(); it.getInt(1) }
+                r to m
+            }
+            assertEquals(0, runs)
+            assertEquals(0, removidas)
+            assertEquals(null, estado.ultimaReconciliacao("samsung"))
+        }
+    }
+
+    @Test
     fun nenhumaVariavelSyncLigaASincronizacao() {
         val env = mapOf(
             "SYNC_INSTANCIAS" to "samsung,sidia",
