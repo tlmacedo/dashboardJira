@@ -288,4 +288,36 @@ class SettingsTest {
         assertTrue(e.message!!.contains("SYNC_HORA_RECONCILIACAO"))
         assertFailsWith<IllegalArgumentException> { Settings.fromEnv(mapOf("SYNC_HORA_RETENCAO" to "3h")) }
     }
+
+    @Test
+    fun demoPadraoEhFalse() {
+        assertFalse(Settings.fromEnv(emptyMap()).dashboardDemoData)
+        assertFalse(Settings.fromEnv(mapOf("DASHBOARD_DEMO_DATA" to "  ")).dashboardDemoData)
+        assertTrue(Settings.fromEnv(mapOf("DASHBOARD_DEMO_DATA" to "true")).dashboardDemoData)
+    }
+
+    @Test
+    fun demoEmProducaoDerrubaSubida() {
+        val e = assertFailsWith<IllegalArgumentException> {
+            Settings.fromEnv(mapOf("DASHBOARD_DEV_MODE" to "false", "DASHBOARD_DEMO_DATA" to "true"))
+        }
+        assertEquals("DASHBOARD_DEMO_DATA exige DASHBOARD_DEV_MODE=true", e.message)
+    }
+
+    @Test
+    fun demoComFlagLigadaDerrubaSubida() {
+        val e = assertFailsWith<IllegalArgumentException> {
+            Settings.fromEnv(mapOf("JIRA_LIVE_ENABLED" to "true", "DASHBOARD_DEMO_DATA" to "true"))
+        }
+        assertEquals("DASHBOARD_DEMO_DATA exige JIRA_LIVE_ENABLED=false", e.message)
+        // Demonstração desligada não impede a flag ligada nem a produção.
+        assertTrue(Settings.fromEnv(mapOf("JIRA_LIVE_ENABLED" to "true", "DASHBOARD_DEMO_DATA" to "false")).jiraLiveEnabled)
+        assertFalse(Settings.fromEnv(mapOf("DASHBOARD_DEV_MODE" to "false")).dashboardDemoData)
+    }
+
+    @Test
+    fun demoValorInvalidoFalha() {
+        val e = assertFailsWith<IllegalArgumentException> { Settings.fromEnv(mapOf("DASHBOARD_DEMO_DATA" to "sim")) }
+        assertTrue(e.message!!.contains("DASHBOARD_DEMO_DATA"))
+    }
 }

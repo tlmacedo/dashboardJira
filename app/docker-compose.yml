@@ -14,6 +14,9 @@ services:
       # Padrões seguros: Jira real desligado e modo desenvolvimento (sem login).
       JIRA_LIVE_ENABLED: ${JIRA_LIVE_ENABLED:-false}
       DASHBOARD_DEV_MODE: ${DASHBOARD_DEV_MODE:-true}
+      # Dados fictícios de demonstração (sem Jira). Só vale com DASHBOARD_DEV_MODE=true e JIRA_LIVE_ENABLED=false:
+      # com produção ou com a flag do Jira ligada, o painel recusa subir.
+      DASHBOARD_DEMO_DATA: ${DASHBOARD_DEMO_DATA:-false}
       # Conexão com o banco vem do ambiente; a senha não tem valor padrão.
       DATABASE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-painel}
       DATABASE_USER: ${POSTGRES_USER:-painel}

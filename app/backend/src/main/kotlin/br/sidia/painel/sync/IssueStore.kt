@@ -162,17 +162,25 @@ class PostgresIssueStore(private val ds: DataSource) : IssueStore, IssueIndex {
         }
     }
 
-    override fun upsert(issue: JsonObject, events: List<ChangeEventRecord>, instance: String, osVersionCustomId: String?) {
+    /**
+     * Mesma gravação de [upsert], mas na conexão e na transação do chamador (sem commit nem rollback aqui).
+     * Usada pela carga de demonstração, que apaga e regrava uma instância inteira numa transação só.
+     */
+    fun upsertNaTransacao(con: Connection, issue: JsonObject, events: List<ChangeEventRecord>, instance: String, osVersionCustomId: String?) {
         val c = CamposDaIssue.de(issue)
         val osVersion = OsVersionExtrator.extrair(issue, osVersionCustomId)
         // O changelog fica nas linhas de change_event; o raw guarda só a issue, sem dados pessoais.
         val raw = SanitizadorRaw.sanitizar(JsonObject(issue.filterKeys { it != "changelog" })).toString()
+        val issueId = gravarIssue(con, c, instance, raw, osVersion)
+        gravarEventos(con, issueId, events)
+    }
+
+    override fun upsert(issue: JsonObject, events: List<ChangeEventRecord>, instance: String, osVersionCustomId: String?) {
         ds.connection.use { con ->
             val autoCommit = con.autoCommit
             con.autoCommit = false
             try {
-                val issueId = gravarIssue(con, c, instance, raw, osVersion)
-                gravarEventos(con, issueId, events)
+                upsertNaTransacao(con, issue, events, instance, osVersionCustomId)
                 con.commit()
             } catch (e: Throwable) {
                 con.rollback()

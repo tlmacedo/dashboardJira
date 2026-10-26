@@ -1,0 +1,14 @@
+# Manifesto dos dados de DEMONSTRAÇÃO (100% fictícios; nenhum host, pessoa ou chave reais).
+# As datas absolutas dos JSON giram em torno da âncora (uma sexta-feira). Na carga, tudo é deslocado em semanas
+# inteiras até hoje, então os instantes ficam sempre no passado e o dia da semana é preservado.
+versao: 1
+ancora: "2026-10-30"
+instancias:
+  samsung:
+    arquivo: samsung.json
+    prefixo: DEMO
+    # Campo do OS Version nas issues fictícias (o mesmo valor usado nos testes do Tempo em status).
+    osVersionCustomId: customfield_12416
+  sidia:
+    arquivo: sidia.json
+    prefixo: DEMOCAT

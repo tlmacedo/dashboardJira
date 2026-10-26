@@ -4,6 +4,7 @@ import br.sidia.painel.cards.registrarNegacaoSemPapel
 import br.sidia.painel.cards.rotasTempoEmStatus
 import br.sidia.painel.config.Settings
 import br.sidia.painel.db.AccessLog
+import br.sidia.painel.demo.prepararDemonstracao
 import br.sidia.painel.security.Authenticator
 import br.sidia.painel.security.DevAuthenticator
 import br.sidia.painel.security.OidcAuthenticator
@@ -45,6 +46,13 @@ fun main() {
     val settings = Settings.fromEnv()
     // Falhas de configuração, papéis ou banco acontecem aqui, na subida, e não na primeira requisição.
     val context = AppContext.load(settings)
+    // Dados fictícios (só em desenvolvimento, Jira desligado) ou recusa de banco misturado; ver DadosDeDemonstracao.
+    try {
+        prepararDemonstracao(context)
+    } catch (e: Exception) {
+        context.close()
+        throw e
+    }
     Runtime.getRuntime().addShutdownHook(Thread { context.close() })
     // O agendador para antes de o pool do banco fechar (AppContext.close); a retenção roda mesmo com o Jira desligado.
     val agendador = montarAgendador(context)
@@ -100,6 +108,7 @@ fun Application.module(
     val banner = when {
         !settings.dashboardDevMode -> null
         settings.jiraLiveEnabled -> "MODO DESENVOLVIMENTO: dados reais do Jira sem login"
+        settings.dashboardDemoData -> "MODO DESENVOLVIMENTO: dados fictícios de demonstração"
         else -> "MODO DESENVOLVIMENTO"
     }
     if (!Files.isDirectory(settings.staticDir)) {

@@ -1,0 +1,602 @@
+{
+  "issues": [
+    {
+      "id": "910001", "key": "DEMO-1",
+      "fields": {
+        "summary": "Checklist de camera frontal (demonstracao 1)",
+        "project": {"key": "TG", "name": "TG-Basic"}, "issuetype": {"name": "Checklist"},
+        "status": {"name": "Done"}, "resolution": {"name": "Done"},
+        "assignee": {"name": "dev.alfa1"}, "reporter": {"name": "pl.alfa"},
+        "created": "2026-09-14T09:00:00.000-0400", "updated": "2026-09-25T16:00:00.000-0400", "resolutiondate": "2026-09-25T16:00:00.000-0400",
+        "duedate": "2026-09-28", "labels": [], "customfield_12416": {"value": "Android 17.0 (OneUI_9.0)"}
+      },
+      "changelog": {"histories": [
+        {"id": "1", "author": {"name": "dev.alfa1"}, "created": "2026-09-15T09:30:00.000-0400", "items": [{"field": "status", "fromString": "To Do", "toString": "In Progress"}]},
+        {"id": "2", "author": {"name": "dev.alfa1"}, "created": "2026-09-23T14:00:00.000-0400", "items": [{"field": "status", "fromString": "In Progress", "toString": "In Review"}]},
+        {"id": "3", "author": {"name": "dev.alfa1"}, "created": "2026-09-25T16:00:00.000-0400", "items": [{"field": "status", "fromString": "In Review", "toString": "Done"}, {"field": "resolution", "fromString": null, "toString": "Done"}]}
+      ]}
+    },
+    {
+      "id": "910002", "key": "DEMO-2",
+      "fields": {
+        "summary": "Checklist de bateria (demonstracao 2)",
+        "project": {"key": "TG", "name": "TG-Basic"}, "issuetype": {"name": "Checklist"},
+        "status": {"name": "Done"}, "resolution": {"name": "Done"},
+        "assignee": {"name": "dev.alfa2"}, "reporter": {"name": "pl.alfa"},
+        "created": "2026-09-16T10:00:00.000-0400", "updated": "2026-10-01T15:00:00.000-0400", "resolutiondate": "2026-10-01T15:00:00.000-0400",
+        "duedate": "2026-10-02", "labels": [], "customfield_12416": {"value": "Android 17.0 (OneUI_9.0)"}
+      },
+      "changelog": {"histories": [
+        {"id": "1", "author": {"name": "dev.alfa2"}, "created": "2026-09-17T10:00:00.000-0400", "items": [{"field": "status", "fromString": "To Do", "toString": "In Progress"}]},
+        {"id": "2", "author": {"name": "dev.alfa2"}, "created": "2026-09-29T11:00:00.000-0400", "items": [{"field": "status", "fromString": "In Progress", "toString": "In Review"}]},
+        {"id": "3", "author": {"name": "dev.alfa2"}, "created": "2026-10-01T15:00:00.000-0400", "items": [{"field": "status", "fromString": "In Review", "toString": "Done"}, {"field": "resolution", "fromString": null, "toString": "Done"}]}
+      ]}
+    },
+    {
+      "id": "910003", "key": "DEMO-3",
+      "fields": {
+        "summary": "Checklist TG de conectividade (demonstracao 3)",
+        "project": {"key": "TG", "name": "TG-Basic"}, "issuetype": {"name": "Checklist TG"},
+        "status": {"name": "Done"}, "resolution": {"name": "Done"},
+        "assignee": {"name": "dev.beta1"}, "reporter": {"name": "pl.beta"},
+        "created": "2026-09-18T08:30:00.000-0400", "updated": "2026-10-05T17:00:00.000-0400", "resolutiondate": "2026-10-05T17:00:00.000-0400",
+        "duedate": "2026-10-02", "labels": [], "customfield_12416": {"value": "Android 16.0 (16)"}
+      },
+      "changelog": {"histories": [
+        {"id": "1", "author": {"name": "dev.beta1"}, "created": "2026-09-21T09:00:00.000-0400", "items": [{"field": "status", "fromString": "To Do", "toString": "In Progress"}]},
+        {"id": "2", "author": {"name": "dev.beta1"}, "created": "2026-10-02T10:00:00.000-0400", "items": [{"field": "status", "fromString": "In Progress", "toString": "In Review"}]},
+        {"id": "3", "author": {"name": "dev.beta1"}, "created": "2026-10-05T17:00:00.000-0400", "items": [{"field": "status", "fromString": "In Review", "toString": "Done"}, {"field": "resolution", "fromString": null, "toString": "Done"}]}
+      ]}
+    },
+    {
+      "id": "910004", "key": "DEMO-4",
+      "fields": {
+        "summary": "Checklist de audio (demonstracao 4)",
+        "project": {"key": "TG", "name": "TG-Basic"}, "issuetype": {"name": "Checklist"},
+        "status": {"name": "Done"}, "resolution": {"name": "Done"},
+        "assignee": {"name": "dev.alfa1"}, "reporter": {"name": "pl.alfa"},
+        "created": "2026-09-22T09:00:00.000-0400", "updated": "2026-10-09T12:00:00.000-0400", "resolutiondate": "2026-10-09T12:00:00.000-0400",
+        "duedate": "2026-10-07", "labels": ["ONHOLDBY-PL", "LATE_SENT"], "customfield_12416": {"value": "Android 16.0 (16)"}
+      },
+      "changelog": {"histories": [
+        {"id": "1", "author": {"name": "dev.alfa1"}, "created": "2026-09-23T09:00:00.000-0400", "items": [{"field": "status", "fromString": "To Do", "toString": "In Progress"}]},
+        {"id": "2", "author": {"name": "dev.alfa1"}, "created": "2026-09-30T10:00:00.000-0400", "items": [{"field": "status", "fromString": "In Progress", "toString": "Blocked"}]},
+        {"id": "3", "author": {"name": "dev.alfa1"}, "created": "2026-10-05T09:00:00.000-0400", "items": [{"field": "status", "fromString": "Blocked", "toString": "In Progress"}]},
+        {"id": "4", "author": {"name": "lider.alfa"}, "created": "2026-10-06T15:00:00.000-0400", "items": [{"field": "labels", "fromString": null, "toString": "ONHOLDBY-PL"}]},
+        {"id": "5", "author": {"name": "dev.alfa1"}, "created": "2026-10-08T09:00:00.000-0400", "items": [{"field": "labels", "fromString": "ONHOLDBY-PL", "toString": "ONHOLDBY-PL LATE_SENT"}]},
+        {"id": "6", "author": {"name": "dev.alfa1"}, "created": "2026-10-08T11:00:00.000-0400", "items": [{"field": "status", "fromString": "In Progress", "toString": "In Review"}]},
+        {"id": "7", "author": {"name": "dev.alfa1"}, "created": "2026-10-09T12:00:00.000-0400", "items": [{"field": "status", "fromString": "In Review", "toString": "Done"}, {"field": "resolution", "fromString": null, "toString": "Done"}]}
+      ]}
+    },
+    {
+      "id": "910005", "key": "DEMO-5",
+      "fields": {
+        "summary": "Checklist de sensores (demonstracao 5)",
+        "project": {"key": "TG", "name": "TG-Basic"}, "issuetype": {"name": "Checklist"},
+        "status": {"name": "Done"}, "resolution": {"name": "Done"},
+        "assignee": {"name": "lider.alfa"}, "reporter": {"name": "pl.alfa"},
+        "created": "2026-09-28T09:00:00.000-0400", "updated": "2026-10-14T10:00:00.000-0400", "resolutiondate": "2026-10-14T10:00:00.000-0400",
+        "duedate": "2026-10-16", "labels": [], "customfield_12416": {"value": "Android 17.0 (OneUI_9.0)"}
+      },
+      "changelog": {"histories": [
+        {"id": "1", "author": {"name": "lider.alfa"}, "created": "2026-09-29T09:00:00.000-0400", "items": [{"field": "status", "fromString": "To Do", "toString": "In Progress"}]},
+        {"id": "2", "author": {"name": "lider.alfa"}, "created": "2026-10-12T10:00:00.000-0400", "items": [{"field": "status", "fromString": "In Progress", "toString": "In Review"}]},
+        {"id": "3", "author": {"name": "lider.alfa"}, "created": "2026-10-14T10:00:00.000-0400", "items": [{"field": "status", "fromString": "In Review", "toString": "Done"}, {"field": "resolution", "fromString": null, "toString": "Done"}]}
+      ]}
+    },
+    {
+      "id": "910006", "key": "DEMO-6",
+      "fields": {
+        "summary": "Checklist de display (demonstracao 6)",
+        "project": {"key": "TG", "name": "TG-Basic"}, "issuetype": {"name": "Checklist"},
+        "status": {"name": "Done"}, "resolution": {"name": "Done"},
+        "assignee": {"name": "dev.beta1"}, "reporter": {"name": "pl.beta"},
+        "created": "2026-10-01T09:00:00.000-0400", "updated": "2026-10-15T09:00:00.000-0400", "resolutiondate": "2026-10-15T09:00:00.000-0400",
+        "duedate": "2026-10-14", "labels": [], "customfield_12416": {"value": "Android 17.0 (OneUI_9.0)"}
+      },
+      "changelog": {"histories": [
+        {"id": "1", "author": {"name": "dev.beta1"}, "created": "2026-10-02T09:00:00.000-0400", "items": [{"field": "status", "fromString": "To Do", "toString": "In Progress"}]},
+        {"id": "2", "author": {"name": "dev.beta1"}, "created": "2026-10-13T09:00:00.000-0400", "items": [{"field": "status", "fromString": "In Progress", "toString": "In Review"}]},
+        {"id": "3", "author": {"name": "dev.beta1"}, "created": "2026-10-15T09:00:00.000-0400", "items": [{"field": "status", "fromString": "In Review", "toString": "Done"}, {"field": "resolution", "fromString": null, "toString": "Done"}]}
+      ]}
+    },
+    {
+      "id": "910007", "key": "DEMO-7",
+      "fields": {
+        "summary": "Revisao do checklist de rede (demonstracao 7)",
+        "project": {"key": "TG", "name": "TG-Basic"}, "issuetype": {"name": "Checklist Review"},
+        "status": {"name": "Done"}, "resolution": {"name": "Done"},
+        "assignee": {"name": "lider.beta"}, "reporter": {"name": "pl.beta"},
+        "created": "2026-10-05T09:00:00.000-0400", "updated": "2026-10-16T11:00:00.000-0400", "resolutiondate": "2026-10-16T11:00:00.000-0400",
+        "duedate": "2026-10-16", "labels": [], "customfield_12416": {"value": "Android 16.0 (16)"},
+        "issuelinks": [
+          {"id": "930001", "type": {"name": "Blocks", "inward": "is blocked by", "outward": "blocks"}, "outwardIssue": {"id": "910035", "key": "DEMO-35"}}
+        ]
+      },
+      "changelog": {"histories": [
+        {"id": "1", "author": {"name": "lider.beta"}, "created": "2026-10-06T09:00:00.000-0400", "items": [{"field": "status", "fromString": "To Do", "toString": "In Progress"}]},
+        {"id": "2", "author": {"name": "lider.beta"}, "created": "2026-10-14T09:00:00.000-0400", "items": [{"field": "status", "fromString": "In Progress", "toString": "In Review"}]},
+        {"id": "3", "author": {"name": "lider.beta"}, "created": "2026-10-16T11:00:00.000-0400", "items": [{"field": "status", "fromString": "In Review", "toString": "Done"}, {"field": "resolution", "fromString": null, "toString": "Done"}]}
+      ]}
+    },
+    {
+      "id": "910008", "key": "DEMO-8",
+      "fields": {
+        "summary": "Checklist de camera traseira (demonstracao 8)",
+        "project": {"key": "TG", "name": "TG-Basic"}, "issuetype": {"name": "Checklist"},
+        "status": {"name": "Done"}, "resolution": {"name": "Done"},
+        "assignee": {"name": "dev.alfa2"}, "reporter": {"name": "pl.alfa"},
+        "created": "2026-10-06T09:00:00.000-0400", "updated": "2026-10-21T14:00:00.000-0400", "resolutiondate": "2026-10-21T14:00:00.000-0400",
+        "duedate": "2026-10-23", "labels": [], "customfield_12416": {"value": "Android 17.0 (OneUI_9.0)"}
+      },
+      "changelog": {"histories": [
+        {"id": "1", "author": {"name": "dev.alfa2"}, "created": "2026-10-07T09:00:00.000-0400", "items": [{"field": "status", "fromString": "To Do", "toString": "In Progress"}]},
+        {"id": "2", "author": {"name": "dev.alfa2"}, "created": "2026-10-12T09:00:00.000-0400", "items": [{"field": "status", "fromString": "In Progress", "toString": "Blocked"}]},
+        {"id": "3", "author": {"name": "dev.alfa2"}, "created": "2026-10-15T09:00:00.000-0400", "items": [{"field": "status", "fromString": "Blocked", "toString": "In Progress"}]},
+        {"id": "4", "author": {"name": "dev.alfa2"}, "created": "2026-10-19T09:00:00.000-0400", "items": [{"field": "status", "fromString": "In Progress", "toString": "In Review"}]},
+        {"id": "5", "author": {"name": "dev.alfa2"}, "created": "2026-10-21T14:00:00.000-0400", "items": [{"field": "status", "fromString": "In Review", "toString": "Done"}, {"field": "resolution", "fromString": null, "toString": "Done"}]}
+      ]}
+    },
+    {
+      "id": "910009", "key": "DEMO-9",
+      "fields": {
+        "summary": "Checklist de carregamento (demonstracao 9)",
+        "project": {"key": "TG", "name": "TG-Basic"}, "issuetype": {"name": "Checklist"},
+        "status": {"name": "Done"}, "resolution": {"name": "Done"},
+        "assignee": {"name": "dev.alfa1"}, "reporter": {"name": "pl.alfa"},
+        "created": "2026-10-08T09:00:00.000-0400", "updated": "2026-10-22T10:00:00.000-0400", "resolutiondate": "2026-10-22T10:00:00.000-0400",
+        "duedate": "2026-10-21", "labels": ["LATE_SENT"], "customfield_12416": {"value": "Android 17.0 (OneUI_9.0)"}
+      },
+      "changelog": {"histories": [
+        {"id": "1", "author": {"name": "dev.alfa1"}, "created": "2026-10-09T09:00:00.000-0400", "items": [{"field": "status", "fromString": "To Do", "toString": "In Progress"}]},
+        {"id": "2", "author": {"name": "dev.alfa1"}, "created": "2026-10-20T09:00:00.000-0400", "items": [{"field": "status", "fromString": "In Progress", "toString": "In Review"}]},
+        {"id": "3", "author": {"name": "dev.alfa1"}, "created": "2026-10-21T17:00:00.000-0400", "items": [{"field": "labels", "fromString": null, "toString": "LATE_SENT"}]},
+        {"id": "4", "author": {"name": "dev.alfa1"}, "created": "2026-10-22T10:00:00.000-0400", "items": [{"field": "status", "fromString": "In Review", "toString": "Done"}, {"field": "resolution", "fromString": null, "toString": "Done"}]}
+      ]}
+    },
+    {
+      "id": "910010", "key": "DEMO-10",
+      "fields": {
+        "summary": "Checklist TG de seguranca (demonstracao 10)",
+        "project": {"key": "TG", "name": "TG-Basic"}, "issuetype": {"name": "Checklist TG"},
+        "status": {"name": "Done"}, "resolution": {"name": "Done"},
+        "assignee": {"name": "dev.beta1"}, "reporter": {"name": "pl.beta"},
+        "created": "2026-10-12T09:00:00.000-0400", "updated": "2026-10-23T09:00:00.000-0400", "resolutiondate": "2026-10-23T09:00:00.000-0400",
+        "duedate": "2026-10-30", "labels": [], "customfield_12416": {"value": "Android 16.0 (16)"}
+      },
+      "changelog": {"histories": [
+        {"id": "1", "author": {"name": "dev.beta1"}, "created": "2026-10-13T09:00:00.000-0400", "items": [{"field": "status", "fromString": "To Do", "toString": "In Progress"}]},
+        {"id": "2", "author": {"name": "dev.beta1"}, "created": "2026-10-21T09:00:00.000-0400", "items": [{"field": "status", "fromString": "In Progress", "toString": "In Review"}]},
+        {"id": "3", "author": {"name": "dev.beta1"}, "created": "2026-10-23T09:00:00.000-0400", "items": [{"field": "status", "fromString": "In Review", "toString": "Done"}, {"field": "resolution", "fromString": null, "toString": "Done"}]}
+      ]}
+    },
+    {
+      "id": "910011", "key": "DEMO-11",
+      "fields": {
+        "summary": "Checklist de notificacoes (demonstracao 11)",
+        "project": {"key": "TG", "name": "TG-Basic"}, "issuetype": {"name": "Checklist"},
+        "status": {"name": "Done"}, "resolution": {"name": "Done"},
+        "assignee": {"name": "dev.alfa2"}, "reporter": {"name": "pl.alfa"},
+        "created": "2026-10-14T09:00:00.000-0400", "updated": "2026-10-26T10:00:00.000-0400", "resolutiondate": "2026-10-26T10:00:00.000-0400",
+        "duedate": "2026-10-27", "labels": [], "customfield_12416": {"value": "Android 17.0 (OneUI_9.0)"}
+      },
+      "changelog": {"histories": [
+        {"id": "1", "author": {"name": "dev.alfa2"}, "created": "2026-10-15T09:00:00.000-0400", "items": [{"field": "status", "fromString": "To Do", "toString": "In Progress"}]},
+        {"id": "2", "author": {"name": "dev.alfa2"}, "created": "2026-10-22T09:00:00.000-0400", "items": [{"field": "status", "fromString": "In Progress", "toString": "In Review"}]},
+        {"id": "3", "author": {"name": "dev.alfa2"}, "created": "2026-10-26T10:00:00.000-0400", "items": [{"field": "status", "fromString": "In Review", "toString": "Done"}, {"field": "resolution", "fromString": null, "toString": "Done"}]}
+      ]}
+    },
+    {
+      "id": "910012", "key": "DEMO-12",
+      "fields": {
+        "summary": "Revisao do checklist de camera (demonstracao 12)",
+        "project": {"key": "TG", "name": "TG-Basic"}, "issuetype": {"name": "Checklist Review"},
+        "status": {"name": "Done"}, "resolution": {"name": "Done"},
+        "assignee": {"name": "dev.alfa1"}, "reporter": {"name": "pl.alfa"},
+        "created": "2026-10-16T09:00:00.000-0400", "updated": "2026-10-28T10:00:00.000-0400", "resolutiondate": "2026-10-28T10:00:00.000-0400",
+        "duedate": "2026-10-29", "labels": [], "customfield_12416": {"value": "Android 16.0 (16)"},
+        "issuelinks": [
+          {"id": "930002", "type": {"name": "Blocks", "inward": "is blocked by", "outward": "blocks"}, "inwardIssue": {"id": "910036", "key": "DEMO-36"}}
+        ]
+      },
+      "changelog": {"histories": [
+        {"id": "1", "author": {"name": "dev.alfa1"}, "created": "2026-10-19T09:00:00.000-0400", "items": [{"field": "status", "fromString": "To Do", "toString": "In Progress"}]},
+        {"id": "2", "author": {"name": "dev.alfa1"}, "created": "2026-10-26T09:00:00.000-0400", "items": [{"field": "status", "fromString": "In Progress", "toString": "In Review"}]},
+        {"id": "3", "author": {"name": "dev.alfa1"}, "created": "2026-10-28T10:00:00.000-0400", "items": [{"field": "status", "fromString": "In Review", "toString": "Done"}, {"field": "resolution", "fromString": null, "toString": "Done"}]}
+      ]}
+    },
+    {
+      "id": "910013", "key": "DEMO-13",
+      "fields": {
+        "summary": "Checklist de gravacao de video (demonstracao 13)",
+        "project": {"key": "TG", "name": "TG-Basic"}, "issuetype": {"name": "Checklist"},
+        "status": {"name": "In Progress"},
+        "assignee": {"name": "dev.alfa1"}, "reporter": {"name": "pl.alfa"},
+        "created": "2026-09-25T09:00:00.000-0400", "updated": "2026-10-27T09:00:00.000-0400",
+        "duedate": "2026-10-20", "labels": [], "customfield_12416": {"value": "Android 17.0 (OneUI_9.0)"}
+      },
+      "changelog": {"histories": [
+        {"id": "1", "author": {"name": "dev.alfa1"}, "created": "2026-09-28T09:00:00.000-0400", "items": [{"field": "status", "fromString": "To Do", "toString": "In Progress"}]}
+      ]}
+    },
+    {
+      "id": "910014", "key": "DEMO-14",
+      "fields": {
+        "summary": "Checklist de modem (demonstracao 14)",
+        "project": {"key": "TG", "name": "TG-Basic"}, "issuetype": {"name": "Checklist"},
+        "status": {"name": "Blocked"},
+        "assignee": {"name": "dev.beta1"}, "reporter": {"name": "pl.beta"},
+        "created": "2026-10-09T09:00:00.000-0400", "updated": "2026-10-28T10:00:00.000-0400",
+        "duedate": "2026-10-23", "labels": [], "customfield_12416": {"value": "Android 16.0 (16)"}
+      },
+      "changelog": {"histories": [
+        {"id": "1", "author": {"name": "dev.beta1"}, "created": "2026-10-12T09:00:00.000-0400", "items": [{"field": "status", "fromString": "To Do", "toString": "In Progress"}]},
+        {"id": "2", "author": {"name": "dev.beta1"}, "created": "2026-10-14T09:00:00.000-0400", "items": [{"field": "status", "fromString": "In Progress", "toString": "Blocked"}]}
+      ]}
+    },
+    {
+      "id": "910015", "key": "DEMO-15",
+      "fields": {
+        "summary": "Checklist de biometria (demonstracao 15)",
+        "project": {"key": "TG", "name": "TG-Basic"}, "issuetype": {"name": "Checklist"},
+        "status": {"name": "In Review"},
+        "assignee": {"name": "dev.alfa2"}, "reporter": {"name": "pl.alfa"},
+        "created": "2026-10-06T09:00:00.000-0400", "updated": "2026-10-09T09:00:00.000-0400",
+        "duedate": "2026-11-06", "labels": [], "customfield_12416": {"value": "Android 17.0 (OneUI_9.0)"}
+      },
+      "changelog": {"histories": [
+        {"id": "1", "author": {"name": "dev.alfa2"}, "created": "2026-10-07T09:00:00.000-0400", "items": [{"field": "status", "fromString": "To Do", "toString": "In Progress"}]},
+        {"id": "2", "author": {"name": "dev.alfa2"}, "created": "2026-10-08T09:00:00.000-0400", "items": [{"field": "status", "fromString": "In Progress", "toString": "In Review"}]}
+      ]}
+    },
+    {
+      "id": "910016", "key": "DEMO-16",
+      "fields": {
+        "summary": "Checklist de acessibilidade sem responsavel (demonstracao 16)",
+        "project": {"key": "TG", "name": "TG-Basic"}, "issuetype": {"name": "Checklist"},
+        "status": {"name": "To Do"},
+        "reporter": {"name": "pl.alfa"},
+        "created": "2026-09-10T09:00:00.000-0400", "updated": "2026-09-10T09:00:00.000-0400",
+        "labels": []
+      },
+      "changelog": {"histories": []}
+    },
+    {
+      "id": "910017", "key": "DEMO-17",
+      "fields": {
+        "summary": "Checklist de memoria de pessoa fora do diretorio (demonstracao 17)",
+        "project": {"key": "TG", "name": "TG-Basic"}, "issuetype": {"name": "Checklist"},
+        "status": {"name": "In Progress"},
+        "assignee": {"name": "fora.do.diretorio"}, "reporter": {"name": "pl.beta"},
+        "created": "2026-10-02T09:00:00.000-0400", "updated": "2026-10-27T09:00:00.000-0400",
+        "duedate": "2026-11-10", "labels": [], "customfield_12416": {"value": "Android 16.0 (16)"}
+      },
+      "changelog": {"histories": [
+        {"id": "1", "author": {"name": "fora.do.diretorio"}, "created": "2026-10-05T09:00:00.000-0400", "items": [{"field": "status", "fromString": "To Do", "toString": "In Progress"}]}
+      ]}
+    },
+    {
+      "id": "910018", "key": "DEMO-18",
+      "fields": {
+        "summary": "Checklist de dados moveis recem-iniciado (demonstracao 18)",
+        "project": {"key": "TG", "name": "TG-Basic"}, "issuetype": {"name": "Checklist"},
+        "status": {"name": "In Progress"},
+        "assignee": {"name": "dev.alfa2"}, "reporter": {"name": "pl.alfa"},
+        "created": "2026-10-27T09:00:00.000-0400", "updated": "2026-10-28T09:00:00.000-0400",
+        "duedate": "2026-11-12", "labels": [], "customfield_12416": {"value": "Android 17.0 (OneUI_9.0)"}
+      },
+      "changelog": {"histories": [
+        {"id": "1", "author": {"name": "dev.alfa2"}, "created": "2026-10-28T09:00:00.000-0400", "items": [{"field": "status", "fromString": "To Do", "toString": "In Progress"}]}
+      ]}
+    },
+    {
+      "id": "910019", "key": "DEMO-19",
+      "fields": {
+        "summary": "Checklist cancelado por decisao do produto (demonstracao 19)",
+        "project": {"key": "TG", "name": "TG-Basic"}, "issuetype": {"name": "Checklist"},
+        "status": {"name": "Done"}, "resolution": {"name": "Won't Do"},
+        "assignee": {"name": "dev.alfa1"}, "reporter": {"name": "pl.alfa"},
+        "created": "2026-10-01T09:00:00.000-0400", "updated": "2026-10-07T10:00:00.000-0400", "resolutiondate": "2026-10-07T10:00:00.000-0400",
+        "duedate": "2026-10-09", "labels": [], "customfield_12416": {"value": "Android 16.0 (16)"}
+      },
+      "changelog": {"histories": [
+        {"id": "1", "author": {"name": "dev.alfa1"}, "created": "2026-10-02T09:00:00.000-0400", "items": [{"field": "status", "fromString": "To Do", "toString": "In Progress"}]},
+        {"id": "2", "author": {"name": "dev.alfa1"}, "created": "2026-10-07T10:00:00.000-0400", "items": [{"field": "status", "fromString": "In Progress", "toString": "Done"}, {"field": "resolution", "fromString": null, "toString": "Won't Do"}]}
+      ]}
+    },
+    {
+      "id": "910020", "key": "DEMO-20",
+      "fields": {
+        "summary": "Checklist fechado sem resolucao (demonstracao 20)",
+        "project": {"key": "TG", "name": "TG-Basic"}, "issuetype": {"name": "Checklist"},
+        "status": {"name": "Closed"},
+        "assignee": {"name": "dev.alfa2"}, "reporter": {"name": "pl.alfa"},
+        "created": "2026-10-02T09:00:00.000-0400", "updated": "2026-10-09T10:00:00.000-0400", "resolutiondate": "2026-10-09T10:00:00.000-0400",
+        "duedate": "2026-10-12", "labels": [], "customfield_12416": {"value": "Android 17.0 (OneUI_9.0)"}
+      },
+      "changelog": {"histories": [
+        {"id": "1", "author": {"name": "dev.alfa2"}, "created": "2026-10-05T09:00:00.000-0400", "items": [{"field": "status", "fromString": "To Do", "toString": "In Progress"}]},
+        {"id": "2", "author": {"name": "dev.alfa2"}, "created": "2026-10-09T10:00:00.000-0400", "items": [{"field": "status", "fromString": "In Progress", "toString": "Closed"}]}
+      ]}
+    },
+    {
+      "id": "910021", "key": "DEMO-21",
+      "fields": {
+        "summary": "Epico de estabilidade do release (demonstracao 21)",
+        "project": {"key": "TG", "name": "TG-Basic"}, "issuetype": {"name": "Epic"},
+        "status": {"name": "In Progress"},
+        "assignee": {"name": "lider.alfa"}, "reporter": {"name": "pl.alfa"},
+        "created": "2026-09-01T09:00:00.000-0400", "updated": "2026-10-20T09:00:00.000-0400",
+        "labels": []
+      },
+      "changelog": {"histories": [
+        {"id": "1", "author": {"name": "lider.alfa"}, "created": "2026-09-02T09:00:00.000-0400", "items": [{"field": "status", "fromString": "To Do", "toString": "In Progress"}]}
+      ]}
+    },
+    {
+      "id": "910022", "key": "DEMO-22",
+      "fields": {
+        "summary": "Checklist cancelado (demonstracao 22)",
+        "project": {"key": "TG", "name": "TG-Basic"}, "issuetype": {"name": "Checklist"},
+        "status": {"name": "Cancelled"}, "resolution": {"name": "Won't Do"},
+        "assignee": {"name": "dev.alfa1"}, "reporter": {"name": "pl.alfa"},
+        "created": "2026-10-10T09:00:00.000-0400", "updated": "2026-10-15T09:00:00.000-0400", "resolutiondate": "2026-10-15T09:00:00.000-0400",
+        "labels": []
+      },
+      "changelog": {"histories": [
+        {"id": "1", "author": {"name": "dev.alfa1"}, "created": "2026-10-12T09:00:00.000-0400", "items": [{"field": "status", "fromString": "To Do", "toString": "In Progress"}]},
+        {"id": "2", "author": {"name": "pl.alfa"}, "created": "2026-10-15T09:00:00.000-0400", "items": [{"field": "status", "fromString": "In Progress", "toString": "Cancelled"}, {"field": "resolution", "fromString": null, "toString": "Won't Do"}]}
+      ]}
+    },
+    {
+      "id": "910023", "key": "DEMO-23",
+      "fields": {
+        "summary": "Task com troca de responsavel por usuario comum (demonstracao 23)",
+        "project": {"key": "TG", "name": "TG-Basic"}, "issuetype": {"name": "Task"},
+        "status": {"name": "In Progress"},
+        "assignee": {"name": "dev.alfa2"}, "reporter": {"name": "pl.alfa"},
+        "created": "2026-10-05T09:00:00.000-0400", "updated": "2026-10-27T09:00:00.000-0400",
+        "duedate": "2026-10-23", "labels": []
+      },
+      "changelog": {"histories": [
+        {"id": "1", "author": {"name": "dev.alfa1"}, "created": "2026-10-06T09:00:00.000-0400", "items": [{"field": "status", "fromString": "To Do", "toString": "In Progress"}]},
+        {"id": "2", "author": {"name": "dev.alfa2"}, "created": "2026-10-13T11:00:00.000-0400", "items": [{"field": "assignee", "from": "dev.alfa1", "to": "dev.alfa2"}]}
+      ]}
+    },
+    {
+      "id": "910024", "key": "DEMO-24",
+      "fields": {
+        "summary": "Task com troca de responsavel pelo Squad Leader (demonstracao 24)",
+        "project": {"key": "TG", "name": "TG-Basic"}, "issuetype": {"name": "Task"},
+        "status": {"name": "In Progress"},
+        "assignee": {"name": "dev.mudou"}, "reporter": {"name": "pl.beta"},
+        "created": "2026-10-09T09:00:00.000-0400", "updated": "2026-10-27T09:00:00.000-0400",
+        "duedate": "2026-10-28", "labels": []
+      },
+      "changelog": {"histories": [
+        {"id": "1", "author": {"name": "dev.beta1"}, "created": "2026-10-12T09:00:00.000-0400", "items": [{"field": "status", "fromString": "To Do", "toString": "In Progress"}]},
+        {"id": "2", "author": {"name": "lider.beta"}, "created": "2026-10-14T10:00:00.000-0400", "items": [{"field": "assignee", "from": "dev.beta1", "to": "dev.mudou"}]}
+      ]}
+    },
+    {
+      "id": "910025", "key": "DEMO-25",
+      "fields": {
+        "summary": "Task passada de mao em mao perto do vencimento (demonstracao 25)",
+        "project": {"key": "TG", "name": "TG-Basic"}, "issuetype": {"name": "Task"},
+        "status": {"name": "In Progress"},
+        "assignee": {"name": "dev.beta1"}, "reporter": {"name": "pl.alfa"},
+        "created": "2026-10-05T09:00:00.000-0400", "updated": "2026-10-21T08:00:00.000-0400",
+        "duedate": "2026-10-21", "labels": []
+      },
+      "changelog": {"histories": [
+        {"id": "1", "author": {"name": "dev.alfa1"}, "created": "2026-10-06T09:00:00.000-0400", "items": [{"field": "status", "fromString": "To Do", "toString": "In Progress"}]},
+        {"id": "2", "author": {"name": "dev.alfa1"}, "created": "2026-10-19T10:00:00.000-0400", "items": [{"field": "assignee", "from": "dev.alfa1", "to": "dev.alfa2"}]},
+        {"id": "3", "author": {"name": "dev.alfa2"}, "created": "2026-10-20T09:00:00.000-0400", "items": [{"field": "assignee", "from": "dev.alfa2", "to": "lider.alfa"}]},
+        {"id": "4", "author": {"name": "lider.alfa"}, "created": "2026-10-21T08:00:00.000-0400", "items": [{"field": "assignee", "from": "lider.alfa", "to": "dev.beta1"}]}
+      ]}
+    },
+    {
+      "id": "910026", "key": "DEMO-26",
+      "fields": {
+        "summary": "Task que voltou a quem ja tinha tido (demonstracao 26)",
+        "project": {"key": "TG", "name": "TG-Basic"}, "issuetype": {"name": "Task"},
+        "status": {"name": "In Progress"},
+        "assignee": {"name": "dev.alfa2"}, "reporter": {"name": "pl.alfa"},
+        "created": "2026-10-02T09:00:00.000-0400", "updated": "2026-10-27T09:00:00.000-0400",
+        "duedate": "2026-11-10", "labels": []
+      },
+      "changelog": {"histories": [
+        {"id": "1", "author": {"name": "dev.alfa2"}, "created": "2026-10-03T09:00:00.000-0400", "items": [{"field": "status", "fromString": "To Do", "toString": "In Progress"}]},
+        {"id": "2", "author": {"name": "lider.alfa"}, "created": "2026-10-08T10:00:00.000-0400", "items": [{"field": "assignee", "from": "dev.alfa2", "to": "dev.alfa1"}]},
+        {"id": "3", "author": {"name": "lider.alfa"}, "created": "2026-10-15T10:00:00.000-0400", "items": [{"field": "assignee", "from": "dev.alfa1", "to": "dev.alfa2"}]}
+      ]}
+    },
+    {
+      "id": "910027", "key": "DEMO-27",
+      "fields": {
+        "summary": "Task com vencimento adiado pelo proprio responsavel (demonstracao 27)",
+        "project": {"key": "TG", "name": "TG-Basic"}, "issuetype": {"name": "Task"},
+        "status": {"name": "In Progress"},
+        "assignee": {"name": "dev.beta1"}, "reporter": {"name": "pl.beta"},
+        "created": "2026-10-05T09:00:00.000-0400", "updated": "2026-10-27T09:00:00.000-0400",
+        "duedate": "2026-10-21", "labels": []
+      },
+      "changelog": {"histories": [
+        {"id": "1", "author": {"name": "dev.beta1"}, "created": "2026-10-06T09:00:00.000-0400", "items": [{"field": "status", "fromString": "To Do", "toString": "In Progress"}]},
+        {"id": "2", "author": {"name": "dev.beta1"}, "created": "2026-10-13T10:00:00.000-0400", "items": [{"field": "duedate", "from": "2026-10-14", "fromString": "2026-10-14 00:00:00.0", "to": "2026-10-21", "toString": "2026-10-21 00:00:00.0"}]}
+      ]}
+    },
+    {
+      "id": "910028", "key": "DEMO-28",
+      "fields": {
+        "summary": "Task com vencimento alterado pelo Reporter (demonstracao 28)",
+        "project": {"key": "TG", "name": "TG-Basic"}, "issuetype": {"name": "Task"},
+        "status": {"name": "In Progress"},
+        "assignee": {"name": "dev.alfa1"}, "reporter": {"name": "pl.alfa"},
+        "created": "2026-10-06T09:00:00.000-0400", "updated": "2026-10-27T09:00:00.000-0400",
+        "duedate": "2026-10-27", "labels": []
+      },
+      "changelog": {"histories": [
+        {"id": "1", "author": {"name": "dev.alfa1"}, "created": "2026-10-07T09:00:00.000-0400", "items": [{"field": "status", "fromString": "To Do", "toString": "In Progress"}]},
+        {"id": "2", "author": {"name": "pl.alfa"}, "created": "2026-10-19T09:00:00.000-0400", "items": [{"field": "duedate", "from": "2026-10-20", "fromString": "2026-10-20 00:00:00.0", "to": "2026-10-27", "toString": "2026-10-27 00:00:00.0"}]}
+      ]}
+    },
+    {
+      "id": "910029", "key": "DEMO-29",
+      "fields": {
+        "summary": "Task com vencimento removido (demonstracao 29)",
+        "project": {"key": "TG", "name": "TG-Basic"}, "issuetype": {"name": "Task"},
+        "status": {"name": "In Progress"},
+        "assignee": {"name": "dev.alfa2"}, "reporter": {"name": "pl.alfa"},
+        "created": "2026-10-07T09:00:00.000-0400", "updated": "2026-10-21T09:00:00.000-0400",
+        "labels": []
+      },
+      "changelog": {"histories": [
+        {"id": "1", "author": {"name": "dev.alfa2"}, "created": "2026-10-08T09:00:00.000-0400", "items": [{"field": "status", "fromString": "To Do", "toString": "In Progress"}]},
+        {"id": "2", "author": {"name": "dev.alfa2"}, "created": "2026-10-21T09:00:00.000-0400", "items": [{"field": "duedate", "from": "2026-10-22", "fromString": "2026-10-22 00:00:00.0", "to": null, "toString": null}]}
+      ]}
+    },
+    {
+      "id": "910030", "key": "DEMO-30",
+      "fields": {
+        "summary": "Task com primeira definicao de vencimento (demonstracao 30)",
+        "project": {"key": "TG", "name": "TG-Basic"}, "issuetype": {"name": "Task"},
+        "status": {"name": "To Do"},
+        "assignee": {"name": "dev.beta1"}, "reporter": {"name": "pl.beta"},
+        "created": "2026-10-12T09:00:00.000-0400", "updated": "2026-10-22T10:00:00.000-0400",
+        "duedate": "2026-11-03", "labels": []
+      },
+      "changelog": {"histories": [
+        {"id": "1", "author": {"name": "dev.beta1"}, "created": "2026-10-22T10:00:00.000-0400", "items": [{"field": "duedate", "from": null, "fromString": null, "to": "2026-11-03", "toString": "2026-11-03 00:00:00.0"}]}
+      ]}
+    },
+    {
+      "id": "910031", "key": "DEMO-31",
+      "fields": {
+        "summary": "Task fechada com label de atraso colocada por outra pessoa (demonstracao 31)",
+        "project": {"key": "TG", "name": "TG-Basic"}, "issuetype": {"name": "Task"},
+        "status": {"name": "Done"}, "resolution": {"name": "Done"},
+        "assignee": {"name": "dev.alfa1"}, "reporter": {"name": "pl.alfa"},
+        "created": "2026-10-01T09:00:00.000-0400", "updated": "2026-10-12T14:00:00.000-0400", "resolutiondate": "2026-10-09T10:00:00.000-0400",
+        "duedate": "2026-10-08", "labels": ["LATE_SENT"]
+      },
+      "changelog": {"histories": [
+        {"id": "1", "author": {"name": "dev.alfa1"}, "created": "2026-10-02T09:00:00.000-0400", "items": [{"field": "status", "fromString": "To Do", "toString": "In Progress"}]},
+        {"id": "2", "author": {"name": "dev.alfa1"}, "created": "2026-10-09T10:00:00.000-0400", "items": [{"field": "status", "fromString": "In Progress", "toString": "Done"}, {"field": "resolution", "fromString": null, "toString": "Done"}]},
+        {"id": "3", "author": {"name": "dev.alfa2"}, "created": "2026-10-12T14:00:00.000-0400", "items": [{"field": "labels", "fromString": null, "toString": "LATE_SENT"}]}
+      ]}
+    },
+    {
+      "id": "910032", "key": "DEMO-32",
+      "fields": {
+        "summary": "Task fechada com label de atraso colocada pelo responsavel (demonstracao 32)",
+        "project": {"key": "TG", "name": "TG-Basic"}, "issuetype": {"name": "Task"},
+        "status": {"name": "Done"}, "resolution": {"name": "Done"},
+        "assignee": {"name": "dev.beta1"}, "reporter": {"name": "pl.beta"},
+        "created": "2026-10-02T09:00:00.000-0400", "updated": "2026-10-16T09:00:00.000-0400", "resolutiondate": "2026-10-14T10:00:00.000-0400",
+        "duedate": "2026-10-13", "labels": ["LATE_REVIEW"]
+      },
+      "changelog": {"histories": [
+        {"id": "1", "author": {"name": "dev.beta1"}, "created": "2026-10-05T09:00:00.000-0400", "items": [{"field": "status", "fromString": "To Do", "toString": "In Progress"}]},
+        {"id": "2", "author": {"name": "dev.beta1"}, "created": "2026-10-14T10:00:00.000-0400", "items": [{"field": "status", "fromString": "In Progress", "toString": "Done"}, {"field": "resolution", "fromString": null, "toString": "Done"}]},
+        {"id": "3", "author": {"name": "dev.beta1"}, "created": "2026-10-16T09:00:00.000-0400", "items": [{"field": "labels", "fromString": null, "toString": "LATE_REVIEW"}]}
+      ]}
+    },
+    {
+      "id": "910033", "key": "DEMO-33",
+      "fields": {
+        "summary": "Task aberta com label de atraso depois do vencimento (demonstracao 33)",
+        "project": {"key": "TG", "name": "TG-Basic"}, "issuetype": {"name": "Task"},
+        "status": {"name": "In Progress"},
+        "assignee": {"name": "dev.alfa2"}, "reporter": {"name": "pl.alfa"},
+        "created": "2026-10-05T09:00:00.000-0400", "updated": "2026-10-19T10:00:00.000-0400",
+        "duedate": "2026-10-15", "labels": ["LATE_SENT"]
+      },
+      "changelog": {"histories": [
+        {"id": "1", "author": {"name": "dev.alfa2"}, "created": "2026-10-06T09:00:00.000-0400", "items": [{"field": "status", "fromString": "To Do", "toString": "In Progress"}]},
+        {"id": "2", "author": {"name": "dev.alfa2"}, "created": "2026-10-19T10:00:00.000-0400", "items": [{"field": "labels", "fromString": null, "toString": "LATE_SENT"}]}
+      ]}
+    },
+    {
+      "id": "910034", "key": "DEMO-34",
+      "fields": {
+        "summary": "Task com LATE_SENT colocada com antecedencia (demonstracao 34)",
+        "project": {"key": "TG", "name": "TG-Basic"}, "issuetype": {"name": "Task"},
+        "status": {"name": "In Progress"},
+        "assignee": {"name": "dev.alfa1"}, "reporter": {"name": "pl.alfa"},
+        "created": "2026-10-01T09:00:00.000-0400", "updated": "2026-10-27T09:00:00.000-0400",
+        "duedate": "2026-10-20", "labels": ["ONHOLDBY-PL", "LATE_SENT"]
+      },
+      "changelog": {"histories": [
+        {"id": "1", "author": {"name": "dev.alfa1"}, "created": "2026-10-02T09:00:00.000-0400", "items": [{"field": "status", "fromString": "To Do", "toString": "In Progress"}]},
+        {"id": "2", "author": {"name": "dev.alfa1"}, "created": "2026-10-05T09:00:00.000-0400", "items": [{"field": "labels", "fromString": null, "toString": "ONHOLDBY-PL LATE_SENT"}]}
+      ]}
+    },
+    {
+      "id": "910035", "key": "DEMO-35",
+      "fields": {
+        "summary": "Task bloqueada pela Review de rede (demonstracao 35)",
+        "project": {"key": "TG", "name": "TG-Basic"}, "issuetype": {"name": "Task"},
+        "status": {"name": "Done"}, "resolution": {"name": "Done"},
+        "assignee": {"name": "lider.beta"}, "reporter": {"name": "pl.beta"},
+        "created": "2026-10-05T09:00:00.000-0400", "updated": "2026-10-19T16:00:00.000-0400", "resolutiondate": "2026-10-19T16:00:00.000-0400",
+        "duedate": "2026-10-16", "labels": [],
+        "issuelinks": [
+          {"id": "930001", "type": {"name": "Blocks", "inward": "is blocked by", "outward": "blocks"}, "inwardIssue": {"id": "910007", "key": "DEMO-7"}}
+        ]
+      },
+      "changelog": {"histories": [
+        {"id": "1", "author": {"name": "lider.beta"}, "created": "2026-10-06T09:00:00.000-0400", "items": [{"field": "status", "fromString": "To Do", "toString": "In Progress"}]},
+        {"id": "2", "author": {"name": "lider.beta"}, "created": "2026-10-19T16:00:00.000-0400", "items": [{"field": "status", "fromString": "In Progress", "toString": "Done"}, {"field": "resolution", "fromString": null, "toString": "Done"}]}
+      ]}
+    },
+    {
+      "id": "910036", "key": "DEMO-36",
+      "fields": {
+        "summary": "Task que bloqueia a Review de camera (demonstracao 36)",
+        "project": {"key": "TG", "name": "TG-Basic"}, "issuetype": {"name": "Task"},
+        "status": {"name": "Done"}, "resolution": {"name": "Done"},
+        "assignee": {"name": "dev.alfa1"}, "reporter": {"name": "pl.alfa"},
+        "created": "2026-10-14T09:00:00.000-0400", "updated": "2026-10-27T15:00:00.000-0400", "resolutiondate": "2026-10-27T15:00:00.000-0400",
+        "duedate": "2026-11-02", "labels": [],
+        "issuelinks": [
+          {"id": "930002", "type": {"name": "Blocks", "inward": "is blocked by", "outward": "blocks"}, "outwardIssue": {"id": "910012", "key": "DEMO-12"}}
+        ]
+      },
+      "changelog": {"histories": [
+        {"id": "1", "author": {"name": "dev.alfa1"}, "created": "2026-10-15T09:00:00.000-0400", "items": [{"field": "status", "fromString": "To Do", "toString": "In Progress"}]},
+        {"id": "2", "author": {"name": "dev.alfa1"}, "created": "2026-10-27T15:00:00.000-0400", "items": [{"field": "status", "fromString": "In Progress", "toString": "Done"}, {"field": "resolution", "fromString": null, "toString": "Done"}]}
+      ]}
+    },
+    {
+      "id": "910037", "key": "DEMO-37",
+      "fields": {
+        "summary": "Task com chave interna de usuario resolvida (demonstracao 37)",
+        "project": {"key": "TG", "name": "TG-Basic"}, "issuetype": {"name": "Task"},
+        "status": {"name": "In Progress"},
+        "assignee": {"name": "dev.alfa2", "key": "JIRAUSER10501"}, "reporter": {"name": "pl.alfa"},
+        "created": "2026-10-08T09:00:00.000-0400", "updated": "2026-10-27T09:00:00.000-0400",
+        "duedate": "2026-11-05", "labels": []
+      },
+      "changelog": {"histories": [
+        {"id": "1", "author": {"name": "dev.alfa1", "key": "JIRAUSER10500"}, "created": "2026-10-09T09:00:00.000-0400", "items": [{"field": "status", "fromString": "To Do", "toString": "In Progress"}]},
+        {"id": "2", "author": {"name": "dev.alfa1", "key": "JIRAUSER10500"}, "created": "2026-10-14T10:00:00.000-0400", "items": [{"field": "assignee", "from": "JIRAUSER10500", "to": "JIRAUSER10501"}]}
+      ]}
+    },
+    {
+      "id": "910038", "key": "DEMO-38",
+      "fields": {
+        "summary": "Task com chave interna de usuario sem resolucao (demonstracao 38)",
+        "project": {"key": "TG", "name": "TG-Basic"}, "issuetype": {"name": "Task"},
+        "status": {"name": "In Progress"},
+        "assignee": {"name": "dev.alfa1"}, "reporter": {"name": "pl.alfa"},
+        "created": "2026-10-09T09:00:00.000-0400", "updated": "2026-10-27T09:00:00.000-0400",
+        "duedate": "2026-11-08", "labels": []
+      },
+      "changelog": {"histories": [
+        {"id": "1", "author": {"name": "dev.alfa1"}, "created": "2026-10-10T09:00:00.000-0400", "items": [{"field": "status", "fromString": "To Do", "toString": "In Progress"}]},
+        {"id": "2", "author": {"name": "lider.alfa"}, "created": "2026-10-15T10:00:00.000-0400", "items": [{"field": "assignee", "from": "dev.alfa1", "to": "JIRAUSER99999"}]}
+      ]}
+    }
+  ]
+}

@@ -34,6 +34,8 @@ data class JiraInstanceSettings(
 data class Settings(
     val jiraLiveEnabled: Boolean = false,
     val dashboardDevMode: Boolean = true,
+    /** `DASHBOARD_DEMO_DATA`: carrega issues fictícias na subida. Só com modo dev ligado e Jira real desligado. */
+    val dashboardDemoData: Boolean = false,
     val retentionMonths: Int = 24,
     val zone: ZoneId = ZoneId.of("America/Manaus"),
     val configDir: Path = Path.of("config"),
@@ -53,6 +55,7 @@ data class Settings(
     /** Sem segredos: senha vira `***` e `usuario:senha@` e `password=` da URL são mascarados. */
     override fun toString(): String =
         "Settings(jiraLiveEnabled=$jiraLiveEnabled, dashboardDevMode=$dashboardDevMode, " +
+            "dashboardDemoData=$dashboardDemoData, " +
             "retentionMonths=$retentionMonths, zone=$zone, configDir=$configDir, " +
             "databaseUrl=${mascararUrl(databaseUrl)}, staticDir=$staticDir, databaseUser=$databaseUser, " +
             "databasePassword=***, databasePoolSize=$databasePoolSize, jiraInstances=$jiraInstances)"
@@ -64,9 +67,18 @@ data class Settings(
          */
         fun fromEnv(env: Map<String, String> = System.getenv()): Settings {
             val padrao = Settings()
+            val jiraLiveEnabled = booleano(env, "JIRA_LIVE_ENABLED", padrao.jiraLiveEnabled)
+            val dashboardDevMode = booleano(env, "DASHBOARD_DEV_MODE", padrao.dashboardDevMode)
+            val dashboardDemoData = booleano(env, "DASHBOARD_DEMO_DATA", padrao.dashboardDemoData)
+            // Fail-closed: dados fictícios nunca convivem com produção nem com o Jira real ligado.
+            if (dashboardDemoData) {
+                require(dashboardDevMode) { "DASHBOARD_DEMO_DATA exige DASHBOARD_DEV_MODE=true" }
+                require(!jiraLiveEnabled) { "DASHBOARD_DEMO_DATA exige JIRA_LIVE_ENABLED=false" }
+            }
             return Settings(
-                jiraLiveEnabled = booleano(env, "JIRA_LIVE_ENABLED", padrao.jiraLiveEnabled),
-                dashboardDevMode = booleano(env, "DASHBOARD_DEV_MODE", padrao.dashboardDevMode),
+                jiraLiveEnabled = jiraLiveEnabled,
+                dashboardDevMode = dashboardDevMode,
+                dashboardDemoData = dashboardDemoData,
                 retentionMonths = texto(env, "RETENTION_MONTHS")?.let {
                     it.toIntOrNull()?.takeIf { n -> n > 0 }
                         ?: throw IllegalArgumentException("RETENTION_MONTHS inválido: '$it' (esperado inteiro positivo)")

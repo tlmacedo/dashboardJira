@@ -174,7 +174,26 @@ Reduzir `RETENTION_MONTHS` apaga mais no próximo ciclo e inclui o `access_log`:
 
 ## Dados de demonstração
 
-Para ver a tela Sincronização sem tocar no Jira, com a flag `false`, use os dados de demonstração: ver Tarefa 10 (ainda não implementada; este runbook não define comandos para ela).
+Para ver o painel e a tela Sincronização sem tocar no Jira, com a flag `false`, use os dados de demonstração (100% fictícios; seção "Ver o painel hoje em 3 comandos" de `app/README.md`).
+
+macOS ou Linux (a partir da raiz do repositório):
+
+```sh
+cd app
+POSTGRES_PASSWORD=<valor descartável> DASHBOARD_DEMO_DATA=true docker compose up --build -d
+open http://localhost:8080        # Linux: xdg-open
+```
+
+Windows (PowerShell, a partir da raiz do repositório):
+
+```powershell
+cd app
+$env:POSTGRES_PASSWORD = "<valor descartável>"; $env:DASHBOARD_DEMO_DATA = "true"
+docker compose up --build -d
+Start-Process http://localhost:8080
+```
+
+**Pré-requisito para ligar a flag do Jira: banco sem dados de demonstração.** O painel recusa subir com `JIRA_LIVE_ENABLED=true` quando o banco ainda tem issues de demonstração (`DASHBOARD_DEMO_DATA` também precisa estar `false`, ou a subida cai). Nada é apagado automaticamente: antes de ligar a flag, use um volume novo (`docker compose down -v`) e suba de novo **sem** `DASHBOARD_DEMO_DATA`. Do mesmo jeito, um banco com issues reais recusa a carga de demonstração.
 
 ## Depois do primeiro ciclo
 

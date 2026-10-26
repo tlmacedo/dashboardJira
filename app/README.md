@@ -14,12 +14,28 @@ docker compose up --build -d
 - `POSTGRES_PASSWORD` é obrigatória e não tem valor padrão: sem ela o compose se recusa a iniciar.
 - Para derrubar e apagar os dados locais: `docker compose down -v`.
 
+## Ver o painel hoje em 3 comandos
+
+A partir da raiz do repositório:
+
+```sh
+cd app
+POSTGRES_PASSWORD=<valor descartável> DASHBOARD_DEMO_DATA=true docker compose up --build -d
+open http://127.0.0.1:8080        # Linux: xdg-open; ou abra o endereço no navegador
+```
+
+- Os dados são **100% fictícios** (issues `DEMO-n` e `DEMOCAT-n`, pessoas dos modelos `.exemplo`) e a faixa vermelha avisa. As datas se ajustam em semanas inteiras até hoje, então a tela Tempo em status mostra números úteis em qualquer dia. Nenhuma requisição ao Jira é feita.
+- O PostgreSQL fixa a senha na **primeira** criação do volume: reuse o mesmo valor nas subidas seguintes ou recomece com `docker compose down -v`.
+- `docker compose down -v` também é obrigatório **antes de ligar a flag do Jira**: o painel recusa subir com a flag ligada e dados de demonstração no banco. Um banco que já tem issues reais também recusa a demonstração.
+- Se `JIRA_LIVE_ENABLED` estiver ligada no terminal (ou no ambiente do Claude Code), o compose a repassa e a subida com demonstração **falha de propósito**: desligue-a nesse terminal antes.
+
 ## Flags
 
 | Variável | Padrão | Efeito |
 |---|---|---|
 | `JIRA_LIVE_ENABLED` | `false` | Única chave de liga e desliga da sincronização. Só o usuário liga; `false` proíbe qualquer acesso ao Jira. |
 | `DASHBOARD_DEV_MODE` | `true` | Modo desenvolvimento: **sem login**, todos os dados, faixa vermelha. |
+| `DASHBOARD_DEMO_DATA` | `false` | Carrega issues **fictícias** na subida, sem tocar no Jira. Só com `DASHBOARD_DEV_MODE=true` e `JIRA_LIVE_ENABLED=false`; qualquer outra combinação derruba a subida. |
 | `PAINEL_STATIC_DIR` | `frontend/dist` (`/app/static` na imagem) | Pasta do build do frontend servida em `/`. |
 
 ## Sincronização periódica (`SYNC_*`)

@@ -29,6 +29,7 @@ j 'env JIRA_LIVE_ENABLED=true ./gradlew test' 2
 j 'JIRA_LIVE_ENABLED_X=1 ./gradlew test' 2
 j 'JIRA_LIVE_ENABLED="false" ./gradlew test' 0
 j 'SYNC_INTERVALO_MIN=10 ./gradlew test' 0
+j 'DASHBOARD_DEMO_DATA=true docker compose up --build -d' 0
 j 'python -m jiradash serve' 2
 j 'ls -la' 0
 j 'curl -s https://example.com/x.png' 0
