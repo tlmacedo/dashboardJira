@@ -93,6 +93,12 @@ Copiados do ledger local; nenhum é Critical e nenhum bloqueia a primeira conex�
 **Hooks (T11 e onda final)**
 - Diferença de checagem de conteúdo: o hook do Claude olha só o `new_string`; o do Cline olha o `diff` inteiro, inclusive o bloco SEARCH (registrar em `hooks.md`; o impacto sumiu com a frase nova do checklist).
 
+**Re-revisão das correções I1 e I2 (aprovada, só Minor)**
+- Custo do fallback da reconciliação: até 1 + 100 requisições por lote com chave apagada; com muitas apagadas pode esgotar `SYNC_MAX_REQUISICOES` todo dia, sem remover nem rebuscar (a confirmação vem antes da rebusca). Reduzir com bisseção do lote.
+- Um 400 numa chave sozinha também cobre "sem permissão" e um eventual 400 sistêmico da cláusula `key`; o pior caso fica limitado a 50% da base pela guarda.
+- Falta teste de lote com 5xx/401/403/429 (a mutação "tratar qualquer erro do lote como 400" não seria pega).
+- Limite que se repete sem progresso (ex.: `SYNC_MAX_REQUISICOES` menor que o custo da primeira issue) nunca suspende nem escala: o gerente só vê linhas "Incompleta (limite)" entre as 10 últimas execuções. Sugestão: aviso/banner quando houver N execuções seguidas de limite com 0 issues.
+
 ## As 8 coisas que o ClineSR precisa saber (atrito dos hooks)
 
 1. Todo `*compose*.y*ml` é só do usuário, inclusive `app/docker-compose.yml` e o futuro `deploy/vm/compose.prod.yml`. Afeta os Planos 8, 9, 12 e 13 (notas já acrescentadas nas tarefas): entregue o trecho pronto e pergunte (pergunta com opções). Subir, derrubar e `config` do compose continuam liberados. `git add` citando o compose é barrado: use `git add` de uma pasta e `git commit -F arquivo`.
