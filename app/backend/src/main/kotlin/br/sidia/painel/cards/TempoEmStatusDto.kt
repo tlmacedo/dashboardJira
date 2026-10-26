@@ -40,6 +40,8 @@ data class AvisoDto(
         const val STATUS_SEM_MAPEAMENTO = "STATUS_SEM_MAPEAMENTO"
         /** Status concluído sem `resolution`, ou `resolution` sem status concluído (spec 4.2: Qualidade dos dados). */
         const val CONCLUSAO_DIVERGENTE = "CONCLUSAO_DIVERGENTE"
+        /** Status concluído e `resolution` preenchida, mas sem data de resolução: fica fora dos números (informativo). */
+        const val CONCLUIDA_SEM_DATA = "CONCLUIDA_SEM_DATA"
         const val CALCULO_INDISPONIVEL = "CALCULO_INDISPONIVEL"
         const val DATAS_INCONSISTENTES = "DATAS_INCONSISTENTES"
         const val OS_INDISPONIVEL = "OS_INDISPONIVEL"

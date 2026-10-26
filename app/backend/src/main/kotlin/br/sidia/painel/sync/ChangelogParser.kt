@@ -87,8 +87,8 @@ object ChangelogParser {
                 val ehResponsavel = campo.equals("assignee", ignoreCase = true)
                 val guardaValor = CAMPOS_COM_VALOR.any { campo.equals(it, ignoreCase = true) }
                 // Campos fora da lista só registram que houve mudança: nunca o texto (privacidade).
-                val de = if (ehResponsavel) usuario(item, "from", "fromString", chaves) else if (guardaValor) item.texto("fromString") else null
-                val para = if (ehResponsavel) usuario(item, "to", "toString", chaves) else if (guardaValor) item.texto("toString") else null
+                val de = if (ehResponsavel) usuario(item, "from", chaves) else if (guardaValor) item.texto("fromString") else null
+                val para = if (ehResponsavel) usuario(item, "to", chaves) else if (guardaValor) item.texto("toString") else null
                 eventos += ChangeEventRecord("$key:$historicoId:$i", key, campo, de, para, quando, autor)
             }
         }
@@ -96,14 +96,13 @@ object ChangelogParser {
     }
 
     /**
-     * Responsável: usa o username (`from`/`to`) quando presente; senão o texto (nome de exibição).
-     * Chave interna (`JIRAUSER*`) é traduzida por [chaves]; sem tradução fica o valor original, sem normalizar
-     * (maiúsculo, para nunca casar com um username).
+     * Responsável: usa o username (`from`/`to`); sem ele o resultado é nulo. NUNCA recorre a `fromString`/`toString`
+     * (nome de exibição, dado pessoal). Chave interna (`JIRAUSER*`) é traduzida por [chaves]; sem tradução fica
+     * sempre em maiúsculas, para nunca casar com um username.
      */
-    private fun usuario(item: JsonObject, chave: String, chaveTexto: String, chaves: Map<String, String>): String? {
-        val bruto = item.texto(chave)?.takeIf { it.isNotBlank() } ?: item.texto(chaveTexto)?.takeIf { it.isNotBlank() }
-            ?: return null
-        if (ChavesDeUsuario.ehChaveInterna(bruto.trim())) return chaves[bruto.trim().uppercase()] ?: bruto
+    private fun usuario(item: JsonObject, chave: String, chaves: Map<String, String>): String? {
+        val bruto = item.texto(chave)?.takeIf { it.isNotBlank() } ?: return null
+        if (ChavesDeUsuario.ehChaveInterna(bruto.trim())) return chaves[bruto.trim().uppercase()] ?: bruto.trim().uppercase()
         return normalizarUsername(bruto)
     }
 

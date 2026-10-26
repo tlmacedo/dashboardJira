@@ -91,6 +91,7 @@
   "tempo.avisos.informativo": "Avisos sobre os dados",
   "tempo.aviso.STATUS_SEM_MAPEAMENTO": "Há status sem mapeamento: {status}",
   "tempo.aviso.CONCLUSAO_DIVERGENTE": "{n} issue(s) com status e resolução divergentes ficaram de fora (veja Qualidade dos dados)",
+  "tempo.aviso.CONCLUIDA_SEM_DATA": "{n} issue(s) concluída(s) sem data de resolução ficaram de fora (veja Qualidade dos dados)",
   "tempo.aviso.CALCULO_INDISPONIVEL": "Dados inconsistentes em algumas issues: cálculo indisponível",
   "tempo.aviso.DATAS_INCONSISTENTES": "Algumas issues com datas inconsistentes foram ignoradas",
   "tempo.aviso.OS_INDISPONIVEL": "OS Version não disponível nos dados sincronizados",

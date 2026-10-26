@@ -51,14 +51,24 @@ class ChangelogParserTest {
     }
 
     @Test
-    fun assigneeSoComStringsUsaNomeDeExibicao() {
+    fun assigneeSemFromETo_NuncaGravaNomeDeExibicao() {
         val h = historicos(
             """[{"id":"3","created":"2026-10-02T10:00:00.000-0400","author":{"name":"x"},
                 "items":[{"field":"assignee","from":null,"to":null,"fromString":"Ana Silva","toString":"Bruno Lima"}]}]""",
         )
+        val e = ChangelogParser.toEvents(issue(), h).single()
+        assertNull(e.from)
+        assertNull(e.to)
         val t = ChangelogParser.toTimeline(issue(), h)
-        assertEquals("bruno lima", t.assigneeChanges.single().to)
-        assertEquals("ana silva", t.initialAssignee)
+        assertNull(t.assigneeChanges.single().to)
+        assertNull(t.initialAssignee)
+    }
+
+    @Test
+    fun chaveInternaNaoResolvidaFicaEmMaiusculas() {
+        val e = ChangelogParser.toEvents(issue(), trocaDeResponsavel("jirauser99", " JiraUser7 ")).single()
+        assertEquals("JIRAUSER99", e.from)
+        assertEquals("JIRAUSER7", e.to)
     }
 
     @Test

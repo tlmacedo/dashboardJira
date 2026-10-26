@@ -170,6 +170,32 @@ describe('tela Tempo em status', () => {
     expect(screen.getByText(/3 issue\(s\) com status e resolução divergentes/)).toBeInTheDocument()
   })
 
+  it('avisoMantemLiteraisEspeciaisDoParametro', async () => {
+    simular({
+      [CARD]: {
+        status: 200,
+        corpo: {
+          ...DTO,
+          avisos: [{ codigo: 'STATUS_SEM_MAPEAMENTO', gravidade: 'bloqueante', mensagem: '', params: { status: "$& e $1 e $'" } }],
+        },
+      },
+    })
+    renderizar()
+    // Marcadores de substituição do JavaScript no valor aparecem literais, nunca interpretados.
+    expect(await screen.findByText("Há status sem mapeamento: $& e $1 e $'")).toBeInTheDocument()
+  })
+
+  it('avisoConcluidaSemDataEhInformativo', async () => {
+    simular({
+      [CARD]: {
+        status: 200,
+        corpo: { ...DTO, avisos: [{ codigo: 'CONCLUIDA_SEM_DATA', gravidade: 'informativo', mensagem: '', params: { n: '2' } }] },
+      },
+    })
+    renderizar()
+    expect(await screen.findByText(/2 issue\(s\) concluída\(s\) sem data de resolução/)).toBeInTheDocument()
+  })
+
   it('avisoInformativoMantemOsNumeros', async () => {
     simular({
       [CARD]: {

@@ -91,6 +91,7 @@
   "tempo.avisos.informativo": "Data notices",
   "tempo.aviso.STATUS_SEM_MAPEAMENTO": "Some statuses have no mapping: {status}",
   "tempo.aviso.CONCLUSAO_DIVERGENTE": "{n} issue(s) with mismatched status and resolution were left out (see Data quality)",
+  "tempo.aviso.CONCLUIDA_SEM_DATA": "{n} completed issue(s) without a resolution date were left out (see Data quality)",
   "tempo.aviso.CALCULO_INDISPONIVEL": "Inconsistent data in some issues: calculation unavailable",
   "tempo.aviso.DATAS_INCONSISTENTES": "Some issues with inconsistent dates were ignored",
   "tempo.aviso.OS_INDISPONIVEL": "OS Version is not available in the synced data",

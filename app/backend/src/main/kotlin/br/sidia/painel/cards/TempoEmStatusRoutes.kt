@@ -380,6 +380,16 @@ private fun calcular(
             mapOf("n" to divergentes.toString()),
         )
     }
+    // Concluída (DONE + resolution) sem data de resolução não cabe em nenhuma lista: avisa em vez de sumir.
+    val semData = (fechadasBrutas + abertasBrutas).filter { candidata(it) && concluida(it) && it.resolved == null }
+        .map { it.key }.toSet().size
+    if (semData > 0) {
+        avisos += AvisoDto(
+            AvisoDto.CONCLUIDA_SEM_DATA, AvisoDto.INFORMATIVO,
+            "$semData issue(s) concluídas sem data de resolução ignoradas",
+            mapOf("n" to semData.toString()),
+        )
+    }
     val fechadasOk = fechadas.filterNot { calculador.datasInconsistentes(it, agora) }
     val abertasOk = abertas.filterNot { calculador.datasInconsistentes(it, agora) }
 

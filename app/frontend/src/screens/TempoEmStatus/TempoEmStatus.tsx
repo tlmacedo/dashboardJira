@@ -509,7 +509,7 @@ function textoDoAviso(a: Aviso, t: (k: string) => string): string {
   const chave = `tempo.aviso.${a.codigo}`
   const base = t(chave)
   if (base === chave) return a.mensagem
-  const preenchido = Object.entries(a.params ?? {}).reduce((texto, [nome, valor]) => texto.replaceAll(`{${nome}}`, valor), base)
+  const preenchido = Object.entries(a.params ?? {}).reduce((texto, [nome, valor]) => texto.replaceAll(`{${nome}}`, () => valor), base)
   // Marcador sem parâmetro correspondente nunca aparece cru na tela.
   return preenchido.replace(/\{\w+\}/g, '…')
 }

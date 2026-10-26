@@ -662,6 +662,24 @@ class TempoEmStatusRoutesTest {
     }
 
     @Test
+    fun concluidaSemDataDeResolucaoViraAvisoInformativo() = rodar {
+        val antes = card("gerente.exemplo")
+        // Status DONE com resolution, mas sem a data de resolução: fica fora das duas listas; avisa em vez de sumir.
+        issue(
+            "TG-42", "Checklist", "ana", "Concluído", "Done", t("10-01 09:00"), null,
+            listOf(resp("10-01 09:00", null, "ana"), st("10-01 10:00", "A Fazer", "Em andamento"), st("10-15 09:00", "Em andamento", "Concluído")),
+        )
+        val depois = card("gerente.exemplo")
+        val aviso = depois.avisos.single { it.codigo == "CONCLUIDA_SEM_DATA" }
+        assertEquals("informativo", aviso.gravidade)
+        assertEquals("1", aviso.params["n"])
+        assertEquals(antes.analisadas, depois.analisadas)
+        assertTrue(depois.avisos.none { it.codigo == "CONCLUSAO_DIVERGENTE" })
+        // Quem não enxerga a ana não recebe o aviso.
+        assertTrue(card("carla").avisos.none { it.codigo == "CONCLUIDA_SEM_DATA" })
+    }
+
+    @Test
     fun resolutionSemConclusaoTambemEhDivergente() = rodar {
         // Resolution preenchida, mas o status não é DONE.
         issue(
