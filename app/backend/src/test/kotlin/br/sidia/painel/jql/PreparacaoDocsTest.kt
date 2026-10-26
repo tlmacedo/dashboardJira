@@ -109,7 +109,8 @@ class PreparacaoDocsTest {
         val runbook = ler("docs/jira/runbook-sincronizacao.md")
         val env = ler("app/.env.example")
         val compose = ler("app/docker-compose.yml")
-        val nomes = (Regex("SYNC_[A-Z_]+").findAll(runbook).map { it.value } + sequenceOf("RETENTION_MONTHS")).toSet()
+        val nomes = (Regex("SYNC_[A-Z_]+").findAll(runbook).map { it.value } + sequenceOf("RETENTION_MONTHS", "ACCESS_LOG_RETENTION_MONTHS")).toSet()
+        assertTrue("ACCESS_LOG_RETENTION_MONTHS" in Regex("[A-Z_]+").findAll(runbook).map { it.value }.toSet(), "Runbook sem ACCESS_LOG_RETENTION_MONTHS")
         assertTrue(nomes.size >= 10, "Esperadas as SYNC_* e RETENTION_MONTHS no runbook: $nomes")
         for (nome in nomes) {
             assertTrue(Regex("^#?\\s*$nome=", RegexOption.MULTILINE).containsMatchIn(env), "$nome sem exemplo no .env.example")

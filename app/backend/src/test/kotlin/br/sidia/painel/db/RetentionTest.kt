@@ -149,6 +149,44 @@ class RetentionTest {
     }
 
     @Test
+    fun accessLogUsaOSeuProprioLimite() {
+        // hoje 2026-10-30: com 6 meses o limite é 2026-04-30; com 24 meses do access_log é 2024-10-30
+        exec("INSERT INTO access_log(id, user_id, route, filters, at) VALUES (1, 'u', '/x', '', '2025-06-01 12:00:00+00')")
+        exec("INSERT INTO access_log(id, user_id, route, filters, at) VALUES (2, 'u', '/x', '', '2024-09-01 12:00:00+00')")
+        issue(1)
+        evento(1, 1, "2025-06-01 12:00:00+00")
+        Retention(ds, calendario).purge(LocalDate.of(2026, 10, 30), 6, accessLogMonths = 24)
+        assertEquals(1, contar("access_log"))
+        assertEquals(0, contar("change_event"))
+    }
+
+    @Test
+    fun issueRemovidaSemResolvedEParadaEApagadaComCascata() {
+        // removida no Jira, nunca resolvida, parada há mais que o limite (2024-10-30): apaga
+        exec("INSERT INTO issue(id, key, instance, project, updated, removida_em) VALUES (1, 'TG-1', 'main', 'TG', '2024-01-01 12:00:00+00', '2024-02-01 12:00:00+00')")
+        // removida mas mexida recentemente: fica
+        exec("INSERT INTO issue(id, key, instance, project, updated, removida_em) VALUES (2, 'TG-2', 'main', 'TG', '2026-09-01 12:00:00+00', '2026-09-02 12:00:00+00')")
+        // aberta antiga SEM removida_em: nunca apagada
+        exec("INSERT INTO issue(id, key, instance, project, updated) VALUES (3, 'TG-3', 'main', 'TG', '2024-01-01 12:00:00+00')")
+        // removida há pouco, porém parada: fica até a remoção também passar do limite
+        exec("INSERT INTO issue(id, key, instance, project, updated, removida_em) VALUES (4, 'TG-4', 'main', 'TG', '2024-01-01 12:00:00+00', '2026-10-01 12:00:00+00')")
+        evento(1, 1, "2026-01-01 12:00:00+00")
+        exec(
+            "INSERT INTO issue_link(instance, from_key, to_key, link_type, direction, visto_em) VALUES " +
+                "('main', 'TG-1', 'TG-3', 'Blocks', 'OUTWARD', now())",
+        )
+        Retention(ds, calendario).purge(LocalDate.of(2026, 10, 30), 24)
+        val chaves = ds.connection.use { c ->
+            c.createStatement().executeQuery("SELECT key FROM issue ORDER BY key").use { rs ->
+                generateSequence { if (rs.next()) rs.getString(1) else null }.toList()
+            }
+        }
+        assertEquals(listOf("TG-2", "TG-3", "TG-4"), chaves)
+        assertEquals(0, contar("change_event"))
+        assertEquals(0, contar("issue_link"))
+    }
+
+    @Test
     fun retencaoApagaSyncRunAntigo() {
         exec("INSERT INTO sync_run(instance, kind, started_at, status) VALUES ('samsung', 'INCREMENTAL', '2024-10-29 12:00:00+00', 'OK')")
         exec("INSERT INTO sync_run(instance, kind, started_at, status) VALUES ('samsung', 'INCREMENTAL', '2024-10-30 04:00:00+00', 'OK')")

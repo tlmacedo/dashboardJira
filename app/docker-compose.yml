@@ -40,6 +40,7 @@ services:
       SYNC_FUSO_SERVIDOR: ${SYNC_FUSO_SERVIDOR:-}
       SYNC_TEMPO_MAX_MIN: ${SYNC_TEMPO_MAX_MIN:-}
       RETENTION_MONTHS: ${RETENTION_MONTHS:-}
+      ACCESS_LOG_RETENTION_MONTHS: ${ACCESS_LOG_RETENTION_MONTHS:-}
     # Configs reais (papéis, calendário, mapa de status, dicionário de campos, fichas em cards/): a pasta app/config/
     # do host entra SOMENTE LEITURA por cima da config embutida na imagem (que só traz os modelos .exemplo).
     # Os arquivos reais com dados pessoais ficam no host, ignorados pelo git e fora da imagem (.dockerignore).

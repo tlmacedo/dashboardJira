@@ -239,6 +239,32 @@ class SettingsTest {
     }
 
     @Test
+    fun retencaoTemPisoDeSeguranca() {
+        for (v in listOf("1", "5", "0", "-3", "601")) {
+            val e = assertFailsWith<IllegalArgumentException> { Settings.fromEnv(mapOf("RETENTION_MONTHS" to v)) }
+            assertTrue(e.message!!.contains("RETENTION_MONTHS"))
+            assertFalse(e.message!!.contains("'$v'"), "a mensagem cita só o nome da variável")
+        }
+        assertEquals(6, Settings.fromEnv(mapOf("RETENTION_MONTHS" to "6")).retentionMonths)
+    }
+
+    @Test
+    fun retencaoDoAccessLogTemChaveSeparadaEPiso() {
+        assertEquals(24, Settings.fromEnv(emptyMap()).accessLogRetentionMonths)
+        assertEquals(12, Settings.fromEnv(mapOf("ACCESS_LOG_RETENTION_MONTHS" to "12")).accessLogRetentionMonths)
+        // RETENTION_MONTHS curto não encurta a auditoria
+        val s = Settings.fromEnv(mapOf("RETENTION_MONTHS" to "6"))
+        assertEquals(24, s.accessLogRetentionMonths)
+        for (v in listOf("11", "0", "abc", "601")) {
+            val e = assertFailsWith<IllegalArgumentException> {
+                Settings.fromEnv(mapOf("ACCESS_LOG_RETENTION_MONTHS" to v))
+            }
+            assertTrue(e.message!!.contains("ACCESS_LOG_RETENTION_MONTHS"))
+            assertFalse(e.message!!.contains("'$v'"))
+        }
+    }
+
+    @Test
     fun syncLeTodasAsVariaveis() {
         val s = Settings.fromEnv(
             mapOf(

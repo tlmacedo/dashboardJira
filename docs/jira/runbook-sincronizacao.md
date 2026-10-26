@@ -84,7 +84,8 @@ A sincronização liga **somente** por `JIRA_LIVE_ENABLED=true`. As variáveis `
 | `SYNC_SOBREPOSICAO_MIN` | `5` | 1 a 60 | Sobreposição do cursor entre incrementais. |
 | `SYNC_FUSO_SERVIDOR` | `America/Manaus` | fuso IANA | Fuso do usuário da credencial no Jira (o `timeZone` do `/myself`). |
 | `SYNC_TEMPO_MAX_MIN` | `60` | 1 a 240 | Tempo máximo de uma execução. |
-| `RETENTION_MONTHS` | `24` | inteiro positivo | Meses de dados locais mantidos (ver Retenção). |
+| `RETENTION_MONTHS` | `24` | 6 a 600 | Meses de dados locais mantidos (ver Retenção). |
+| `ACCESS_LOG_RETENTION_MONTHS` | `24` | 12 a 600 | Meses da auditoria de acessos (`access_log`), independente de `RETENTION_MONTHS`. |
 
 O `docker-compose.yml` já repassa ao contêiner todas as variáveis acima, as de conexão (`JIRA_SAMSUNG_URL`, `JIRA_SAMSUNG_TOKEN`, `JIRA_SIDIA_URL`, `JIRA_SIDIA_USER`, `JIRA_SIDIA_TOKEN`) e `DASHBOARD_DEMO_DATA`, sempre no formato `NOME: ${NOME:-}` (sem valor no arquivo; vazio = padrão do código). Os valores vêm do `.env`.
 
@@ -208,10 +209,11 @@ Nenhuma outra variável liga ou desliga a sincronização. Com `false`, o gate n
 
 Todo dia, em `SYNC_HORA_RETENCAO`, o app apaga **só dados locais** antigos; nunca altera o Jira. O limite é `RETENTION_MONTHS` (padrão 24):
 
-- `issue`: só as resolvidas **e** sem alteração desde o limite (eventos e worklogs saem junto). Issue aberta nunca é apagada.
-- `access_log` (auditoria de acessos), `sync_run` (execuções) e o cache de usuários: por data.
+- `issue`: as resolvidas **e** sem alteração desde o limite, e também as removidas no Jira (nunca resolvidas) cuja remoção e última alteração passaram do limite (eventos, worklogs e vínculos saem junto). Issue aberta ativa ou recente nunca é apagada.
+- `sync_run` (execuções) e o cache de usuários: por data.
+- `access_log` (auditoria de acessos): limite próprio, `ACCESS_LOG_RETENTION_MONTHS` (mínimo 12), para a auditoria não encurtar junto com a retenção geral.
 
-Reduzir `RETENTION_MONTHS` apaga mais no próximo ciclo e inclui o `access_log`: não use valores muito baixos sem decidir antes o prazo de auditoria.
+`RETENTION_MONTHS` tem piso de 6 meses (valor menor impede a subida). Reduzi-lo apaga mais no próximo ciclo, mas não toca o `access_log`.
 
 ## Dados de demonstração
 

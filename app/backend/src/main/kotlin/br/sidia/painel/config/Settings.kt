@@ -37,6 +37,8 @@ data class Settings(
     /** `DASHBOARD_DEMO_DATA`: carrega issues fictícias na subida. Só com modo dev ligado e Jira real desligado. */
     val dashboardDemoData: Boolean = false,
     val retentionMonths: Int = 24,
+    /** `ACCESS_LOG_RETENTION_MONTHS`: retenção própria da auditoria (`access_log`), mínimo 12. */
+    val accessLogRetentionMonths: Int = 24,
     val zone: ZoneId = ZoneId.of("America/Manaus"),
     val configDir: Path = Path.of("config"),
     val databaseUrl: String = "jdbc:postgresql://localhost:5432/painel",
@@ -56,7 +58,7 @@ data class Settings(
     override fun toString(): String =
         "Settings(jiraLiveEnabled=$jiraLiveEnabled, dashboardDevMode=$dashboardDevMode, " +
             "dashboardDemoData=$dashboardDemoData, " +
-            "retentionMonths=$retentionMonths, zone=$zone, configDir=$configDir, " +
+            "retentionMonths=$retentionMonths, accessLogRetentionMonths=$accessLogRetentionMonths, zone=$zone, configDir=$configDir, " +
             "databaseUrl=${mascararUrl(databaseUrl)}, staticDir=$staticDir, databaseUser=$databaseUser, " +
             "databasePassword=***, databasePoolSize=$databasePoolSize, jiraInstances=$jiraInstances)"
 
@@ -79,10 +81,11 @@ data class Settings(
                 jiraLiveEnabled = jiraLiveEnabled,
                 dashboardDevMode = dashboardDevMode,
                 dashboardDemoData = dashboardDemoData,
-                retentionMonths = texto(env, "RETENTION_MONTHS")?.let {
-                    it.toIntOrNull()?.takeIf { n -> n > 0 }
-                        ?: throw IllegalArgumentException("RETENTION_MONTHS inválido: '$it' (esperado inteiro positivo)")
-                } ?: padrao.retentionMonths,
+                // Piso de segurança: valor baixo apagaria quase todo o histórico. Mensagens citam só o NOME.
+                retentionMonths = mesesDeRetencao(env, "RETENTION_MONTHS", 6, padrao.retentionMonths),
+                accessLogRetentionMonths = mesesDeRetencao(
+                    env, "ACCESS_LOG_RETENTION_MONTHS", 12, padrao.accessLogRetentionMonths,
+                ),
                 zone = texto(env, "PAINEL_TZ")?.let {
                     try {
                         ZoneId.of(it)
@@ -106,6 +109,14 @@ data class Settings(
                 sync = lerSync(env),
             )
         }
+
+        private const val MAX_MESES_DE_RETENCAO = 600
+
+        private fun mesesDeRetencao(env: Map<String, String>, nome: String, minimo: Int, padrao: Int): Int =
+            texto(env, nome)?.let {
+                it.toIntOrNull()?.takeIf { n -> n in minimo..MAX_MESES_DE_RETENCAO }
+                    ?: throw IllegalArgumentException("$nome inválido (esperado inteiro de $minimo a $MAX_MESES_DE_RETENCAO)")
+            } ?: padrao
 
         /** Lê as `SYNC_*`; vazio = padrão. Mensagens citam só o NOME da variável, nunca o valor. */
         private fun lerSync(env: Map<String, String>): SyncSettings {

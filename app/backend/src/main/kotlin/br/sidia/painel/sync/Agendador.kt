@@ -187,7 +187,7 @@ private suspend fun executarRetencao(ctx: AppContext, estado: SyncStateStore, cl
         val id = estado.iniciar(INSTANCIA_RETENCAO, SyncKind.RETENCAO, clock.instant())
         try {
             val hoje = LocalDate.now(clock.withZone(ctx.settings.zone))
-            val apagadas = Retention(ds, ctx.calendar).purge(hoje, ctx.settings.retentionMonths)
+            val apagadas = Retention(ds, ctx.calendar).purge(hoje, ctx.settings.retentionMonths, ctx.settings.accessLogRetentionMonths)
             estado.concluir(id, RunStatus.OK, RunResumo(removidas = apagadas), null, null, clock.instant())
         } catch (e: Exception) {
             logMontagem.warn("Retenção falhou: {}", e.javaClass.simpleName)
