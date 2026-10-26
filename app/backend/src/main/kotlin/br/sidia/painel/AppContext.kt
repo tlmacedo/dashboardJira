@@ -51,7 +51,14 @@ class AppContext(
     override fun close() {
         try {
             val acoes = aoFechar.toList().also { aoFechar.clear() }
-            acoes.forEach { runCatching(it) }
+            for (acao in acoes) {
+                try {
+                    acao()
+                } catch (e: Exception) {
+                    // Só a classe: a mensagem pode trazer dados. A falha de uma ação não impede as outras.
+                    log.warn("Falha ao encerrar um componente: {}", e.javaClass.simpleName)
+                }
+            }
             jira.close()
         } finally {
             (dataSource as? AutoCloseable)?.close()

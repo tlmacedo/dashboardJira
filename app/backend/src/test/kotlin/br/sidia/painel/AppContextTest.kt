@@ -429,6 +429,26 @@ class AppContextTest {
     }
 
     @Test
+    fun closeLogaSoAClasseDaFalhaDeAoFecharEContinua() {
+        val acumulado = ListAppender<ILoggingEvent>().apply { start() }
+        val logger = LoggerFactory.getLogger(AppContext::class.java) as Logger
+        logger.addAppender(acumulado)
+        try {
+            val ctx = testContext(Settings())
+            var segunda = false
+            ctx.aoFechar { throw IllegalStateException("segredo-no-fechamento") }
+            ctx.aoFechar { segunda = true }
+            ctx.close()
+            assertTrue(segunda, "a falha de uma ação não impede as outras")
+            val mensagens = acumulado.list.map { it.formattedMessage }
+            assertTrue(mensagens.any { it.contains("IllegalStateException") }, mensagens.toString())
+            assertTrue(mensagens.none { it.contains("segredo") }, mensagens.toString())
+        } finally {
+            logger.detachAppender(acumulado)
+        }
+    }
+
+    @Test
     fun moduloUsaSempreAConfiguracaoDoContexto() = testApplication {
         val divergente = Settings(dashboardDevMode = false)
         val doContexto = Settings(dashboardDevMode = true, zone = ZoneId.of("America/Sao_Paulo"))

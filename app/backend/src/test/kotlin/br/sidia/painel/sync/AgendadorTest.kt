@@ -194,6 +194,37 @@ class AgendadorTest {
     }
 
     @Test
+    fun falhaLogaSoAClasseENaoMensagemENemDerrubaComError() = runBlocking {
+        val (ctx, estado) = estadoNovo()
+        val acumulado = ch.qos.logback.core.read.ListAppender<ch.qos.logback.classic.spi.ILoggingEvent>().apply { start() }
+        val logger = org.slf4j.LoggerFactory.getLogger(Agendador::class.java) as ch.qos.logback.classic.Logger
+        logger.addAppender(acumulado)
+        try {
+            ctx.use {
+                val executadas = AtomicInteger(0)
+                val ag = Agendador(
+                    listOf(
+                        tarefa { throw IllegalStateException("segredo-que-nao-deve-vazar") },
+                        // Throwable que não é Exception (ex.: erro de linkagem) também não derruba o laço.
+                        tarefa { throw NoSuchMethodError("segredo-de-error") },
+                        tarefa(SyncKind.RECONCILIACAO) { executadas.incrementAndGet() },
+                    ),
+                    estado,
+                    Clock.systemUTC(),
+                )
+                ag.ciclo()
+                assertEquals(1, executadas.get())
+            }
+            val mensagens = acumulado.list.map { it.formattedMessage }
+            assertTrue(mensagens.any { it.contains("IllegalStateException") }, mensagens.toString())
+            assertTrue(mensagens.any { it.contains("NoSuchMethodError") }, mensagens.toString())
+            assertTrue(mensagens.none { it.contains("segredo") }, mensagens.toString())
+        } finally {
+            logger.detachAppender(acumulado)
+        }
+    }
+
+    @Test
     fun relogioInjetavel() = runBlocking {
         val (ctx, estado) = estadoNovo()
         ctx.use {
@@ -297,7 +328,7 @@ class AgendadorTest {
     }
 
     @Test
-    fun moduloIniciaEPAraOAgendador() {
+    fun moduloIniciaEParaOAgendador() {
         val s = settings(false)
         val ctx = testContextComBanco(s, pg)
         val estado = PostgresSyncStateStore(requireNotNull(ctx.dataSource))

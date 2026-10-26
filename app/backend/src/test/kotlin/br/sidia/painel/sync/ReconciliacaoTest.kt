@@ -59,6 +59,9 @@ class ReconciliacaoTest {
     /** Estado simulado do Jira: chave -> (id numérico, updated). */
     private val noJira = LinkedHashMap<String, Pair<Long, Instant>>()
     private val corpos = CopyOnWriteArrayList<JsonObject>()
+
+    /** Issues que existem no Jira mas que a paginação por startAt "pulou" na lista leve (só aparecem em `key in`). */
+    private val ocultasNaLista = mutableSetOf<String>()
     private var ctx: AppContext? = null
     private lateinit var store: PostgresIssueStore
     private lateinit var estado: PostgresSyncStateStore
@@ -103,8 +106,12 @@ class ReconciliacaoTest {
                         val jql = corpo.getValue("jql").jsonPrimitive.content
                         val pedidas = Regex("\"(TG-\\d+)\"").findAll(jql).map { it.groupValues[1] }.toSet()
                         val completo = corpo["expand"] != null
+                        // `updated >= "aaaa-MM-dd HH:mm"` (fuso de Manaus) restringe o universo, como o Jira faria.
+                        val desde = Regex("updated >= \"(\\d{4}-\\d\\d-\\d\\d \\d\\d:\\d\\d)\"").find(jql)?.groupValues?.get(1)
+                            ?.let { java.time.LocalDateTime.parse(it.replace(' ', 'T')).toInstant(ZoneOffset.ofHours(-4)) }
                         val itens = noJira.entries
-                            .filter { !jql.contains("key in") || it.key in pedidas }
+                            .filter { desde == null || it.value.second >= desde }
+                            .filter { if (jql.contains("key in")) it.key in pedidas else it.key !in ocultasNaLista }
                             .map { (k, v) -> if (completo) completa(k, v.first, v.second) else leve(k, v.first, v.second) }
                         respond(
                             """{"startAt":0,"maxResults":1000,"total":${itens.size},"issues":[${itens.joinToString(",")}]}""",
@@ -342,15 +349,47 @@ class ReconciliacaoTest {
     fun reconciliacaoNaoReinsereIssuePurgada() = runBlocking {
         val s = montar()
         semearBase(2)
-        // Resolvida e atualizada em 2024-01, antes do corte: a consulta leve nem a pede, e ela não volta.
+        // Existe no Jira, resolvida e atualizada em 2024-01 (antes do corte): a consulta leve não a traz, e ela não volta.
+        noJira["TG-77"] = 977L to Instant.parse("2024-01-10T10:00:00Z")
         val r = executada(s.reconciliar("samsung"))
         assertEquals(RunStatus.OK, r.status)
+        assertEquals(0, r.resumo.issues)
         assertTrue(
             corpos[0].getValue("jql").jsonPrimitive.content.contains("""updated >= "2024-10-30 00:00""""),
             corpos[0].toString(),
         )
         assertEquals(0, contar("SELECT count(*) FROM issue WHERE key = 'TG-77'"))
         assertEquals(2, contar("SELECT count(*) FROM issue"))
+    }
+
+    @Test
+    fun candidataAremocaoQueOJiraAindaTrazPorChaveNaoEhRemovida() = runBlocking {
+        val s = montar()
+        semearBase(4)
+        // A lista leve pulou TG-4 (paginação), mas ele existe: a confirmação por chave o poupa.
+        ocultasNaLista += "TG-4"
+        val r = executada(s.reconciliar("samsung"))
+        assertEquals(RunStatus.OK, r.status)
+        assertEquals(0, r.resumo.removidas)
+        assertNull(removidaEm("TG-4"))
+        val confirmacao = corpos.map { it.getValue("jql").jsonPrimitive.content }.filter { it.contains("key in") && it.contains("\"TG-4\"") }
+        assertEquals(1, confirmacao.size, corpos.toString())
+    }
+
+    @Test
+    fun confirmacaoDeRemocaoUsaLotesDe100() = runBlocking {
+        val s = montar(sync = SyncSettings(maxFracaoRemocao = 1.0))
+        semearBase(230)
+        for (i in 1..230) noJira.remove("TG-$i")
+        noJira["TG-1000"] = 1900L to instante("10:00")
+        val r = executada(s.reconciliar("samsung"))
+        assertEquals(RunStatus.OK, r.status)
+        assertEquals(230, r.resumo.removidas)
+        // 1 lista leve + 3 confirmações (100 + 100 + 30) + 1 rebusca da TG-1000.
+        val confirmacoes = corpos.map { it.getValue("jql").jsonPrimitive.content }
+            .filter { it.contains("key in") && !it.contains("\"TG-1000\"") }
+        assertEquals(3, confirmacoes.size, corpos.size.toString())
+        assertEquals(listOf(30, 100, 100), confirmacoes.map { Regex("\"TG-\\d+\"").findAll(it).count() }.sorted())
     }
 
     @Test

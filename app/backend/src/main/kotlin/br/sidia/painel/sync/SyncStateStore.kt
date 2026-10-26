@@ -311,6 +311,17 @@ class PostgresSyncStateStore(private val ds: DataSource) : SyncStateStore {
         }
     }
 
+    /** `pg_advisory_unlock`; false se a trava não foi solta (retorno falso ou exceção). */
+    private fun soltarTrava(c: Connection, chave: String): Boolean =
+        try {
+            c.prepareStatement("SELECT pg_advisory_unlock(hashtextextended(?, 0))").use { ps ->
+                ps.setString(1, chave)
+                ps.executeQuery().use { it.next() && it.getBoolean(1) }
+            }
+        } catch (e: Exception) {
+            false
+        }
+
     /** Conexão com trava possivelmente presa: não volta ao pool (evicção); sem Hikari, fecha de verdade. */
     private fun descartar(c: Connection) {
         runCatching { (ds as? com.zaxxer.hikari.HikariDataSource)?.evictConnection(c) }
@@ -339,6 +350,7 @@ class PostgresSyncStateStore(private val ds: DataSource) : SyncStateStore {
                     ps.executeQuery().use { it.next(); it.getBoolean(1) }
                 }
                 if (!obtida) continue
+                var presa = false
                 try {
                     fechadas += c.prepareStatement(
                         "UPDATE sync_run SET status = 'FALHA', codigo_erro = 'INTERROMPIDA', finished_at = ? " +
@@ -350,11 +362,11 @@ class PostgresSyncStateStore(private val ds: DataSource) : SyncStateStore {
                         ps.executeUpdate()
                     }
                 } finally {
-                    c.prepareStatement("SELECT pg_advisory_unlock(hashtextextended(?, 0))").use { ps ->
-                        ps.setString(1, chave)
-                        ps.executeQuery().use { it.next() }
-                    }
+                    // Soltar a trava confere o retorno: se falhar, a conexão (e a trava presa nela) é descartada.
+                    presa = !soltarTrava(c, chave)
+                    if (presa) descartar(c)
                 }
+                if (presa) break
             }
         }
         return fechadas

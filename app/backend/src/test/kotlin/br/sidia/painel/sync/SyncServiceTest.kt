@@ -175,7 +175,7 @@ class SyncServiceTest {
         val r = executada(s.incremental("samsung"))
         assertEquals(RunStatus.OK, r.status)
         assertEquals(2, r.resumo.issues)
-        assertEquals(1, r.resumo.eventos.coerceAtMost(1))
+        assertEquals(2, r.resumo.eventos)
         assertEquals(1, r.resumo.requisicoes)
         assertNull(r.codigoErro)
         assertEquals(Instant.parse("2026-10-30T12:20:00Z"), estado.cursor("samsung"))
@@ -196,10 +196,14 @@ class SyncServiceTest {
     @Test
     fun falhaNoMeioNaoAvancaCursorAlemDoCommit() = runBlocking {
         val s = montar()
-        issues = listOf(issue(1, em("12:10:00")), issue(2, em("12:20:00")), issue(3, "ontem-as-tres"))
+        // A 3ª tem `updated` VÁLIDO (a maior de todas), mas o changelog malformado: não pode avançar o cursor.
+        val terceira = issue(3, em("12:30:00")).replace("2026-10-20T09:00:00.000-0400", "nao-eh-data")
+        issues = listOf(issue(1, em("12:10:00")), issue(2, em("12:20:00")), terceira)
         val r = executada(s.incremental("samsung"))
         assertEquals(RunStatus.FALHA, r.status)
         assertEquals("DADO_MALFORMADO", r.codigoErro)
+        assertEquals(2, r.resumo.issues)
+        assertEquals(2, r.resumo.eventos)
         assertEquals(Instant.parse("2026-10-30T12:20:00Z"), estado.cursor("samsung"))
         assertEquals(2, contar("issue"))
         // reexecução com a fixture corrigida: sem eventos duplicados, cursor na 3ª
@@ -394,6 +398,101 @@ class SyncServiceTest {
         assertEquals(Instant.parse("2024-10-30T04:00:00Z"), s.limiteDeRetencao())
         val unico = AtomicInteger(motoresCriados.size)
         assertEquals(1, unico.get())
+    }
+
+    private fun servicoCom(store: SyncStateStore, live: Boolean): SyncService {
+        val c = requireNotNull(ctx)
+        return SyncService(c, PostgresIssueStore(requireNotNull(c.dataSource)), store, SyncGate(live, c.settings.sync), relogio)
+    }
+
+    @Test
+    fun flagDesligadaNegaSemTocarNoBanco() = runBlocking {
+        montar(live = false)
+        val proibido = java.lang.reflect.Proxy.newProxyInstance(
+            SyncStateStore::class.java.classLoader, arrayOf(SyncStateStore::class.java),
+        ) { _, m, _ -> throw AssertionError("tocou no banco: ${m.name}") } as SyncStateStore
+        val s = servicoCom(proibido, live = false)
+        assertEquals(ResultadoExecucao.Negada(MotivoNegacao.DESLIGADO_PELA_FLAG), s.incremental("samsung"))
+        assertEquals(ResultadoExecucao.Negada(MotivoNegacao.DESLIGADO_PELA_FLAG), s.reconciliar("samsung"))
+        assertEquals(0, corpos.size)
+    }
+
+    /** Suspende a instância depois da prévia do gate e antes da trava (outra réplica suspendeu enquanto esperávamos). */
+    private class SuspendeAntesDaTrava(private val real: SyncStateStore) : SyncStateStore by real {
+        override suspend fun <T> comTrava(instance: String, bloco: suspend () -> T): T? {
+            real.suspender(instance, "HTTP_429", Instant.parse("2026-10-30T14:59:00Z"))
+            return real.comTrava(instance, bloco)
+        }
+    }
+
+    @Test
+    fun suspensaoEhReleitaDentroDaTrava() = runBlocking {
+        montar()
+        val s = servicoCom(SuspendeAntesDaTrava(estado), live = true)
+        issues = listOf(issue(1, em("12:10:00")))
+        assertEquals(ResultadoExecucao.Negada(MotivoNegacao.SUSPENSA_POR_ERRO), s.incremental("samsung"))
+        assertEquals(ResultadoExecucao.Negada(MotivoNegacao.SUSPENSA_POR_ERRO), s.reconciliar("samsung"))
+        assertEquals(0, corpos.size)
+        assertEquals(0, contar("sync_run"))
+    }
+
+    /** Faz `concluir` devolver false, como se outro caminho já tivesse fechado a execução. */
+    private class ConcluirFalso(private val real: SyncStateStore) : SyncStateStore by real {
+        override fun concluir(
+            runId: Long, status: RunStatus, resumo: RunResumo, codigoErro: String?, httpStatus: Int?, at: Instant,
+        ): Boolean = false
+    }
+
+    @Test
+    fun concluirFalsoNaoContaSucessoNemSuspende() = runBlocking {
+        montar()
+        val s = servicoCom(ConcluirFalso(estado), live = true)
+        issues = listOf(issue(1, em("12:10:00")))
+        val r = executada(s.incremental("samsung"))
+        assertEquals(RunStatus.FALHA, r.status)
+        assertEquals("INTERROMPIDA", r.codigoErro)
+        // Mesmo com falhas, nada é suspenso quando o desfecho foi descartado.
+        aoReceber = { throw JiraException(401, "x", "x") }
+        repeat(3) { assertEquals("INTERROMPIDA", executada(s.incremental("samsung")).codigoErro) }
+        assertNull(estado.suspensa("samsung"))
+    }
+
+    @Test
+    fun falhasSemCodigoProprioRegistramSoAClasseDaExcecao() = runBlocking {
+        val s = montar()
+        val acumulado = ch.qos.logback.core.read.ListAppender<ch.qos.logback.classic.spi.ILoggingEvent>().apply { start() }
+        val logger = org.slf4j.LoggerFactory.getLogger(SyncService::class.java) as ch.qos.logback.classic.Logger
+        logger.addAppender(acumulado)
+        try {
+            issues = listOf(issue(1, em("12:10:00")).replace("2026-10-20T09:00:00.000-0400", "segredo-xyz"))
+            val r = executada(s.incremental("samsung"))
+            assertEquals("DADO_MALFORMADO", r.codigoErro)
+            val mensagens = acumulado.list.map { it.formattedMessage }
+            assertTrue(mensagens.any { it.contains("DADO_MALFORMADO") && it.contains("DadoMalformadoException") }, mensagens.toString())
+            assertTrue(mensagens.none { it.contains("segredo-xyz") }, mensagens.toString())
+        } finally {
+            logger.detachAppender(acumulado)
+        }
+    }
+
+    @Test
+    fun resumoParcialDaFalhaPreservaIncompletasEUsuariosNaoResolvidos() = runBlocking {
+        val s = montar()
+        // 1ª: sem summary (incompleta) e com troca de responsável por chaves internas sem tradução; 2ª: changelog malformado.
+        val primeira = """{"id":"901","key":"TG-1","fields":{"project":{"key":"TG"},"issuetype":{"name":"Task"},
+            "status":{"name":"To Do"},"created":"2026-10-01T09:00:00.000-0400","updated":"${em("12:10:00")}","labels":[]},
+            "changelog":{"total":1,"histories":[{"id":"1","created":"2026-10-20T09:00:00.000-0400","author":{"name":"ana"},
+            "items":[{"field":"assignee","from":"JIRAUSER9","to":"JIRAUSER8","fromString":"A","toString":"B"}]}]}}"""
+        val segunda = issue(2, em("12:20:00")).replace("2026-10-20T09:00:00.000-0400", "nao-eh-data")
+        issues = listOf(primeira, segunda)
+        val r = executada(s.incremental("samsung"))
+        assertEquals("DADO_MALFORMADO", r.codigoErro)
+        assertEquals(1, r.resumo.issues)
+        assertEquals(1, r.resumo.incompletas)
+        assertEquals(2, r.resumo.usuariosNaoResolvidos)
+        val gravado = estado.ultimas("samsung").single().resumo
+        assertEquals(1, gravado.incompletas)
+        assertEquals(2, gravado.usuariosNaoResolvidos)
     }
 
     @Test

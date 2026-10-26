@@ -66,6 +66,7 @@ class Agendador(
     val tipos: List<SyncKind> = tarefas.map { it.kind }
 
     private val trava = Mutex()
+    @Volatile
     private var job: Job? = null
 
     /** Verdadeiro entre [iniciar] e o fim do job. */
@@ -94,7 +95,8 @@ class Agendador(
                     t.executar()
                 } catch (e: CancellationException) {
                     throw e
-                } catch (e: Exception) {
+                } catch (e: Throwable) {
+                    // Inclui Error (ex.: NoSuchMethodError): nada derruba o laço; só a classe é logada, nunca a mensagem.
                     log.warn("Tarefa agendada {} falhou: {}", t.kind, e.javaClass.simpleName)
                 }
             }

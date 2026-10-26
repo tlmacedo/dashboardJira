@@ -23,7 +23,16 @@ data class SyncSummary(val issues: Int, val events: Int, val incompletas: Int = 
 class DadoMalformadoException(mensagem: String) : IllegalStateException(mensagem)
 
 /** Issue já gravada (commit feito); entregue ao `aoGravar` do [Syncer]. */
-data class IssueGravada(val key: String, val updated: java.time.Instant?)
+data class IssueGravada(
+    val key: String,
+    val updated: java.time.Instant?,
+    /** Eventos gravados com esta issue. */
+    val eventos: Int = 0,
+    /** Sem `created` ou `summary` (fora das linhas do tempo). */
+    val incompleta: Boolean = false,
+    /** Chaves internas de usuário sem tradução vistas nos eventos desta issue (em maiúsculas). */
+    val naoResolvidos: Set<String> = emptySet(),
+)
 
 /**
  * Sincroniza issues e changelog de uma instância do Jira para o banco. Idempotente:
@@ -95,12 +104,14 @@ class Syncer(
             }
             issues++
             eventos += registros.size
-            if (incompleta(issue)) incompletas++
-            registros.filter { it.field.equals("assignee", ignoreCase = true) }
+            val incompleta = incompleta(issue)
+            if (incompleta) incompletas++
+            val naoResolvidosDaIssue = registros.filter { it.field.equals("assignee", ignoreCase = true) }
                 .flatMap { listOfNotNull(it.from, it.to) }
                 .filter { ChavesDeUsuario.ehChaveInterna(it.trim()) }
-                .mapTo(naoResolvidos) { it.trim().uppercase() }
-            aoGravar(IssueGravada(chave, updated))
+                .mapTo(HashSet()) { it.trim().uppercase() }
+            naoResolvidos += naoResolvidosDaIssue
+            aoGravar(IssueGravada(chave, updated, registros.size, incompleta, naoResolvidosDaIssue))
         }
         return SyncSummary(issues, eventos, incompletas, naoResolvidos.size)
     }

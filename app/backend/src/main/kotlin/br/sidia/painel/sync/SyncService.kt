@@ -8,6 +8,7 @@ import br.sidia.painel.jira.OrcamentoEsgotadoException
 import br.sidia.painel.jira.TetoDeItensExcedidoException
 import br.sidia.painel.jql.AtualizadoDesde
 import br.sidia.painel.jql.CardQueryFactory
+import br.sidia.painel.jql.CardSpec
 import br.sidia.painel.jql.JqlQuery
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
@@ -62,12 +63,21 @@ class SyncService(
         return Retention.limite(LocalDate.now(clock.withZone(zona)), ctx.settings.retentionMonths, zona)
     }
 
-    suspend fun incremental(instance: String): ResultadoExecucao {
-        val suspensa = io { estado.suspensa(instance) } != null
-        val decisao = gate.avaliar(SyncKind.INCREMENTAL, instance, suspensa)
-        if (decisao is GateDecision.Negada) return ResultadoExecucao.Negada(decisao.motivo)
-        // iniciar() e concluir() ficam dentro da trava: nenhuma outra réplica fecha esta execução no meio.
-        return estado.comTrava(instance) { executar(instance) } ?: ResultadoExecucao.Ocupada
+    suspend fun incremental(instance: String): ResultadoExecucao =
+        comGate(SyncKind.INCREMENTAL, instance) { executar(instance) }
+
+    /**
+     * Flag e instância são checadas ANTES de qualquer acesso ao banco (flag desligada = nem o banco é tocado).
+     * A suspensão é lida de novo DENTRO da trava: outra réplica pode ter suspendido a instância enquanto esperávamos.
+     * iniciar() e concluir() ficam dentro da trava: nenhuma outra réplica fecha esta execução no meio.
+     */
+    private suspend fun comGate(kind: SyncKind, instance: String, trabalho: suspend () -> ResultadoExecucao): ResultadoExecucao {
+        val previa = gate.avaliar(kind, instance, suspensa = false)
+        if (previa is GateDecision.Negada) return ResultadoExecucao.Negada(previa.motivo)
+        return estado.comTrava(instance) {
+            val decisao = gate.avaliar(kind, instance, io { estado.suspensa(instance) } != null)
+            if (decisao is GateDecision.Negada) ResultadoExecucao.Negada(decisao.motivo) else trabalho()
+        } ?: ResultadoExecucao.Ocupada
     }
 
     /**
@@ -78,41 +88,41 @@ class SyncService(
      * Se a remoção passaria de [SyncSettings.maxFracaoRemocao] da base local, ou o Jira vier vazio com base local,
      * aborta com `RECONCILIACAO_SUSPEITA` sem remover, renomear nem rebuscar nada.
      */
-    suspend fun reconciliar(instance: String): ResultadoExecucao {
-        val suspensa = io { estado.suspensa(instance) } != null
-        val decisao = gate.avaliar(SyncKind.RECONCILIACAO, instance, suspensa)
-        if (decisao is GateDecision.Negada) return ResultadoExecucao.Negada(decisao.motivo)
-        return estado.comTrava(instance) {
-            executar(instance, SyncKind.RECONCILIACAO) { orcamento, aoGravar -> reconciliarDados(instance, orcamento, aoGravar) }
-        } ?: ResultadoExecucao.Ocupada
-    }
+    suspend fun reconciliar(instance: String): ResultadoExecucao =
+        comGate(SyncKind.RECONCILIACAO, instance) {
+            executar(instance, SyncKind.RECONCILIACAO) { orcamento, progresso -> reconciliarDados(instance, orcamento, progresso) }
+        }
 
     private suspend fun executar(instance: String): ResultadoExecucao =
-        executar(instance, SyncKind.INCREMENTAL) { orcamento, aoGravar -> sincronizar(instance, orcamento, aoGravar) }
+        executar(instance, SyncKind.INCREMENTAL) { orcamento, progresso -> sincronizar(instance, orcamento, progresso) }
 
     private suspend fun executar(
         instance: String,
         kind: SyncKind,
-        trabalho: suspend (OrcamentoDeRequisicoes, () -> Unit) -> RunResumo,
+        trabalho: suspend (OrcamentoDeRequisicoes, Progresso) -> RunResumo,
     ): ResultadoExecucao {
         val runId = io { estado.iniciar(instance, kind, clock.instant()) }
         val orcamento = OrcamentoDeRequisicoes(cfg.maxRequisicoes)
-        var gravadas = 0
+        val progresso = Progresso()
         try {
-            val resumo = trabalho(orcamento) { gravadas++ }
+            val resumo = trabalho(orcamento, progresso)
             return fechar(runId, instance, kind, RunStatus.OK, resumo, null, null)
         } catch (e: CancellationException) {
             // Um timeout do próprio serviço (chamador ainda ativo) é falha; qualquer outro cancelamento é CANCELADA.
             if (e is TimeoutCancellationException && currentCoroutineContext().isActive) {
-                return fechar(runId, instance, kind, RunStatus.FALHA, parcial(gravadas, orcamento), "TEMPO_ESGOTADO", null)
+                return fechar(runId, instance, kind, RunStatus.FALHA, progresso.resumo(orcamento), "TEMPO_ESGOTADO", null)
             }
             withContext(NonCancellable) {
-                estado.concluir(runId, RunStatus.CANCELADA, parcial(gravadas, orcamento), "CANCELADA", null, clock.instant())
+                estado.concluir(runId, RunStatus.CANCELADA, progresso.resumo(orcamento), "CANCELADA", null, clock.instant())
             }
             throw e
         } catch (e: Exception) {
             val (codigo, http) = classificar(e)
-            return fechar(runId, instance, kind, RunStatus.FALHA, parcial(gravadas, orcamento), codigo, http)
+            // Só a CLASSE da exceção (nunca a mensagem, que pode ter valor do Jira) nos erros sem código próprio.
+            if (codigo == "ERRO_INTERNO" || codigo == "DADO_MALFORMADO") {
+                log.warn("Sincronização falhou ({}): exceção {}", codigo, e::class.simpleName)
+            }
+            return fechar(runId, instance, kind, RunStatus.FALHA, progresso.resumo(orcamento), codigo, http)
         }
     }
 
@@ -120,7 +130,7 @@ class SyncService(
     private suspend fun reconciliarDados(
         instance: String,
         orcamento: OrcamentoDeRequisicoes,
-        aoGravar: () -> Unit,
+        progresso: Progresso,
     ): RunResumo {
         val corte = limiteDeRetencao()
         val ficha = requireNotNull(ctx.fichas["sincronizacao"]) { "ficha 'sincronizacao' ausente" }
@@ -138,13 +148,16 @@ class SyncService(
                 io {
                     plano.renomear.forEach { (jiraId, chave) -> store.renomear(instance, jiraId, chave) }
                 }
-                val removidas = io { store.marcarRemovidas(instance, plano.remover.map { it.id }.toSet(), clock.instant()) }
+                // A paginação por startAt pode ter pulado uma issue: antes de marcar, confirma por chave no Jira.
+                val confirmadas = confirmarRemocoes(instance, ficha, fabrica, desde, plano.remover)
+                val removidas = io { store.marcarRemovidas(instance, confirmadas.map { it.id }.toSet(), clock.instant()) }
+                progresso.removidas = removidas
                 var resumo = RunResumo(removidas = removidas)
                 if (plano.rebuscar.isNotEmpty()) {
                     val syncer = criarSyncer(instance)
                     for (lote in plano.rebuscar.chunked(TAMANHO_DO_LOTE)) {
                         val query = fabrica.build(ficha, mapOf("desde" to desde, "chaves" to lote))
-                        val r = syncer.run(query) { aoGravar() }
+                        val r = syncer.run(query) { g -> progresso.somar(g) }
                         resumo = resumo.copy(
                             issues = resumo.issues + r.issues,
                             eventos = resumo.eventos + r.events,
@@ -157,6 +170,28 @@ class SyncService(
                 resumo.copy(requisicoes = orcamento.usadas)
             }
         }
+    }
+
+    /**
+     * Dos candidatos a remoção, devolve só os que o Jira NÃO traz ao consultar por chave (`key in (...)`, lotes de
+     * [TAMANHO_DO_LOTE], com a mesma ficha). O que o Jira ainda traz fica na base, ativo.
+     */
+    private suspend fun confirmarRemocoes(
+        instance: String,
+        ficha: CardSpec,
+        fabrica: CardQueryFactory,
+        desde: AtualizadoDesde,
+        candidatos: List<IndiceIssue>,
+    ): List<IndiceIssue> {
+        if (candidatos.isEmpty()) return candidatos
+        val presentes = HashSet<String>()
+        for (lote in candidatos.map { it.key }.chunked(TAMANHO_DO_LOTE)) {
+            val query = fabrica.buildLeve(ficha, mapOf("desde" to desde, "chaves" to lote))
+            ctx.jira.create(instance).searchAll(query, maxItens = cfg.maxItens).collect { issue ->
+                (issue["key"] as? JsonPrimitive)?.content?.let { presentes += it }
+            }
+        }
+        return candidatos.filter { it.key !in presentes }
     }
 
     /** Percorre a consulta leve (só `key` e `updated`; o `id` vem no topo da issue). */
@@ -193,7 +228,7 @@ class SyncService(
     private suspend fun sincronizar(
         instance: String,
         orcamento: OrcamentoDeRequisicoes,
-        aoGravarUma: () -> Unit,
+        progresso: Progresso,
     ): RunResumo {
         val limite = limiteDeRetencao()
         val cursor = io { estado.cursor(instance) }
@@ -206,7 +241,7 @@ class SyncService(
                 syncer.run(query) { g ->
                     // Só depois do commit da issue; o cursor nunca recua (GREATEST no banco).
                     g.updated?.let { io { estado.avancarCursor(instance, it) } }
-                    aoGravarUma()
+                    progresso.somar(g)
                 }
             }
         }
@@ -219,8 +254,26 @@ class SyncService(
         )
     }
 
-    private fun parcial(gravadas: Int, orcamento: OrcamentoDeRequisicoes) =
-        RunResumo(issues = gravadas, requisicoes = orcamento.usadas)
+    /** Totais já gravados da execução em curso; é o resumo parcial quando ela termina em falha ou cancelamento. */
+    private class Progresso {
+        var issues = 0
+        var eventos = 0
+        var incompletas = 0
+        var removidas = 0
+        val naoResolvidos = HashSet<String>()
+
+        fun somar(g: IssueGravada) {
+            issues++
+            eventos += g.eventos
+            if (g.incompleta) incompletas++
+            naoResolvidos += g.naoResolvidos
+        }
+
+        fun resumo(orcamento: OrcamentoDeRequisicoes) = RunResumo(
+            issues = issues, eventos = eventos, requisicoes = orcamento.usadas, incompletas = incompletas,
+            usuariosNaoResolvidos = naoResolvidos.size, removidas = removidas,
+        )
+    }
 
     /**
      * Registra o desfecho. Se `concluir` devolver false (a linha já foi fechada por outro caminho), não conta
