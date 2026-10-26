@@ -150,6 +150,84 @@ class IssueLinkStoreTest {
         assertNull(removidaEm("TG-2", "TG-1", "sidia"))
     }
 
+    private fun issueComId(id: Long, chave: String, vararg itens: String): JsonObject = Json.parseToJsonElement(
+        """{"id":"$id","key":"$chave","fields":{"summary":"s","project":{"key":"TG"},"issuetype":{"name":"Task"},
+        "status":{"name":"To Do"},"created":"2026-10-01T09:00:00.000-0400","updated":"2026-10-02T09:00:00.000-0400","labels":[],
+        "issuelinks": [${itens.joinToString(",")}]}}""",
+    ).jsonObject
+
+    private fun relates(ponta: String, chave: String) =
+        """{"type":{"name":"Relates","inward":"relates to","outward":"relates to"},"$ponta":{"key":"$chave"}}"""
+
+    private fun inserirSimetrico(de: String, para: String, removida: Boolean = false) = requireNotNull(ctx.dataSource).connection.use { c ->
+        c.createStatement().execute(
+            "INSERT INTO issue_link(instance, from_key, to_key, link_type, direction, visto_em, removida_em) VALUES " +
+                "('samsung', '$de', '$para', 'Relates', 'SIMETRICO', now(), ${if (removida) "now()" else "NULL"})",
+        )
+    }
+
+    private fun ativosSimetricos(): List<String> = requireNotNull(ctx.dataSource).connection.use { c ->
+        c.createStatement().executeQuery(
+            "SELECT from_key || '>' || to_key FROM issue_link WHERE removida_em IS NULL AND link_type = 'Relates' ORDER BY 1",
+        ).use { rs -> generateSequence { if (rs.next()) rs.getString(1) else null }.toList() }
+    }
+
+    @Test
+    fun issueMovidaPeloUpsertMarcaOsVinculosDaChaveAntigaComoRemovidos() {
+        gravar(issueComId(501, "TG-1", blocks("outwardIssue", "TG-2")))
+        assertEquals(1, links.daIssue("samsung", "TG-1").size)
+        // Mesmo id do Jira, chave nova: caminho do upsert, sem a renomeação da reconciliação.
+        gravar(issueComId(501, "TG-9"), em = t1)
+        assertEquals(emptyList(), links.daIssue("samsung", "TG-1"))
+        assertNotNull(removidaEm("TG-1", "TG-2"))
+    }
+
+    @Test
+    fun simetricoPersistidoViaSubstituirFicaNaOrdemNatural() {
+        gravar(issueComId(601, "TG-10", relates("outwardIssue", "TG-9")))
+        assertEquals(listOf("TG-9>TG-10"), ativosSimetricos())
+        gravar(issueComId(602, "TG-9", relates("inwardIssue", "TG-10")), em = t1)
+        assertEquals(listOf("TG-9>TG-10"), ativosSimetricos())
+    }
+
+    @Test
+    fun renomearPontaSimetricoVoltaAOrdemNaturalSemDuplicar() {
+        inserirSimetrico("TG-3", "TG-5")
+        inserirSimetrico("TG-5", "TG-8") // já existe o vínculo que a renomeação de TG-3 para TG-8 recriaria ao contrário
+        requireNotNull(ctx.dataSource).connection.use { c ->
+            c.autoCommit = false
+            links.renomearPonta(c, "samsung", "TG-3", "TG-8")
+            c.commit()
+        }
+        assertEquals(listOf("TG-5>TG-8"), ativosSimetricos())
+    }
+
+    @Test
+    fun renomearPontaSimetricoSemColisaoTrocaAsPontas() {
+        inserirSimetrico("TG-3", "TG-5")
+        requireNotNull(ctx.dataSource).connection.use { c ->
+            c.autoCommit = false
+            links.renomearPonta(c, "samsung", "TG-3", "TG-8")
+            c.commit()
+        }
+        assertEquals(listOf("TG-5>TG-8"), ativosSimetricos())
+    }
+
+    @Test
+    fun movidaERenomearPontaFicamNaMesmaTransacao() {
+        gravar(issueComId(701, "TG-1", blocks("outwardIssue", "TG-2")))
+        inserirSimetrico("TG-1", "TG-5")
+        requireNotNull(ctx.dataSource).connection.use { c ->
+            c.autoCommit = false
+            store.upsertNaTransacao(c, issueComId(701, "TG-9"), emptyList(), "samsung", null, emptyList(), t1)
+            links.renomearPonta(c, "samsung", "TG-1", "TG-8")
+            c.rollback()
+        }
+        assertEquals(1, links.ativos("samsung", "Blocks").size)
+        assertEquals(listOf("TG-1>TG-5"), ativosSimetricos())
+        assertEquals(0, contar("removida_em IS NOT NULL"))
+    }
+
     @Test
     fun rawDaIssueNaoGuardaOsVinculos() {
         val i = issue("TG-1", """{"type":{"name":"Blocks"},"inwardIssue":{"key":"TG-2","fields":{"summary":"segredo da outra ponta"}}}""")

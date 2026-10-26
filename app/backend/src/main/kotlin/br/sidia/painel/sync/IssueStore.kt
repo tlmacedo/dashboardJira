@@ -237,12 +237,14 @@ class PostgresIssueStore(private val ds: DataSource) : IssueStore, IssueIndex {
     private fun liberarJiraIdDaChaveAntiga(con: Connection, c: CamposDaIssue, instance: String) {
         val jiraId = c.jiraId ?: return
         con.prepareStatement(
-            "UPDATE issue SET removida_em = now(), jira_id = NULL WHERE instance = ? AND jira_id = ? AND key <> ?",
+            "UPDATE issue SET removida_em = now(), jira_id = NULL WHERE instance = ? AND jira_id = ? AND key <> ? RETURNING key",
         ).use { ps ->
             ps.setString(1, instance)
             ps.setLong(2, jiraId)
             ps.setString(3, c.key)
-            ps.executeUpdate()
+            val antigas = ps.executeQuery().use { rs -> buildList { while (rs.next()) add(rs.getString(1)) } }
+            // Os vínculos da chave antiga deixam de valer na mesma transação; os da chave nova vêm no `substituir`.
+            for (antiga in antigas) links.marcarRemovidosDaChave(con, instance, antiga)
         }
     }
 

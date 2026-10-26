@@ -1,5 +1,6 @@
 package br.sidia.painel.sync
 
+import br.sidia.painel.domain.ORDEM_NATURAL_DE_CHAVES
 import java.sql.Connection
 import java.sql.ResultSet
 import java.sql.Timestamp
@@ -52,8 +53,8 @@ class PostgresIssueLinkStore(private val ds: DataSource) : IssueLinkStore {
     /**
      * A issue [antiga] passou a se chamar [nova] (mesmo `jira_id`): as pontas dos vínculos da instância acompanham,
      * na transação do chamador. Antes, saem os vínculos que colidiriam com um que já existe sob a chave nova ou que
-     * virariam um vínculo da issue com ela mesma. Em tipo simétrico a ordem das pontas pode deixar de ser a natural;
-     * o próximo `substituir` de qualquer ponta troca a linha.
+     * virariam um vínculo da issue com ela mesma. Em tipo simétrico, ao fim as pontas voltam à ordem natural
+     * (`from_key` menor que `to_key`), sem deixar duas linhas para o mesmo par.
      */
     internal fun renomearPonta(conn: Connection, instance: String, antiga: String, nova: String) {
         conn.prepareStatement(
@@ -79,6 +80,84 @@ class PostgresIssueLinkStore(private val ds: DataSource) : IssueLinkStore {
                 ps.setString(2, instance)
                 ps.setString(3, antiga)
                 ps.executeUpdate()
+            }
+        }
+        restaurarOrdemNatural(conn, instance, nova)
+    }
+
+    /** A issue [chave] deixou de existir sob esse nome: seus vínculos ativos ganham `removida_em`, na transação do chamador. */
+    internal fun marcarRemovidosDaChave(conn: Connection, instance: String, chave: String) {
+        conn.prepareStatement(
+            "UPDATE issue_link SET removida_em = now() WHERE instance = ? AND removida_em IS NULL AND (from_key = ? OR to_key = ?)",
+        ).use { ps ->
+            ps.setString(1, instance)
+            ps.setString(2, chave)
+            ps.setString(3, chave)
+            ps.executeUpdate()
+        }
+    }
+
+    /**
+     * Vínculos simétricos com a ponta [chave] fora da ordem natural (`from_key` maior que `to_key`) voltam à ordem natural.
+     * Se a linha na ordem certa já existe, a fora de ordem é apagada (e a que ficou volta a ser ativa quando a apagada era).
+     */
+    private fun restaurarOrdemNatural(conn: Connection, instance: String, chave: String) {
+        class Linha(val de: String, val para: String, val tipo: String, val removida: Timestamp?)
+        val linhas = conn.prepareStatement(
+            "SELECT from_key, to_key, link_type, removida_em FROM issue_link " +
+                "WHERE instance = ? AND direction = 'SIMETRICO' AND (from_key = ? OR to_key = ?)",
+        ).use { ps ->
+            ps.setString(1, instance)
+            ps.setString(2, chave)
+            ps.setString(3, chave)
+            ps.executeQuery().use { rs ->
+                buildList { while (rs.next()) add(Linha(rs.getString(1), rs.getString(2), rs.getString(3), rs.getTimestamp(4))) }
+            }
+        }
+        for (l in linhas.filter { ORDEM_NATURAL_DE_CHAVES.compare(it.de, it.para) > 0 }) {
+            val jaExiste = conn.prepareStatement(
+                "SELECT 1 FROM issue_link WHERE instance = ? AND from_key = ? AND to_key = ? AND link_type = ?",
+            ).use { ps ->
+                ps.setString(1, instance)
+                ps.setString(2, l.para)
+                ps.setString(3, l.de)
+                ps.setString(4, l.tipo)
+                ps.executeQuery().use { it.next() }
+            }
+            if (jaExiste) {
+                // A fora de ordem sai; se ela estava ativa, a linha certa fica ativa.
+                if (l.removida == null) {
+                    conn.prepareStatement(
+                        "UPDATE issue_link SET removida_em = NULL WHERE instance = ? AND from_key = ? AND to_key = ? AND link_type = ?",
+                    ).use { ps ->
+                        ps.setString(1, instance)
+                        ps.setString(2, l.para)
+                        ps.setString(3, l.de)
+                        ps.setString(4, l.tipo)
+                        ps.executeUpdate()
+                    }
+                }
+                conn.prepareStatement(
+                    "DELETE FROM issue_link WHERE instance = ? AND from_key = ? AND to_key = ? AND link_type = ?",
+                ).use { ps ->
+                    ps.setString(1, instance)
+                    ps.setString(2, l.de)
+                    ps.setString(3, l.para)
+                    ps.setString(4, l.tipo)
+                    ps.executeUpdate()
+                }
+            } else {
+                conn.prepareStatement(
+                    "UPDATE issue_link SET from_key = ?, to_key = ? WHERE instance = ? AND from_key = ? AND to_key = ? AND link_type = ?",
+                ).use { ps ->
+                    ps.setString(1, l.para)
+                    ps.setString(2, l.de)
+                    ps.setString(3, instance)
+                    ps.setString(4, l.de)
+                    ps.setString(5, l.para)
+                    ps.setString(6, l.tipo)
+                    ps.executeUpdate()
+                }
             }
         }
     }

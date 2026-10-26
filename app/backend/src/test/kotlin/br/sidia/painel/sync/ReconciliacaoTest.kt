@@ -224,7 +224,7 @@ class ReconciliacaoTest {
         val r = executada(s.reconciliar("samsung"))
         assertEquals(RunStatus.OK, r.status)
         assertEquals(1, contar("SELECT count(*) FROM issue_link WHERE instance = 'samsung' AND from_key = 'TG-3' AND to_key = 'TG-40'"))
-        assertEquals(1, contar("SELECT count(*) FROM issue_link WHERE instance = 'samsung' AND from_key = 'TG-40' AND to_key = 'TG-1'"))
+        assertEquals(1, contar("SELECT count(*) FROM issue_link WHERE instance = 'samsung' AND from_key = 'TG-1' AND to_key = 'TG-40'"))
         assertEquals(0, contar("SELECT count(*) FROM issue_link WHERE instance = 'samsung' AND (from_key = 'TG-4' OR to_key = 'TG-4')"))
         // Outra instância não é tocada.
         assertEquals(1, contar("SELECT count(*) FROM issue_link WHERE instance = 'sidia' AND to_key = 'TG-4'"))
