@@ -87,12 +87,28 @@ object ChangelogParser {
                 val ehResponsavel = campo.equals("assignee", ignoreCase = true)
                 val guardaValor = CAMPOS_COM_VALOR.any { campo.equals(it, ignoreCase = true) }
                 // Campos fora da lista só registram que houve mudança: nunca o texto (privacidade).
-                val de = if (ehResponsavel) usuario(item, "from", chaves) else if (guardaValor) item.texto("fromString") else null
-                val para = if (ehResponsavel) usuario(item, "to", chaves) else if (guardaValor) item.texto("toString") else null
+                val ehVencimento = campo.equals("duedate", ignoreCase = true)
+                val de = if (ehResponsavel) usuario(item, "from", chaves)
+                else if (ehVencimento) vencimento(item, "from", "fromString")
+                else if (guardaValor) item.texto("fromString") else null
+                val para = if (ehResponsavel) usuario(item, "to", chaves)
+                else if (ehVencimento) vencimento(item, "to", "toString")
+                else if (guardaValor) item.texto("toString") else null
                 eventos += ChangeEventRecord("$key:$historicoId:$i", key, campo, de, para, quando, autor)
             }
         }
         return eventos.sortedBy { it.at }
+    }
+
+    private val DATA_ISO = Regex("""^\d{4}-\d{2}-\d{2}$""")
+
+    /**
+     * Vencimento: o DC manda `from`/`to` como `aaaa-mm-dd` e `fromString`/`toString` como `aaaa-mm-dd 00:00:00.0`.
+     * Guarda o valor ISO quando ele existe; senão, o texto (que a auditoria sinaliza se não for legível).
+     */
+    private fun vencimento(item: JsonObject, chave: String, chaveTexto: String): String? {
+        val iso = item.texto(chave)?.trim()?.takeIf { DATA_ISO.matches(it) }
+        return iso ?: item.texto(chaveTexto)
     }
 
     /**

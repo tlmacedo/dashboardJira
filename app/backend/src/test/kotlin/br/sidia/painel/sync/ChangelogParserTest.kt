@@ -119,6 +119,28 @@ class ChangelogParserTest {
     }
 
     @Test
+    fun duedateGuardaFromIsoQuandoPresente() {
+        val h = historicos(
+            """[{"id":"9","created":"2026-10-03T10:00:00.000-0400","author":{"name":"Ana.Silva"},
+                "items":[{"field":"duedate","from":"2026-10-15","fromString":"2026-10-15 00:00:00.0","to":null,"toString":null}]}]""",
+        )
+        val e = ChangelogParser.toEvents(issue(), h).single()
+        assertEquals("2026-10-15", e.from)
+        assertNull(e.to)
+    }
+
+    @Test
+    fun duedateSemIsoNoFromUsaFromString() {
+        val h = historicos(
+            """[{"id":"9","created":"2026-10-03T10:00:00.000-0400",
+                "items":[{"field":"duedate","from":"15/10/2026","fromString":"2026-10-15 00:00:00.0","to":"2026-10-20","toString":"2026-10-20 00:00:00.0"}]}]""",
+        )
+        val e = ChangelogParser.toEvents(issue(), h).single()
+        assertEquals("2026-10-15 00:00:00.0", e.from)
+        assertEquals("2026-10-20", e.to)
+    }
+
+    @Test
     fun idDoEventoEUnicoPorItem() {
         val h = historicos(
             """[{"id":"5","created":"2026-10-02T10:00:00.000-0400","items":[
