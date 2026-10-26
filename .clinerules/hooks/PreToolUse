@@ -171,7 +171,7 @@ caminho_protegido() {
   done
   base="${partes[k-1]}"
   # nome curto 8.3 só importa no último segmento (a proteção é pelo nome do arquivo; pastas como
-  # C:\Users\THIAGO~1\... continuam liberadas)
+  # C:\Users\USUARIO~1\... continuam liberadas)
   case "$base" in *~[0-9]*) motivo="nome curto 8.3 ($base) pode apontar para .env ou config real"; return 0 ;; esac
   case "$base" in
     .env.example|.env.sample) return 1 ;;

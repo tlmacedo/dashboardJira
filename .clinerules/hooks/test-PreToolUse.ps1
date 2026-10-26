@@ -413,7 +413,7 @@ Caso '-' '{"preToolUse":{"toolName":"search_files","parameters":"{nao json"}}' $
 $grande = (@('x') * 150000) -join "`n"
 Caso '-' (Cmd ("cat .env`n" + $grande)) $true 'falha fechada: comando grande lendo .env'
 Caso 'true' (Cmd ('echo $JIRA_SAMSUNG_TOKEN' + "`n" + $grande)) $true 'falha fechada: token em comando grande'
-Caso '-' (Esc 'write_to_file' 'C:\Users\THIAGO~1\x\README.md') $false 'não regressão: pasta com nome curto 8.3 (TEMP do Windows)'
+Caso '-' (Esc 'write_to_file' 'C:\Users\USUARIO~1\x\README.md') $false 'não regressão: pasta com nome curto 8.3 (TEMP do Windows)'
 Caso '-' 'isto não é json' $true 'falha fechada: entrada inválida'
 Caso '-' '' $true 'falha fechada: entrada vazia'
 Caso '-' '[1,2]' $true 'falha fechada: JSON que não é objeto'

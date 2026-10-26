@@ -231,7 +231,7 @@ function Caminho-Protegido([string]$caminho) {
     $script:norm = ($partes -join '/')
     $base = [string]$partes[$partes.Count - 1]
     # nome curto 8.3 só importa no último segmento (a proteção é pelo nome do arquivo; pastas como
-    # C:\Users\THIAGO~1\... continuam liberadas)
+    # C:\Users\USUARIO~1\... continuam liberadas)
     if ($base -match '~[0-9]') { return "nome curto 8.3 ($base) pode apontar para .env ou config real." }
     if (@('.env.example', '.env.sample') -contains $base) { return $null }
     if ($base -match '^\.env(\..*)?$') { return "arquivo de ambiente ($base): contém segredos." }

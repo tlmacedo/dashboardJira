@@ -274,7 +274,7 @@ caso - '{"preToolUse":{"toolName":"search_files","parameters":"{nao json"}}' tru
 grande=$(yes x | head -n 150000)
 caso - "$(cmd "$(printf 'cat .env\n%s' "$grande")")" true "falha fechada: comando grande (SIGPIPE) lendo .env"
 caso true "$(cmd "$(printf 'echo $JIRA_SAMSUNG_TOKEN\n%s' "$grande")")" true "falha fechada: token em comando grande"
-caso - "$(esc write_to_file 'C:\Users\THIAGO~1\x\README.md')" false "não regressão: pasta com nome curto 8.3 (TEMP do Windows)"
+caso - "$(esc write_to_file 'C:\Users\USUARIO~1\x\README.md')" false "não regressão: pasta com nome curto 8.3 (TEMP do Windows)"
 
 echo "falhas: $falhas"
 [ "$falhas" = 0 ]

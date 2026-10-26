@@ -58,7 +58,7 @@ O usuário pediu que o frontend siga a identidade visual da Sidia. Temas dispon�
 1. Todo número leva às tasks que o compõem.
 2. Métricas de fluxo avaliam o sistema de trabalho, não ranqueiam pessoas.
 3. Indício não é prova: auditoria mostra evidência verificável no histórico da task.
-4. Nada que dependa do Jira real é afirmado antes de validado com autorização.
+4. Nada que dependa do Jira real é afirmado antes de ser validado; o acesso ao Jira só existe com a flag ligada pelo usuário (regra 1 do `CLAUDE.md`).
 5. Cada pessoa vê somente o que seu papel permite.
 
 ## Accessibility & Inclusion
