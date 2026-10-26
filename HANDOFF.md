@@ -27,7 +27,7 @@ Commits do Plano 3A: `9cd22aa` (plano) até `8e84a31` (ajustes de identidade). P
 
 ## Regras que não podem ser esquecidas
 
-- **Nenhuma consulta ao Jira da empresa sem autorização expressa do usuário, por pesquisa.** Hoje nenhuma está autorizada (hook em `.claude/hooks/guard.sh`, flag `JIRA_LIVE_ENABLED=false`). Vale para o MCP da Atlassian e para qualquer comando de rede.
+- **A única trava de acesso ao Jira é a flag `JIRA_LIVE_ENABLED`** (decisão do usuário em 25/10): `false` = bloqueado para todos (app, agendador, MCP, rede); `true` = liberado. Só o usuário muda a flag; hook em `.claude/hooks/guard.sh`.
 - Toda aprovação do usuário vem como **pergunta com opções**, a recomendada primeiro e marcada "(Recomendada)".
 - **Docker sempre ativo** (`sh .claude/hooks/ensure-docker.sh`); testes de banco com PostgreSQL real via Testcontainers; nunca trocar por H2 ou mock.
 - Conversar em pt-BR; comentários de código em pt-BR.
