@@ -12,6 +12,7 @@ import br.sidia.painel.sync.Agendador
 import br.sidia.painel.sync.PostgresIssueStore
 import br.sidia.painel.sync.PostgresSyncStateStore
 import br.sidia.painel.sync.montarAgendador
+import br.sidia.painel.sync.rotasSyncStatus
 import io.ktor.server.application.ApplicationStarted
 import io.ktor.server.application.ApplicationStopping
 import kotlinx.coroutines.runBlocking
@@ -113,6 +114,7 @@ fun Application.module(
         spaEstatica(settings.staticDir)
         context.dataSource?.let { ds ->
             rotasTempoEmStatus(context, PostgresIssueStore(ds), AccessLog(ds))
+            rotasSyncStatus(context, PostgresSyncStateStore(ds), AccessLog(ds))
         }
         get("/api/health") { call.respond(HealthResposta(ok = true)) }
         get("/api/meta") {

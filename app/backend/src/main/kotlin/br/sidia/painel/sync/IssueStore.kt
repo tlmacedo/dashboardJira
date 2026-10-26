@@ -1,6 +1,7 @@
 package br.sidia.painel.sync
 
 import br.sidia.painel.domain.IssueTimeline
+import br.sidia.painel.jql.CardSpec
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import java.sql.Connection
@@ -20,16 +21,41 @@ interface IssueStore {
     fun upsert(issue: JsonObject, events: List<ChangeEventRecord>, instance: String, osVersionCustomId: String? = null)
 
     /**
-     * Linhas do tempo da instância. `openOnly=true` devolve só as não resolvidas (os limites são ignorados).
-     * Caso contrário, com [closedFrom] e/ou [closedTo], só as resolvidas em `[closedFrom, closedTo)`;
-     * sem nenhum limite, todas. Com [osVersion], só as issues cujo OS Version é igual (sem diferenciar maiúsculas).
+     * Linhas do tempo da instância (nunca as removidas logicamente). `openOnly=true` devolve as não
+     * resolvidas OU sem `resolution` (os limites são ignorados): quem tem status concluído mas não tem
+     * `resolution` também vem, para o chamador contar a divergência (spec 4.2). Caso contrário, com
+     * [closedFrom] e/ou [closedTo], só as resolvidas em `[closedFrom, closedTo)`; sem nenhum limite, todas.
+     * Com [osVersion], só as issues cujo OS Version é igual (sem diferenciar maiúsculas). Com [filtro], só os
+     * tipos da ficha e fora dos status excluídos por ela.
      */
     fun timelines(
         instance: String, closedFrom: Instant?, closedTo: Instant?, openOnly: Boolean, osVersion: String? = null,
+        filtro: FiltroDeFicha? = null,
     ): List<IssueTimeline>
 
     /** Se alguma issue da instância tem OS Version gravado (falso quando o campo ainda não é sincronizado). */
     fun temOsVersion(instance: String): Boolean
+}
+
+/**
+ * O que a ficha do card fixa sobre as issues, aplicado também na LEITURA do banco (a base guarda tudo o que a
+ * sincronização trouxe, e o card só pode contar o que a ficha manda). [tipos] vazio = qualquer tipo.
+ * O projeto fica de fora: na base ele é a chave (`TG`) e na ficha pode ser o nome; a instância já separa.
+ */
+data class FiltroDeFicha(val tipos: Set<String>, val statusExcluidos: Set<String>) {
+    companion object {
+        private const val CAMPO_TIPO = "issuetype"
+        private const val CAMPO_STATUS = "status"
+
+        /** Valores de `filtrosFixos[issuetype]` e `filtrosExcluidos[status]` da ficha (chave sem diferenciar maiúsculas). */
+        fun de(spec: CardSpec): FiltroDeFicha = FiltroDeFicha(
+            tipos = valores(spec.filtrosFixos, CAMPO_TIPO),
+            statusExcluidos = valores(spec.filtrosExcluidos, CAMPO_STATUS),
+        )
+
+        private fun valores(mapa: Map<String, List<String>>, campo: String): Set<String> =
+            mapa.filterKeys { it.equals(campo, ignoreCase = true) }.values.flatten().toSet()
+    }
 }
 
 /** Linha leve de uma issue ativa (não removida), usada pela reconciliação. */
@@ -256,16 +282,26 @@ class PostgresIssueStore(private val ds: DataSource) : IssueStore, IssueIndex {
 
     override fun timelines(
         instance: String, closedFrom: Instant?, closedTo: Instant?, openOnly: Boolean, osVersion: String?,
+        filtro: FiltroDeFicha?,
     ): List<IssueTimeline> {
         val filtros = StringBuilder("instance = ? AND removida_em IS NULL AND created IS NOT NULL")
         val params = mutableListOf<Any>(instance)
+        if (filtro != null && filtro.tipos.isNotEmpty()) {
+            filtros.append(" AND lower(coalesce(issue_type, '')) = ANY (?)")
+            params.add(minusculas(filtro.tipos))
+        }
+        if (filtro != null && filtro.statusExcluidos.isNotEmpty()) {
+            filtros.append(" AND lower(coalesce(status, '')) <> ALL (?)")
+            params.add(minusculas(filtro.statusExcluidos))
+        }
         if (osVersion != null) {
             // Comparação exata sem diferenciar maiúsculas; o valor entra só como parâmetro.
             filtros.append(" AND lower(os_version) = lower(?)")
             params += osVersion
         }
         if (openOnly) {
-            filtros.append(" AND resolved IS NULL")
+            // Sem resolução também vale: status concluído sem `resolution` é divergência a contar, não a esconder.
+            filtros.append(" AND (resolved IS NULL OR resolution IS NULL)")
         } else {
             if (closedFrom != null) {
                 filtros.append(" AND resolved >= ?")
@@ -281,7 +317,11 @@ class PostgresIssueStore(private val ds: DataSource) : IssueStore, IssueIndex {
         ds.connection.use { con ->
             val linhas = con.prepareStatement(sql).use { ps ->
                 params.forEachIndexed { i, p ->
-                    if (p is Timestamp) ps.setTimestamp(i + 1, p) else ps.setString(i + 1, p as String)
+                    when (p) {
+                        is Timestamp -> ps.setTimestamp(i + 1, p)
+                        is Array<*> -> ps.setArray(i + 1, con.createArrayOf("text", p))
+                        else -> ps.setString(i + 1, p as String)
+                    }
                 }
                 ps.executeQuery().use { rs ->
                     buildList {
@@ -310,6 +350,10 @@ class PostgresIssueStore(private val ds: DataSource) : IssueStore, IssueIndex {
             }
         }
     }
+
+    /** Valores em minúsculas (fixas, sem depender do idioma) como array de parâmetro, para comparar sem diferenciar maiúsculas. */
+    private fun minusculas(valores: Set<String>): Array<String> =
+        valores.map { it.lowercase(java.util.Locale.ROOT) }.toTypedArray()
 
     private fun eventosDe(con: Connection, linhas: List<LinhaIssue>): Map<Long, List<ChangeEventRecord>> {
         val chaves = linhas.associate { it.id to it.key }

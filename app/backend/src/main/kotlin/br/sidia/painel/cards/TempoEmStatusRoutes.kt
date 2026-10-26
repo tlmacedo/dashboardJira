@@ -13,6 +13,7 @@ import br.sidia.painel.security.Principal
 import br.sidia.painel.security.Visibility
 import br.sidia.painel.security.normalizarUsername
 import br.sidia.painel.security.principal
+import br.sidia.painel.sync.FiltroDeFicha
 import br.sidia.painel.sync.IssueStore
 import br.sidia.painel.sync.normalizarOsVersion
 import io.ktor.http.HttpStatusCode
@@ -33,6 +34,9 @@ import java.util.Locale
 
 /** Instância do Jira de onde o card lê as issues (a mesma da ficha `tempo-em-status.card.yaml`). */
 const val INSTANCIA_TEMPO_EM_STATUS = "samsung"
+
+/** Id da ficha (`tempo-em-status.card.yaml`) cujos tipos e status excluídos valem também na leitura. */
+private const val FICHA_TEMPO_EM_STATUS = "tempo-em-status"
 
 /** Padrão do período: os últimos 90 dias até hoje (fuso do painel). */
 private const val PERIODO_PADRAO_DIAS = 90L
@@ -132,7 +136,7 @@ fun Route.rotasTempoEmStatus(ctx: AppContext, store: IssueStore, auditoria: Acce
             val principal = call.principal
             val detalhe = lerDetalhe(call.request.queryParameters["kind"])
             val filtros = lerFiltros(call.request.queryParameters, hoje(ctx))
-            val calculado = calcular(ctx, store, principal, filtros)
+            val calculado = calcular(ctx, store, principal, filtros, (detalhe as? Detalhe.PorPessoaStatus)?.pessoa)
             // Pessoa fora da visibilidade: 403 (mesmo critério do filtro `pessoa` do card).
             if (detalhe is Detalhe.PorPessoaStatus && detalhe.pessoa !in calculado.visiveis) {
                 throw ErroHttp(HttpStatusCode.Forbidden)
@@ -297,7 +301,14 @@ private fun pessoasDe(t: IssueTimeline): Set<String> = buildSet {
     t.currentAssignee?.let(::add)
 }
 
-private fun calcular(ctx: AppContext, store: IssueStore, principal: Principal, f: Filtros): Calculado {
+private fun calcular(
+    ctx: AppContext,
+    store: IssueStore,
+    principal: Principal,
+    f: Filtros,
+    // Pessoa pedida no detalhamento: entra entre os candidatos mesmo sem nenhuma issue (a própria pessoa recebe [], não 403).
+    pessoaExtra: String? = null,
+): Calculado {
     val hoje = hoje(ctx)
     val zona = ctx.settings.zone
     val agora = ctx.clock.instant()
@@ -307,17 +318,39 @@ private fun calcular(ctx: AppContext, store: IssueStore, principal: Principal, f
         ctx.roles.membersOf(nome, hoje).takeIf { it.isNotEmpty() } ?: throw ErroHttp(HttpStatusCode.BadRequest)
     }
 
-    val fechadas = store.timelines(
+    // Só o que a ficha manda (tipos e status excluídos) também na leitura: a base guarda tudo que foi sincronizado.
+    val filtroDaFicha = FiltroDeFicha.de(ctx.fichas.getValue(FICHA_TEMPO_EM_STATUS))
+    val fechadasBrutas = store.timelines(
         INSTANCIA_TEMPO_EM_STATUS,
         f.de.atStartOfDay(zona).toInstant(),
         f.ate.plusDays(1).atStartOfDay(zona).toInstant(),
         false,
         f.os,
+        filtroDaFicha,
     )
-    val abertas = store.timelines(INSTANCIA_TEMPO_EM_STATUS, null, null, true, f.os)
+    val abertasBrutas = store.timelines(INSTANCIA_TEMPO_EM_STATUS, null, null, true, f.os, filtroDaFicha)
 
-    val existentes = (fechadas + abertas).flatMapTo(mutableSetOf()) { pessoasDe(it) }
-    val visiveis = Visibility.visibleUserIds(principal, ctx.roles, hoje, existentes + listOfNotNull(f.pessoa))
+    // Concluída = categoria DONE E resolution (spec 4.2). Divergente (um sem o outro) não entra em nenhum
+    // número e é só contada, para a Qualidade dos dados. Status sem mapeamento não é classificado aqui:
+    // o cálculo abaixo avisa dele.
+    fun categoria(t: IssueTimeline): StatusCategory? =
+        try {
+            ctx.statusMap.category(t.currentStatus)
+        } catch (e: UnmappedStatusException) {
+            null
+        }
+
+    fun temResolucao(t: IssueTimeline) = !t.resolution.isNullOrBlank()
+
+    fun divergente(t: IssueTimeline) = categoria(t)?.let { (it == StatusCategory.DONE) != temResolucao(t) } ?: false
+
+    fun concluida(t: IssueTimeline) = categoria(t) == StatusCategory.DONE && temResolucao(t)
+    val fechadas = fechadasBrutas.filterNot(::divergente)
+    // A consulta das abertas também traz as sem resolution: só ficam as realmente abertas.
+    val abertas = abertasBrutas.filterNot { divergente(it) || concluida(it) }
+
+    val existentes = (fechadasBrutas + abertasBrutas).flatMapTo(mutableSetOf()) { pessoasDe(it) }
+    val visiveis = Visibility.visibleUserIds(principal, ctx.roles, hoje, existentes + listOfNotNull(f.pessoa, pessoaExtra))
     if (f.pessoa != null && f.pessoa !in visiveis) throw ErroHttp(HttpStatusCode.Forbidden)
 
     var permitidos = visiveis
@@ -338,6 +371,15 @@ private fun calcular(ctx: AppContext, store: IssueStore, principal: Principal, f
     // o total (das que o usuário poderia ver) é avisado, nunca as chaves.
     val inconsistentes = (fechadas + abertas).count { candidata(it) && calculador.datasInconsistentes(it, agora) }
     if (inconsistentes > 0) avisos += AvisoDto(AvisoDto.DATAS_INCONSISTENTES, AvisoDto.INFORMATIVO, "$inconsistentes issue(s) com datas inconsistentes ignoradas")
+    // Divergentes (de quem o usuário poderia ver), contadas uma vez só mesmo quando vêm das duas consultas.
+    val divergentes = (fechadasBrutas + abertasBrutas).filter { candidata(it) && divergente(it) }.map { it.key }.toSet().size
+    if (divergentes > 0) {
+        avisos += AvisoDto(
+            AvisoDto.CONCLUSAO_DIVERGENTE, AvisoDto.INFORMATIVO,
+            "$divergentes issue(s) com status e resolução divergentes ignoradas",
+            mapOf("n" to divergentes.toString()),
+        )
+    }
     val fechadasOk = fechadas.filterNot { calculador.datasInconsistentes(it, agora) }
     val abertasOk = abertas.filterNot { calculador.datasInconsistentes(it, agora) }
 
@@ -354,7 +396,10 @@ private fun calcular(ctx: AppContext, store: IssueStore, principal: Principal, f
         val analisadas = resultado.analyzed.toSet()
         concluidas = fechadasDoUsuario.filter { it.key in analisadas }.associateBy { it.key }
     } catch (e: UnmappedStatusException) {
-        avisos += AvisoDto(AvisoDto.STATUS_SEM_MAPEAMENTO, AvisoDto.BLOQUEANTE, "status sem mapeamento: ${e.status}")
+        avisos += AvisoDto(
+            AvisoDto.STATUS_SEM_MAPEAMENTO, AvisoDto.BLOQUEANTE, "status sem mapeamento: ${e.status}",
+            mapOf("status" to e.status),
+        )
     } catch (e: IllegalArgumentException) {
         // Dado inconsistente (ex.: resolução antes da criação): o cálculo fica indisponível, sem detalhes.
         avisos += AvisoDto(AvisoDto.CALCULO_INDISPONIVEL, AvisoDto.BLOQUEANTE, "dados inconsistentes em algumas issues: cálculo indisponível")

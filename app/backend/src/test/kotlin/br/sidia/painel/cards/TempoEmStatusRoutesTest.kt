@@ -139,21 +139,21 @@ class TempoEmStatusRoutesTest {
     private fun semear() {
         // Concluídas dentro dos 90 dias até 25/10/2026.
         issue(
-            "TG-1", "Task", "ana", "Concluído", "Done", t("10-01 09:00"), t("10-07 09:00"),
+            "TG-1", "Checklist","ana", "Concluído", "Done", t("10-01 09:00"), t("10-07 09:00"),
             listOf(
                 resp("10-02 10:00", null, "ana"), st("10-02 10:00", "A Fazer", "Em andamento"),
                 st("10-05 09:00", "Em andamento", "Em revisão"), st("10-07 09:00", "Em revisão", "Concluído"),
             ),
         )
         issue(
-            "TG-2", "Bug", "bruno", "Concluído", "Done", t("10-01 10:00"), t("10-08 15:00"),
+            "TG-2", "Checklist TG","bruno", "Concluído", "Done", t("10-01 10:00"), t("10-08 15:00"),
             listOf(
                 resp("10-01 10:00", null, "bruno"), st("10-01 11:00", "A Fazer", "Em andamento"),
                 st("10-06 15:00", "Em andamento", "Em revisão"), st("10-08 15:00", "Em revisão", "Concluído"),
             ),
         )
         issue(
-            "TG-3", "Task", "carla", "Concluído", "Done", t("10-02 09:00"), t("10-12 10:00"),
+            "TG-3", "Checklist","carla", "Concluído", "Done", t("10-02 09:00"), t("10-12 10:00"),
             listOf(
                 resp("10-02 09:00", null, "carla"), st("10-02 10:00", "A Fazer", "Em andamento"),
                 st("10-09 10:00", "Em andamento", "Em revisão"), st("10-12 10:00", "Em revisão", "Concluído"),
@@ -161,7 +161,7 @@ class TempoEmStatusRoutesTest {
         )
         // Passou de ana para bruno (os dois do Alfa).
         issue(
-            "TG-4", "Task", "bruno", "Concluído", "Done", t("10-01 09:00"), t("10-13 09:00"),
+            "TG-4", "Checklist","bruno", "Concluído", "Done", t("10-01 09:00"), t("10-13 09:00"),
             listOf(
                 resp("10-01 09:00", null, "ana"), st("10-01 09:30", "A Fazer", "Em andamento"),
                 resp("10-05 09:00", "ana", "bruno"),
@@ -170,7 +170,7 @@ class TempoEmStatusRoutesTest {
         )
         // Responsável que não está no diretório: só coordenação e gerente.
         issue(
-            "TG-5", "Task", "externo.fora", "Concluído", "Done", t("10-02 11:00"), t("10-14 12:00"),
+            "TG-5", "Checklist","externo.fora", "Concluído", "Done", t("10-02 11:00"), t("10-14 12:00"),
             listOf(
                 resp("10-02 11:00", null, "externo.fora"), st("10-02 12:00", "A Fazer", "Em andamento"),
                 st("10-14 12:00", "Em andamento", "Concluído"),
@@ -178,7 +178,7 @@ class TempoEmStatusRoutesTest {
         )
         // Concluída em 03/08 (82 dias antes de hoje): dentro do padrão de 90 dias.
         issue(
-            "TG-9", "Task", "ana", "Concluído", "Done", t("07-31 09:00"), t("08-03 10:00"),
+            "TG-9", "Checklist","ana", "Concluído", "Done", t("07-31 09:00"), t("08-03 10:00"),
             listOf(
                 resp("07-31 09:00", null, "ana"), st("07-31 10:00", "A Fazer", "Em andamento"),
                 st("08-03 10:00", "Em andamento", "Concluído"),
@@ -186,7 +186,7 @@ class TempoEmStatusRoutesTest {
         )
         // Concluída em maio: fora dos 90 dias.
         issue(
-            "TG-8", "Task", "ana", "Concluído", "Done", t("05-01 09:00"), t("05-04 10:00"),
+            "TG-8", "Checklist","ana", "Concluído", "Done", t("05-01 09:00"), t("05-04 10:00"),
             listOf(
                 resp("05-01 09:00", null, "ana"), st("05-01 10:00", "A Fazer", "Em andamento"),
                 st("05-04 10:00", "Em andamento", "Concluído"),
@@ -194,16 +194,16 @@ class TempoEmStatusRoutesTest {
         )
         // Abertas paradas.
         issue(
-            "TG-6", "Task", "bruno", "Em revisão", null, t("10-01 12:00"), null,
+            "TG-6", "Checklist","bruno", "Em revisão", null, t("10-01 12:00"), null,
             listOf(resp("10-01 12:00", null, "bruno"), st("10-02 09:00", "A Fazer", "Em revisão")),
         )
         issue(
-            "TG-7", "Task", "carla", "Em andamento", null, t("10-01 12:00"), null,
+            "TG-7", "Checklist","carla", "Em andamento", null, t("10-01 12:00"), null,
             listOf(resp("10-01 12:00", null, "carla"), st("10-02 09:00", "A Fazer", "Em andamento")),
         )
         // Aberta que foi da ana e hoje é do bruno: o nome do bruno não pode aparecer para a ana.
         issue(
-            "TG-10", "Task", "bruno", "Em revisão", null, t("10-01 09:00"), null,
+            "TG-10", "Checklist","bruno", "Em revisão", null, t("10-01 09:00"), null,
             listOf(
                 resp("10-01 09:00", null, "ana"), st("10-02 09:00", "A Fazer", "Em revisão"),
                 resp("10-05 09:00", "ana", "bruno"),
@@ -520,7 +520,7 @@ class TempoEmStatusRoutesTest {
 
     @Test
     fun filtroPorTipoEOutliers() = rodar {
-        assertEquals(listOf("TG-2"), chaves(drill("gerente.exemplo", "analisadas", "&tipo=Bug")))
+        assertEquals(listOf("TG-2"), chaves(drill("gerente.exemplo", "analisadas", "&tipo=Checklist%20TG")))
         // TG-9 tem ciclo de 3 dias e TG-5 de 12: nenhum passa de 30 dias, então semOutliers não muda nada aqui.
         assertEquals(6, card("gerente.exemplo", "?semOutliers=true").analisadas)
         assertEquals(HttpStatusCode.BadRequest, get("gerente.exemplo", "/api/cards/tempo-em-status?semOutliers=talvez").status)
@@ -556,7 +556,7 @@ class TempoEmStatusRoutesTest {
     @Test
     fun statusNaoMapeadoVaiParaAvisos() = rodar {
         issue(
-            "TG-11", "Task", "bruno", "Concluído", "Done", t("10-01 09:00"), t("10-20 09:00"),
+            "TG-11", "Checklist","bruno", "Concluído", "Done", t("10-01 09:00"), t("10-20 09:00"),
             listOf(
                 resp("10-01 09:00", null, "bruno"), st("10-01 10:00", "A Fazer", "Status Maluco"),
                 st("10-20 09:00", "Status Maluco", "Concluído"),
@@ -577,6 +577,101 @@ class TempoEmStatusRoutesTest {
         val ana = card("ana")
         assertTrue(ana.avisos.isEmpty(), ana.avisos.toString())
         assertEquals(3, ana.analisadas)
+    }
+
+    @Test
+    fun avisoTrazParametroDoStatus() = rodar {
+        issue(
+            "TG-11", "Checklist", "bruno", "Concluído", "Done", t("10-01 09:00"), t("10-20 09:00"),
+            listOf(
+                resp("10-01 09:00", null, "bruno"), st("10-01 10:00", "A Fazer", "Revisando"),
+                st("10-20 09:00", "Revisando", "Concluído"),
+            ),
+        )
+        val dto = card("gerente.exemplo")
+        val semMapa = dto.avisos.single { it.codigo == "STATUS_SEM_MAPEAMENTO" }
+        assertEquals("Revisando", semMapa.params["status"])
+    }
+
+    // ---- Filtros da ficha e conclusão divergente ----
+
+    @Test
+    fun cardIgnoraTipoEStatusForaDaFicha() = rodar {
+        val antes = card("ana")
+        val drillAntes = chaves(drill("ana", "analisadas"))
+        // Epic concluído e task Cancelled (status sem mapeamento) da ana, fechados no período, e as mesmas abertas.
+        issue(
+            "TG-30", "Epic", "ana", "Concluído", "Done", t("10-01 09:00"), t("10-10 09:00"),
+            listOf(resp("10-01 09:00", null, "ana"), st("10-01 10:00", "A Fazer", "Em andamento"), st("10-10 09:00", "Em andamento", "Concluído")),
+        )
+        issue(
+            "TG-31", "Checklist", "ana", "Cancelled", "Done", t("10-01 09:00"), t("10-11 09:00"),
+            listOf(resp("10-01 09:00", null, "ana"), st("10-01 10:00", "A Fazer", "Em andamento"), st("10-11 09:00", "Em andamento", "Cancelled")),
+        )
+        issue(
+            "TG-32", "Epic", "ana", "Em revisão", null, t("10-01 09:00"), null,
+            listOf(resp("10-01 09:00", null, "ana"), st("10-02 09:00", "A Fazer", "Em revisão")),
+        )
+        issue(
+            "TG-33", "Checklist", "ana", "Cancelled", null, t("10-01 09:00"), null,
+            listOf(resp("10-01 09:00", null, "ana"), st("10-02 09:00", "A Fazer", "Cancelled")),
+        )
+        val depois = card("ana")
+        assertEquals(antes.analisadas, depois.analisadas)
+        assertEquals(antes.paradas, depois.paradas)
+        assertTrue(depois.avisos.isEmpty(), depois.avisos.toString())
+        assertEquals(drillAntes, chaves(drill("ana", "analisadas")))
+        assertEquals(emptyList(), chaves(drill("ana", "status:Em revisão")).filter { it in setOf("TG-30", "TG-31", "TG-32", "TG-33") })
+        assertEquals(emptyList(), chaves(drill("ana", "pessoa:ana:status:Em revisão")).filter { it in setOf("TG-30", "TG-31", "TG-32", "TG-33") })
+        assertEquals(emptyList(), chaves(drill("ana", "paradas")).filter { it in setOf("TG-32", "TG-33") })
+        // O gerente também não os conta.
+        assertEquals(6, card("gerente.exemplo").analisadas)
+    }
+
+    @Test
+    fun drillDaPropriaPessoaSemIssuesDaListaVazia() = rodar {
+        // Sem nenhuma issue na base, a pessoa não aparece em lugar nenhum: a própria ana ainda recebe lista vazia.
+        executarSql("DELETE FROM change_event; DELETE FROM issue")
+        val r = get("ana", "/api/drill/tempo-em-status?kind=${enc("pessoa:ana:status:Em revisão")}")
+        assertEquals(HttpStatusCode.OK, r.status, r.corpo)
+        assertEquals(emptyList(), Json.decodeFromString<List<DrillRow>>(r.corpo))
+        // Outra pessoa continua negada.
+        assertEquals(HttpStatusCode.Forbidden, get("ana", "/api/drill/tempo-em-status?kind=${enc("pessoa:bruno:status:Em revisão")}").status)
+    }
+
+    @Test
+    fun concluidaSemResolutionViraAvisoDivergente() = rodar {
+        val antes = card("gerente.exemplo")
+        // Status Concluído (DONE) sem resolution: aparece nas duas consultas (fechada no período e sem resolution).
+        issue(
+            "TG-40", "Checklist", "ana", "Concluído", null, t("10-01 09:00"), t("10-15 09:00"),
+            listOf(resp("10-01 09:00", null, "ana"), st("10-01 10:00", "A Fazer", "Em andamento"), st("10-15 09:00", "Em andamento", "Concluído")),
+        )
+        val depois = card("gerente.exemplo")
+        val aviso = depois.avisos.single { it.codigo == "CONCLUSAO_DIVERGENTE" }
+        assertEquals("informativo", aviso.gravidade)
+        // Contada uma vez só, mesmo estando nas duas consultas.
+        assertEquals("1", aviso.params["n"])
+        assertEquals(antes.analisadas, depois.analisadas)
+        assertEquals(antes.paradas, depois.paradas)
+        assertTrue("TG-40" !in chaves(drill("gerente.exemplo", "analisadas")))
+        assertTrue("TG-40" !in chaves(drill("gerente.exemplo", "paradas")))
+        assertTrue(depois.abertasParadas.none { it.key == "TG-40" })
+        // Quem não enxerga a ana não recebe o aviso.
+        assertTrue(card("carla").avisos.none { it.codigo == "CONCLUSAO_DIVERGENTE" })
+    }
+
+    @Test
+    fun resolutionSemConclusaoTambemEhDivergente() = rodar {
+        // Resolution preenchida, mas o status não é DONE.
+        issue(
+            "TG-41", "Checklist", "ana", "Em revisão", "Done", t("10-01 09:00"), t("10-15 09:00"),
+            listOf(resp("10-01 09:00", null, "ana"), st("10-02 09:00", "A Fazer", "Em revisão")),
+        )
+        val dto = card("gerente.exemplo")
+        assertEquals("1", dto.avisos.single { it.codigo == "CONCLUSAO_DIVERGENTE" }.params["n"])
+        assertEquals(6, dto.analisadas)
+        assertTrue("TG-41" !in chaves(drill("gerente.exemplo", "analisadas")))
     }
 
     // ---- Auditoria ----
@@ -667,7 +762,7 @@ class TempoEmStatusRoutesTest {
     fun issueComDatasInconsistentesEhIgnoradaEAvisada() = rodar {
         // Resolvida antes de ser criada.
         issue(
-            "TG-20", "Task", "ana", "Concluído", "Done", t("10-10 09:00"), t("10-05 09:00"),
+            "TG-20", "Checklist","ana", "Concluído", "Done", t("10-10 09:00"), t("10-05 09:00"),
             listOf(resp("10-10 09:00", null, "ana"), st("10-10 10:00", "A Fazer", "Em andamento")),
         )
         for (usuario in listOf("gerente.exemplo", "ana")) {
@@ -688,7 +783,7 @@ class TempoEmStatusRoutesTest {
     fun taskQueMudouDeSquadNaoExpoeOColegaDoOutroSquad() = rodar {
         // Da ana (Alfa) para a carla (Beta).
         issue(
-            "TG-12", "Task", "carla", "Concluído", "Done", t("10-01 09:00"), t("10-10 09:00"),
+            "TG-12", "Checklist","carla", "Concluído", "Done", t("10-01 09:00"), t("10-10 09:00"),
             listOf(
                 resp("10-01 09:00", null, "ana"), st("10-01 10:00", "A Fazer", "Em andamento"),
                 resp("10-05 09:00", "ana", "carla"), st("10-10 09:00", "Em andamento", "Concluído"),
