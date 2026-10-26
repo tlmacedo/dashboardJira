@@ -1,0 +1,32 @@
+# Modelo das regras da auditoria (copie para auditoria.yaml e ajuste). Não leva dado pessoal.
+# Estrito: chave desconhecida falha ao carregar. Os tipos de Review NÃO ficam aqui: vêm de vinculos.yaml.
+versao: 1
+
+# "Perto do vencimento": |distância| em dias <= este limite (0 a 30).
+pertoDoVencimentoDias: 2
+
+# Posse antecipada do responsável: dias antes do vencimento (0 a 30).
+posseAntesDoVencimentoDias: 2
+
+# Quantas trocas de responsável caracterizam passa-bola (2 a 10).
+passaBolaTrocas: 3
+
+# Como contar os dias: corrido ou util (dias úteis do calendário).
+unidade: corrido
+
+# Status que representam cancelamento (sem diferenciar maiúsculas); não pode ser vazio.
+statusCancelamento: [Cancelled, Canceled, Dropped]
+
+# Gravidade de cada sinal (1 a 3); ativo: false desliga o sinal. Todo código precisa de regra.
+sinais:
+  VENCIMENTO_ALTERADO_NAO_AUTORIZADO: { gravidade: 3 }
+  VENCIMENTO_REMOVIDO: { gravidade: 3 }
+  VENCIMENTO_TASK_REVIEW_DIVERGENTE: { gravidade: 1 }
+  RESPONSAVEL_TROCADO_NAO_AUTORIZADO: { gravidade: 3 }
+  PASSA_BOLA: { gravidade: 3 }
+  TROCA_PERTO_DO_VENCIMENTO: { gravidade: 2 }
+  LABEL_APOS_FECHAMENTO_NAO_AUTORIZADO: { gravidade: 2 }
+  LABEL_PELO_RESPONSAVEL_APOS_FECHAMENTO: { gravidade: 2 }
+  LABEL_TARDIA_COM_POSSE_ANTECIPADA: { gravidade: 2 }
+  LABEL_APOS_VENCIMENTO: { gravidade: 3 }
+  CANCELAMENTO_SUSPEITO: { gravidade: 2 }

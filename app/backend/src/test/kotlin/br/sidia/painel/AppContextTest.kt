@@ -20,6 +20,7 @@ import org.slf4j.LoggerFactory
 import org.testcontainers.postgresql.PostgreSQLContainer
 import java.nio.file.Files
 import java.nio.file.Path
+import java.nio.file.StandardCopyOption
 import java.time.Clock
 import java.time.Instant
 import java.time.ZoneId
@@ -87,12 +88,59 @@ class AppContextTest {
         escreverMapaDeStatus()
         Files.copy(TestPaths.configDir.resolve("jira_campos.exemplo.yaml"), pasta.resolve("jira_campos.yaml"))
         Files.copy(TestPaths.configDir.resolve("vinculos.exemplo.yaml"), pasta.resolve("vinculos.yaml"))
+        Files.copy(TestPaths.configDir.resolve("labels_atraso.exemplo.yaml"), pasta.resolve("labels_atraso.yaml"))
+        Files.copy(TestPaths.configDir.resolve("auditoria.exemplo.yaml"), pasta.resolve("auditoria.yaml"))
         copiarFichas()
     }
 
     @Test
+    fun appContextCarregaComFallbackDeDev() {
+        listOf("papeis", "calendario", "status_map", "jira_campos", "vinculos", "labels_atraso", "auditoria").forEach {
+            Files.copy(TestPaths.configDir.resolve("$it.exemplo.yaml"), pasta.resolve("$it.exemplo.yaml"))
+        }
+        copiarFichas()
+        val s = Settings(
+            dashboardDevMode = true, configDir = pasta,
+            databaseUrl = pg.jdbcUrl, databaseUser = pg.username, databasePassword = pg.password,
+        )
+        AppContext.load(s).use { ctx ->
+            assertTrue(ctx.labelsDeAtraso.justifica("ONHOLDBY-PL"))
+            assertEquals(3, ctx.regrasAuditoria.passaBolaTrocas)
+            // tiposReview tem uma fonte só: o vinculos.yaml
+            assertEquals(ctx.vinculos.tiposReview, ctx.regrasAuditoria.tiposReview)
+        }
+        assertTrue(avisos().any { "labels_atraso.exemplo.yaml" in it }, avisos().toString())
+        assertTrue(avisos().any { "auditoria.exemplo.yaml" in it }, avisos().toString())
+        // Com os arquivos reais, os modelos são ignorados.
+        Files.writeString(pasta.resolve("labels_atraso.yaml"), "versao: 1\njustificativas: [\"XYZ\"]\ntardias: []\n")
+        AppContext.load(s).use { ctx -> assertTrue(ctx.labelsDeAtraso.justifica("xyz")) }
+    }
+
+    @Test
+    fun producaoSemArquivoRealFalha() {
+        for (nome in listOf("labels_atraso", "auditoria")) {
+            pasta.toFile().listFiles()?.forEach { it.deleteRecursively() }
+            escreverArquivosReais()
+            // o modelo existe, mas em produção só o arquivo real vale
+            Files.copy(TestPaths.configDir.resolve("$nome.exemplo.yaml"), pasta.resolve("$nome.exemplo.yaml"), StandardCopyOption.REPLACE_EXISTING)
+            Files.delete(pasta.resolve("$nome.yaml"))
+            val e = assertFailsWith<IllegalStateException> { AppContext.load(producao()) }
+            assertTrue(pasta.resolve("$nome.yaml").toString() in e.message.orEmpty(), e.message)
+        }
+    }
+
+    @Test
+    fun auditoriaInvalidaFalhaSemVazarConteudo() {
+        escreverArquivosReais()
+        Files.writeString(pasta.resolve("auditoria.yaml"), "versao: 1\nsegredo-xyz: 1\n")
+        val e = assertFailsWith<IllegalStateException> { AppContext.load(producao(senha = pg.password)) }
+        assertTrue(pasta.resolve("auditoria.yaml").toString() in e.message.orEmpty(), e.message)
+        assertFalse("segredo-xyz" in e.stackTraceToString())
+    }
+
+    @Test
     fun appContextCarregaVinculosComFallbackDeDev() {
-        listOf("papeis", "calendario", "status_map", "jira_campos", "vinculos").forEach {
+        listOf("papeis", "calendario", "status_map", "jira_campos", "vinculos", "labels_atraso", "auditoria").forEach {
             Files.copy(TestPaths.configDir.resolve("$it.exemplo.yaml"), pasta.resolve("$it.exemplo.yaml"))
         }
         copiarFichas()
@@ -138,7 +186,7 @@ class AppContextTest {
     @Test
     fun appContextCarregaDicionarioEFichas() {
         // dev sem arquivos reais: modelos de exemplo; as fichas versionadas vêm de cards/
-        listOf("papeis", "calendario", "status_map", "jira_campos", "vinculos").forEach {
+        listOf("papeis", "calendario", "status_map", "jira_campos", "vinculos", "labels_atraso", "auditoria").forEach {
             Files.copy(TestPaths.configDir.resolve("$it.exemplo.yaml"), pasta.resolve("$it.exemplo.yaml"))
         }
         copiarFichas()
@@ -218,6 +266,8 @@ class AppContextTest {
         Files.copy(TestPaths.configDir.resolve("status_map.exemplo.yaml"), pasta.resolve("status_map.exemplo.yaml"))
         Files.copy(TestPaths.configDir.resolve("jira_campos.exemplo.yaml"), pasta.resolve("jira_campos.exemplo.yaml"))
         Files.copy(TestPaths.configDir.resolve("vinculos.exemplo.yaml"), pasta.resolve("vinculos.exemplo.yaml"))
+        Files.copy(TestPaths.configDir.resolve("labels_atraso.exemplo.yaml"), pasta.resolve("labels_atraso.exemplo.yaml"))
+        Files.copy(TestPaths.configDir.resolve("auditoria.exemplo.yaml"), pasta.resolve("auditoria.exemplo.yaml"))
         copiarFichas()
         val s = Settings(
             dashboardDevMode = true,

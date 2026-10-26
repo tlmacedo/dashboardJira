@@ -296,7 +296,7 @@ class DadosDeDemonstracaoTest {
             carregador(demo).carregar()
             val total = contar(demo, "SELECT count(*) FROM issue")
             fun comSettings(s: Settings) = AppContext(
-                s, demo.calendar, demo.roles, demo.dataSource, demo.jira, demo.statusMap, demo.campos, demo.fichas, demo.vinculos, demo.clock,
+                s, demo.calendar, demo.roles, demo.dataSource, demo.jira, demo.statusMap, demo.campos, demo.fichas, demo.vinculos, demo.labelsDeAtraso, demo.regrasAuditoria, demo.clock,
             )
             val e = assertFailsWith<DemoRecusadaException> {
                 prepararDemonstracao(comSettings(Settings(dashboardDevMode = false, dashboardDemoData = false)))
@@ -310,7 +310,7 @@ class DadosDeDemonstracaoTest {
     fun producaoSemDadosDeDemoSobeNormalmente() {
         contexto(relogioEm(ancora.plusDays(1)), Settings()).use { ctx ->
             fun comSettings(s: Settings) = AppContext(
-                s, ctx.calendar, ctx.roles, ctx.dataSource, ctx.jira, ctx.statusMap, ctx.campos, ctx.fichas, ctx.vinculos, ctx.clock,
+                s, ctx.calendar, ctx.roles, ctx.dataSource, ctx.jira, ctx.statusMap, ctx.campos, ctx.fichas, ctx.vinculos, ctx.labelsDeAtraso, ctx.regrasAuditoria, ctx.clock,
             )
             prepararDemonstracao(comSettings(Settings(dashboardDevMode = false, dashboardDemoData = false)))
             assertEquals(0, contar(ctx, "SELECT count(*) FROM issue"))
@@ -323,7 +323,7 @@ class DadosDeDemonstracaoTest {
             carregador(demo).carregar()
             val total = contar(demo, "SELECT count(*) FROM issue")
             fun comSettings(s: Settings) = AppContext(
-                s, demo.calendar, demo.roles, demo.dataSource, demo.jira, demo.statusMap, demo.campos, demo.fichas, demo.vinculos, demo.clock,
+                s, demo.calendar, demo.roles, demo.dataSource, demo.jira, demo.statusMap, demo.campos, demo.fichas, demo.vinculos, demo.labelsDeAtraso, demo.regrasAuditoria, demo.clock,
             )
             // Flag ligada e demonstração desligada, mas o banco tem dados fictícios: não sobe, e nada é apagado.
             val e = assertFailsWith<DemoRecusadaException> {

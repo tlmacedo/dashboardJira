@@ -173,6 +173,8 @@ class JiraClientFactoryCacheTest {
         campos = br.sidia.painel.jql.FieldDictionary(emptyList()),
         fichas = emptyMap(),
         vinculos = br.sidia.painel.vinculosDeTeste(),
+        labelsDeAtraso = br.sidia.painel.labelsDeAtrasoDeTeste(),
+        regrasAuditoria = br.sidia.painel.regrasDeAuditoriaDeTeste(),
     )
 
     @Test
