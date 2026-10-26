@@ -45,6 +45,8 @@ class CardQueryFactory(private val dict: FieldDictionary) {
         val minimos = listOf(
             "summary", "issuetype", "status", "assignee", "reporter", "created", "updated",
             "resolutiondate", "duedate", "labels", "parent", "project",
+            // Campo de sistema (não é do dicionário): os vínculos Blocks ligam a Review à sua task.
+            "issuelinks",
         )
         // Campo com id técnico sai como customfield_NNNN (cf[NNNN] é normalizado); sem id, sai pelo nome.
         val extras = spec.campos.map { c -> campoDicionario.get(c).let { idParaFields(it.customId) ?: it.name } }

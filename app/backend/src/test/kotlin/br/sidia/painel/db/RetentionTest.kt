@@ -126,6 +126,29 @@ class RetentionTest {
     }
 
     @Test
+    fun retencaoApagaVinculosDaIssuePurgada() {
+        issueComDatas(1, "2024-09-01 12:00:00+00", "2024-09-02 12:00:00+00") // purgada
+        issueComDatas(2, null, "2026-10-01 12:00:00+00") // fica
+        fun vinculo(instancia: String, de: String, para: String, removida: String? = null) = exec(
+            "INSERT INTO issue_link(instance, from_key, to_key, link_type, direction, visto_em, removida_em) VALUES " +
+                "('$instancia', '$de', '$para', 'Blocks', 'OUTWARD', now(), ${removida?.let { "'$it'" } ?: "NULL"})",
+        )
+        vinculo("main", "TG-1", "TG-2") // ponta purgada como origem
+        vinculo("main", "TG-3", "TG-1") // ponta purgada como destino
+        vinculo("main", "TG-2", "TG-3") // fica: nenhuma ponta purgada
+        vinculo("main", "TG-2", "TG-4", "2024-09-01 12:00:00+00") // removida antes do limite: apaga
+        vinculo("main", "TG-2", "TG-5", "2026-10-01 12:00:00+00") // removida há pouco: fica
+        vinculo("outra", "TG-1", "TG-2") // outra instância sem a issue TG-1: fica
+        Retention(ds, calendario).purge(LocalDate.of(2026, 10, 30), 24)
+        val restantes = ds.connection.use { c ->
+            c.createStatement().executeQuery("SELECT instance || ':' || from_key || '>' || to_key FROM issue_link ORDER BY 1").use { rs ->
+                generateSequence { if (rs.next()) rs.getString(1) else null }.toList()
+            }
+        }
+        assertEquals(listOf("main:TG-2>TG-3", "main:TG-2>TG-5", "outra:TG-1>TG-2"), restantes)
+    }
+
+    @Test
     fun retencaoApagaSyncRunAntigo() {
         exec("INSERT INTO sync_run(instance, kind, started_at, status) VALUES ('samsung', 'INCREMENTAL', '2024-10-29 12:00:00+00', 'OK')")
         exec("INSERT INTO sync_run(instance, kind, started_at, status) VALUES ('samsung', 'INCREMENTAL', '2024-10-30 04:00:00+00', 'OK')")

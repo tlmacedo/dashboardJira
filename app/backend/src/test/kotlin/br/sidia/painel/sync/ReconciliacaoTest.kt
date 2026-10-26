@@ -210,6 +210,46 @@ class ReconciliacaoTest {
     }
 
     @Test
+    fun renomearAtualizaAsPontasDoVinculo() = runBlocking {
+        val s = montar()
+        semearBase(4)
+        consulta(
+            "INSERT INTO issue_link(instance, from_key, to_key, link_type, direction, visto_em) VALUES " +
+                "('samsung', 'TG-3', 'TG-4', 'Blocks', 'OUTWARD', now()), " +
+                "('samsung', 'TG-4', 'TG-1', 'Relates', 'SIMETRICO', now()), " +
+                "('sidia', 'TG-3', 'TG-4', 'Blocks', 'OUTWARD', now())",
+        )
+        noJira.remove("TG-4")
+        noJira["TG-40"] = 904L to instante("10:00")
+        val r = executada(s.reconciliar("samsung"))
+        assertEquals(RunStatus.OK, r.status)
+        assertEquals(1, contar("SELECT count(*) FROM issue_link WHERE instance = 'samsung' AND from_key = 'TG-3' AND to_key = 'TG-40'"))
+        assertEquals(1, contar("SELECT count(*) FROM issue_link WHERE instance = 'samsung' AND from_key = 'TG-40' AND to_key = 'TG-1'"))
+        assertEquals(0, contar("SELECT count(*) FROM issue_link WHERE instance = 'samsung' AND (from_key = 'TG-4' OR to_key = 'TG-4')"))
+        // Outra instância não é tocada.
+        assertEquals(1, contar("SELECT count(*) FROM issue_link WHERE instance = 'sidia' AND to_key = 'TG-4'"))
+    }
+
+    @Test
+    fun renomearComVinculoJaExistenteNaChaveNovaNaoQuebra() = runBlocking {
+        val s = montar()
+        semearBase(4)
+        // O vínculo já existe sob a chave nova (visto antes pela outra ponta) e também sob a antiga; e há um com a própria chave nova.
+        consulta(
+            "INSERT INTO issue_link(instance, from_key, to_key, link_type, direction, visto_em) VALUES " +
+                "('samsung', 'TG-3', 'TG-4', 'Blocks', 'OUTWARD', now()), " +
+                "('samsung', 'TG-3', 'TG-40', 'Blocks', 'OUTWARD', now()), " +
+                "('samsung', 'TG-4', 'TG-40', 'Relates', 'SIMETRICO', now())",
+        )
+        noJira.remove("TG-4")
+        noJira["TG-40"] = 904L to instante("10:00")
+        val r = executada(s.reconciliar("samsung"))
+        assertEquals(RunStatus.OK, r.status)
+        assertEquals(1, contar("SELECT count(*) FROM issue_link WHERE from_key = 'TG-3' AND to_key = 'TG-40'"))
+        assertEquals(0, contar("SELECT count(*) FROM issue_link WHERE from_key = to_key OR from_key = 'TG-4' OR to_key = 'TG-4'"))
+    }
+
+    @Test
     fun divergenteEhRebuscadaComChangelog() = runBlocking {
         val s = montar()
         semearBase(3)

@@ -13,6 +13,10 @@ import java.nio.file.Files
 /** Dicionário de campos do modelo versionado (`jira_campos.exemplo.yaml`), igual ao usado pelos testes de fichas. */
 fun camposDeTeste(): FieldDictionary = FieldDictionary.fromYaml(TestPaths.configDir.resolve("jira_campos.exemplo.yaml"))
 
+/** Configuração de vínculos do modelo versionado (`vinculos.exemplo.yaml`). */
+fun vinculosDeTeste(): br.sidia.painel.sync.VinculosConfig =
+    br.sidia.painel.sync.VinculosConfig.fromYaml(TestPaths.configDir.resolve("vinculos.exemplo.yaml"))
+
 /** Fichas versionadas (arquivos `.card.yaml` da pasta cards) por `id`, carregadas contra o dicionário informado. */
 fun fichasDeTeste(campos: FieldDictionary = camposDeTeste()): Map<String, CardSpec> =
     Files.list(TestPaths.configDir.resolve("cards")).use { arquivos ->
@@ -32,5 +36,6 @@ fun testContext(settings: Settings): AppContext {
         statusMap = StatusMap.fromYaml(TestPaths.configDir.resolve("status_map.exemplo.yaml")),
         campos = campos,
         fichas = fichasDeTeste(campos),
+        vinculos = vinculosDeTeste(),
     )
 }

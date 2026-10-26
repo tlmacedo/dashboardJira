@@ -86,7 +86,45 @@ class AppContextTest {
         Files.writeString(pasta.resolve("papeis.yaml"), papeisTeste)
         escreverMapaDeStatus()
         Files.copy(TestPaths.configDir.resolve("jira_campos.exemplo.yaml"), pasta.resolve("jira_campos.yaml"))
+        Files.copy(TestPaths.configDir.resolve("vinculos.exemplo.yaml"), pasta.resolve("vinculos.yaml"))
         copiarFichas()
+    }
+
+    @Test
+    fun appContextCarregaVinculosComFallbackDeDev() {
+        listOf("papeis", "calendario", "status_map", "jira_campos", "vinculos").forEach {
+            Files.copy(TestPaths.configDir.resolve("$it.exemplo.yaml"), pasta.resolve("$it.exemplo.yaml"))
+        }
+        copiarFichas()
+        val s = Settings(
+            dashboardDevMode = true, configDir = pasta,
+            databaseUrl = pg.jdbcUrl, databaseUser = pg.username, databasePassword = pg.password,
+        )
+        AppContext.load(s).use { ctx ->
+            assertEquals("Blocks", ctx.vinculos.tipoDeLink)
+            assertTrue(ctx.vinculos.ehReview("Checklist Review"))
+        }
+        assertTrue(avisos().any { "vinculos.exemplo.yaml" in it }, avisos().toString())
+        // Com o arquivo real, o modelo é ignorado.
+        Files.writeString(pasta.resolve("vinculos.yaml"), "versao: 1\ntipoDeLink: Outro\ntiposReview: [\"Revisao\"]\n")
+        AppContext.load(s).use { ctx -> assertEquals("Outro", ctx.vinculos.tipoDeLink) }
+    }
+
+    @Test
+    fun producaoSemVinculosRealFalhaCitandoOCaminho() {
+        escreverArquivosReais()
+        Files.delete(pasta.resolve("vinculos.yaml"))
+        Files.copy(TestPaths.configDir.resolve("vinculos.exemplo.yaml"), pasta.resolve("vinculos.exemplo.yaml"))
+        val e = assertFailsWith<IllegalStateException> { AppContext.load(producao()) }
+        assertTrue(pasta.resolve("vinculos.yaml").toString() in e.message.orEmpty(), e.message)
+    }
+
+    @Test
+    fun vinculosInvalidoFalhaSemVazarConteudo() {
+        escreverArquivosReais()
+        Files.writeString(pasta.resolve("vinculos.yaml"), "versao: 1\ntiposReview: []\n")
+        val e = assertFailsWith<IllegalStateException> { AppContext.load(producao()) }
+        assertTrue(pasta.resolve("vinculos.yaml").toString() in e.message.orEmpty(), e.message)
     }
 
     /** Copia as fichas versionadas (arquivos `.card.yaml` da pasta cards) para a pasta de configuração do teste. */
@@ -100,7 +138,7 @@ class AppContextTest {
     @Test
     fun appContextCarregaDicionarioEFichas() {
         // dev sem arquivos reais: modelos de exemplo; as fichas versionadas vêm de cards/
-        listOf("papeis", "calendario", "status_map", "jira_campos").forEach {
+        listOf("papeis", "calendario", "status_map", "jira_campos", "vinculos").forEach {
             Files.copy(TestPaths.configDir.resolve("$it.exemplo.yaml"), pasta.resolve("$it.exemplo.yaml"))
         }
         copiarFichas()
@@ -179,6 +217,7 @@ class AppContextTest {
         Files.copy(TestPaths.configDir.resolve("calendario.exemplo.yaml"), pasta.resolve("calendario.exemplo.yaml"))
         Files.copy(TestPaths.configDir.resolve("status_map.exemplo.yaml"), pasta.resolve("status_map.exemplo.yaml"))
         Files.copy(TestPaths.configDir.resolve("jira_campos.exemplo.yaml"), pasta.resolve("jira_campos.exemplo.yaml"))
+        Files.copy(TestPaths.configDir.resolve("vinculos.exemplo.yaml"), pasta.resolve("vinculos.exemplo.yaml"))
         copiarFichas()
         val s = Settings(
             dashboardDevMode = true,

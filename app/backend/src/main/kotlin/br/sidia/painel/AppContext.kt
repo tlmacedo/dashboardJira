@@ -9,6 +9,7 @@ import br.sidia.painel.jql.CardSpecs
 import br.sidia.painel.jql.FieldDictionary
 import br.sidia.painel.security.Role
 import br.sidia.painel.security.RoleDirectory
+import br.sidia.painel.sync.VinculosConfig
 import br.sidia.painel.time.BusinessCalendar
 import org.slf4j.LoggerFactory
 import java.nio.file.Files
@@ -32,6 +33,8 @@ class AppContext(
     val statusMap: StatusMap,
     val campos: FieldDictionary,
     val fichas: Map<String, CardSpec>,
+    /** Como a Review se liga à sua task (tipo do link, tipos de issue); lido de `vinculos.yaml`. */
+    val vinculos: VinculosConfig,
     val clock: Clock = Clock.system(settings.zone),
 ) : AutoCloseable {
     private val aoFechar = java.util.concurrent.CopyOnWriteArrayList<() -> Unit>()
@@ -76,6 +79,9 @@ class AppContext(
             val arquivoCampos = resolverDicionario(settings)
             val campos = lerYaml(arquivoCampos) { FieldDictionary.fromYaml(arquivoCampos) }
             val fichas = carregarFichas(settings, campos)
+            // Vínculos Review x task (tipo do link e tipos de issue): config sem dado pessoal; o modelo só cai em dev.
+            val arquivoVinculos = resolver(settings, "vinculos")
+            val vinculos = lerYaml(arquivoVinculos) { VinculosConfig.fromYaml(arquivoVinculos) }
 
             // Valida na subida todas as instâncias do Jira configuradas (sem enviar nada); só id e regra na falha.
             val jira = JiraClientFactory(settings)
@@ -89,7 +95,7 @@ class AppContext(
             }
 
             val ds = abrirBanco(settings)
-            return AppContext(settings, calendario, papeis, ds, jira, mapaDeStatus, campos, fichas, clock)
+            return AppContext(settings, calendario, papeis, ds, jira, mapaDeStatus, campos, fichas, vinculos, clock)
         }
 
         /**

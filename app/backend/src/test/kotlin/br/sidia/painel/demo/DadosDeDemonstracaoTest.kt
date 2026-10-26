@@ -7,7 +7,12 @@ import br.sidia.painel.config.Settings
 import br.sidia.painel.jira.JiraAuthKind
 import br.sidia.painel.jira.JiraClientFactory
 import br.sidia.painel.module
+import br.sidia.painel.sync.DirecaoVinculo
+import br.sidia.painel.sync.ParDeChaves
+import br.sidia.painel.sync.ParesTaskReview
+import br.sidia.painel.sync.PostgresIssueLinkStore
 import br.sidia.painel.sync.PostgresIssueStore
+import br.sidia.painel.sync.VinculoRecord
 import br.sidia.painel.testContextComBanco
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.mock.MockEngine
@@ -115,10 +120,43 @@ class DadosDeDemonstracaoTest {
             val primeiro = d.carregar()
             val issues = contar(ctx, "SELECT count(*) FROM issue")
             val eventos = contar(ctx, "SELECT count(*) FROM change_event")
+            val vinculos = contar(ctx, "SELECT count(*) FROM issue_link")
+            assertTrue(vinculos > 0)
             val segundo = d.carregar()
             assertEquals(primeiro, segundo)
             assertEquals(issues, contar(ctx, "SELECT count(*) FROM issue"))
             assertEquals(eventos, contar(ctx, "SELECT count(*) FROM change_event"))
+            assertEquals(vinculos, contar(ctx, "SELECT count(*) FROM issue_link"))
+            assertEquals(0, contar(ctx, "SELECT count(*) FROM issue_link WHERE removida_em IS NOT NULL"))
+        }
+    }
+
+    @Test
+    fun carregaVinculosDaDemo() {
+        contexto(relogioEm(ancora.plusDays(1))).use { ctx ->
+            carregador(ctx).carregar()
+            val ds = requireNotNull(ctx.dataSource)
+            val ativos = PostgresIssueLinkStore(ds).ativos("samsung", "Blocks")
+            // Dois pares, um em cada direção (visto pelas duas pontas, uma linha por link).
+            assertEquals(
+                setOf(
+                    VinculoRecord("DEMO-7", "DEMO-35", "Blocks", DirecaoVinculo.OUTWARD),
+                    VinculoRecord("DEMO-36", "DEMO-12", "Blocks", DirecaoVinculo.OUTWARD),
+                ),
+                ativos.toSet(),
+            )
+            assertEquals(2, ativos.size)
+            assertEquals(0, contar(ctx, "SELECT count(*) FROM issue_link WHERE instance <> 'samsung'"))
+            val tipoDe = ds.connection.use { c ->
+                c.createStatement().executeQuery("SELECT key, issue_type FROM issue WHERE instance = 'samsung' AND removida_em IS NULL").use { rs ->
+                    buildMap { while (rs.next()) put(rs.getString(1), rs.getString(2).orEmpty()) }
+                }
+            }
+            val r = ParesTaskReview.resolver(ativos, tipoDe, ctx.vinculos)
+            assertEquals(setOf(ParDeChaves("DEMO-35", "DEMO-7"), ParDeChaves("DEMO-36", "DEMO-12")), r.pares.toSet())
+            assertEquals(2, r.pares.size)
+            assertEquals(0, r.ambiguas)
+            assertEquals(0, r.ignorados)
         }
     }
 
@@ -236,7 +274,7 @@ class DadosDeDemonstracaoTest {
             carregador(demo).carregar()
             val total = contar(demo, "SELECT count(*) FROM issue")
             fun comSettings(s: Settings) = AppContext(
-                s, demo.calendar, demo.roles, demo.dataSource, demo.jira, demo.statusMap, demo.campos, demo.fichas, demo.clock,
+                s, demo.calendar, demo.roles, demo.dataSource, demo.jira, demo.statusMap, demo.campos, demo.fichas, demo.vinculos, demo.clock,
             )
             // Flag ligada e demonstração desligada, mas o banco tem dados fictícios: não sobe, e nada é apagado.
             val e = assertFailsWith<DemoRecusadaException> {

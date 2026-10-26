@@ -118,6 +118,39 @@ class SyncerTest {
     }
 
     @Test
+    fun syncerGravaVinculosDaFixture() = runBlocking {
+        val syncer = Syncer(cliente(jira(busca = fixture("search-issuelinks.json"))), store, "samsung")
+        val r1 = syncer.run(consulta)
+        assertEquals(8, r1.issues)
+        // Blocks TG-2->TG-1 (visto pelas duas pontas), TG-3->TG-4 (idem), TG-5->TG-6 (idem) e Relates TG-1~TG-7; o item malformado cai.
+        assertEquals(4, contar("issue_link"))
+        val links = PostgresIssueLinkStore(requireNotNull(ctx.dataSource))
+        assertEquals(
+            listOf(
+                VinculoRecord("TG-2", "TG-1", "Blocks", DirecaoVinculo.OUTWARD),
+                VinculoRecord("TG-3", "TG-4", "Blocks", DirecaoVinculo.OUTWARD),
+                VinculoRecord("TG-5", "TG-6", "Blocks", DirecaoVinculo.OUTWARD),
+            ),
+            links.ativos("samsung", "blocks").sortedBy { it.fromKey },
+        )
+        assertEquals(
+            listOf(VinculoRecord("TG-1", "TG-7", "Relates", DirecaoVinculo.SIMETRICO)),
+            links.ativos("samsung", "Relates"),
+        )
+        // Repetir a sincronização não muda nada, e o raw não guarda os vínculos nem dados da outra ponta.
+        syncer.run(consulta)
+        assertEquals(4, contar("issue_link"))
+        val raws = requireNotNull(ctx.dataSource).connection.use { c ->
+            c.createStatement().executeQuery("SELECT raw::text FROM issue").use { rs ->
+                buildList { while (rs.next()) add(rs.getString(1)) }
+            }
+        }
+        assertEquals(8, raws.size)
+        // O nome do campo entre aspas (o resumo de TG-8 cita "issuelinks" como texto, sem aspas próprias do campo).
+        assertTrue(raws.none { "\"issuelinks\":" in it || "outra ponta" in it }, "raw guarda vínculo ou dado da outra ponta")
+    }
+
+    @Test
     fun changelogTruncadoBuscaOCompleto() = runBlocking {
         val engine = jira()
         Syncer(cliente(engine), store, "samsung").run(consulta)

@@ -3,6 +3,7 @@ package br.sidia.painel.demo
 import br.sidia.painel.AppContext
 import br.sidia.painel.sync.ChangelogParser
 import br.sidia.painel.sync.ChavesDeUsuario
+import br.sidia.painel.sync.IssueLinks
 import br.sidia.painel.sync.PostgresIssueStore
 import com.charleskorn.kaml.Yaml
 import kotlinx.serialization.Serializable
@@ -134,13 +135,25 @@ class DadosDeDemonstracao(
                     ps.setString(2, "${inst.prefixo}-%")
                     ps.executeUpdate()
                 }
+                // issue_link não tem FK nem cascata: os vínculos com ponta de prefixo de demonstração saem na mesma transação.
+                con.prepareStatement("DELETE FROM issue_link WHERE instance = ? AND (from_key LIKE ? OR to_key LIKE ?)").use { ps ->
+                    ps.setString(1, instancia)
+                    ps.setString(2, "${inst.prefixo}-%")
+                    ps.setString(3, "${inst.prefixo}-%")
+                    ps.executeUpdate()
+                }
+                val agora = clock.instant()
                 for (issue in issues) {
                     val historicos = ((issue["changelog"] as? JsonObject)?.get("histories") as? JsonArray)
                         .orEmpty().map { it.jsonObject }
                     // A coleta das chaves JIRAUSER* roda sobre o JSON recebido, antes de qualquer sanitização.
                     val chaves = ChavesDeUsuario.coletar(issue, historicos)
                     val registros = ChangelogParser.toEvents(issue, historicos, chaves)
-                    store.upsertNaTransacao(con, issue, registros, instancia, inst.osVersionCustomId)
+                    // Os vínculos saem do JSON da fixture, como na sincronização (sem eles a demo ficaria sem pares).
+                    val chaveDaIssue = (issue["key"] as JsonPrimitive).content
+                    store.upsertNaTransacao(
+                        con, issue, registros, instancia, inst.osVersionCustomId, IssueLinks.ler(chaveDaIssue, issue), agora,
+                    )
                     eventos += registros.size
                 }
                 con.commit()

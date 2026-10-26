@@ -35,6 +35,7 @@ fun testContextComBanco(
         statusMap = StatusMap.fromYaml(TestPaths.configDir.resolve("status_map.exemplo.yaml")),
         campos = campos,
         fichas = fichasDeTeste(campos),
+        vinculos = vinculosDeTeste(),
         clock = clock,
     )
 }

@@ -250,7 +250,7 @@ class TempoEmStatusRoutesTest {
         val contexto = if (settings == ctx.settings) {
             ctx
         } else {
-            AppContext(settings, ctx.calendar, ctx.roles, ctx.dataSource, ctx.jira, ctx.statusMap, ctx.campos, ctx.fichas, ctx.clock)
+            AppContext(settings, ctx.calendar, ctx.roles, ctx.dataSource, ctx.jira, ctx.statusMap, ctx.campos, ctx.fichas, ctx.vinculos, ctx.clock)
         }
         application { module(settings, contexto, auth) }
         Cliente(client).bloco()

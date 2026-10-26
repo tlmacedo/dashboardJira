@@ -7,7 +7,8 @@ titulo: Sincronização de issues
 instancia: samsung
 
 # Campos do dicionário lidos além dos mínimos (summary, issuetype, status, assignee, reporter, created,
-# updated, resolutiondate, duedate, labels, parent, project, sempre pedidos).
+# updated, resolutiondate, duedate, labels, parent, project, issuelinks, sempre pedidos; issuelinks traz os
+# vínculos Blocks que ligam a Review à sua task).
 campos:
   - OS Version
   - SKU Type

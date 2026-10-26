@@ -80,10 +80,19 @@ class CardQueryFactoryTest {
         assertEquals(
             listOf(
                 "summary", "issuetype", "status", "assignee", "reporter", "created", "updated",
-                "resolutiondate", "duedate", "labels", "parent", "project", "OS Version", "SKU Type", "Checklist Type",
+                "resolutiondate", "duedate", "labels", "parent", "project", "issuelinks",
+                "OS Version", "SKU Type", "Checklist Type",
             ),
             q.fields,
         )
+    }
+
+    @Test
+    fun fichaSincronizacaoPedeIssuelinks() {
+        val fields = fabrica.build(fichaSync, mapOf("desde" to desde)).fields
+        assertEquals(1, fields.count { it == "issuelinks" }, fields.toString())
+        // A consulta leve (reconciliação) continua pedindo só a chave e o updated.
+        assertEquals(listOf("key", "updated"), fabrica.buildLeve(fichaSync, mapOf("desde" to desde)).fields)
     }
 
     private val fichaSync get() = CardSpecs.fromYaml(TestPaths.configDir.resolve("cards/sincronizacao.card.yaml"), dict)
@@ -420,7 +429,7 @@ class CardQueryFactoryTest {
         assertEquals(
             listOf(
                 "summary", "issuetype", "status", "assignee", "reporter", "created", "updated",
-                "resolutiondate", "duedate", "labels", "parent", "project",
+                "resolutiondate", "duedate", "labels", "parent", "project", "issuelinks",
                 "customfield_12416", "customfield_10001", "Checklist Type",
             ),
             fields,

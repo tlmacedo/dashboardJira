@@ -84,7 +84,8 @@ class Syncer(
             }
             val updated = try {
                 withContext(Dispatchers.IO) {
-                    store.upsert(issue, registros, instance, osVersionCustomId)
+                    // Os vínculos saem do JSON recebido (nulo = sem o campo: não mexe nos gravados), na mesma transação da issue.
+                    store.upsert(issue, registros, instance, osVersionCustomId, IssueLinks.ler(chave, issue), clock.instant())
                     CamposDaIssue.de(issue).updated
                 }
             } catch (e: IllegalArgumentException) {

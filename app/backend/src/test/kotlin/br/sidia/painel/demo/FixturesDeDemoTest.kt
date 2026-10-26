@@ -7,6 +7,9 @@ import br.sidia.painel.fichasDeTeste
 import br.sidia.painel.sync.ChangeEventRecord
 import br.sidia.painel.sync.ChangelogParser
 import br.sidia.painel.sync.ChavesDeUsuario
+import br.sidia.painel.sync.IssueLinks
+import br.sidia.painel.sync.ParesTaskReview
+import br.sidia.painel.sync.VinculosConfig
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
@@ -251,15 +254,22 @@ class FixturesDeDemoTest {
 
         // --- Pares Task x Checklist Review ligados por Blocks (nunca por parent) ---
         val porChave = samsung.associateBy(::chave)
-        val bloqueios = mutableSetOf<Pair<String, String>>() // (bloqueia, é bloqueada)
-        for (i in samsung) {
-            for (l in (fields(i)["issuelinks"] as? JsonArray).orEmpty().map { it.jsonObject }) {
-                if (texto(l["type"] as? JsonObject, "name") != "Blocks") continue
-                texto(l["outwardIssue"] as? JsonObject, "key")?.let { bloqueios += chave(i) to it }
-                texto(l["inwardIssue"] as? JsonObject, "key")?.let { bloqueios += it to chave(i) }
-            }
-        }
+        // Os vínculos saem do mesmo leitor da sincronização (o link aparece nas duas pontas e vira uma só linha).
+        val vinculos = samsung.flatMap { IssueLinks.ler(chave(it), it).orEmpty() }.distinct()
+        val bloqueios = vinculos.filter { it.tipo == "Blocks" }.map { it.fromKey to it.toKey }.toSet() // (bloqueia, é bloqueada)
+        assertEquals(2, bloqueios.size, "a demo tem dois pares Blocks: $bloqueios")
+        assertEquals(
+            bloqueios.size * 2,
+            samsung.sumOf { i -> (fields(i)["issuelinks"] as? JsonArray).orEmpty().size },
+            "cada link deve aparecer nas duas pontas",
+        )
         assertTrue(samsung.none { fields(it).containsKey("parent") }, "as fixtures não usam parent")
+        val tipoDe = samsung.associate { chave(it) to tipo(it).orEmpty() }
+        val resolucao = ParesTaskReview.resolver(
+            vinculos, tipoDe, VinculosConfig.fromYaml(TestPaths.configDir.resolve("vinculos.exemplo.yaml")),
+        )
+        assertEquals(2, resolucao.pares.size, "nenhum par pelo parent: só os dois Blocks")
+        assertEquals(0, resolucao.ambiguas)
         val paresReviewBloqueiaTask = bloqueios.filter { (a, b) -> tipo(porChave.getValue(a)) == "Checklist Review" && tipo(porChave.getValue(b)) == "Task" }
         val paresTaskBloqueiaReview = bloqueios.filter { (a, b) -> tipo(porChave.getValue(a)) == "Task" && tipo(porChave.getValue(b)) == "Checklist Review" }
         assertTrue(paresReviewBloqueiaTask.isNotEmpty(), "falta par em que a Review bloqueia a task")

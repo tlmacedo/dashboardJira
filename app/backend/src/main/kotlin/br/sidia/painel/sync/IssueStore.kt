@@ -18,7 +18,10 @@ interface IssueStore {
      * `os_version` sempre é regravado a partir de [osVersionCustomId]: ressincronizar sem customId (nulo)
      * zera o valor existente, por desenho (o valor segue o dicionário atual).
      */
-    fun upsert(issue: JsonObject, events: List<ChangeEventRecord>, instance: String, osVersionCustomId: String? = null)
+    fun upsert(
+        issue: JsonObject, events: List<ChangeEventRecord>, instance: String, osVersionCustomId: String? = null,
+        vinculos: List<VinculoRecord>? = null, vinculosEm: Instant = Instant.now(),
+    )
 
     /**
      * Linhas do tempo da instância (nunca as removidas logicamente). `openOnly=true` devolve as não
@@ -110,6 +113,7 @@ fun normalizarOsVersion(valor: String): String = valor.trim().replace(ESPACOS_OS
 
 /** Implementação sobre PostgreSQL (JDBC). Todas as consultas são parametrizadas. */
 class PostgresIssueStore(private val ds: DataSource) : IssueStore, IssueIndex {
+    private val links = PostgresIssueLinkStore(ds)
 
     override fun indice(instance: String, atualizadasDesde: Instant): List<IndiceIssue> =
         ds.connection.use { con ->
@@ -147,17 +151,37 @@ class PostgresIssueStore(private val ds: DataSource) : IssueStore, IssueIndex {
     /** Se a nova chave já pertence a outra linha, não faz nada: a rebusca do upsert resolve pelo `jira_id`. */
     override fun renomear(instance: String, jiraId: Long, novaChave: String) {
         ds.connection.use { con ->
-            con.prepareStatement(
-                "UPDATE issue SET key = ? WHERE instance = ? AND jira_id = ? AND key <> ? " +
-                    "AND NOT EXISTS (SELECT 1 FROM issue o WHERE o.instance = ? AND o.key = ?)",
-            ).use { ps ->
-                ps.setString(1, novaChave)
-                ps.setString(2, instance)
-                ps.setLong(3, jiraId)
-                ps.setString(4, novaChave)
-                ps.setString(5, instance)
-                ps.setString(6, novaChave)
-                ps.executeUpdate()
+            val autoCommit = con.autoCommit
+            con.autoCommit = false
+            try {
+                // A chave antiga é lida antes: os vínculos que a citam passam para a nova na mesma transação.
+                val antiga = con.prepareStatement(
+                    "SELECT key FROM issue WHERE instance = ? AND jira_id = ? AND key <> ? " +
+                        "AND NOT EXISTS (SELECT 1 FROM issue o WHERE o.instance = ? AND o.key = ?) FOR UPDATE",
+                ).use { ps ->
+                    ps.setString(1, instance)
+                    ps.setLong(2, jiraId)
+                    ps.setString(3, novaChave)
+                    ps.setString(4, instance)
+                    ps.setString(5, novaChave)
+                    ps.executeQuery().use { rs -> if (rs.next()) rs.getString(1) else null }
+                }
+                if (antiga != null) {
+                    con.prepareStatement("UPDATE issue SET key = ? WHERE instance = ? AND jira_id = ? AND key = ?").use { ps ->
+                        ps.setString(1, novaChave)
+                        ps.setString(2, instance)
+                        ps.setLong(3, jiraId)
+                        ps.setString(4, antiga)
+                        ps.executeUpdate()
+                    }
+                    links.renomearPonta(con, instance, antiga, novaChave)
+                }
+                con.commit()
+            } catch (e: Throwable) {
+                con.rollback()
+                throw e
+            } finally {
+                con.autoCommit = autoCommit
             }
         }
     }
@@ -166,21 +190,36 @@ class PostgresIssueStore(private val ds: DataSource) : IssueStore, IssueIndex {
      * Mesma gravação de [upsert], mas na conexão e na transação do chamador (sem commit nem rollback aqui).
      * Usada pela carga de demonstração, que apaga e regrava uma instância inteira numa transação só.
      */
-    fun upsertNaTransacao(con: Connection, issue: JsonObject, events: List<ChangeEventRecord>, instance: String, osVersionCustomId: String?) {
+    fun upsertNaTransacao(
+        con: Connection, issue: JsonObject, events: List<ChangeEventRecord>, instance: String, osVersionCustomId: String?,
+        vinculos: List<VinculoRecord>? = null, vinculosEm: Instant = Instant.now(),
+    ) {
         val c = CamposDaIssue.de(issue)
         val osVersion = OsVersionExtrator.extrair(issue, osVersionCustomId)
-        // O changelog fica nas linhas de change_event; o raw guarda só a issue, sem dados pessoais.
-        val raw = SanitizadorRaw.sanitizar(JsonObject(issue.filterKeys { it != "changelog" })).toString()
+        // O changelog fica nas linhas de change_event e os vínculos em issue_link; o raw guarda só a issue, sem
+        // dados pessoais e sem o que o Jira traz da outra ponta de cada link (resumo, status, prioridade).
+        val raw = SanitizadorRaw.sanitizar(semChangelogNemVinculos(issue)).toString()
         val issueId = gravarIssue(con, c, instance, raw, osVersion)
         gravarEventos(con, issueId, events)
+        if (vinculos != null) links.substituir(con, instance, c.key, vinculos, vinculosEm)
     }
 
-    override fun upsert(issue: JsonObject, events: List<ChangeEventRecord>, instance: String, osVersionCustomId: String?) {
+    private fun semChangelogNemVinculos(issue: JsonObject): JsonObject {
+        val campos = issue["fields"] as? JsonObject
+        val base = issue.filterKeys { it != "changelog" }
+        if (campos == null || "issuelinks" !in campos) return JsonObject(base)
+        return JsonObject(base + ("fields" to JsonObject(campos.filterKeys { it != "issuelinks" })))
+    }
+
+    override fun upsert(
+        issue: JsonObject, events: List<ChangeEventRecord>, instance: String, osVersionCustomId: String?,
+        vinculos: List<VinculoRecord>?, vinculosEm: Instant,
+    ) {
         ds.connection.use { con ->
             val autoCommit = con.autoCommit
             con.autoCommit = false
             try {
-                upsertNaTransacao(con, issue, events, instance, osVersionCustomId)
+                upsertNaTransacao(con, issue, events, instance, osVersionCustomId, vinculos, vinculosEm)
                 con.commit()
             } catch (e: Throwable) {
                 con.rollback()
