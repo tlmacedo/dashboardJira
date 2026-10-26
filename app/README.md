@@ -36,7 +36,7 @@ Na subida o painel carrega o calendário e o diretório de papéis, abre o pool 
 
 | Variável | Padrão | Efeito |
 |---|---|---|
-| `PAINEL_CONFIG_DIR` | `config` (`/app/config` na imagem) | Pasta dos YAML (`papeis.yaml`, `calendario.yaml`, `cards/`). |
+| `PAINEL_CONFIG_DIR` | `config` (`/app/config` na imagem) | Pasta dos YAML (`papeis.yaml`, `calendario.yaml`, `status_map.yaml`, `cards/`). |
 | `DATABASE_POOL_SIZE` | `10` | Tamanho máximo do pool de conexões (1 a 100; vazio = padrão; inválido falha na subida). |
 | `DATABASE_URL`, `DATABASE_USER`, `DATABASE_PASSWORD` | ver `.env.example` | Conexão com o banco; a senha não tem padrão. |
 
@@ -44,6 +44,7 @@ Na subida o painel carrega o calendário e o diretório de papéis, abre o pool 
 
 - `papeis.yaml` ausente em `PAINEL_CONFIG_DIR` (em dev o painel usa `papeis.exemplo.yaml` com aviso).
 - `calendario.yaml` ausente (idem: em dev usa `calendario.exemplo.yaml`).
+- `status_map.yaml` ausente (idem: em dev usa `status_map.exemplo.yaml`; em produção é obrigatório, sem padrão inventado). Crie-o a partir de `config/status_map.exemplo.yaml`, com os nomes de status reais; sem ele o painel não sobe e, com nomes que não casam, o card Tempo em status mostra "status sem mapeamento".
 - YAML inválido: a mensagem cita só o caminho e o tipo do erro.
 - Nenhum **GERENTE** com papel vigente hoje no `papeis.yaml`.
 - `DATABASE_PASSWORD` vazia.
@@ -56,6 +57,7 @@ Na subida o painel carrega o calendário e o diretório de papéis, abre o pool 
 volumes:
   - ./config/papeis.yaml:/app/config/papeis.yaml:ro
   - ./config/calendario.yaml:/app/config/calendario.yaml:ro
+  - ./config/status_map.yaml:/app/config/status_map.yaml:ro
 ```
 
 O `docker compose` padrão roda com `DASHBOARD_DEV_MODE=true` e por isso usa os modelos de exemplo (dados fictícios) e basta para subir.
