@@ -14,6 +14,9 @@ export type StuckIssue = {
   median: number
 }
 
+/** Aviso do backend: o texto exibido vem do código (i18n); a gravidade decide se esconde os números. */
+export type Aviso = { codigo: string; gravidade: 'bloqueante' | 'informativo' | string; mensagem: string }
+
 export type TempoEmStatusDto = {
   analisadas: number
   eficienciaFluxo: number | null
@@ -22,7 +25,7 @@ export type TempoEmStatusDto = {
   pessoaStatus: PersonStatus[]
   abertasParadas: StuckIssue[]
   unit: 'util' | 'corrido' | string
-  avisos: string[]
+  avisos: Aviso[]
 }
 
 export type DrillRow = {

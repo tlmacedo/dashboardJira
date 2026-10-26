@@ -299,7 +299,7 @@ class TempoEmStatusRoutesTest {
         val a = card("gerente.exemplo", "?os=${enc(osA)}")
         // Concluídas com A no período: TG-1, TG-3, TG-5, TG-9.
         assertEquals(4, a.analisadas)
-        assertTrue(a.avisos.none { "OS Version" in it }, a.avisos.toString())
+        assertTrue("OS_INDISPONIVEL" !in a.avisos.map { it.codigo }, a.avisos.toString())
         val drillA = chaves(drill("gerente.exemplo", "analisadas", osNaUrl(osA)))
         assertEquals(listOf("TG-1", "TG-3", "TG-5", "TG-9"), drillA)
         assertEquals(a.analisadas, drillA.size)
@@ -353,7 +353,7 @@ class TempoEmStatusRoutesTest {
         val dto = card("gerente.exemplo", "?os=${enc("Android 99.0 (Inexistente)")}")
         assertEquals(0, dto.analisadas)
         assertEquals(0, dto.paradas)
-        assertTrue(dto.avisos.none { "OS Version" in it }, dto.avisos.toString())
+        assertTrue("OS_INDISPONIVEL" !in dto.avisos.map { it.codigo }, dto.avisos.toString())
         assertEquals(emptyList(), drill("gerente.exemplo", "analisadas", osNaUrl("Android 99.0 (Inexistente)")))
     }
 
@@ -376,12 +376,13 @@ class TempoEmStatusRoutesTest {
         requireNotNull(ctx.dataSource).connection.use { it.createStatement().execute("UPDATE issue SET os_version = NULL") }
         val dto = card("gerente.exemplo", "?os=${enc(osA)}")
         assertEquals(0, dto.analisadas)
-        assertTrue("OS Version não disponível nos dados sincronizados" in dto.avisos, dto.avisos.toString())
+        val osAviso = dto.avisos.single { it.codigo == "OS_INDISPONIVEL" }
+        assertEquals("informativo", osAviso.gravidade)
         assertEquals(emptyList(), drill("gerente.exemplo", "analisadas", osNaUrl(osA)))
         // Sem o filtro, nenhum aviso de OS Version e os dados voltam.
         val semFiltro = card("gerente.exemplo")
         assertEquals(6, semFiltro.analisadas)
-        assertTrue(semFiltro.avisos.none { "OS Version" in it })
+        assertTrue("OS_INDISPONIVEL" !in semFiltro.avisos.map { it.codigo })
     }
 
     @Test
@@ -564,7 +565,9 @@ class TempoEmStatusRoutesTest {
         val r = get("gerente.exemplo", "/api/cards/tempo-em-status")
         assertEquals(HttpStatusCode.OK, r.status, r.corpo)
         val dto = Json.decodeFromString<TempoEmStatusDto>(r.corpo)
-        assertTrue("status sem mapeamento: Status Maluco" in dto.avisos, dto.avisos.toString())
+        val semMapa = dto.avisos.single { it.codigo == "STATUS_SEM_MAPEAMENTO" }
+        assertEquals("bloqueante", semMapa.gravidade)
+        assertTrue("Status Maluco" in semMapa.mensagem, semMapa.mensagem)
         assertEquals(0, dto.analisadas)
         assertEquals(null, dto.eficienciaFluxo)
         assertEquals(0, dto.paradas)
@@ -669,14 +672,16 @@ class TempoEmStatusRoutesTest {
         )
         for (usuario in listOf("gerente.exemplo", "ana")) {
             val dto = card(usuario)
-            assertTrue("1 issue(s) com datas inconsistentes ignoradas" in dto.avisos, "$usuario ${dto.avisos}")
-            assertTrue(dto.avisos.none { "TG-20" in it }, dto.avisos.toString())
+            val av = dto.avisos.single { it.codigo == "DATAS_INCONSISTENTES" }
+            assertEquals("informativo", av.gravidade, usuario)
+            assertTrue("1 issue(s)" in av.mensagem, "$usuario ${dto.avisos}")
+            assertTrue(dto.avisos.none { "TG-20" in it.mensagem }, dto.avisos.toString())
             assertTrue(dto.eficienciaFluxo != null && dto.porStatus.isNotEmpty(), "o card não pode zerar")
             assertFalse("TG-20" in drill(usuario, "analisadas").map { it.key })
         }
         assertEquals(6, card("gerente.exemplo").analisadas)
         // Quem não tem posse da issue não recebe o aviso (nem sabe que ela existe).
-        assertTrue(card("carla").avisos.none { "inconsistentes" in it }, card("carla").avisos.toString())
+        assertTrue(card("carla").avisos.none { it.codigo == "DATAS_INCONSISTENTES" }, card("carla").avisos.toString())
     }
 
     @Test

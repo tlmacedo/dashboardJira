@@ -5,6 +5,7 @@ import { useLang } from '../../i18n/LangProvider'
 import {
   ApiError,
   fetchTempoEmStatus,
+  type Aviso,
   type Categoria,
   type Filtros,
   type PersonStatus,
@@ -130,7 +131,7 @@ export function TempoEmStatus() {
               </button>
             ))}
           </div>
-          <button type="button" className="btn" onClick={exportar} disabled={!dto || dto.avisos.length > 0}>
+          <button type="button" className="btn" onClick={exportar} disabled={!dto || temBloqueio(dto)}>
             {t('tempo.csv')}
           </button>
         </div>
@@ -177,18 +178,18 @@ export function TempoEmStatus() {
         <div className={consulta.isFetching ? 'conteudo conteudo--atualizando' : 'conteudo'} aria-busy={consulta.isFetching}>
           {dto.avisos.length > 0 && (
             <div className="aviso" role="status">
-              <strong>{t('tempo.avisos')}</strong>
+              <strong>{temBloqueio(dto) ? t('tempo.avisos') : t('tempo.avisos.informativo')}</strong>
               <ul>
                 {dto.avisos.map((a) => (
-                  <li key={a}>{a}</li>
+                  <li key={`${a.codigo}:${a.mensagem}`}>{textoDoAviso(a, t)}</li>
                 ))}
               </ul>
-              <p>{t('tempo.avisos.ajuda')}</p>
+              {temBloqueio(dto) && <p>{t('tempo.avisos.ajuda')}</p>}
             </div>
           )}
           <Kpis dto={dto} aoAbrir={setGaveta} />
-          {dto.avisos.length === 0 && dto.analisadas === 0 && <p className="vazio">{t('tempo.vazio')}</p>}
-          {dto.analisadas > 0 && dto.avisos.length === 0 && (
+          {!temBloqueio(dto) && dto.analisadas === 0 && <p className="vazio">{t('tempo.vazio')}</p>}
+          {dto.analisadas > 0 && !temBloqueio(dto) && (
             <>
               <PorStatus dto={dto} unidadeTxt={unidadeTxt} aoAbrir={setGaveta} />
               <Matriz dto={dto} aoAbrir={setGaveta} />
@@ -253,7 +254,7 @@ function FormFiltros(props: { filtros: Filtros; aoAplicar: (f: Filtros) => void 
 function Kpis(props: { dto: TempoEmStatusDto; aoAbrir: (g: Gaveta) => void }) {
   const { t, lang } = useLang()
   const { dto, aoAbrir } = props
-  const indisponivel = dto.avisos.length > 0
+  const indisponivel = temBloqueio(dto)
   const dash = '—'
   const analisadas = indisponivel ? dash : inteiro(dto.analisadas, lang)
   const eficiencia = indisponivel || dto.eficienciaFluxo == null ? dash : percentual(dto.eficienciaFluxo, lang)
@@ -497,4 +498,24 @@ function Esqueleto({ rotulo }: { rotulo: string }) {
       <div className="esq esq--bloco" />
     </div>
   )
+}
+
+/**
+ * Texto do aviso traduzido pelo código. Só o nome do status sem mapeamento (dado, não texto) vem do
+ * backend, depois do primeiro ": " da mensagem. Código desconhecido cai na mensagem original.
+ */
+function textoDoAviso(a: Aviso, t: (k: string) => string): string {
+  const chave = `tempo.aviso.${a.codigo}`
+  const base = t(chave)
+  if (base === chave) return a.mensagem
+  if (a.codigo === 'STATUS_SEM_MAPEAMENTO') {
+    const i = a.mensagem.indexOf(': ')
+    if (i >= 0) return `${base}: ${a.mensagem.slice(i + 2)}`
+  }
+  return base
+}
+
+/** Só aviso bloqueante esconde os números; os informativos aparecem como faixa. */
+function temBloqueio(dto: TempoEmStatusDto): boolean {
+  return dto.avisos.some((a) => a.gravidade === 'bloqueante')
 }

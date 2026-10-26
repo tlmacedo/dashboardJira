@@ -37,7 +37,7 @@ function cartao(corrido: boolean) {
       median: +(3.2 * f).toFixed(1),
     })),
     unit: corrido ? 'corrido' : 'util',
-    avisos: [] as string[],
+    avisos: [] as { codigo: string; gravidade: string; mensagem: string }[],
   }
 }
 

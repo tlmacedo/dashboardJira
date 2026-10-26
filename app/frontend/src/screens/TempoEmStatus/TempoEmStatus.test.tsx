@@ -141,14 +141,34 @@ describe('tela Tempo em status', () => {
           porStatus: [],
           pessoaStatus: [],
           abertasParadas: [],
-          avisos: ['status sem mapeamento: Em Triagem'],
+          avisos: [{ codigo: 'STATUS_SEM_MAPEAMENTO', gravidade: 'bloqueante', mensagem: 'status sem mapeamento: Em Triagem' }],
         },
       },
     })
     renderizar()
-    expect(await screen.findByText(/status sem mapeamento: Em Triagem/)).toBeInTheDocument()
+    expect(await screen.findByText(/status sem mapeamento: Em Triagem/i)).toBeInTheDocument()
     const kpis = screen.getByRole('group', { name: 'Indicadores' })
     expect(within(kpis).getAllByText('—')).toHaveLength(3)
+  })
+
+  it('avisoInformativoMantemOsNumeros', async () => {
+    simular({
+      [CARD]: {
+        status: 200,
+        corpo: {
+          ...DTO,
+          avisos: [{ codigo: 'DATAS_INCONSISTENTES', gravidade: 'informativo', mensagem: '1 issue(s) com datas inconsistentes ignoradas' }],
+        },
+      },
+    })
+    renderizar()
+    // Faixa traduzida pelo código (não pela mensagem do backend) e números preservados.
+    expect(await screen.findByText(/datas inconsistentes foram ignoradas/i)).toBeInTheDocument()
+    expect(screen.queryByText(/1 issue\(s\)/)).toBeNull()
+    const kpis = screen.getByRole('group', { name: 'Indicadores' })
+    expect(within(kpis).queryByText('—')).toBeNull()
+    expect(screen.getByRole('table', { name: /Mediana por pessoa/ })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /CSV/i })).toBeEnabled()
   })
 
   it('semPermissaoMostraMensagem', async () => {

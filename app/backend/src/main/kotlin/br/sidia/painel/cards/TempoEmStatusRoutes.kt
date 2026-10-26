@@ -324,10 +324,10 @@ private fun calcular(ctx: AppContext, store: IssueStore, principal: Principal, f
     if (membrosDoSquad != null) permitidos = permitidos intersect membrosDoSquad
     if (f.pessoa != null) permitidos = permitidos intersect setOf(f.pessoa)
 
-    val avisos = mutableListOf<String>()
+    val avisos = mutableListOf<AvisoDto>()
     // Sem nenhuma issue com OS Version (customId ainda não descoberto), o filtro não tem o que casar: avisa.
     if (f.os != null && !store.temOsVersion(INSTANCIA_TEMPO_EM_STATUS)) {
-        avisos += "OS Version não disponível nos dados sincronizados"
+        avisos += AvisoDto(AvisoDto.OS_INDISPONIVEL, AvisoDto.INFORMATIVO, "OS Version não disponível nos dados sincronizados")
     }
 
     val calculador = TimeInStatusCalculator(ctx.calendar, ctx.statusMap)
@@ -337,7 +337,7 @@ private fun calcular(ctx: AppContext, store: IssueStore, principal: Principal, f
     // Issue com datas inconsistentes (ex.: resolução antes da criação) não derruba o card: é ignorada e só
     // o total (das que o usuário poderia ver) é avisado, nunca as chaves.
     val inconsistentes = (fechadas + abertas).count { candidata(it) && calculador.datasInconsistentes(it, agora) }
-    if (inconsistentes > 0) avisos += "$inconsistentes issue(s) com datas inconsistentes ignoradas"
+    if (inconsistentes > 0) avisos += AvisoDto(AvisoDto.DATAS_INCONSISTENTES, AvisoDto.INFORMATIVO, "$inconsistentes issue(s) com datas inconsistentes ignoradas")
     val fechadasOk = fechadas.filterNot { calculador.datasInconsistentes(it, agora) }
     val abertasOk = abertas.filterNot { calculador.datasInconsistentes(it, agora) }
 
@@ -354,10 +354,10 @@ private fun calcular(ctx: AppContext, store: IssueStore, principal: Principal, f
         val analisadas = resultado.analyzed.toSet()
         concluidas = fechadasDoUsuario.filter { it.key in analisadas }.associateBy { it.key }
     } catch (e: UnmappedStatusException) {
-        avisos += "status sem mapeamento: ${e.status}"
+        avisos += AvisoDto(AvisoDto.STATUS_SEM_MAPEAMENTO, AvisoDto.BLOQUEANTE, "status sem mapeamento: ${e.status}")
     } catch (e: IllegalArgumentException) {
         // Dado inconsistente (ex.: resolução antes da criação): o cálculo fica indisponível, sem detalhes.
-        avisos += "dados inconsistentes em algumas issues: cálculo indisponível"
+        avisos += AvisoDto(AvisoDto.CALCULO_INDISPONIVEL, AvisoDto.BLOQUEANTE, "dados inconsistentes em algumas issues: cálculo indisponível")
     }
 
     val dto = TempoEmStatusDto(
