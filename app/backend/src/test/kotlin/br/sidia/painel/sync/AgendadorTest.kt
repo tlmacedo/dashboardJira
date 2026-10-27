@@ -47,7 +47,7 @@ class RelogioMutavel(inicio: Instant, private val zona: ZoneId = ZoneOffset.UTC)
     override fun instant(): Instant = agora
 }
 
-/** Agenda pura e agendador contra PostgreSQL real; relógio e `dormir` injetados, sem espera de relógio real. */
+/** Agenda pura e agendador contra SQLite real em arquivo temporário; relógio e `dormir` injetados, sem espera de relógio real. */
 class AgendadorTest {
     companion object {
         private val pg = BancoEmArquivo()

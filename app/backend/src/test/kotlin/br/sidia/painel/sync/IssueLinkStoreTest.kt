@@ -17,7 +17,7 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
-/** Gravação dos vínculos junto com a issue, contra PostgreSQL real (Testcontainers). */
+/** Gravação dos vínculos junto com a issue, contra SQLite real em arquivo temporário. */
 class IssueLinkStoreTest {
     companion object {
         private val pg = BancoEmArquivo()

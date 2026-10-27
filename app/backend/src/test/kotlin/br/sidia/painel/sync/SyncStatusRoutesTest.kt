@@ -37,7 +37,7 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /**
- * `GET /api/sync/status` contra PostgreSQL real: só para o gerente, sempre auditada e sem segredos.
+ * `GET /api/sync/status` contra SQLite real em arquivo temporário: só para o gerente, sempre auditada e sem segredos.
  * Nenhuma rede, nenhum Jira.
  */
 class SyncStatusRoutesTest {

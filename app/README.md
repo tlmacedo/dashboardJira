@@ -2,7 +2,7 @@
 
 Backend Kotlin/Ktor em `backend/`, frontend React + TypeScript (Vite) em `frontend/`. O app Python anterior fica em `../legacy/` apenas como referência. Desenho completo: [spec](../docs/superpowers/specs/2026-10-24-painel-squads-kotlin-react-design.md).
 
-## Como subir (sem Docker e sem servidor de banco)
+## Como subir
 
 Requisitos: **JDK 21** e **Node 22 com pnpm**. O banco é um arquivo SQLite (`data/painel.db`), criado sozinho na primeira subida.
 
@@ -45,7 +45,7 @@ A flag `JIRA_LIVE_ENABLED` é a única chave de liga e desliga. As variáveis `S
 
 ## Aviso de segurança
 
-O modo desenvolvimento **não tem login**. Nunca o exponha em rede com dados reais. O painel escuta na porta `8080` e, sem Docker para limitar a publicação, **quem restringe o acesso é o firewall/rede da máquina**: em estação de trabalho, deixe-o acessível só em `127.0.0.1`.
+O modo desenvolvimento **não tem login**. Nunca o exponha em rede com dados reais. O painel escuta na porta `8080` e **quem restringe o acesso é o firewall/rede da máquina**: em estação de trabalho, deixe-o acessível só em `127.0.0.1`.
 
 Para produção: defina `DASHBOARD_DEV_MODE=false` (exige o login SSO/OIDC, previsto em plano posterior). Não exponha em rede enquanto o login não existir.
 

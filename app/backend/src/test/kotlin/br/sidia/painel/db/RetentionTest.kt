@@ -11,7 +11,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
-/** Testes contra PostgreSQL real (Testcontainers); nunca H2 nem mock. */
+/** Testes contra SQLite real em arquivo temporário; nunca H2 nem mock. */
 class RetentionTest {
     companion object {
         private val pg = BancoEmArquivo()

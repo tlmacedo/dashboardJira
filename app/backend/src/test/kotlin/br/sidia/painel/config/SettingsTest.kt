@@ -51,7 +51,7 @@ class SettingsTest {
         )
     }
 
-    // Revisado: variável presente mas vazia (comum no docker-compose) agora significa "usar o padrão".
+    // Revisado: variável presente mas vazia agora significa "usar o padrão".
     @Test
     fun diretorioEstaticoVazioUsaPadrao() {
         assertEquals(Path.of("frontend/dist"), Settings.fromEnv(mapOf("PAINEL_STATIC_DIR" to "  ")).staticDir)

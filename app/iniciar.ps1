@@ -1,4 +1,4 @@
-# Sobe o painel no Windows (PowerShell 5.1 ou 7), sem Docker nem servidor de banco.
+# Sobe o painel no Windows (PowerShell 5.1 ou 7).
 # Requisitos: JDK 21 e Node 22 com pnpm. Uso (a partir de app\):  .\iniciar.ps1  [-SemBuildDoFront]
 # Variáveis: copie .env.example para .env e preencha. O banco é o arquivo data\painel.db.
 param([switch]$SemBuildDoFront)

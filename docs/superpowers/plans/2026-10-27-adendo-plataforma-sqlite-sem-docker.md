@@ -4,6 +4,35 @@
 
 **Precedência:** este adendo vence qualquer trecho de plano ou spec que fale de PostgreSQL, Docker, compose, Testcontainers, imagem, contêiner, Kubernetes ou volume. Ordem completa: `CLAUDE.md` > `.clinerules/` > `docs/guia-execucao-outra-ia.md` > **este adendo** > spec da fase > plano > spec mestra de 24/10. Os planos 4A a 16 foram escritos *antes* da troca; onde o texto diz "PostgreSQL", leia "SQLite" e aplique as regras abaixo. Os planos 8, 9, 12 e 13 (e suas specs) já foram reescritos para a nova realidade; nos demais, só o que está na tabela da seção 7 muda.
 
+## 0. Windows: só PowerShell (leia antes de rodar qualquer comando)
+
+**Proibido neste projeto (a TI da empresa bloqueia): contêineres, servidor de banco e WSL.** Não instale, não inicie e não tente usar nenhum deles. Também não use `bash`, `sh` nem `wsl` no terminal do Windows: no Windows 11 o `bash.exe` abre o WSL e o comando é abortado. Use sempre PowerShell.
+
+Os planos antigos trazem comandos em `sh`. No Windows, **traduza para PowerShell** (a coluna da direita), nunca rode o `sh`:
+
+| `sh` / macOS | PowerShell (Windows 11) |
+|---|---|
+| `./gradlew test` | `.\gradlew.bat test` |
+| `cmd1 && cmd2` | `cmd1; if ($LASTEXITCODE -eq 0) { cmd2 }` (PowerShell 5.1 não tem `&&`) |
+| `export VAR=valor` / `VAR=valor cmd` | `$env:VAR = 'valor'` (vale só na sessão) |
+| `cp a b` / `cp -r a b` | `Copy-Item a b` / `Copy-Item -Recurse a b` |
+| `rm -rf pasta` / `rm arq` | `Remove-Item -Recurse -Force pasta` / `Remove-Item arq` |
+| `ls`, `cat arq` | `Get-ChildItem`, `Get-Content arq` |
+| `grep -n texto arq` | `Select-String -Path arq -Pattern texto` |
+| `mkdir -p a/b` | `New-Item -ItemType Directory -Force a\b` |
+| `sh app/iniciar.sh` | `.\app\iniciar.ps1` |
+| `sh .claude/hooks/test-guard.sh` (Claude Code) | `.clinerules\hooks\test-PreToolUse.ps1` (Cline) |
+| `/tmp/arquivo` | `$env:TEMP\arquivo` |
+
+Se um passo só existe em `sh` e não tem tradução óbvia, **pare e pergunte**; não instale Git Bash, WSL nem outro shell por conta própria.
+
+### Se aparecer "aborted" (ou o Cline não sai do mesmo erro)
+1. **Atualize o clone:** `git checkout main; git pull --ff-only origin main`. Versões antigas dos workflows mandavam rodar `docker info` e abrir o Docker Desktop em laço de espera; com isso bloqueado pela TI o comando nunca termina e é abortado.
+2. **Comece uma tarefa nova no Cline** (o histórico da tarefa antiga guarda as instruções antigas) e reabra o VS Code.
+3. **Confira as regras globais do Cline** (Settings do ClineSR, "Custom Instructions"/regras globais e a pasta de regras do usuário) e apague qualquer menção a contêiner, banco de servidor ou WSL.
+4. **Terminal do VS Code em PowerShell:** o perfil padrão não pode ser Git Bash nem WSL (paleta de comandos: "Terminal: Select Default Profile").
+5. Se o comando abortado não cita nada disso, **copie a mensagem exata** (a linha do comando e o texto do erro) e pergunte ao usuário; não tente de novo em laço.
+
 ## 1. O que existe hoje (não refaça)
 
 | Peça | Como é agora |
@@ -48,7 +77,7 @@ Antes de escrever SQL novo, abra `V1__base.sql` e um repositório vizinho (`sync
 
 ## 4. Proibido em qualquer plano
 
-Dockerfile, `docker-compose.yml`, `.dockerignore`, imagens, digests, registro de contêiner, Kubernetes, Helm, `docker compose`, `docker run`, Testcontainers, PostgreSQL, H2, `pg_dump`. Se uma tarefa pedir qualquer um deles, **não execute a parte**: aplique a seção 5 e registre `Ruling:` no arquivo de progresso.
+Qualquer contêiner ou orquestrador (arquivos de imagem e de composição, registros, Kubernetes, Helm), WSL, Testcontainers, PostgreSQL (inclusive `pg_dump`) e H2. Se uma tarefa pedir qualquer um deles, **não execute a parte**: aplique a seção 5 e registre `Ruling:` no arquivo de progresso.
 
 ## 5. Equivalentes para o que os planos antigos faziam com contêiner
 

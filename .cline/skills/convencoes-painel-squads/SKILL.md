@@ -1,6 +1,6 @@
 ---
 name: convencoes-painel-squads
-description: Use em QUALQUER tarefa neste repositório (Painel de Squads, Kotlin/Ktor + React) antes de escrever código, testes, commits ou docs. Resume as proibições (Jira, dados pessoais, configs reais, sem Docker/PostgreSQL), as convenções de código e de commit, e aponta para os workflows /continuar.md, /executar-plano.md, /revisar-tarefa.md, /fim-de-branch.md, /perguntar-ao-usuario.md e /escrever-plano.md.
+description: Use em QUALQUER tarefa neste repositório (Painel de Squads, Kotlin/Ktor + React) antes de escrever código, testes, commits ou docs. Resume as proibições (Jira, dados pessoais, configs reais, plataforma), as convenções de código e de commit, e aponta para os workflows /continuar.md, /executar-plano.md, /revisar-tarefa.md, /fim-de-branch.md, /perguntar-ao-usuario.md e /escrever-plano.md.
 ---
 
 # Convenções do Painel de Squads
@@ -17,7 +17,7 @@ Skill própria do projeto (não é de terceiros). Resume o que está em `CLAUDE.
 - **Jira:** com `JIRA_LIVE_ENABLED` diferente de `true`, nenhum acesso a servidor Jira por nenhum caminho (app, `curl`, navegador, script, MCP). Só o usuário muda a flag; nunca a ligue, nem dentro de um comando. Testes usam sempre fixtures e `MockEngine`. A regra vigente é a regra 1 do `CLAUDE.md`; não há exigência extra de autorização por pesquisa.
 - **Arquivos reais:** nunca edite nem commite `.env`, `config/{papeis,equipes,ausencias,squads}.yaml` nem `Filtros_Status_tool.txt`. Use os modelos `.exemplo`/`.demo`.
 - **Dados pessoais:** só nomes fictícios (`ana.silva`, `bruno`, domínio `.invalid`) em fixtures, testes, docs e commits.
-- **Banco:** SQLite em arquivo; testes com SQLite real em arquivo temporário (`testContextComBanco`). Sem Docker. Nunca H2 nem mock. Próxima migração livre (hoje a V2).
+- **Banco:** SQLite em arquivo; testes com SQLite real em arquivo temporário (`testContextComBanco`). Nunca H2 nem mock. Próxima migração livre (hoje a V2).
 - **Git:** nunca `git add -A` nem `git add -f` (o usuário mantém `legacy/.env.example` modificado fora de commit); só mescle PR pelo fluxo de entrega (`docs/superpowers/fluxo-de-entrega.md`, seção 5: 7 condições; Plano 16 só com ordem expressa do usuário) e nunca apague branch com código fora da `main`.
 - **Travas:** um bloqueio do hook nunca é contornado reescrevendo o comando. Pare e relate.
 

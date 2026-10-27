@@ -43,7 +43,7 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 /**
- * Rotas do card "Tempo em status" contra PostgreSQL real (Testcontainers), diretório de papéis em
+ * Rotas do card "Tempo em status" contra SQLite real em arquivo temporário, diretório de papéis em
  * memória e relógio fixo. Nenhuma rede, nenhum Jira.
  */
 class TempoEmStatusRoutesTest {

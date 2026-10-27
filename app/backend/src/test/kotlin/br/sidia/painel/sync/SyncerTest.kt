@@ -45,7 +45,7 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 import kotlin.time.Duration.Companion.seconds
 
-/** Sincronização contra PostgreSQL real (Testcontainers) e Jira simulado por MockEngine; nenhuma rede real. */
+/** Sincronização contra SQLite real em arquivo temporário e Jira simulado por MockEngine; nenhuma rede real. */
 class SyncerTest {
     companion object {
         private val pg = BancoEmArquivo()

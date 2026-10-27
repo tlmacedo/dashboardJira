@@ -12,7 +12,7 @@ import java.time.Clock
 import kotlin.io.path.deleteRecursively
 
 /**
- * Pasta temporária com arquivos SQLite de teste (nada de servidor nem Docker). Cada classe de teste cria uma
+ * Pasta temporária com arquivos SQLite de teste (nada de servidor). Cada classe de teste cria uma
  * (`companion object`) e a apaga no `@AfterAll`. [novoArquivo] devolve sempre um arquivo novo e vazio, então cada
  * teste começa com banco limpo e nunca herda dados nem conexões de outro.
  */

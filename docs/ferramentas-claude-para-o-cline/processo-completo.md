@@ -44,7 +44,7 @@ Regras do ciclo:
 ## 3. Texto para o implementador (cole numa nova tarefa)
 
 > Você implementa a Tarefa N do plano `<caminho>` na branch `<branch>`. Leia antes: o cabeçalho do plano (Goal, Architecture, Restrições globais, Foco da revisão), a spec da fase, o texto da tarefa (`<arquivo-do-brief>`), o arquivo de progresso e `docs/guia-execucao-outra-ia.md`. Confira os nomes no código real; se divergirem do plano, siga o código e registre.
-> Regras duras: nunca acesse o Jira nem a rede; nunca ligue a flag `JIRA_LIVE_ENABLED`. Sem Docker; SQLite real em arquivo temporário nos testes (`testContextComBanco`). Escreva os testes da tarefa primeiro e veja-os falhar pelo motivo certo, implemente, veja passar, rode a suíte completa. `git add` só dos seus arquivos. Um commit em pt-BR (Conventional Commits). Devolva: status, hash, testes (total/falhas), divergências do plano e preocupações.
+> Regras duras: nunca acesse o Jira nem a rede; nunca ligue a flag `JIRA_LIVE_ENABLED`. SQLite real em arquivo temporário nos testes (`testContextComBanco`). Escreva os testes da tarefa primeiro e veja-os falhar pelo motivo certo, implemente, veja passar, rode a suíte completa. `git add` só dos seus arquivos. Um commit em pt-BR (Conventional Commits). Devolva: status, hash, testes (total/falhas), divergências do plano e preocupações.
 
 ## 4. Texto para o revisor (cole numa nova tarefa; só leitura)
 

@@ -21,7 +21,7 @@ import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 
-/** Testes do registro de consultas contra PostgreSQL real (Testcontainers). */
+/** Testes do registro de consultas contra SQLite real em arquivo temporário. */
 class AccessLogTest {
     companion object {
         private val pg = BancoEmArquivo()

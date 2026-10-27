@@ -38,7 +38,7 @@ import kotlin.test.assertTrue
 import kotlin.time.Duration.Companion.seconds
 
 /**
- * Reconciliação diária contra PostgreSQL real (Testcontainers) e Jira simulado por MockEngine.
+ * Reconciliação diária contra SQLite real em arquivo temporário e Jira simulado por MockEngine.
  * "Hoje" é 2026-10-30 em Manaus (corte de retenção: 2024-10-30 00:00 em Manaus); nenhuma rede real.
  */
 class ReconciliacaoTest {

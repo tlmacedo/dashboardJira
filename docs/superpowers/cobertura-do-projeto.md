@@ -1,3 +1,5 @@
+> **HISTÓRICO (27/10/2026):** este mapa foi escrito antes da saída dos contêineres e do PostgreSQL. As linhas sobre imagem, compose, Testcontainers e `pg_dump` não valem mais; vale o adendo `plans/2026-10-27-adendo-plataforma-sqlite-sem-docker.md` e os Planos 8, 9, 12 e 13 reescritos. Não execute nada a partir das linhas antigas.
+
 # Cobertura do projeto: planos 4A a 8 contra a spec e os documentos
 
 Data: 25/10/2026. Auditoria somente leitura, feita na branch `docs/planos-04a-04` (árvore de trabalho com alterações não commitadas). Nenhum acesso ao Jira nem à rede.

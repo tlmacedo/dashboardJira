@@ -47,7 +47,7 @@ import kotlin.test.assertTrue
 import kotlin.io.path.extension
 import kotlin.io.path.name
 
-/** Dados de demonstração contra PostgreSQL real (Testcontainers). Nenhuma rede, nenhum Jira. */
+/** Dados de demonstração contra SQLite real em arquivo temporário. Nenhuma rede, nenhum Jira. */
 class DadosDeDemonstracaoTest {
     companion object {
         private val pg = BancoEmArquivo()

@@ -32,12 +32,12 @@ Siglas da coluna "Onde": **C** = `CLAUDE.md` · **R** = `.clinerules/00-regras-d
 | 2.8 | A flag do Jira vale só no `app/.env` (terminal e sistema são ignorados); o `.env` real nunca vai para arquivo versionado | C, G |
 | 2.9 | Arquivos que o projeto declara só locais (`.superpowers/`, segredos) não são commitados | GL, `.gitignore` |
 
-## 3. Banco (sem Docker)
+## 3. Banco e plataforma
 
 | # | Regra | Onde |
 |---|---|---|
-| 3.1 | Sem Docker nem servidor de banco (a empresa os bloqueia): banco SQLite em arquivo (`DATABASE_PATH`), JDK 21 e Node/pnpm | C, G |
-| 3.2 | Nunca trocar o SQLite real por H2 ou mock nos testes; nunca reintroduzir Testcontainers/PostgreSQL | C, R |
+| 3.1 | **Proibido neste projeto (a TI da empresa bloqueia): contêineres, servidor de banco e WSL.** Não instale, não inicie e não tente usar nenhum deles. Também não use `bash`, `sh` nem `wsl` no terminal do Windows: no Windows 11 o `bash.exe` abre o WSL e o comando é abortado. Use sempre PowerShell. O banco é SQLite em arquivo (`DATABASE_PATH`); JDK 21 e Node/pnpm | C, G |
+| 3.2 | Nunca trocar o SQLite real por H2 ou mock nos testes | C, R |
 | 3.3 | Um painel por arquivo de banco (trava `<banco>.lock`); apagar `app/data/painel.db` só com o painel parado | G |
 | 3.4 | Migração Flyway nova no próximo número livre; nunca editar migração já mesclada | P4A |
 

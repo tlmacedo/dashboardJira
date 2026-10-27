@@ -4,7 +4,7 @@
 
 **Goal:** clone compilando, testando e subindo o painel no PC da empresa, com ferramentas de rede (proxy, certificado da empresa, espelhos) configuradas **fora do repositório**.
 
-**Restrições globais:** não ligar a flag do Jira, não ler nem editar `app/.env`, não acessar o Jira, não desativar verificação de certificado (nem `-k`, nem `NODE_TLS_REJECT_UNAUTHORIZED=0`, nem `strict-ssl=false`), não commitar endereços/credenciais da empresa. Comandos em PowerShell (5.1 ou 7; no 5.1 não existe `&&`).
+**Restrições globais:** **Proibido neste projeto (a TI da empresa bloqueia): contêineres, servidor de banco e WSL.** Não instale, não inicie e não tente usar nenhum deles. Também não use `bash`, `sh` nem `wsl` no terminal do Windows: no Windows 11 o `bash.exe` abre o WSL e o comando é abortado. Use sempre PowerShell.  não ligar a flag do Jira, não ler nem editar `app/.env`, não acessar o Jira, não desativar verificação de certificado (nem `-k`, nem `NODE_TLS_REJECT_UNAUTHORIZED=0`, nem `strict-ssl=false`), não commitar endereços/credenciais da empresa. Comandos em PowerShell (5.1 ou 7; no 5.1 não existe `&&`).
 
 **Branch:** `feat/pc-da-empresa` (fluxo de entrega, seção 1). Como o plano quase não altera arquivos, o PR traz só o arquivo de progresso, o `HANDOFF.md` e eventuais correções de documentação.
 
