@@ -29,6 +29,8 @@
 - **Plano 13:** provedor OIDC, máquina de produção, proxy/TLS e cofre/arquivo de segredos.
 - **Branches conhecidas** (ignorar no `git branch -r --no-merged`): nenhuma pendente em 27/10/2026; se aparecer uma branch `ccr-*` ou `claude/*` antiga, confirme que está mesclada e peça ao usuário para apagá-la.
 
+- **Skills do Claude no Cline (teste):** inventário em `SKILLS_INSTALADAS_CLAUDE.md`; 45 cópias em `skills-para-cline/` e `scripts/copiar-skills-para-cline.ps1`. Rode o script no PC da empresa e registre em `docs/ferramentas-claude-para-o-cline/skills.md` se o Cline reconheceu (não bloqueia nenhum plano).
+
 ## Próximos passos, em ordem
 
 1. **Fase 0** (PC da empresa) → **Plano 9** (CI e endurecimento; cria o `.github/` que ainda não existe) → **Plano 14a** (primeira conexão real, quando o usuário ligar a flag) → **Plano 4, Tarefas 4 a 9** → 5a → 5b → 6a → 6b → 7a → 7b → 10 → 11 → 14b → 8 → 12 → 13 → 15. O **Plano 16** (escrita no Jira pelo painel) é futuro e só com decisão do usuário. Justificativa e dependências: índice dos planos.

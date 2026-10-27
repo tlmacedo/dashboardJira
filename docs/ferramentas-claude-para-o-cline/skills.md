@@ -141,3 +141,7 @@ Origem: https://github.com/pbakaus/impeccable · Licença: Apache-2.0 · versão
 |---|---|
 | Subagentes Haiku para tarefas mecânicas | A documentação diz que subagentes existem só na CLI e no Desktop (https://docs.cline.bot/features/subagents.md); o código da extensão tem `use_subagents`. No ClineSR: **não confirmado**. Os workflows assumem que você faz tudo em sequência |
 | Revisores (`pr-review-toolkit:*`, revisão final com Opus) | `revisar-tarefa.md`; para uma segunda opinião, pergunte ao usuário (pergunta com opções) |
+
+## Cópias das skills do Claude para teste no Cline (27/10/2026)
+
+O inventário de tudo que o Claude tem instalado está em [`SKILLS_INSTALADAS_CLAUDE.md`](../../SKILLS_INSTALADAS_CLAUDE.md). As 45 skills com licença livre foram copiadas para [`skills-para-cline/`](../../skills-para-cline/README.md), e `scripts/copiar-skills-para-cline.ps1` as instala em `%USERPROFILE%\.cline\skills`. **Resultado do teste no ClineSR: ainda não verificado** (registrar aqui: versão do ClineSR, quantas skills a aba Skills mostrou, quais falharam e a mensagem).
