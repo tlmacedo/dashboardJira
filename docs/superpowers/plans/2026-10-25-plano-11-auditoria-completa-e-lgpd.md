@@ -272,7 +272,7 @@ Registrar a resposta, a data e a opção no `HANDOFF.md` e no progresso. **Sem r
   - `semDadosReais` (nenhum `@` fora de `.invalid`, nenhum `https://` fora de `.invalid`).
 
 - [ ] **Passo 1: Escrever o teste** e rodar `./gradlew test --tests '*InventarioDeDadosTest*'` → FALHA (documento inexistente).
-- [ ] **Passo 2: Escrever o inventário** a partir do banco migrado (listar as colunas pelo próprio teste ou por `\d+` num contêiner local).
+- [ ] **Passo 2: Escrever o inventário** a partir do banco migrado (listar as colunas pelo próprio teste ou por `\d+` no SQLite local (`pragma_table_info`/`sqlite_master`)).
 - [ ] **Passo 3: Rodar** → PASSA.
 - [ ] **Passo 4: Conferir** que `raw` (`issue.raw`) está descrito com o que o `SanitizadorRaw` remove e que `filters` (`access_log`) está descrito com o saneamento do `AccessLog`.
 - [ ] **Passo 5: Commit** `docs(lgpd): inventário dos dados tratados, verificado contra o esquema`.

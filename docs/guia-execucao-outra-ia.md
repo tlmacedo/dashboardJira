@@ -1,6 +1,6 @@
 # Guia de execução para outra IA (ClineSR e similares)
 
-Objetivo: quem continuar a execução dos planos (a partir do Plano 4A) deve ter **o mesmo entendimento de projeto e as mesmas regras** de quem os escreveu (o Claude Code). Este guia substitui o que o Claude tem de ferramentas próprias (subagentes, skills de terceiros, revisores) e que o Cline não tem do mesmo jeito. O porte dessas ferramentas (workflows, skills do projeto e o hook `PreToolUse` do Cline) está em `docs/ferramentas-claude-para-o-cline/`. Nada aqui contradiz o `CLAUDE.md`; havendo conflito, vale o `CLAUDE.md`, depois este guia, depois o plano.
+Objetivo: quem continuar a execução dos planos (a partir da Fase 0 e do Plano 9; o Plano 4A já está na `main`) deve ter **o mesmo entendimento de projeto e as mesmas regras** de quem os escreveu (o Claude Code). Este guia substitui o que o Claude tem de ferramentas próprias (subagentes, skills de terceiros, revisores) e que o Cline não tem do mesmo jeito. O porte dessas ferramentas (workflows, skills do projeto e o hook `PreToolUse` do Cline) está em `docs/ferramentas-claude-para-o-cline/`. Nada aqui contradiz o `CLAUDE.md`; havendo conflito, vale o `CLAUDE.md`, depois este guia, depois o plano.
 
 **Workflows do Cline** (`.clinerules/workflows/`, digite `/nome.md`): `/continuar.md` (início de sessão), `/executar-plano.md` (seção 4 deste guia), `/revisar-tarefa.md` (seção 5), `/fim-de-branch.md` (seções 4, 6 e 8), `/perguntar-ao-usuario.md` (seção 7) e `/escrever-plano.md`.
 
@@ -10,6 +10,7 @@ Objetivo: quem continuar a execução dos planos (a partir do Plano 4A) deve ter
 
 ## 1. Ordem de leitura (obrigatória antes de escrever código)
 
+0. `docs/superpowers/fluxo-de-entrega.md` (revisão, validação, PR, merge) e `docs/superpowers/plans/2026-10-27-adendo-plataforma-sqlite-sem-docker.md` (SQLite, sem Docker); num PC novo, `docs/superpowers/plans/2026-10-27-plano-00-pc-da-empresa.md`.
 1. `.clinerules/00-regras-do-projeto.md` (proibições e decisões).
 2. `CLAUDE.md` e `PRODUCT.md` (regras sempre válidas e produto).
 3. `HANDOFF.md` (estado atual e próximos passos).

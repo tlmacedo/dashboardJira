@@ -16,7 +16,7 @@ Os comandos têm duas formas: **Windows 11 PowerShell** (executor principal, Pow
 git status                                  # tem que estar limpo
 git checkout main
 git pull --ff-only origin main              # se falhar: pare e pergunte (histórico divergiu)
-git branch -r --no-merged origin/main       # branches remotas com código fora da main
+git branch -r --no-merged origin/main       # branches remotas com código fora da main (ignore as já listadas em "Branches conhecidas" do HANDOFF.md)
 gh pr list --state open                     # PRs abertas
 git checkout -b feat/<nome-do-plano>
 ```
@@ -48,7 +48,10 @@ Tarefa não é "terminada" sem: testes verdes **com números mostrados**, revis�
 2. Suíte completa **sem cache**, das duas camadas, mostrando os números:
 ```powershell
 cd app\backend; .\gradlew.bat test --rerun-tasks
-cd ..\frontend; pnpm install --frozen-lockfile; pnpm vitest run; if ($LASTEXITCODE -eq 0) { pnpm build }
+if ($LASTEXITCODE -ne 0) { throw "backend falhou" }
+cd ..\frontend; pnpm install --frozen-lockfile; pnpm vitest run
+if ($LASTEXITCODE -ne 0) { throw "frontend falhou" }
+pnpm build
 ```
 ```sh
 (cd app/backend && ./gradlew test --rerun-tasks) && (cd app/frontend && pnpm install --frozen-lockfile && pnpm vitest run && pnpm build)
@@ -79,7 +82,8 @@ Leia o resultado inteiro. Condições para seguir: nenhum e-mail real, username 
 ```powershell
 git push -u origin feat/<nome-do-plano>
 # corpo da PR em arquivo fora do repositório
-@"
+# (PowerShell 5.1 grava BOM com Set-Content -Encoding utf8; use este método para o corpo da PR)
+$corpo = @"
 ## O que traz
 ...
 ## Segurança
@@ -88,9 +92,10 @@ git push -u origin feat/<nome-do-plano>
 Backend: X testes, 0 falhas. Frontend: Y testes, 0 falhas. Build: ok.
 ## Não testado / pendências
 ...
-"@ | Set-Content -Encoding utf8 $env:TEMP\pr.md
+"@
+[System.IO.File]::WriteAllText("$env:TEMP\pr.md", $corpo, (New-Object System.Text.UTF8Encoding($false)))
 gh pr create --base main --head feat/<nome-do-plano> --title "<tipo>(<escopo>): <resumo>" --body-file $env:TEMP\pr.md
-gh pr checks --watch                      # espera o CI (existe depois do Plano 9)
+gh pr checks --watch                      # espera o CI; antes do Plano 9 sai com "no checks reported" (código ≠ 0): é esperado, ignore
 ```
 ```sh
 git push -u origin feat/<nome-do-plano>
@@ -98,7 +103,7 @@ gh pr create --base main --head feat/<nome-do-plano> --title "<tipo>(<escopo>): 
 gh pr checks --watch
 ```
 
-**Só mescle se TODAS forem verdadeiras** (registre cada uma no progresso):
+**Exceção: o Plano 16 (escrita no Jira) nunca é mesclado sem ordem expressa do usuário.** **Limite aceito:** a "revisão independente" é feita pelo próprio ClineSR em contexto limpo, não por outro modelo; por isso a revisão final e o CI são condições, e na dúvida pergunta. **Só mescle se TODAS forem verdadeiras** (registre cada uma no progresso):
 1. Todas as tarefas do plano/bloco concluídas e revisadas; nenhuma "não iniciada".
 2. Revisão final: "PRONTA PARA PUSH/PR/MERGE", sem Critical/Important abertos (nem em re-revisão).
 3. Suíte completa sem cache verde nas duas camadas, números no corpo da PR. Em PR de documentação pura, a suíte ainda precisa estar verde.
@@ -112,22 +117,23 @@ Conflito com a `main`: `git fetch origin; git merge origin/main` (merge, não re
 ## 6. Merge e retorno à `main`
 
 ```powershell
-gh pr merge <número> --squash --delete-branch --subject "<mesmo título da PR>"
+gh pr merge <número> --squash --delete-branch --match-head-commit <sha-do-último-commit> --subject "<mesmo título da PR>"
 git checkout main
 git pull --ff-only origin main
 git log --oneline -3                          # o commit do merge tem que aparecer
-git branch -d feat/<nome-do-plano>            # -d (não -D): recusa se houver código fora da main
+git branch --list "feat/*"                    # o --delete-branch normalmente já apagou a local
 git status                                    # limpo
 ```
 ```sh
-gh pr merge <número> --squash --delete-branch --subject "<mesmo título da PR>"
+gh pr merge <número> --squash --delete-branch --match-head-commit <sha-do-último-commit> --subject "<mesmo título da PR>"
 git checkout main && git pull --ff-only origin main && git log --oneline -3
-git branch -d feat/<nome-do-plano> && git status
+git branch --list "feat/*"; git status
 ```
 
 Depois: rode a suíte **na `main`** (backend e frontend) para provar que a `main` mesclada compila e passa; anote os números no progresso do **próximo** plano. Se a `main` ficou vermelha: pare, avise o usuário com o log e não comece o próximo plano.
 
 - Se o `gh pr merge` for recusado (proteção de branch, aprovação exigida, checks obrigatórios): **não use `--admin` nem desative a proteção**. Pare e pergunte (seção 8).
+- **Branch local sobrando:** com merge *squash* o commit da branch não é ancestral da `main`, então `git branch -d` recusa ("not fully merged"). Só se `git branch --list "feat/*"` ainda mostrar a branch **e** `gh pr view <número> --json state` disser `MERGED`, apague-a com `git branch -D feat/<nome-do-plano>` (o código já está na `main`). Em qualquer outro caso, nunca use `-D`.
 - O estado "Executado (PR #N)" no índice e no `HANDOFF.md` entra no **primeiro commit da branch do próximo plano** (seção 1), nunca como commit direto na `main`. Nunca faça `git push` para a `main`.
 - Sem `gh` instalado ou autenticado (`gh auth status` falha): faça o push da branch, **pare** e entregue ao usuário o link de comparação e o texto da PR; peça que ele abra e mescle (ou que autentique o `gh`).
 - Em seguida, e só então, comece o próximo plano (seção 1).

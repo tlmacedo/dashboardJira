@@ -180,7 +180,7 @@ O teste de carga leva `@Tag("carga")`, roda pela tarefa `testCarga` e fica fora 
 8. **Documentos do Jira (T8).** `PreparacaoDocsTest` passa: `checklistCitaCadaCampoAConfirmar`, `matrizCitaCadaEndpoint`, `cadaFichaUsaSoCamposDoDicionario`, `cadaPassoDoChecklistConfirmaAFlag` (do 4A), `documentosDeJiraSemRegraAntiga`, `semHostRealNemToken` e `testesNaoAcessamOJiraReal`. Nenhum documento de `docs/jira/` mantém a regra antiga.
 9. **Remoção (T9), só com aprovação.** Antes, existe a tag `legacy-final`. `ReferenciasLegacyTest` passa: `nadaReferenciaLegacy` e `nenhumCodigoLeLegacy`. Também passam as suítes completas, `pnpm build`, `sh .claude/hooks/test-guard.sh` e o pacote (`montar-pacote` e `verificar-pacote`). Nenhuma verificação usa Docker.
 10. **Guia (T10).** `GuiaDoPainelDocTest` passa: `guiaCitaCadaItemDoMenu`, `guiaCitaCadaFicha` e `claudeMdSemCaminhoInexistente`. O índice dos planos mostra o estado final.
-11. **Fim.** Varrer dados pessoais antes do push. Confirmar que o repositório é PRIVADO. Abrir PR para a `main` e não mesclar sem o usuário mandar.
+11. **Fim.** Varrer dados pessoais antes do push. Confirmar que o repositório é PRIVADO. Abrir PR para a `main` e mesclar pelo fluxo de entrega (`docs/superpowers/fluxo-de-entrega.md`).
 
 ## 7. Riscos, pendências e pontos de parada
 

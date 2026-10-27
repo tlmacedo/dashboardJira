@@ -22,7 +22,7 @@ Testes no último ponto verde conhecido: backend 745+, 0 falhas (SQLite real, de
 1. `git checkout main && git pull && git checkout -b feat/auditoria-2`; confira `git log --oneline -5` e rode a suíte.
 2. Leia a próxima tarefa no plano (`### Tarefa N`) e a spec `docs/superpowers/specs/2026-10-25-spec-fase-04-auditoria.md`.
 3. Siga o fluxo do guia: testes primeiro (veja falharem), implementar, rodar, autorrevisão pelo checklist, um commit por tarefa, atualizar ESTE arquivo.
-4. Ao terminar as 9 tarefas: revisão final do conjunto, varredura de dados pessoais, PR e `main` com `pull`. Não mesclar sem o usuário mandar.
+4. Ao terminar as 9 tarefas: revisão final do conjunto, varredura de dados pessoais, PR e `main` com `pull`. Mesclar pelo fluxo de entrega (`docs/superpowers/fluxo-de-entrega.md`).
 
 ## Minor adiados do Plano 4 até aqui (para a onda final)
 

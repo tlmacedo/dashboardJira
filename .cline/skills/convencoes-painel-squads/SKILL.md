@@ -18,7 +18,7 @@ Skill própria do projeto (não é de terceiros). Resume o que está em `CLAUDE.
 - **Arquivos reais:** nunca edite nem commite `.env`, `config/{papeis,equipes,ausencias,squads}.yaml` nem `Filtros_Status_tool.txt`. Use os modelos `.exemplo`/`.demo`.
 - **Dados pessoais:** só nomes fictícios (`ana.silva`, `bruno`, domínio `.invalid`) em fixtures, testes, docs e commits.
 - **Banco:** SQLite em arquivo; testes com SQLite real em arquivo temporário (`testContextComBanco`). Sem Docker. Nunca H2 nem mock. Próxima migração livre (hoje a V2).
-- **Git:** nunca `git add -A` nem `git add -f` (o usuário mantém `legacy/.env.example` modificado fora de commit); nunca mesclar PR nem apagar branch sem o usuário mandar.
+- **Git:** nunca `git add -A` nem `git add -f` (o usuário mantém `legacy/.env.example` modificado fora de commit); só mescle PR pelo fluxo de entrega (`docs/superpowers/fluxo-de-entrega.md`, seção 5: 7 condições; Plano 16 só com ordem expressa do usuário) e nunca apague branch com código fora da `main`.
 - **Travas:** um bloqueio do hook nunca é contornado reescrevendo o comando. Pare e relate.
 
 ## Código

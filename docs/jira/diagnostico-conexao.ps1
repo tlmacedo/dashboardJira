@@ -5,15 +5,16 @@
 .DESCRIPTION
   1) ambiente, DNS, TCP e certificado TLS  2) serverInfo (sem login)  3) login (GET myself)
   4) projetos visiveis  5) localiza o usuario  6) consulta: tasks concluidas por ele nesta semana.
-  Grava tudo em diagnostico_jira_AAAAMMDD_HHMMSS.txt (o token NUNCA e impresso).
+  Grava tudo em diagnostico_jira_AAAAMMDD_HHMMSS.txt na pasta atual (o token NUNCA e impresso, mas o log tem e-mails, nomes e titulos de tasks: ele esta no .gitignore; nunca o compartilhe nem o commite).
+  So roda com a flag do Jira ligada em app\.env (apenas o usuario liga).
 
 .EXAMPLE
   # defina antes (nao passe o token como parametro: o historico do PowerShell gravaria):
   $env:JIRA_BASE_URL = 'https://suaempresa.atlassian.net'     # ou https://jira.suaempresa.com.br
   $env:JIRA_EMAIL    = 'voce@suaempresa.com'                   # so Cloud
   $env:JIRA_TOKEN    = 'SEU_TOKEN'                             # Cloud: API token | Data Center: Personal Access Token
-  .\diagnostico_jira.ps1
-  # sem variaveis, o script pergunta. Outras opcoes: -User usuario.exemplo -Since 2026-10-19 -FullBody -IgnoreCertErrors
+  .\docs\jira\diagnostico-conexao.ps1
+  # sem variaveis, o script pergunta. Outras opcoes: -User usuario.exemplo -Since 2026-10-19 -FullBody
 #>
 param(
   [string]$BaseUrl = $env:JIRA_BASE_URL,
@@ -26,8 +27,7 @@ param(
   [string]$Since   = '',                       # AAAA-MM-DD; padrao = segunda-feira desta semana
   [int]$MaxBody    = 3000,                     # limite de caracteres de cada corpo impresso
   [int]$TimeoutSec = 30,
-  [switch]$FullBody,                           # imprime corpos completos
-  [switch]$IgnoreCertErrors                    # SO PARA TESTE: ignora erro de certificado
+  [switch]$FullBody                            # imprime corpos completos
 )
 
 # ---------------------------------------------------------------- preparo
@@ -39,23 +39,21 @@ $script:steps = New-Object System.Collections.ArrayList
 $logFile = Join-Path (Get-Location) ('diagnostico_jira_{0:yyyyMMdd_HHmmss}.txt' -f (Get-Date))
 try { Start-Transcript -Path $logFile -Force | Out-Null } catch { Write-Host "Aviso: nao foi possivel gravar o log: $($_.Exception.Message)" -ForegroundColor Yellow }
 
-# le app\.env (se existir) para as variaveis que ainda estao vazias
-foreach ($p in @("$PSScriptRoot\..\.env", "$PSScriptRoot\.env", '.\app\.env', '.\.env')) {
-  if ($p -and (Test-Path $p)) {
+# TRAVA: so roda com a flag do Jira ligada em app\.env (unica trava do projeto). Le SOMENTE essa linha; nenhuma credencial vem do arquivo.
+$flagLigada = $false
+foreach ($p in @("$PSScriptRoot\..\..\app\.env", '.\app\.env', '.\.env')) {
+  if (Test-Path $p) {
     foreach ($line in Get-Content $p -ErrorAction SilentlyContinue) {
-      if ($line -match '^\s*([A-Z_]+)\s*=\s*(.*?)\s*(#.*)?$') {
-        $k = $Matches[1]; $v = $Matches[2].Trim('"').Trim("'")
-        if ($v) {
-          if ($k -eq 'JIRA_BASE_URL' -and -not $BaseUrl) { $BaseUrl = $v }
-          if ($k -eq 'JIRA_EMAIL'    -and -not $Email)   { $Email   = $v }
-          if ($k -eq 'JIRA_TOKEN'    -and -not $Token)   { $Token   = $v }
-          if ($k -eq 'JIRA_FLAVOR'   -and $Flavor -eq 'auto') { $Flavor = $v }
-        }
-      }
+      if ($line -match '^\s*JIRA_LIVE_ENABLED\s*=\s*"?(\w+)"?\s*(#.*)?$') { $flagLigada = ($Matches[1] -eq 'true') }
     }
-    Write-Host "(variaveis lidas de $p quando estavam vazias)" -ForegroundColor DarkGray
     break
   }
+}
+if (-not $flagLigada) {
+  Write-Host 'Flag do Jira desligada (ou app\.env ausente): o acesso ao Jira esta proibido. O usuario liga a flag a mao em app\.env e roda o script de novo.' -ForegroundColor Yellow
+  try { Stop-Transcript | Out-Null } catch { }
+  Remove-Item -Path $logFile -ErrorAction SilentlyContinue
+  exit 2
 }
 
 function Write-Section([string]$t) {
@@ -131,10 +129,6 @@ function Invoke-Raw {
     $px.Credentials = [System.Net.CredentialCache]::DefaultCredentials
     $handler.Proxy = $px; $handler.UseProxy = $true
   } catch { }
-  if ($IgnoreCertErrors) {
-    try { [System.Net.ServicePointManager]::ServerCertificateValidationCallback = { $true } } catch { }
-    try { $handler.ServerCertificateCustomValidationCallback = [System.Net.Http.HttpClientHandler]::DangerousAcceptAnyServerCertificateValidator } catch { }
-  }
   $client = New-Object System.Net.Http.HttpClient($handler)
   $client.Timeout = [TimeSpan]::FromSeconds($TimeoutSec)
   $req = New-Object System.Net.Http.HttpRequestMessage((New-Object System.Net.Http.HttpMethod($Method)), $Url)
@@ -176,7 +170,7 @@ function Invoke-Raw {
 
 function Get-Hint($r) {
   if ($r.Error) {
-    if ($r.Error -match 'SSL|TLS|certificate|certificado|trust|confian') { return 'Falha de TLS/certificado. Em rede corporativa costuma ser inspecao SSL (CA interna nao confiada) ou certificado vencido. Instale a CA da empresa; so para teste rode com -IgnoreCertErrors.' }
+    if ($r.Error -match 'SSL|TLS|certificate|certificado|trust|confian') { return 'Falha de TLS/certificado. Em rede corporativa costuma ser inspecao SSL (CA interna nao confiada) ou certificado vencido. Faca a JVM/Node/Windows confiarem na CA da empresa (docs/superpowers/plans/2026-10-27-plano-00-pc-da-empresa.md, Tarefa 2). Nunca desative a verificacao.' }
     if ($r.Error -match 'No such host|nome|resolved|resolu|NameResolution|remote name') { return 'DNS nao resolveu o host: confira o endereco digitado e se a VPN esta conectada.' }
     if ($r.Error -match 'timeout|timed out|Timeout|cancel') { return 'Tempo esgotado: VPN desconectada, firewall ou proxy bloqueando. Teste o endereco no navegador na mesma maquina.' }
     if ($r.Error -match 'refused|recusad') { return 'Conexao recusada: porta/endereco errados (Data Center interno costuma usar 8080/443).' }

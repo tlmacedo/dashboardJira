@@ -673,7 +673,7 @@ Testes em `app/backend/src/test/kotlin/br/sidia/painel/escrita/` (mesmos nomes d
   - `regrasDasIasCitamAsDuasFlags`: `CLAUDE.md`, `.clinerules` e o guia citam `JIRA_WRITE_ENABLED` e "só o usuário".
   - `documentosSemHostReal`.
 - [ ] **Passo 2: Rodar** `sh .claude/hooks/test-guard.sh` e `./gradlew test --tests '*EscritaDocTest*'` → FALHA. **Passo 3: Implementar.** **Passo 4: Rodar** → PASSA; suítes completas das duas camadas; `test-guard.sh` verde. **Passo 5: Commit** `docs(escrita): hook, regras das IAs, RIPD e checklist da primeira escrita`.
-- [ ] **Passo 6: Fim do plano:** revisão do conjunto (`git diff main..HEAD`, checklist da seção 5 do guia, com foco no Review Focus acima), varredura de dados pessoais, `HANDOFF.md` e índice, push, PR. **Não mesclar** sem o usuário. **Não ligar `JIRA_WRITE_ENABLED`** em nenhum ambiente: só o usuário, depois do aceite do DPO, seguindo o checklist da primeira escrita.
+- [ ] **Passo 6: Fim do plano:** revisão do conjunto (`git diff main..HEAD`, checklist da seção 5 do guia, com foco no Review Focus acima), varredura de dados pessoais, `HANDOFF.md` e índice, push, PR. **Exceção ao fluxo de entrega: este plano só é mesclado com ordem expressa do usuário** (escreve no Jira). **Não ligar `JIRA_WRITE_ENABLED`** em nenhum ambiente: só o usuário, depois do aceite do DPO, seguindo o checklist da primeira escrita.
 
 ---
 

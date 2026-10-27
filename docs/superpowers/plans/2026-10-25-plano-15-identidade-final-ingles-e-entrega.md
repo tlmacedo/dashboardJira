@@ -81,7 +81,7 @@ CLAUDE.md, PRODUCT.md, README.md, HANDOFF.md, docs/superpowers/plans/2026-10-24-
      - "Ainda não há logo oficial": consequência: o menu continua com o nome em texto; a T2 só cria o componente `Marca` com o caminho alternativo.
   2. **Fonte Mark e licença.**
      - "Fornecer os arquivos `.woff2` e a licença, que permite uso web e cópia em repositório privado (Recomendada)": consequência: a T3 versiona os arquivos em `public/fonts/`.
-     - "Fornecer os arquivos, mas a licença não permite cópia no repositório": consequência: os arquivos ficam fora do git e entram na imagem no build a partir de um diretório local ignorado (`app/frontend/fontes-licenciadas/`), documentado na T3; o CI usa a pilha de sistema.
+     - "Fornecer os arquivos, mas a licença não permite cópia no repositório": consequência: os arquivos ficam fora do git e entram no pacote no build a partir de um diretório local ignorado (`app/frontend/fontes-licenciadas/`), documentado na T3; o CI usa a pilha de sistema.
      - "Não usar a Mark": consequência: pilha de sistema permanente (decisão registrada).
   3. **Manual de marca.**
      - "Não há manual: manter o azul `#1329A0` e as cores do plano visual (Recomendada)".
@@ -214,7 +214,7 @@ Sem logo (T1, terceira opção): criar só `Marca.tsx` com o texto, os testes `m
 
 - [ ] **Passo 1: Rodar** `claudeMdSemCaminhoInexistente` (Plano 8) e as suítes completas (backend e frontend), `pnpm build`, `node scripts/orcamento-bundle.mjs`, `sh .claude/hooks/test-guard.sh` → PASSA.
 - [ ] **Passo 2: Varredura** de dados pessoais, hosts e segredos em `git diff main..HEAD`; conferir que nenhuma fonte com licença restrita foi versionada.
-- [ ] **Passo 3: Commit** `docs: fechamento do projeto e entrega ao time`; PR para a `main`. Não mesclar sem o usuário mandar.
+- [ ] **Passo 3: Commit** `docs: fechamento do projeto e entrega ao time`; PR para a `main`. Mesclar pelo fluxo de entrega (`docs/superpowers/fluxo-de-entrega.md`).
 
 ---
 

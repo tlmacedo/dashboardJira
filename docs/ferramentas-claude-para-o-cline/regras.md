@@ -60,7 +60,7 @@ Siglas da coluna "Onde": **C** = `CLAUDE.md` · **R** = `.clinerules/00-regras-d
 | 5.3 | Tarefa a tarefa, na ordem do plano, um commit por tarefa, Conventional Commits em pt-BR | R, G, GL |
 | 5.4 | Arquivo de progresso versionado `docs/superpowers/progresso/<plano>.md` com tarefas concluídas e Rulings | G |
 | 5.5 | Ao fim do plano: suíte completa, revisão do conjunto, varredura de dados pessoais, `HANDOFF.md` e índice atualizados, push, PR, volta à `main` e `pull` | R, G, H, W (`fim-de-branch.md`) |
-| 5.6 | **Nunca mesclar PR nem apagar branch com código fora da `main` sem o usuário mandar** | R, G, H |
+| 5.6 | **Mesclar PR só pelo fluxo de entrega (7 condições, `docs/superpowers/fluxo-de-entrega.md`); Plano 16 só com ordem expressa do usuário; nunca apagar branch com código fora da `main`** | R, G, H |
 | 5.7 | Branches empilhadas mescladas da base para o topo, cada PR refeita contra a `main` | GL |
 | 5.8 | Trabalho em partes pequenas e mescláveis; funcionalidade incompleta atrás de flag | GL |
 | 5.9 | Fim de sessão: `HANDOFF.md` atualizado; nada de commit só local nem branch sem PR (ou registrar o motivo e a próxima ação) | GL, G, H |

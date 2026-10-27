@@ -74,7 +74,7 @@ Siga `/fim-de-branch.md`. Em resumo, nesta ordem:
 4. `git push -u origin <branch>`; `gh pr create --base main` com corpo em arquivo (`--body-file`): o que traz, segurança, verificação (números), o que **não** foi testado, pendências. Plano incompleto = PR em **rascunho** (`--draft`) com o estado exato.
 5. **Aguarde o CI** (`gh pr checks`).
 6. **Merge:** por decisão do usuário (27/10/2026), a IA mescla (squash) quando as 7 condições da seção 5 do fluxo de entrega forem verdadeiras; senão pergunta.
-7. Depois do merge: `git checkout main`, `git pull`, rode a suíte na `main` para confirmar que compila e passa; apague a branch local com `git branch -d` (o `--delete-branch` do merge já apaga a remota mesclada); **nunca** apague uma branch com código fora da `main`.
+7. Depois do merge: `git checkout main`, `git pull`, rode a suíte na `main` para confirmar que compila e passa; o `--delete-branch` do merge já apaga a branch (após squash, `git branch -d` recusa: só use `-D` se a PR estiver `MERGED`); **nunca** apague uma branch com código fora da `main`.
 8. Nunca termine uma sessão com commit só local nem branch sem PR: publique ou registre o motivo e a próxima ação no `HANDOFF.md`.
 
 ## 8. Quando parar e perguntar ao usuário

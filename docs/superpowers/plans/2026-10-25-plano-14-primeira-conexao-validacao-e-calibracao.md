@@ -78,6 +78,20 @@ HANDOFF.md, docs/superpowers/plans/2026-10-24-indice-dos-planos.md
 
 ## Bloco 14a — primeira conexão (depois do Plano 4A)
 
+### Tarefa 0 (pré-requisito do 14a): os hooks de proteção passam a ler a flag do arquivo de variáveis do app
+
+**Por quê:** desde 27/10 o app lê a flag do Jira **somente** de `app/.env` (`config/ArquivoEnv.kt`), mas os hooks de proteção (`.claude/hooks/guard.sh` e `.clinerules/hooks/PreToolUse` / `PreToolUse.ps1`) ainda leem a variável da flag do **ambiente do processo** da IA. Resultado: o usuário liga a flag no `app/.env`, o painel passa a acessar o Jira, mas o hook continua barrando todo comando da IA que cite o Jira. Duas chaves para a mesma trava é o que a decisão de 27/10 quer evitar.
+
+**Interim (se esta tarefa ainda não foi feita):** o usuário, além de editar o `app/.env`, define a variável de usuário do Windows com o mesmo nome e valor (pelo painel "Variáveis de ambiente" do Windows ou por `[Environment]::SetEnvironmentVariable` no PowerShell dele) e reinicia o VS Code. A IA **não** faz isso por ele.
+
+**Arquivos:** modificar `.clinerules/hooks/PreToolUse.ps1`, `.clinerules/hooks/PreToolUse`, `.claude/hooks/guard.sh` e os três testes (`test-PreToolUse.ps1`, `test-PreToolUse.sh`, `test-guard.sh`); atualizar `docs/ferramentas-claude-para-o-cline/hooks.md` e a "Hooks e a flag" do `HANDOFF.md`.
+
+- [ ] **Passo 1: Testes que falham** (nos três arquivos de teste, com um arquivo de variáveis temporário apontado por variável de teste, nunca o arquivo real): `flagVemDoArquivoDeVariaveis` (flag verdadeira no arquivo libera; falsa ou ausente bloqueia); `ambienteDoProcessoNaoLiga` (ambiente verdadeiro e arquivo falso ou ausente: bloqueia); `ambienteDoProcessoNaoDesliga` (arquivo verdadeiro, ambiente falso: libera); `arquivoIlegivelFalhaFechado` (arquivo inexistente, sem permissão ou valor inválido: bloqueia); `leituraDaIaAoArquivoContinuaBarrada` (o hook lê o arquivo para si, mas continua negando que a IA o leia, escreva ou versione: os casos antigos seguem passando).
+- [ ] **Passo 2: Implementar.** O hook localiza o arquivo na raiz do repositório (`<raiz>/app/.env`; a raiz vem do próprio caminho do hook, não de variável da IA), lê **só a linha da flag** (mesma regra de `ArquivoEnv`: `NOME=valor`, aspas e comentário final opcionais, sem diferenciar maiúsculas no valor) e trata qualquer erro como "flag desligada". Nunca imprime o conteúdo do arquivo nem o valor de outras variáveis. Mantenha todas as demais travas (texto que liga a flag, arquivo de variáveis protegido contra a IA etc.).
+- [ ] **Passo 3: Rodar** as três suítes de hook (`sh .claude/hooks/test-guard.sh`; `sh .clinerules/hooks/test-PreToolUse.sh`; `powershell.exe -NoProfile -ExecutionPolicy Bypass -File .clinerules\hooks\test-PreToolUse.ps1`) e a suíte do backend.
+- [ ] **Passo 4: Revisão adversarial** (é código de segurança: peça ao revisor a mutação real dos testes e a tentativa de contornar: caminho relativo, symlink, variável de ambiente de nome parecido, arquivo com a flag duplicada, a última ocorrência vence).
+- [ ] **Passo 5: Commit** `fix(hooks): a flag do Jira é lida do arquivo de variáveis do app, igual ao painel`.
+
 ### Tarefa 1: Pedir ao usuário que ligue a flag e preparar a sessão
 
 **Arquivos:** Criar `docs/validacao/roteiro-primeira-conexao.md`; Modificar `.gitignore` (`validacao-local/`); Teste `validacao/RoteiroDocTest.kt`.
@@ -198,7 +212,7 @@ HANDOFF.md, docs/superpowers/plans/2026-10-24-indice-dos-planos.md
 - [ ] Se **Reporter = PL** for refutado, **Ponto de parada: perguntar ao usuário**: "Manter o Reporter como PL e registrar a exceção (Recomendada se as exceções forem raras)"; "Criar um campo de PL por squad em `equipes.yaml` (vira tarefa do Plano 4 reaberta)"; "Desligar o sinal de auditoria que depende do PL até decidir".
 - [ ] Nenhuma regra refutada: registrar `Ruling: nenhuma correção necessária` e seguir.
 
-**Fim do 14a:** suíte completa, varredura de dados pessoais (`git diff main..HEAD` sem chave, username, host, `customfield` real), PR `feat(validacao): primeira conexão (14a)`. Não mesclar sem o usuário mandar.
+**Fim do 14a:** suíte completa, varredura de dados pessoais (`git diff main..HEAD` sem chave, username, host, `customfield` real), PR `feat(validacao): primeira conexão (14a)`. Mesclar pelo fluxo de entrega (`docs/superpowers/fluxo-de-entrega.md`).
 
 ---
 
@@ -320,7 +334,7 @@ HANDOFF.md, docs/superpowers/plans/2026-10-24-indice-dos-planos.md
 - [ ] **Passo 1: Conferir** `git status` (nenhum arquivo de config real, nada de `validacao-local/`); apagar `$HOME/painel-validacao/` e registrar a remoção.
 - [ ] **Passo 2: Rodar** as suítes completas (backend e frontend), `pnpm build`, `sh .claude/hooks/test-guard.sh` → PASSA.
 - [ ] **Passo 3: Varredura** de dados pessoais e hosts em `git diff main..HEAD`.
-- [ ] **Passo 4: Commit** `docs(validacao): fechamento da validação com dados reais`; PR do bloco 14b. Não mesclar sem o usuário mandar.
+- [ ] **Passo 4: Commit** `docs(validacao): fechamento da validação com dados reais`; PR do bloco 14b. Mesclar pelo fluxo de entrega (`docs/superpowers/fluxo-de-entrega.md`).
 
 ---
 

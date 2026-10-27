@@ -13,7 +13,7 @@ Porte do fluxo que o Claude Code fazia com as skills `superpowers:subagent-drive
 2. Leia a spec da fase, o índice `docs/superpowers/plans/2026-10-24-indice-dos-planos.md` e **o plano inteiro**, inclusive "Restrições globais", "Foco da revisão" e "Decisões".
 3. Prepare a branch com comandos separados:
    - `git checkout main`
-   - `git pull`
+   - `git pull --ff-only origin main`
    - `git branch -r --no-merged origin/main` e `gh pr list`: havendo trabalho fora da `main`, pare e pergunte.
    - `git checkout -b feat/<nome-do-plano>`
 4. Ambiente: sem Docker nem banco a iniciar (SQLite em arquivo). Confira `java -version` (21). Windows PowerShell: use `;` no lugar de `&&`; não use `sh`/`bash`. Fluxo de fechamento do plano (revisão final, validação, PR e merge): `docs/superpowers/fluxo-de-entrega.md`.

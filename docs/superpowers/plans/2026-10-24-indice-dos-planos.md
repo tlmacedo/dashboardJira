@@ -10,13 +10,13 @@ Spec mestra: `docs/superpowers/specs/2026-10-24-painel-squads-kotlin-react-desig
 3. **Precedência em caso de conflito:** `CLAUDE.md` > `docs/guia-execucao-outra-ia.md` > spec da fase > plano > spec mestra de 24/10 (que ainda traz a regra antiga de acesso ao Jira, substituída em 25/10).
 4. **Acesso ao Jira:** a única trava é a flag `JIRA_LIVE_ENABLED` (`false` = proibido para todos; `true` = liberado). Só o usuário muda a flag. Testes automáticos nunca acessam o Jira real.
 
-**Ordem de execução** (cada item é um PR a partir da `main` atualizada; nada é mesclado sem o usuário mandar; o próximo só começa depois que o anterior estiver na `main`):
+**Ordem de execução** (cada item é um PR a partir da `main` atualizada; a IA mescla ao fim de cada plano/bloco pelo `docs/superpowers/fluxo-de-entrega.md` (7 condições; o Plano 16 só com ordem expressa do usuário); o próximo só começa depois que o anterior estiver na `main`):
 
 **Fase 0 PC da empresa** → 9 CI e endurecimento → 14a Primeira conexão (quando o usuário ligar a flag em `app/.env`) → 4 Auditoria (Tarefas 4 a 9) → 5a Cards de trabalho → 5b Negativas, Riscos, Previsão e Épicos → 6a Capacidade e planejamento → 6b Worklog, posse, esforço e cobertura → 7a Checklist × Review e Integridade → 7b Distribuição, Governança e início → 10 Complementos de telas e filtros → 11 Auditoria completa e LGPD → 14b Validação e calibração dos cards (depois do 7) → 8 Preparação final (a remoção do `legacy/` só depois do "sim" do usuário ao documento de equivalência; sem ele, vira PR próprio depois) → 12 Operação em produção → 13 Implantação real → 15 Identidade final, inglês e entrega. O **Plano 16** (escrita no Jira pelo painel) é futuro: só com decisão do usuário.
 
 **Por que a 9 e a 14a vêm antes do restante da Auditoria:** a 9 cria o CI (hoje não existe `.github/`), que passa a ser condição do merge automático; a 14a calibra campos, status e vínculos com o Jira real logo cedo, antes de seis planos de cards que dependem desses nomes. Argumento contra: a 14a depende de o usuário ligar a flag e de a rede da empresa estar liberada; se isso atrasar, pule para o Plano 4 (que roda com fixtures) e volte à 14a quando puder, registrando o `Ruling`.
 
-Por quê: a 14 já pode começar em parte (bloco 14a, sincronização) logo depois do 4A, quando o usuário ligar a flag, em PR próprio e sem migração; a validação dos cards (bloco 14b) vem depois do 7, e a posição 14 da lista é a do fechamento.
+A 14a (bloco de sincronização) começa logo depois do 9, quando o usuário ligar a flag; a validação dos cards (14b) vem depois do 7. A **Tarefa 0 do Plano 14** (hooks lendo a flag do `app/.env`) é pré-requisito do 14a.
 
 **O Plano 4 depende do 4A (executar depois do 4A):** usa `JqlValues.issueKey` (4A, T3), `AvisoDto.params` (4A, T8), `issue.removida_em` (4A, T2 e T6), os dados de demonstração (4A, T10) e o teste `cadaPassoDoChecklistConfirmaAFlag` (4A, T11); sem o 4A na `main`, o Plano 4 não compila.
 
@@ -41,7 +41,7 @@ Por quê: a 14 já pode começar em parte (bloco 14a, sincronização) logo depo
 | 11 (12 tarefas) | `2026-10-25-plano-11-auditoria-completa-e-lgpd.md` | `../specs/2026-10-25-spec-fase-11-auditoria-completa-e-lgpd.md` | Escrito, aguardando execução |
 | 12 (12 tarefas) | `2026-10-25-plano-12-operacao-em-producao.md` | `../specs/2026-10-25-spec-fase-12-operacao-em-producao.md` | Escrito, aguardando execução |
 | 13 (13 tarefas) | `2026-10-25-plano-13-implantacao-real.md` | `../specs/2026-10-25-spec-fase-13-implantacao-real.md` | Escrito, aguardando execução |
-| 14 (14 tarefas: 14a e 14b) | `2026-10-25-plano-14-primeira-conexao-validacao-e-calibracao.md` | `../specs/2026-10-25-spec-fase-14-primeira-conexao-validacao-e-calibracao.md` | Escrito, aguardando execução |
+| 14 (15 tarefas: Tarefa 0 dos hooks, 14a e 14b) | `2026-10-25-plano-14-primeira-conexao-validacao-e-calibracao.md` | `../specs/2026-10-25-spec-fase-14-primeira-conexao-validacao-e-calibracao.md` | Escrito, aguardando execução |
 | 15 (11 tarefas) | `2026-10-25-plano-15-identidade-final-ingles-e-entrega.md` | `../specs/2026-10-25-spec-fase-15-identidade-final-ingles-e-entrega.md` | Escrito, aguardando execução |
 
 ## Fase 4A — Sincronização periódica (depende das Fases 1 a 3)

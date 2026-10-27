@@ -14,7 +14,7 @@
 
 Rode e anote as versões no progresso (nada disso vai para o git além de "ok/versão"):
 ```powershell
-java -version 2>&1 | Select-Object -First 1
+java -version 2>&1   # com JAVA_TOOL_OPTIONS definido há uma linha extra "Picked up ..."; leia a que mostra a versão
 node -v
 pnpm -v
 git --version
@@ -22,7 +22,7 @@ gh --version
 gh auth status
 $PSVersionTable.PSVersion.ToString()
 ```
-Esperado: Java 21.x, Node v22.x, pnpm 9.x, git 2.4x, `gh` instalado e `Logged in`.
+Esperado: Java 21.x, Node v22.x, pnpm 9.x ou 10.x, git 2.4x, `gh` instalado e `Logged in`.
 Se falhar:
 - Sem JDK 21: instalar Temurin/OpenJDK 21 (zip, sem instalador, em pasta do usuário, e `JAVA_HOME` apontando para ela). Precisando de privilégio ou aprovação da TI: **pergunte**.
 - Sem Node 22: instalar o zip do Node 22 LTS em pasta do usuário e acrescentar ao `PATH` do usuário.
@@ -78,19 +78,21 @@ Esperado: testes sem falhas (48+) e `app\frontend\dist\index.html` criado. Falha
 
 ### Tarefa 5: Política de execução do PowerShell e subida com dados fictícios
 
-1. Se `.ps1` for bloqueado ("execução de scripts foi desabilitada"): rode apenas no escopo do processo, sem mexer na política da máquina:
+1. Se `.ps1` for bloqueado ("execução de scripts foi desabilitada"): use `powershell.exe -NoProfile -ExecutionPolicy Bypass -File ...` (só no processo; nunca altere a política da máquina). Se a política de grupo da empresa impedir até isso, **pergunte**; alternativa: `cd app\backend; .\gradlew.bat run` (não usa `.ps1`).
+2. **O painel é um processo que não termina**, e o Cline executa um comando por vez: suba-o **em segundo plano**, espere o health e encerre-o por programa. Os dados fictícios valem só na sessão (nunca no `app\.env`):
    ```powershell
-   powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\app\iniciar.ps1 -SemBuildDoFront
+   $env:DASHBOARD_DEMO_DATA = 'true'
+   $proc = Start-Process -FilePath powershell.exe -PassThru -WindowStyle Hidden -WorkingDirectory app `
+     -ArgumentList '-NoProfile','-ExecutionPolicy','Bypass','-File','iniciar.ps1','-SemBuildDoFront'
+   $ok = $false
+   1..60 | ForEach-Object { Start-Sleep 5; try { if ((Invoke-RestMethod http://127.0.0.1:8080/api/health -Proxy $null -TimeoutSec 3).ok) { $ok = $true; break } } catch { } }
+   $ok
+   Invoke-RestMethod http://127.0.0.1:8080/api/meta -Proxy $null
    ```
-   (a política de grupo da empresa pode impedir até isso: **pergunte**; alternativa: `cd app\backend; .\gradlew.bat run`, que não usa `.ps1`).
-2. Para os dados fictícios: `$env:DASHBOARD_DEMO_DATA = 'true'` **só na sessão** (nunca no `app/.env`) e depois `.\app\iniciar.ps1 -SemBuildDoFront`.
-3. Em **outro** terminal, na pasta `app` (para não citar o nome do repositório no comando):
-   ```powershell
-   Invoke-RestMethod http://127.0.0.1:8080/api/health
-   Invoke-RestMethod http://127.0.0.1:8080/api/meta
-   ```
-   Esperado: `ok = True`; `meta` com `devMode = True`, `liveEnabled = False` e o banner de dados fictícios. Abra `http://127.0.0.1:8080` no navegador e confira que a interface carrega.
-4. Pare o painel (Ctrl+C), apague `app\data\painel.db*` (dados fictícios) e remova a variável da sessão: `Remove-Item Env:DASHBOARD_DEMO_DATA`.
+   (`-Proxy $null` evita que a requisição para `127.0.0.1` passe pelo proxy da empresa; no PowerShell 5.1 sem esse parâmetro use `curl.exe --noproxy "*" http://127.0.0.1:8080/api/health`.)
+   Esperado: `$ok` = `True`; `meta` com `devMode = True`, `liveEnabled = False` e o banner de dados fictícios. Abra `http://127.0.0.1:8080` no navegador e confira que a interface carrega (se não puder abrir navegador, registre que só a API foi verificada).
+3. **Encerre o painel e toda a árvore de processos** (o Gradle deixa um processo Java filho): `Stop-Process -Id $proc.Id -Force; Get-CimInstance Win32_Process -Filter "Name='java.exe'" | Where-Object { $_.CommandLine -match 'painel' } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force }`; depois `Get-NetTCPConnection -LocalPort 8080 -ErrorAction SilentlyContinue` deve vir vazio (se não vier, pergunte antes de encerrar processos que não sejam seus).
+4. Apague `app\data\painel.db*` (dados fictícios) e remova a variável da sessão: `Remove-Item Env:DASHBOARD_DEMO_DATA`.
 Se a porta 8080 estiver ocupada: `Get-NetTCPConnection -LocalPort 8080` mostra o dono; pergunte antes de encerrar processos que não sejam seus.
 Critério: health ok e tela carregando. Em `/api/meta`, `liveEnabled` tem que ser `False`.
 

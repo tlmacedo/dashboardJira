@@ -21,7 +21,7 @@ Para quem vai continuar o Painel de Squads com o **ClineSR** (variante Samsung d
 | `/continuar.md` | Início de toda sessão: lê o `HANDOFF.md`, confere git, PRs e ambiente, diz onde estamos e o próximo passo |
 | `/executar-plano.md` | Executar um plano tarefa a tarefa (TDD, revisão, commit, progresso) |
 | `/revisar-tarefa.md` | Revisar uma tarefa ou o plano inteiro (checklist de 12 itens, mutação mental, lentes extras) |
-| `/fim-de-branch.md` | Fechar a branch: verificação, varredura de dados pessoais, push, PR, volta à `main`; nunca mesclar sem o usuário mandar |
+| `/fim-de-branch.md` | Fechar a branch: verificação, varredura de dados pessoais, push, PR, merge pelo fluxo de entrega (7 condições) e volta à `main` |
 | `/perguntar-ao-usuario.md` | Toda dúvida ou falta de direção: pergunta com opções, a recomendada primeiro, cada uma com porquê e consequência |
 | `/escrever-plano.md` | Escrever um plano novo no padrão dos planos existentes |
 
