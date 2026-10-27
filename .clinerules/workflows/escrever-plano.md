@@ -26,7 +26,7 @@ Porte de `superpowers:brainstorming` + `superpowers:writing-plans`, como o Claud
 **Spec da fase (ler primeiro):** caminho; spec mestra e seções; origem das pendências.
 
 ## Restrições globais (Global Constraints)
-(Jira e flag, MockEngine, Docker/Testcontainers, JQL só pelo JqlBuilder, dados pessoais, migração no próximo número livre, commits em pt-BR...)
+(Jira e flag, MockEngine, SQLite sem Docker (ver o adendo de plataforma), JQL só pelo JqlBuilder, dados pessoais, migração no próximo número livre, commits em pt-BR...)
 
 ## Foco da revisão (Review Focus)
 (os riscos do plano, numerados, cada um com o NOME do teste que o prova)

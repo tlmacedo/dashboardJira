@@ -44,7 +44,7 @@ Regras do ciclo:
 ## 3. Texto para o implementador (cole numa nova tarefa)
 
 > Você implementa a Tarefa N do plano `<caminho>` na branch `<branch>`. Leia antes: o cabeçalho do plano (Goal, Architecture, Restrições globais, Foco da revisão), a spec da fase, o texto da tarefa (`<arquivo-do-brief>`), o arquivo de progresso e `docs/guia-execucao-outra-ia.md`. Confira os nomes no código real; se divergirem do plano, siga o código e registre.
-> Regras duras: nunca acesse o Jira nem a rede; nunca ligue a flag `JIRA_LIVE_ENABLED`. Docker ativo; PostgreSQL real nos testes. Escreva os testes da tarefa primeiro e veja-os falhar pelo motivo certo, implemente, veja passar, rode a suíte completa. `git add` só dos seus arquivos. Um commit em pt-BR (Conventional Commits). Devolva: status, hash, testes (total/falhas), divergências do plano e preocupações.
+> Regras duras: nunca acesse o Jira nem a rede; nunca ligue a flag `JIRA_LIVE_ENABLED`. Sem Docker; SQLite real em arquivo temporário nos testes (`testContextComBanco`). Escreva os testes da tarefa primeiro e veja-os falhar pelo motivo certo, implemente, veja passar, rode a suíte completa. `git add` só dos seus arquivos. Um commit em pt-BR (Conventional Commits). Devolva: status, hash, testes (total/falhas), divergências do plano e preocupações.
 
 ## 4. Texto para o revisor (cole numa nova tarefa; só leitura)
 
@@ -61,11 +61,11 @@ Quando todas as tarefas do plano estiverem aprovadas:
 
 ## 6. Revisão final do conjunto (contexto limpo, o mais capaz possível)
 
-> Você é o revisor final da branch `<branch>` (`git diff main..HEAD`). Somente leitura. Não reabra o que o arquivo de progresso já registra como julgado, aceito ou adiado, a menos que a soma das partes piore. Foque no que só a visão do conjunto enxerga: (1) com a flag do Jira desligada, nenhum caminho faz requisição (varra o código por clientes HTTP fora da fábrica); (2) dados pessoais em cada tabela, log, mensagem de erro, fixture e documento versionado; (3) retenção/remoção destrutiva e migrações em banco já populado; (4) concorrência e ciclo de vida; (5) coerência entre código, documentos, compose, `.env.example` e runbook; (6) o que contradiz o plano ou a spec; (7) o que bloqueia abrir a PR. Classifique Critical/Important/Minor e diga explicitamente se a branch está PRONTA PARA PUSH/PR/MERGE.
+> Você é o revisor final da branch `<branch>` (`git diff main..HEAD`). Somente leitura. Não reabra o que o arquivo de progresso já registra como julgado, aceito ou adiado, a menos que a soma das partes piore. Foque no que só a visão do conjunto enxerga: (1) com a flag do Jira desligada, nenhum caminho faz requisição (varra o código por clientes HTTP fora da fábrica); (2) dados pessoais em cada tabela, log, mensagem de erro, fixture e documento versionado; (3) retenção/remoção destrutiva e migrações em banco já populado; (4) concorrência e ciclo de vida; (5) coerência entre código, documentos, `.env.example`, scripts de subida e runbook; (6) o que contradiz o plano ou a spec; (7) o que bloqueia abrir a PR. Classifique Critical/Important/Minor e diga explicitamente se a branch está PRONTA PARA PUSH/PR/MERGE.
 
 Importantes (Important) da revisão final se corrigem **antes** do push, em commits novos, com **re-revisão focada** nas correções que mudam comportamento. Os Minor restantes vão para o progresso.
 
-## 7. Publicar (fim de branch)
+## 7. Publicar (fim de plano): resumo; o procedimento completo e vigente é `docs/superpowers/fluxo-de-entrega.md`
 
 Siga `/fim-de-branch.md`. Em resumo, nesta ordem:
 1. Suíte completa das duas camadas, **mostrando os números**.
@@ -73,18 +73,18 @@ Siga `/fim-de-branch.md`. Em resumo, nesta ordem:
 3. Atualize o arquivo de progresso, o `HANDOFF.md` (estado, próximo passo, pendências) e o índice dos planos.
 4. `git push -u origin <branch>`; `gh pr create --base main` com corpo em arquivo (`--body-file`): o que traz, segurança, verificação (números), o que **não** foi testado, pendências. Plano incompleto = PR em **rascunho** (`--draft`) com o estado exato.
 5. **Aguarde o CI** (`gh pr checks`).
-6. **Não mescle.** Pergunte ao usuário (pergunta com opções: mesclar com squash, esperar revisão dele, começar o próximo plano). Só mescle quando ele mandar.
-7. Depois do merge: `git checkout main`, `git pull`, rode a suíte na `main` para confirmar que compila e passa; apague a branch local mesclada; apague a remota **só com confirmação** e **nunca** uma branch com código fora da `main`.
+6. **Merge:** por decisão do usuário (27/10/2026), a IA mescla (squash) quando as 7 condições da seção 5 do fluxo de entrega forem verdadeiras; senão pergunta.
+7. Depois do merge: `git checkout main`, `git pull`, rode a suíte na `main` para confirmar que compila e passa; o `--delete-branch` do merge já apaga a branch (após squash, `git branch -d` recusa: só use `-D` se a PR estiver `MERGED`); **nunca** apague uma branch com código fora da `main`.
 8. Nunca termine uma sessão com commit só local nem branch sem PR: publique ou registre o motivo e a próxima ação no `HANDOFF.md`.
 
 ## 8. Quando parar e perguntar ao usuário
 
-Sempre em forma de pergunta com 2 a 4 opções, a recomendada primeiro, cada uma com o porquê e a consequência (`/perguntar-ao-usuario.md`). Pare para: ação irreversível; segurança que o plano não resolve; efeito fora do repositório (merge, push em branch compartilhada, apagar branch remota, reiniciar Docker); decisão de produto; 4ª rodada de correção; qualquer ideia de acessar o Jira (a resposta padrão é não: só o usuário liga a flag, à mão). **Decisões que o usuário já tomou** estão em `CLAUDE.md`, `HANDOFF.md` e nos rulings dos arquivos de progresso: não pergunte de novo.
+Sempre em forma de pergunta com 2 a 4 opções, a recomendada primeiro, cada uma com o porquê e a consequência (`/perguntar-ao-usuario.md`). Pare para: ação irreversível; segurança que o plano não resolve; efeito fora do repositório (merge, push em branch compartilhada, apagar branch remota com código fora da `main`, configuração do GitHub); decisão de produto; 4ª rodada de correção; qualquer ideia de acessar o Jira (a resposta padrão é não: só o usuário liga a flag, à mão). **Decisões que o usuário já tomou** estão em `CLAUDE.md`, `HANDOFF.md` e nos rulings dos arquivos de progresso: não pergunte de novo.
 
 ## 9. Armadilhas que já custaram tempo
 
 - **Hooks barram a IA** de editar compose, settings e o arquivo de ambiente, e de gravar texto que ligue a flag do Jira (inclusive em documentação e testes): entregue o trecho pronto ao usuário; monte valores de teste por variável; mensagem de commit por arquivo (`git commit -F`), sem citar esses nomes.
 - Rodar o Gradle em dois lugares ao mesmo tempo no mesmo diretório corrompe a execução: um de cada vez.
-- Docker travado (o daemon responde 500): peça autorização antes de reiniciar o Docker Desktop, porque derruba os contêineres do usuário.
+- Gradle travado ou "database is locked": feche qualquer painel/JVM usando `app/data/painel.db` e rode um Gradle por vez.
 - Comece cada tarefa relendo o texto dela; não confie na memória da tarefa anterior.
 - Não use `git add -A` nem `-f`: o usuário mantém `legacy/.env.example` modificado e fora de commit.

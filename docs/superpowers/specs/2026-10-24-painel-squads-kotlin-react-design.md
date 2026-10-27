@@ -1,5 +1,7 @@
 # Design: Painel de Squads (Kotlin + React), preparado para o Jira DC
 
+> **Nota (27/10):** a plataforma mudou por decisão do usuário (a empresa bloqueia Docker e PostgreSQL): o banco é SQLite embutido em arquivo e não há Docker. Ver `docs/superpowers/plans/2026-10-27-adendo-plataforma-sqlite-sem-docker.md`, que vence este documento onde houver conflito de plataforma.
+
 Data: 24/10/2026
 Status: revisado por um construtor independente; aguardando aprovação do usuário
 
@@ -48,7 +50,7 @@ Por que agora: o app atual é um protótipo sem validação real, tem divergênc
 ## 4. Decisões já tomadas (pelo usuário)
 
 ### 4.1 Stack
-- Backend **Kotlin (Ktor)**, banco **PostgreSQL**, frontend **React + TypeScript (Vite, SPA)**. Decidido por requisitos de negócio, ignorando o código existente. O app Python em `app/` é substituído no lugar; o histórico permanece no git e os testes e dados demo servem de referência de números.
+- Backend **Kotlin (Ktor)**, banco **SQLite embutido (arquivo)**, frontend **React + TypeScript (Vite, SPA)**. Decidido por requisitos de negócio, ignorando o código existente. O app Python em `app/` é substituído no lugar; o histórico permanece no git e os testes e dados demo servem de referência de números.
 - Flutter e Next.js descartados.
 - Ordem de entrega: **fatia vertical primeiro** com o card **Tempo em status** (valida changelog, campos customizados, cache, tela e testes), depois os demais cards.
 
@@ -109,7 +111,7 @@ Cada card tem uma ficha em YAML: finalidade, instância, campos usados, filtros 
 - Em testes e no modo padrão usa transporte simulado com fixtures; qualquer requisição de rede real exige `JIRA_LIVE_ENABLED=true` (e a autorização do usuário).
 
 ### 5.4 Sincronização
-Sincronização incremental com marca d'água e reconciliação diária para o PostgreSQL; histórico (changelog, tempo por status, worklog) guardado para as métricas. **Retenção:** o histórico completo (changelog, worklog) é guardado por um prazo configurável, **padrão 24 meses**; dados mais antigos são removidos ou agregados automaticamente. O prazo final é decisão do DPO e muda em configuração. Detalhes de implementação ficam com o construtor.
+Sincronização incremental com marca d'água e reconciliação diária para o SQLite; histórico (changelog, tempo por status, worklog) guardado para as métricas. **Retenção:** o histórico completo (changelog, worklog) é guardado por um prazo configurável, **padrão 24 meses**; dados mais antigos são removidos ou agregados automaticamente. O prazo final é decisão do DPO e muda em configuração. Detalhes de implementação ficam com o construtor.
 
 ### 5.5 Entregáveis de preparação (além do código)
 1. `config/jira_campos.yaml` classificado.
@@ -163,7 +165,7 @@ Indício, não prova: aviso fixo na tela. A consulta é auditada. Integridade s�
 
 ## 8. Fases sugeridas (o plano detalha)
 
-1. **Fundação:** estrutura Ktor + PostgreSQL + Vite, configuração por flags (`JIRA_LIVE_ENABLED`, `DASHBOARD_DEV_MODE`), papéis e filtro por papel, autenticação SSO/OIDC (stub em desenvolvimento), cliente Jira com transporte simulado, calendário Manaus e dias úteis, dados demo.
+1. **Fundação:** estrutura Ktor + SQLite + Vite, configuração por flags (`JIRA_LIVE_ENABLED`, `DASHBOARD_DEV_MODE`), papéis e filtro por papel, autenticação SSO/OIDC (stub em desenvolvimento), cliente Jira com transporte simulado, calendário Manaus e dias úteis, dados demo.
 2. **Dicionário de campos e construtor de JQL** com validação e testes de snapshot; ficha de cards em YAML.
 3. **Fatia vertical: Tempo em status**, de ponta a ponta (fixtures, changelog, API, tela, testes de aceite).
 4. **Auditoria:** sinais, autorização por papel, gaveta de histórico, card Task × Review, registro de consultas.

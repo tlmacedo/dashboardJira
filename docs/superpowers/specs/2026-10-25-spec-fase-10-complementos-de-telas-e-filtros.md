@@ -70,11 +70,11 @@ Esta fase fecha esse conjunto de uma vez, no kit comum. Assim cada tela herda o 
 
 **Dados pessoais.** Fixtures e demonstração só com nomes e valores fictícios; configs reais fora do git.
 
-**Ambiente.** Docker ativo; banco real por Testcontainers; comentários e commits em pt-BR.
+**Ambiente.** Sem Docker; banco SQLite real em arquivo temporário (`testContextComBanco`/`BancoEmArquivo`); comentários e commits em pt-BR.
 
 ### 3.2 Restrições específicas desta fase
 
-- **Uma migração:** `V{n}__campos_do_dicionario.sql` (esperado V10, depois do V9 do Plano 7).
+- **Uma migração:** `V{n}__campos_do_dicionario.sql` (`n` = próxima migração livre; hoje só existe a V1, então a V2; nunca editar a V1).
 - **O link para o Jira** sai de `JIRA_<INSTANCIA>_URL` (já lida pelo `Settings`), limpo de credenciais, query e fragmento, só `https`, e só com a flag `true`.
 - **Nenhuma dependência npm nova.** Gráficos em SVG próprio; virtualização própria.
 - **O preenchimento retroativo** lê só `issue.raw` no banco local; nunca fala com o Jira.
@@ -87,7 +87,7 @@ Esta fase fecha esse conjunto de uma vez, no kit comum. Assim cada tela herda o 
 | U1 | A flag `JIRA_LIVE_ENABLED` é a única trava; só o usuário a liga | [usuário, 25/10] |
 | U2 | Universo da ficha de sincronização (tipos Checklist, Checklist TG, Checklist Review, Feature check, TG Feature check e Task; Epic fora) | [usuário, 25/10, Plano 4A] |
 | U3 | Integridade só para gerente; Auditoria (e histórico campo a campo) para coordenação e gerente | [usuário, spec mestra 7.3] |
-| D1 | **Coluna única `issue.campos_dicionario jsonb`** (nome → valor) para os seis campos com `filtro: true` no `jira_campos.yaml`; `OS Version` mantém a coluna própria | [valor padrão 25/10, reversível] |
+| D1 | **Coluna única `issue.campos_dicionario` (JSON em `TEXT`)** (nome → valor) para os seis campos com `filtro: true` no `jira_campos.yaml`; `OS Version` mantém a coluna própria | [valor padrão 25/10, reversível] |
 | D2 | **Ficha de sincronização ganha** Model Name, Model Category, TG Request Type e Carrier Code; linhas antigas se completam na próxima reconciliação com a flag ligada; enquanto isso, aviso `CAMPOS_DO_DICIONARIO_INCOMPLETOS` | [valor padrão 25/10, reversível] |
 | D3 | **Filtro por campo** na URL como `campo.<slug>=<valor>` (repetível), sem diferenciar maiúsculas nem espaços nas pontas; aplicado antes do cálculo | [valor padrão 25/10, reversível] |
 | D4 | **Opções de filtro** só das issues visíveis dos últimos 180 dias; no máximo 200 valores por lista, com aviso `OPCOES_TRUNCADAS` | [valor padrão 25/10, reversível] |
@@ -144,9 +144,9 @@ Sem resposta, seguir com a opção 1 e registrar no `HANDOFF.md`.
 **Riscos:**
 - *Campo SELECT com formato inesperado no Jira real* (objeto sem `value`). Mitigação: o extrator ignora e o aviso de dados incompletos aparece; corrigir no Plano 14 com a amostra real.
 - *Gráfico improvisado nos Planos 5 a 7 com biblioteca incompatível com a CSP do Plano 9.* Mitigação: `verificar-csp.mjs` no CI; se a biblioteca injetar estilo inline em HTML, trocar pelo componente próprio desta fase.
-- *Opções de filtro lentas na escala de 30.000 issues.* Mitigação: índice GIN da migração e janela de 180 dias; o orçamento do Plano 8, T6 mede.
+- *Opções de filtro lentas na escala de 30.000 issues.* Mitigação: `json_extract`/`json_each` sobre a coluna JSON (sem índice GIN no SQLite; índice de expressão só se o orçamento estourar) e janela de 180 dias; o orçamento do Plano 8, T6 mede.
 
-**Migrações:** a desta fase é V10 (esperado). Sequência esperada até o Plano 12: V4, V5 e V6 (4A), V7 (5a), V8 (6b), V9 (7b), **V10 (10)**, V11 (11), V12 (8, só se o orçamento estourar), próxima livre (12); o Plano 16 (futuro) também usa a próxima livre. A auditoria previa V8 para o Plano 8; como ele usa "próximo número livre", não há conflito. Conflito real só se blocos rodarem em branches paralelas: nesse caso, renumerar a migração do PR que mesclar depois, antes do merge.
+**Migrações:** a desta fase usa a próxima livre na execução (hoje só existe a V1, então a próxima é a V2; os números V4 a V12 antigos eram só rótulos). Cada plano numera em sequência na ordem em que os PRs chegam à `main`; o Plano 16 (futuro) também usa a próxima livre. A auditoria previa V8 para o Plano 8; como ele usa "próximo número livre", não há conflito. Conflito real só se blocos rodarem em branches paralelas: nesse caso, renumerar a migração do PR que mesclar depois, antes do merge.
 
 ## 8. Glossário do que esta fase consome
 

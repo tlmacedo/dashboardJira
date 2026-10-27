@@ -19,7 +19,7 @@ Nenhum teste automático acessa o Jira real: o escritor e o leitor usam `MockEng
 **Stack (Tech Stack):**
 - Kotlin 2 + Ktor 3.3.1 (cliente com `MockEngine`, servidor com o `ProtecaoCsrf` do Plano 9)
 - kotlinx.serialization e kaml (YAML estrito)
-- PostgreSQL + Flyway + Testcontainers 2.0.3
+- SQLite embutido + Flyway (testes com SQLite real em arquivo temporário)
 - React + TypeScript (Vite, Vitest, Testing Library, TanStack Query)
 - `sh` nos testes do hook
 
@@ -44,7 +44,7 @@ Antes da Tarefa 2, o executor confere na `main` os nomes abaixo. Se um plano ant
 | `SomenteLeituraTest` | Plano 6, T16 |
 | Trava de LGPD de Auditoria e Integridade (nome da variável) | Plano 11 (não escrito em 25/10; confirmar) |
 | Produção com OIDC real e leitura validada com a flag ligada | Planos 13 e 14 |
-| Próximo número livre de migração Flyway | `resources/db/migration/` (usar `V{n}` livre na execução; nunca editar migração mesclada) |
+| Próximo número livre de migração Flyway | `resources/db/migration/` (usar a próxima livre na execução; hoje só existe a V1, então a V2; nunca editar a V1 nem outra mesclada) |
 
 ## Pontos de parada: perguntar ao usuário
 
@@ -87,9 +87,10 @@ Todos estão na Tarefa 1. Cada um é uma pergunta separada, com a opção recome
 
 ## Restrições globais (Global Constraints)
 
+- **Plataforma (adendo de 27/10, `plans/2026-10-27-adendo-plataforma-sqlite-sem-docker.md`):** SQLite embutido, sem Docker e sem servidor de banco; o adendo vence qualquer menção antiga a PostgreSQL, Docker ou Testcontainers. SQL novo segue a tradução da seção 2 do adendo (instantes em `INTEGER` ms UTC, datas em `TEXT` ISO, listas em JSON com `json_each`, helpers de `db/SqlSupport.kt`). Comandos de terminal: Windows 11 PowerShell (principal), por exemplo `cd app\backend; .\gradlew.bat test` e `cd app\frontend; pnpm test`; em `sh`, `cd app/backend && ./gradlew test`. Flags do Jira e de escrita só valem no `app/.env`.
 - **Flag de leitura:** `JIRA_LIVE_ENABLED` é a única trava de **acesso** ao Jira (regra 1 do `CLAUDE.md`). Com `false`, nenhuma requisição sai (leitura nem escrita), por nenhum caminho.
 - **Flag de escrita, separada e sempre `false` por padrão:** `JIRA_WRITE_ENABLED`. A escrita exige as **duas** flags `true`; com qualquer uma `false`, nenhuma requisição de escrita acontece. Não existe "escrita sem leitura" nem um modo em que uma flag implique a outra.
-  - **Só o usuário liga a flag de escrita.** Nenhuma IA a liga, nem em `.env`, compose, manifesto, teste de integração ou comando.
+  - **Só o usuário liga a flag de escrita.** Nenhuma IA a liga, nem em `app/.env`, manifesto, teste de integração ou comando (a flag só vale no `app/.env`).
   - O nome usa o prefixo `JIRA_` por decisão do usuário, uma exceção à convenção do Plano 13 ("variáveis novas começam com `DASHBOARD_` ou `OIDC_`"). Ela fica ao lado das credenciais `JIRA_SAMSUNG_*` e o hook já barra qualquer `JIRA_*` em comandos.
 - **Subida fail-closed:** a aplicação **não sobe** com `JIRA_WRITE_ENABLED=true` se `JIRA_LIVE_ENABLED=false`, se `DASHBOARD_DEV_MODE=true` ou se a credencial de escrita faltar. A mensagem cita só o nome da regra.
 - **Nenhum teste automático acessa o Jira real**, mesmo com as flags `true`: `MockEngine` com contador por método e hosts `.invalid` (`https://jira.exemplo.invalid`).
@@ -317,18 +318,18 @@ Testes em `app/backend/src/test/kotlin/br/sidia/painel/escrita/` (mesmos nomes d
 **Interfaces:**
 - Migração:
   - `previa_escrita`, que é estado de trabalho e pode mudar de situação:
-    - `id uuid`, `instance`, `user_id`, `criada_em`, `expira_em`;
+    - `id TEXT` (UUID em texto), `instance`, `user_id`, `criada_em`, `expira_em` (instantes em `INTEGER` ms UTC);
     - `situacao` (`PENDENTE`, `CONFIRMADA`, `EXPIRADA`, `CANCELADA`);
-    - `hash_conteudo`, `chave_idempotencia` (`UNIQUE` quando não nula);
-    - `itens jsonb` (chave, alterações, valores esperados de `duedate` e `labels`);
+    - `hash_conteudo`, `chave_idempotencia` (`UNIQUE` (o SQLite aceita vários nulos));
+    - `itens` (`TEXT` com JSON; chave, alterações, valores esperados de `duedate` e `labels`);
     - `motivo`.
   - `escrita_jira`, só de acréscimo:
-    - `id bigserial`, `previa_id`, `lote_id`, `instance`, `issue_key`;
+    - `id INTEGER PRIMARY KEY AUTOINCREMENT`, `previa_id`, `lote_id`, `instance`, `issue_key`;
     - `campo` (`duedate` ou `labels`), `valor_antes`, `valor_pedido`, `valor_observado`;
     - `user_id`, `papel_na_data`, `motivo`;
     - `resultado` (`TENTATIVA`, `APLICADA`, `JA_APLICADA`, `CONFLITO`, `NEGADA`, `RECUSADA`, `INCERTA`, `NAO_EXECUTADA`, `REVERTIDA`);
-    - `status_http`, `em timestamptz`, `reversao_de` (FK para `escrita_jira.id`), `conta_de_servico`.
-  - O gatilho `escrita_jira_imutavel` lança erro em `UPDATE` e em `DELETE`, exceto quando a sessão define `SET LOCAL painel.retencao = 'on'`, o que só a retenção faz.
+    - `status_http`, `em INTEGER` (ms UTC), `reversao_de` (FK para `escrita_jira.id`), `conta_de_servico`.
+  - Os gatilhos `escrita_jira_imutavel_update` e `escrita_jira_imutavel_delete` (`BEFORE UPDATE`/`BEFORE DELETE`, com `SELECT RAISE(ABORT, 'escrita_jira é só de acréscimo')`) só deixam passar quando a linha `retencao` da tabela de controle `controle_interno(chave TEXT PRIMARY KEY, valor TEXT)` vale `'on'` (cláusula `WHEN`). O SQLite não tem variável de sessão: só a retenção grava `'on'`, dentro da mesma transação IMMEDIATE, e volta a `'off'` antes de confirmar.
   - Índices: `(instance, issue_key, campo, em)`.
   - `CHECK (length(motivo) BETWEEN 10 AND 500)`.
 - Produz:
@@ -345,7 +346,7 @@ Testes em `app/backend/src/test/kotlin/br/sidia/painel/escrita/` (mesmos nomes d
   ```
 - SQL só parametrizado; sempre `(instance, issue_key)`.
 
-- [ ] **Passo 1: Testes que falham** (Testcontainers):
+- [ ] **Passo 1: Testes que falham** (SQLite em arquivo temporário):
   - `registroImutavel`: `UPDATE` e `DELETE` em `escrita_jira` falham.
   - `retencaoEhOUnicoCaminhoDeApagar`: a retenção apaga as linhas mais antigas que o prazo; o mesmo `DELETE` sem a variável de sessão falha.
   - `chaveDeIdempotenciaUnica`.
@@ -461,7 +462,7 @@ Testes em `app/backend/src/test/kotlin/br/sidia/painel/escrita/` (mesmos nomes d
 - `JiraWriteDisabledException` no meio do lote → o resto fica `NAO_EXECUTADA` (`FLAG_DESLIGADA`).
 - Depois de cada `APLICADA`, pedir a ressincronização da chave ao `Syncer` (confirmar o nome no 4A), sem esperar.
 
-- [ ] **Passo 1: Testes que falham** (`MockEngine`, Testcontainers):
+- [ ] **Passo 1: Testes que falham** (`MockEngine`, SQLite em arquivo temporário):
   - `semConfirmacaoNaoExecuta`.
   - `textoDeConfirmacaoComContagemErrada400`: "CONFIRMAR 3 ALTERACOES" para 2 → 400 e 0 PUT.
   - `hashDiferente400`.
@@ -639,11 +640,11 @@ Testes em `app/backend/src/test/kotlin/br/sidia/painel/escrita/` (mesmos nomes d
 **Conteúdo:**
 - **`guard.sh`:**
   - A regra 1 continua barrando todo `JIRA_*` diferente de `JIRA_LIVE_ENABLED` em comandos, o que inclui `JIRA_WRITE_ENABLED` e `JIRA_SAMSUNG_WRITE_TOKEN`. Isso fica como está.
-  - Acrescentar um bloqueio explícito com mensagem própria para `JIRA_WRITE_ENABLED` com valor verdadeiro (`1`, `true`, `yes`, `on`, com aspas ou espaços), em comando, `docker compose -e`, `export` e `env`.
-  - O modo `arquivos` passa a barrar a escrita de `JIRA_WRITE_ENABLED=true` em qualquer arquivo (`.env*`, compose, manifestos).
+  - Acrescentar um bloqueio explícito com mensagem própria para `JIRA_WRITE_ENABLED` com valor verdadeiro (`1`, `true`, `yes`, `on`, com aspas ou espaços), em comando (`sh` e PowerShell), `export`, `env` e atribuição `$env:`.
+  - O modo `arquivos` passa a barrar a escrita de `JIRA_WRITE_ENABLED=true` em qualquer arquivo (`.env*`, manifestos).
   - As mensagens antigas que ainda falam em "autorização expressa por pesquisa" passam a citar a regra da flag única (a regra nova de 25/10).
   - O bloqueio a ferramentas MCP da Atlassian continua total, leitura e escrita.
-- **`test-guard.sh`:** casos para `JIRA_WRITE_ENABLED=true ./gradlew run`, `export JIRA_WRITE_ENABLED=1`, `docker compose run -e JIRA_WRITE_ENABLED=true`, um compose com a chave verdadeira e a gravação de `.env` com a chave verdadeira, todos bloqueados. A chave com `false` em `app/.env.example` é permitida.
+- **`test-guard.sh`:** casos para `JIRA_WRITE_ENABLED=true ./gradlew run`, `export JIRA_WRITE_ENABLED=1`, a forma PowerShell `$env:` com a chave verdadeira e a gravação de `.env` com a chave verdadeira, todos bloqueados. A chave com `false` em `app/.env.example` é permitida.
 - **`CLAUDE.md` e `.clinerules`:** acrescentar à regra 1 que a escrita no Jira exige, além de `JIRA_LIVE_ENABLED=true`, a flag `JIRA_WRITE_ENABLED=true`, separada e `false` por padrão, que só o usuário liga. Nenhuma IA escreve no Jira por ferramenta (MCP, `curl`, script), nem com as duas flags ligadas: só o painel escreve, pelo fluxo prévia → confirmação. O guia ganha a linha "Escrita" na tabela da seção 2 e o ponto de parada na seção 7.
 - **`checklist-primeira-escrita.md`** (só o usuário executa, com as duas flags ligadas por ele, numa issue de teste escolhida por ele; decisão 9):
   1. Conferir as permissões da conta de serviço (Browse Projects, Edit Issues, Schedule Issues).
@@ -672,7 +673,7 @@ Testes em `app/backend/src/test/kotlin/br/sidia/painel/escrita/` (mesmos nomes d
   - `regrasDasIasCitamAsDuasFlags`: `CLAUDE.md`, `.clinerules` e o guia citam `JIRA_WRITE_ENABLED` e "só o usuário".
   - `documentosSemHostReal`.
 - [ ] **Passo 2: Rodar** `sh .claude/hooks/test-guard.sh` e `./gradlew test --tests '*EscritaDocTest*'` → FALHA. **Passo 3: Implementar.** **Passo 4: Rodar** → PASSA; suítes completas das duas camadas; `test-guard.sh` verde. **Passo 5: Commit** `docs(escrita): hook, regras das IAs, RIPD e checklist da primeira escrita`.
-- [ ] **Passo 6: Fim do plano:** revisão do conjunto (`git diff main..HEAD`, checklist da seção 5 do guia, com foco no Review Focus acima), varredura de dados pessoais, `HANDOFF.md` e índice, push, PR. **Não mesclar** sem o usuário. **Não ligar `JIRA_WRITE_ENABLED`** em nenhum ambiente: só o usuário, depois do aceite do DPO, seguindo o checklist da primeira escrita.
+- [ ] **Passo 6: Fim do plano:** revisão do conjunto (`git diff main..HEAD`, checklist da seção 5 do guia, com foco no Review Focus acima), varredura de dados pessoais, `HANDOFF.md` e índice, push, PR. **Exceção ao fluxo de entrega: este plano só é mesclado com ordem expressa do usuário** (escreve no Jira). **Não ligar `JIRA_WRITE_ENABLED`** em nenhum ambiente: só o usuário, depois do aceite do DPO, seguindo o checklist da primeira escrita.
 
 ---
 

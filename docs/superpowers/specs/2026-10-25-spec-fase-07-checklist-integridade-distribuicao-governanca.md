@@ -86,7 +86,7 @@ Esta fase porta as telas restantes do app atual que dependem de tudo o que veio 
 **Configs reais fora do git.** Versionar só `*.exemplo.yaml`. Heurísticas ficam em YAML versionado, e a versão sai em toda resposta.
 
 **Ambiente e convenções.**
-- Docker ativo, com banco real por Testcontainers.
+- Sem Docker: banco SQLite real em arquivo temporário (`testContextComBanco`/`BancoEmArquivo`).
 - Migração no próximo número livre.
 - Comentários e commits em pt-BR.
 
@@ -148,7 +148,7 @@ Esta fase porta as telas restantes do app atual que dependem de tudo o que veio 
 **Código e banco.**
 - Organização interna dos detectores e das consultas, mantendo as **assinaturas públicas do plano**.
 - Função de hash da `chave_sugestao`, que deve ser estável e documentada no código.
-- Número das migrações.
+- Número das migrações (a próxima livre; hoje só existe a V1, então a V2).
 
 **Interface.** Textos das frases de aprendizado, que são códigos traduzidos no frontend, e o layout fino das telas dentro do plano visual: seções 4, 6.1 e 6.5.
 
@@ -162,7 +162,7 @@ Esta fase porta as telas restantes do app atual que dependem de tudo o que veio 
 
 ## 6. Critérios de aceitação verificáveis
 
-Os critérios supõem Docker ativo. Cada teste citado precisa falhar antes de existir a implementação, e pelo motivo certo.
+Os critérios supõem apenas JDK 21 (SQLite real em arquivo temporário, sem Docker). Cada teste citado precisa falhar antes de existir a implementação, e pelo motivo certo.
 
 **Bloco 7a (Tarefas 1 a 8)**
 
@@ -204,7 +204,7 @@ Os critérios supõem Docker ativo. Cada teste citado precisa falhar antes de ex
 
 **Fim de cada bloco**
 
-12. As suítes completas das duas camadas ficam verdes, inclusive `SomenteAFabricaCriaClientesJira` e `sh .claude/hooks/test-guard.sh`. Antes do push, varrer dados pessoais. Abrir PR para a `main` e não mesclar sem o usuário mandar.
+12. As suítes completas das duas camadas ficam verdes, inclusive `SomenteAFabricaCriaClientesJira` e `sh .claude/hooks/test-guard.sh`. Antes do push, varrer dados pessoais. Abrir PR para a `main` e mesclar pelo fluxo de entrega (`docs/superpowers/fluxo-de-entrega.md`).
 
 ## 7. Riscos e pendências
 

@@ -4,9 +4,9 @@
 
 **Objetivo (Goal):** Completar o que todas as telas compartilham e que os Planos 5 a 7 deixaram parcial: filtros e agrupamentos pelos campos do dicionário (Checklist Type, SKU Type, Model Name, Model Category, TG Request Type, Carrier Code), opções de filtro vindas do backend, gaveta universal da task em todas as telas (com link para o Jira montado da configuração), detalhe em nova aba, paginação virtual de tabelas grandes, estados de tela padronizados, mensagens do backend por código com i18n pt/en, componente de gráfico com paleta categórica acessível e os ajustes que a auditoria apontou nos Planos 5 e 7.
 
-**Arquitetura (Architecture):** Os campos do dicionário passam a ser extraídos na gravação para uma coluna `issue.campos_dicionario jsonb` (nome do campo → valor), com preenchimento retroativo a partir de `issue.raw` (só banco local) e chegam ao `IssueSnapshot` como `camposDicionario`. `FiltrosDeCard` ganha filtros por campo, aplicados em memória pelo `CardDeLeitura` antes de qualquer cálculo, o que mantém "card = tamanho do detalhe". Um endpoint de opções (`/api/filtros/opcoes`) devolve só o que está no escopo visível do principal. A gaveta universal é uma rota única (`/api/tarefa/{key}`) que reaproveita os domínios existentes (tempo por status, posse, fatores de risco, histórico da auditoria). No frontend, o kit comum (`CardPage`, `DrillDrawer`) ganha `EstadoDaTela`, `TabelaVirtual`, `TarefaDrawer` e `Grafico*`, de modo que cada tela herda tudo sem código próprio.
+**Arquitetura (Architecture):** Os campos do dicionário passam a ser extraídos na gravação para uma coluna `issue.campos_dicionario` (`TEXT` com JSON: nome do campo → valor; filtros por `json_extract`/`json_each`), com preenchimento retroativo a partir de `issue.raw` (só banco local) e chegam ao `IssueSnapshot` como `camposDicionario`. `FiltrosDeCard` ganha filtros por campo, aplicados em memória pelo `CardDeLeitura` antes de qualquer cálculo, o que mantém "card = tamanho do detalhe". Um endpoint de opções (`/api/filtros/opcoes`) devolve só o que está no escopo visível do principal. A gaveta universal é uma rota única (`/api/tarefa/{key}`) que reaproveita os domínios existentes (tempo por status, posse, fatores de risco, histórico da auditoria). No frontend, o kit comum (`CardPage`, `DrillDrawer`) ganha `EstadoDaTela`, `TabelaVirtual`, `TarefaDrawer` e `Grafico*`, de modo que cada tela herda tudo sem código próprio.
 
-**Stack (Tech Stack):** Kotlin 2.2.20 + Ktor 3.3.1, kaml, PostgreSQL 16 + Flyway + Testcontainers 2.0.3; React 19 + TypeScript (Vite 8, Vitest 5, Testing Library, TanStack Query 5). **Nenhuma dependência npm nova**: gráficos em SVG próprio e virtualização própria.
+**Stack (Tech Stack):** Kotlin 2.2.20 + Ktor 3.3.1, kaml, SQLite embutido + Flyway (testes com SQLite real em arquivo temporário); React 19 + TypeScript (Vite 8, Vitest 5, Testing Library, TanStack Query 5). **Nenhuma dependência npm nova**: gráficos em SVG próprio e virtualização própria.
 
 **Spec da fase (ler primeiro):** `docs/superpowers/specs/2026-10-25-spec-fase-10-complementos-de-telas-e-filtros.md`. **Spec mestra:** seções 5.1, 6.1 ("dicionário como filtros e agrupamentos"), 10. **Plano visual:** `docs/design/plano-visual-frontend.md` seções 3 (paleta), 5.5 a 5.8 (tabela, detalhamento, gaveta, estados), 6.4 (gaveta com link para o Jira) e 7 (paginação virtual). **Auditoria:** `docs/superpowers/cobertura-do-projeto.md` (A4, A5, M1, M2, M3, M4, M5, M7 código, B4; inconsistências E5, E12, E13).
 
@@ -18,9 +18,9 @@ Antes da Tarefa 1, conferir na `main` que os Planos 4A, 9, 4, 5, 6 e 7 foram mes
 
 | Nome | Origem |
 |---|---|
-| `IssueSnapshot`, `WorkStore`, `PostgresWorkStore`, `ConsultaDeTrabalho`, `Situacao` | `trabalho/` (Plano 5, T2) |
+| `IssueSnapshot`, `WorkStore`, `SqliteWorkStore`, `ConsultaDeTrabalho`, `Situacao` | `trabalho/` (Plano 5, T2) |
 | `FiltrosDeCard`, `FiltroInvalidoException`, `EntradaDeCard`, `CardDeLeitura<D>`, `rotaDeCard`, `Escopo` | `cards/` (Plano 5, T4) |
-| `PostgresIssueStore.upsert(issue, events, instance, osVersionCustomId)`, `OsVersionExtrator`, `SanitizadorRaw` | `sync/` (Planos 3 e 5) |
+| `SqliteIssueStore.upsert(issue, events, instance, osVersionCustomId)`, `OsVersionExtrator`, `SanitizadorRaw` | `sync/` (Planos 3 e 5) |
 | `FieldDictionary`, `jira_campos.exemplo.yaml`, ficha `sincronizacao.card.yaml` (`campos: [OS Version, SKU Type, Checklist Type]`) | Planos 2 e 4A |
 | `DadosDeDemonstracao`, `ManifestoDemo`, `InstanciaDemo(arquivo, prefixo, osVersionCustomId)` | `demo/` (Plano 4A, T10) |
 | `TimeInStatusCalculator`, `PosseCalculator.posse`, `RiscoCalculator.avaliar`, `FatorDeRisco` | Planos 3, 6 (T11) e 5 (T11) |
@@ -30,10 +30,11 @@ Antes da Tarefa 1, conferir na `main` que os Planos 4A, 9, 4, 5, 6 e 7 foram mes
 | `ErroDto(codigo, params)`, `enviarJson`, `ErroDaApi`, `EVENTO_SESSAO_EXPIRADA` | Plano 9 (T4, T5) |
 | `CardPage`, `KpiCard`, `useCard`, `Filtros.tsx`, `shared/DrillDrawer.tsx`, `shared/csv.ts`, `nav.ts` | frontend (Planos 1, 3, 4, 5) |
 | Componentes de gráfico criados nos Planos 5 a 7 (se houver) | telas dos Planos 5 a 7 |
-| Último número de migração na `main` (esperado: V9, do Plano 7; o 4A ocupa V4 a V6) | `resources/db/migration/` |
+| Último número de migração na `main` (confirme com `ls`; hoje só existe a V1) | `resources/db/migration/` |
 
 ## Restrições globais (Global Constraints)
 
+- **Plataforma (adendo de 27/10, `plans/2026-10-27-adendo-plataforma-sqlite-sem-docker.md`):** SQLite embutido, sem Docker e sem servidor de banco; o adendo vence qualquer menção antiga a PostgreSQL, Docker ou Testcontainers. SQL novo segue a tradução da seção 2 do adendo (instantes em `INTEGER` ms UTC, datas em `TEXT` ISO, listas em JSON com `json_each`, helpers de `db/SqlSupport.kt`). Comandos de terminal: Windows 11 PowerShell (principal), por exemplo `cd app\backend; .\gradlew.bat test` e `cd app\frontend; pnpm test`; em `sh`, `cd app/backend && ./gradlew test`. Flags do Jira e de escrita só valem no `app/.env`.
 - **A única trava de acesso ao Jira é a flag `JIRA_LIVE_ENABLED`** (regra 1 do `CLAUDE.md`, 25/10). Este plano não acessa o Jira: tudo roda com fixtures, `MockEngine` e dados de demonstração. O **link para o Jira** só é montado quando a flag é `true` e a instância está configurada; com `false`, a resposta traz `linkJira = null` e a tela não mostra o botão (abrir o link seria um acesso ao Jira por uma pessoa).
 - O link nunca é escrito no código: sai de `JiraInstanceSettings.baseUrl` (variável `JIRA_<INSTANCIA>_URL`, lida pelo `Settings`), só com esquema `https`, host, porta e caminho base, sem credenciais nem query (`Settings.mascararUrl` não serve: aqui a URL tem de ser limpa, não mascarada).
 - **Visibilidade:** a gaveta, as opções de filtro e os filtros por campo só devolvem o que está no escopo visível do principal (`Visibility`/`Escopo`). Issue fora da visão → 404 (nunca 403, para não confirmar que a chave existe). Pessoa fora da visão aparece como "outra pessoa" (`null`), nunca pelo nome. O histórico campo a campo na gaveta só aparece para `COORDENADOR` e `GERENTE` (mesma regra da Auditoria).
@@ -41,8 +42,8 @@ Antes da Tarefa 1, conferir na `main` que os Planos 4A, 9, 4, 5, 6 e 7 foram mes
 - Sem ranking de pessoas: listas de pessoas (opções de filtro inclusive) em ordem alfabética.
 - Interface: cor nunca é o único sinal (`✓` `●` `▲` com texto e, nos gráficos, padrão e forma); pt-BR e inglês completos; três temas; foco e `Esc` em gaveta; CSV com neutralização de fórmula (`shared/csv.ts`).
 - Toda rota nova grava `access_log` (inclusive 400, 403 e 404) por `executarAuditado`; falha ao gravar → 503.
-- **Migração:** uma só, `V{n}__campos_do_dicionario.sql`, com `n` = próximo número livre (esperado V10). Nunca editar migração mesclada.
-- Nenhuma variável nova começa com `JIRA_`. Nenhuma dependência npm nova. Docker ativo; banco real por Testcontainers.
+- **Migração:** uma só, `V{n}__campos_do_dicionario.sql`, com `n` = próxima migração livre (confirme com `ls app/backend/src/main/resources/db/migration`; hoje só existe a V1, então a V2). O esquema novo entra numa migração nova, nunca editando a V1 nem outra já mesclada.
+- Nenhuma variável nova começa com `JIRA_`. Nenhuma dependência npm nova. Sem Docker: banco SQLite real em arquivo temporário (`testContextComBanco`/`BancoEmArquivo`); a suíte só exige JDK 21.
 - Comentários em pt-BR; commits Conventional Commits pt-BR (`feat(filtros): ...`, `feat(ui): ...`, `fix(cards): ...`).
 
 ## Foco da revisão (Review Focus)
@@ -83,7 +84,7 @@ docs/analise/diferencas-esperadas-complementos.md
 **Arquivos:** Criar `resources/db/migration/V{n}__campos_do_dicionario.sql`, `sync/CamposDoDicionario.kt`, `sync/PreenchimentoDeCampos.kt`; Modificar `sync/IssueStore.kt` (`upsert` grava a coluna), `trabalho/IssueSnapshot.kt`, `trabalho/WorkStore.kt`, `AppContext.kt` (chama o preenchimento na subida), `app/config/jira_campos.exemplo.yaml` (chave `filtro: true` nos seis campos), `app/config/cards/sincronizacao.card.yaml` (acrescenta `Model Name`, `Model Category`, `TG Request Type`, `Carrier Code` a `campos`), `demo/DadosDeDemonstracao.kt`, `resources/demo/manifesto.yaml` e `samsung.json` (customIds e valores fictícios dos seis campos), `docs/jira/checklist-primeira-conexao.md` (conferir os quatro campos novos da ficha); Teste `sync/CamposDoDicionarioTest.kt`, `sync/PreenchimentoDeCamposTest.kt`, `trabalho/WorkStoreTest.kt`, `jql/CardQueryFactoryTest.kt`, `demo/FixturesDeDemoTest.kt`.
 
 **Interfaces:**
-- Migração: `ALTER TABLE issue ADD COLUMN campos_dicionario jsonb` (anulável: `NULL` = ainda não extraído; `'{}'` = extraído e vazio) e índice `CREATE INDEX idx_issue_campos_dicionario ON issue USING gin (campos_dicionario)`.
+- Migração: `ALTER TABLE issue ADD COLUMN campos_dicionario TEXT` (JSON em texto; anulável: `NULL` = ainda não extraído; `'{}'` = extraído e vazio). Sem índice GIN (não existe no SQLite): os filtros usam `json_extract(campos_dicionario, '$."Model Name"') = ?` e, para valores repetíveis e opções de filtro, `json_each(campos_dicionario)`; o orçamento de desempenho (Plano 8, T6) mede e, só se estourar, uma migração própria cria índice de expressão sobre `json_extract`.
 - Produz:
   ```kotlin
   data class CampoDeFiltro(val nome: String, val slug: String, val customId: String?)   // slug: "checklist-type", "sku-type", "model-name", "model-category", "tg-request-type", "carrier-code"
@@ -103,7 +104,7 @@ docs/analise/diferencas-esperadas-complementos.md
 - [ ] **Passo 1: Testes que falham:**
   - `extraiSelectTextoELista` (`{"customfield_90001":{"value":"Full"}}` → `Checklist Type=Full`; texto `" OP01 "` → `OP01`; lista de dois SELECT → `"A; B"`; ausente ou `null` → fora do mapa).
   - `campoSemCustomIdFicaFora` (sem exceção).
-  - `upsertGravaCamposDoDicionario` (Testcontainers) e `upsertSemCamposGravaObjetoVazio`.
+  - `upsertGravaCamposDoDicionario` (SQLite em arquivo temporário) e `upsertSemCamposGravaObjetoVazio`.
   - `preencheRetroativamenteDoRaw` (linha com `campos_dicionario IS NULL` e `raw` com `customfield_90002` → preenchida; segunda chamada → 0 linhas tocadas).
   - `preenchimentoNaoFazRequisicao` (contexto com `MockEngine` contador → 0).
   - `snapshotTrazCamposDoDicionario` (`WorkStoreTest`).
@@ -111,7 +112,7 @@ docs/analise/diferencas-esperadas-complementos.md
   - `fixturesDeDemoTemOsSeisCampos` (`FixturesDeDemoTest`; sem e-mail nem host real).
   - `avisoCamposIncompletosComLinhasAntigas`.
 - [ ] **Passo 2: Rodar** `cd app/backend && ./gradlew test --tests '*CamposDoDicionarioTest*' --tests '*PreenchimentoDeCamposTest*' --tests '*WorkStoreTest*' --tests '*CardQueryFactoryTest*' --tests '*FixturesDeDemoTest*'` → FALHA.
-- [ ] **Passo 3: Implementar** (SQL parametrizado; `jsonb` gravado com `?::jsonb`).
+- [ ] **Passo 3: Implementar** (SQL parametrizado; o JSON é gravado como texto com `emJson()` de `db/SqlSupport.kt`, sem `?::jsonb`).
 - [ ] **Passo 4: Rodar** → PASSA e suíte completa (conferir os XML).
 - [ ] **Passo 5: Commit** `feat(filtros): campos do dicionário na base, com preenchimento a partir do raw`.
 
@@ -415,7 +416,7 @@ docs/analise/diferencas-esperadas-complementos.md
 
 ## Decisões (25/10, valor padrão recomendado, reversível)
 
-1. **Coluna `campos_dicionario jsonb`** em vez de uma coluna por campo: um só formato para os seis campos e para os que vierem, sem migração por campo.
+1. **Coluna `campos_dicionario` (JSON em `TEXT`)** em vez de uma coluna por campo: um só formato para os seis campos e para os que vierem, sem migração por campo.
 2. **Preenchimento retroativo a partir do `raw`**, só banco local; as linhas antigas sem os quatro campos novos se completam na próxima reconciliação com a flag ligada pelo usuário.
 3. **Link para o Jira só com a flag `true`** e montado de `JIRA_<INSTANCIA>_URL`, sem credenciais: com a flag `false`, abrir o link seria acesso ao Jira.
 4. **Issue fora da visão → 404** na gaveta (não confirma a existência da chave).

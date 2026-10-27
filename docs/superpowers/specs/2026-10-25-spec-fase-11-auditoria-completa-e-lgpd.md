@@ -41,7 +41,7 @@ Duas coisas impedem chamar a auditoria de completa e o painel de pronto para dad
 
 - Uma trava que olha o conteúdo do banco para decidir. Quebraria os testes dos Planos 4 e 7 e seria imprevisível.
 - Uma trava que libera em modo dev com a flag do Jira ligada, quando há dados reais sem login.
-- Uma IA ligando `DASHBOARD_DPO_ACEITE=true` em arquivo, compose ou comando.
+- Uma IA ligando `DASHBOARD_DPO_ACEITE=true` em arquivo (inclusive o `app/.env`) ou comando.
 - Uma rota sensível nova (de qualquer plano) que escape da trava.
 - Guardar texto livre no `change_event` ou o comentário do worklog.
 - A rota do titular aceitar um parâmetro que escolha outra pessoa.
@@ -63,12 +63,12 @@ Duas coisas impedem chamar a auditoria de completa e o painel de pronto para dad
 
 **Fail-closed.** Configuração obrigatória ausente ou inválida derruba a subida.
 
-**Ambiente.** Docker ativo; banco real por Testcontainers; comentários e commits em pt-BR.
+**Ambiente.** Sem Docker; banco SQLite real em arquivo temporário (`testContextComBanco`/`BancoEmArquivo`); comentários e commits em pt-BR.
 
 ### 3.2 Restrições específicas desta fase
 
 - **Variáveis novas:** `DASHBOARD_DPO_ACEITE`, `DASHBOARD_DPO_ACEITE_REF`, `RETENTION_HISTORICO_MONTHS`, `RETENTION_ACCESS_LOG_MONTHS`, `RETENTION_DECISOES_MONTHS`, `RETENTION_EXECUCOES_MONTHS`. Nenhuma começa com `JIRA_`.
-- **Uma migração** no máximo, `V{n}__dados_para_auditoria_completa.sql` (esperado V11). O conteúdo segue a resposta do ponto de parada 1.
+- **Uma migração** no máximo, `V{n}__dados_para_auditoria_completa.sql` (`n` = próxima livre; hoje só existe a V1, então a V2; nunca editar a V1). O conteúdo segue a resposta do ponto de parada 1.
 - **Estimativas** são guardadas como segundos brutos (`from`/`to` numéricos), nunca o texto humanizado.
 - **Worklog** ganha só a data de criação; continua sem comentário.
 
@@ -95,7 +95,7 @@ Duas coisas impedem chamar a auditoria de completa e o painel de pronto para dad
 - Como `executarAuditado` mapeia `BloqueadoPeloDpoException` (o comportamento observável é fixo).
 - A redação do inventário, do relatório e da comunicação, desde que os testes de documento passem e a linguagem da comunicação seja simples.
 - Os casos fictícios de demonstração para os sinais novos.
-- A técnica para listar as colunas no teste do inventário (`information_schema.columns`).
+- A técnica para listar as colunas no teste do inventário (`sqlite_master` e `pragma_table_info`).
 
 ## 6. Critérios de aceitação verificáveis
 
@@ -144,7 +144,7 @@ Sem resposta, **não seguir com a T3 a T6**: fazer a T1, a T2 e a T7 a T12 e dei
 - *Excesso de alertas de worklog retroativo* (time que registra horas na sexta). Mitigação: limite em YAML; a calibração com dados reais é do Plano 14.
 - *Zerar o cursor e a flag nunca ser ligada.* Sem efeito: com a flag `false`, nada é sincronizado.
 
-**Migrações:** a desta fase é V11 (esperado), e só existe nas opções 1 e 2 ou com a remoção de `person`. Sequência esperada até o Plano 12: V4, V5 e V6 (4A), V7 (5a), V8 (6b), V9 (7b), V10 (10), **V11 (11)**, V12 (8, só se o orçamento estourar), próxima livre (12). Se a T3 não criar migração, o Plano 8 usa V11: ele já manda usar o próximo número livre.
+**Migrações:** a desta fase usa a próxima livre na execução (hoje só existe a V1, então a V2; os V4 a V12 antigos eram só rótulos), e só existe nas opções 1 e 2 ou com a remoção de `person`. Se a T3 não criar migração, o número fica para o plano seguinte, que já manda usar o próximo livre.
 
 ## 8. Glossário do que esta fase consome
 
@@ -154,7 +154,7 @@ Sem resposta, **não seguir com a T3 a T6**: fazer a T1, a T2 e a T7 a T12 e dei
 | `RegrasDeAuditoria`, `auditoria.exemplo.yaml` | limites e gravidades por sinal | Plano 4, T1 |
 | `Autorizacao`, `MotivoAutorizacao` | quem pode alterar na data | Plano 4, T2 |
 | `executarAuditado` | rota auditada (registra antes de responder) | Plano 4, T7 |
-| `ChangelogParser`, `CAMPOS_COM_VALOR`, `PostgresIssueStore.upsert` | gravação do changelog | Plano 3 |
+| `ChangelogParser`, `CAMPOS_COM_VALOR`, `SqliteIssueStore.upsert` | gravação do changelog | Plano 3 |
 | `WorklogRecord`, `WorklogParser`, `WorklogStore` | worklog sincronizado | Plano 6, T10 |
 | `SinalIntegridade.ESTIMATIVA_AUMENTADA`, `SINAL_SEM_DADO` | sinal de Integridade sem dado | Plano 7, T5 |
 | `ItemCentral` | itens da Central | Plano 7, T15 |

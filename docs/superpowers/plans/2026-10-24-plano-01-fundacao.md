@@ -1,5 +1,7 @@
 # Fundação do Painel de Squads (Fase 1) — Plano de implementação
 
+> **Nota (27/10):** executado antes da saída do Docker/PostgreSQL; o banco hoje é SQLite (ver `plans/2026-10-27-adendo-plataforma-sqlite-sem-docker.md`). Onde o texto abaixo diz PostgreSQL, Docker ou Testcontainers, vale o adendo.
+
 > **Para executores:** USE superpowers:subagent-driven-development (recomendado) ou superpowers:executing-plans para executar este plano tarefa por tarefa. Os passos usam caixas `- [ ]`.
 
 **Objetivo:** Deixar de pé o esqueleto do novo app (Ktor + PostgreSQL + React/Vite) com flags, fuso de Manaus e dias úteis, papéis com vigência, filtro por papel em todas as rotas, banco com retenção, cliente Jira com trava e a casca do frontend, tudo testado offline.

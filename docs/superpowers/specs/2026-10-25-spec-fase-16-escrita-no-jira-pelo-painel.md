@@ -72,7 +72,7 @@ A auditoria (Fase 4) e a Divergência Task × Review mostram o que está errado,
 - **Sem ranking de pessoas.** Pt-BR e inglês. WCAG AA nos temas Claro, Escuro e Sidia. A cor nunca é o único sinal.
 - **Fuso America/Manaus** para todo "dia" e para a vigência de papéis.
 - **LGPD:** dados pessoais só depois do aceite do DPO. Fixtures só com nomes fictícios (`.invalid`).
-- **Configs reais fora do git.** Banco real nos testes (Testcontainers). Fail-closed em produção.
+- **Configs reais fora do git.** Banco real nos testes (SQLite em arquivo temporário). Fail-closed em produção.
 - Conversa, comentários e commits em pt-BR (Conventional Commits).
 
 ### 3.2 Restrições específicas desta fase
@@ -116,7 +116,7 @@ A auditoria (Fase 4) e a Divergência Task × Review mostram o que está errado,
 ## 5. O que fica para quem implementa
 
 - A estrutura interna do `ExecutorDeEscrita` e do `EscritaStore` (SQL parametrizado), com as assinaturas do plano.
-- A forma do gatilho de imutabilidade e de como a retenção o libera (variável de sessão ou papel de banco próprio), desde que nenhum outro caminho apague ou altere.
+- A forma do gatilho de imutabilidade e de como a retenção o libera (linha de controle lida pelo gatilho `WHEN`, já que o SQLite não tem variável de sessão nem papel de banco), desde que nenhum outro caminho apague ou altere.
 - Os textos de i18n, o layout fino do modal e da gaveta dentro do kit existente.
 - O nome final da variável da credencial de escrita, desde que nunca apareça em log nem em comando.
 - Escolhas que o plano deixa abertas: a mais segura e reversível, registrada como `Ruling:` em `docs/superpowers/progresso/2026-10-25-plano-16-escrita-no-jira-pelo-painel.md`.

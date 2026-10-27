@@ -4,11 +4,11 @@
 
 **Objetivo (Goal):** Detectar, a partir do changelog sincronizado (`change_event`), as alterações de responsável, vencimento e labels de atraso feitas por quem não podia fazê-las (spec seção 7), e mostrá-las em telas restritas, com gaveta de histórico campo a campo, o card Task × Review e as métricas "no prazo" e "no prazo ajustado".
 
-**Arquitetura (Architecture):** Um domínio puro reconstrói o estado de cada issue em qualquer instante (`AuditTimeline`) e decide quem estava autorizado na data civil de Manaus de cada alteração (`Autorizacao`, sobre o `RoleDirectory` com vigência). Detectores puros transformam a linha do tempo em `Sinal`; o `AuditCalculator` junta sinais, Task × Review e no prazo. Os achados são **calculados na leitura** (sem tabela nova): o `PostgresAuditStore` lê `issue`, `change_event` e `issue_link` (vínculos "Blocks" do 4A, Tarefa 12, para os pares Task × Review). As rotas `/api/auditoria/*` e `/api/cards/task-review` exigem coordenador ou gerente, gravam toda consulta em `access_log` e alimentam duas telas React densas.
+**Arquitetura (Architecture):** Um domínio puro reconstrói o estado de cada issue em qualquer instante (`AuditTimeline`) e decide quem estava autorizado na data civil de Manaus de cada alteração (`Autorizacao`, sobre o `RoleDirectory` com vigência). Detectores puros transformam a linha do tempo em `Sinal`; o `AuditCalculator` junta sinais, Task × Review e no prazo. Os achados são **calculados na leitura** (sem tabela nova): o `SqliteAuditStore` lê `issue`, `change_event` e `issue_link` (vínculos "Blocks" do 4A, Tarefa 12, para os pares Task × Review). As rotas `/api/auditoria/*` e `/api/cards/task-review` exigem coordenador ou gerente, gravam toda consulta em `access_log` e alimentam duas telas React densas.
 
-**Stack (Tech Stack):** Kotlin 2 + Ktor 3.3.1, kaml (YAML estrito), PostgreSQL + Testcontainers 2.0.3; React + TypeScript (Vite, Vitest, Testing Library, TanStack Query).
+**Stack (Tech Stack):** Kotlin 2 + Ktor 3.3.1, kaml (YAML estrito), SQLite embutido (testes com SQLite real em arquivo temporário); React + TypeScript (Vite, Vitest, Testing Library, TanStack Query).
 
-**Spec:** `docs/superpowers/specs/2026-10-24-painel-squads-kotlin-react-design.md` (seções 4.2 "Atraso justificado", 4.3, 7.1, 7.2, 7.3, 9 e 10). Depende só de interfaces do Plano 3, já na `main`: `ChangeEventRecord`, `ChangelogParser`, `IssueStore`/`PostgresIssueStore` (só como modelo de SQL), `StatusMap`, `BusinessCalendar`, `RoleDirectory`, `Visibility`, `AccessLog`, `AvisoDto`, `requireRole`, `testContextComBanco`, `ORDEM_NATURAL_DE_CHAVES`. **Executar depois do Plano 4A** (dependência de código, não só de dados): este plano usa `JqlValues.issueKey` (4A, Tarefa 3; validação da chave na T7), `AvisoDto.params` (4A, Tarefa 8; avisos `REPORTER_ALTERADO`/`VENCIMENTO_ILEGIVEL` na T5), a coluna `issue.removida_em` (4A, Tarefas 2 e 6; filtro na T6), `DadosDeDemonstracao`/`DASHBOARD_DEMO_DATA` (4A, Tarefa 10) o teste `PreparacaoDocsTest.cadaPassoDoChecklistConfirmaAFlag` (4A, Tarefa 11; T9) e os vínculos entre issues `issue_link`/`IssueLinkStore`, `VinculosConfig` (`ctx.vinculos`), `ParesTaskReview.resolver` e `ParDeChaves` (4A, Tarefa 12; pareamento Task × Review nas T1, T5, T6 e T7). **Executar depois do 4A completo, inclusive a Tarefa 12.** Sem o 4A na `main`, este plano não compila. Executa-se 100% offline com fixtures.
+**Spec:** `docs/superpowers/specs/2026-10-24-painel-squads-kotlin-react-design.md` (seções 4.2 "Atraso justificado", 4.3, 7.1, 7.2, 7.3, 9 e 10). Depende só de interfaces do Plano 3, já na `main`: `ChangeEventRecord`, `ChangelogParser`, `IssueStore`/`SqliteIssueStore` (só como modelo de SQL), `StatusMap`, `BusinessCalendar`, `RoleDirectory`, `Visibility`, `AccessLog`, `AvisoDto`, `requireRole`, `testContextComBanco`, `ORDEM_NATURAL_DE_CHAVES`. **Executar depois do Plano 4A** (dependência de código, não só de dados): este plano usa `JqlValues.issueKey` (4A, Tarefa 3; validação da chave na T7), `AvisoDto.params` (4A, Tarefa 8; avisos `REPORTER_ALTERADO`/`VENCIMENTO_ILEGIVEL` na T5), a coluna `issue.removida_em` (4A, Tarefas 2 e 6; filtro na T6), `DadosDeDemonstracao`/`DASHBOARD_DEMO_DATA` (4A, Tarefa 10) o teste `PreparacaoDocsTest.cadaPassoDoChecklistConfirmaAFlag` (4A, Tarefa 11; T9) e os vínculos entre issues `issue_link`/`IssueLinkStore`, `VinculosConfig` (`ctx.vinculos`), `ParesTaskReview.resolver` e `ParDeChaves` (4A, Tarefa 12; pareamento Task × Review nas T1, T5, T6 e T7). **Executar depois do 4A completo, inclusive a Tarefa 12.** Sem o 4A na `main`, este plano não compila. Executa-se 100% offline com fixtures.
 
 **Pareamento Task × Review (Decisão do usuário, 25/10):** a Review (`Checklist Review`) se liga à task pelo link de issue **"Blocks / is blocked by"** (`issue_link`, gravado pelo 4A, Tarefa 12), nas duas direções; **não** pelo campo `parent`. `AuditIssue.parentKey` continua existindo só para hierarquia/Epic e não define par. Se a base não tiver nenhum vínculo ativo do tipo configurado (por exemplo, issues gravadas antes da Tarefa 12 do 4A e ainda não ressincronizadas), o card Task × Review responde vazio (`pares = 0`, `percentual = null`) com o aviso informativo `VINCULOS_INDISPONIVEIS`, sem erro.
 
@@ -21,6 +21,7 @@ O Plano 3 grava em `change_event` o valor de/para **só** de `status`, `assignee
 
 ## Restrições globais (Global Constraints)
 
+- **Plataforma (adendo de 27/10, `plans/2026-10-27-adendo-plataforma-sqlite-sem-docker.md`):** SQLite embutido, sem Docker e sem servidor de banco; o adendo vence qualquer menção antiga a PostgreSQL, Docker ou Testcontainers. SQL novo segue a tradução da seção 2 do adendo (instantes em `INTEGER` ms UTC, datas em `TEXT` ISO, listas em JSON com `json_each`, helpers de `db/SqlSupport.kt`). Comandos de terminal: Windows 11 PowerShell (principal), por exemplo `cd app\backend; .\gradlew.bat test` e `cd app\frontend; pnpm test`; em `sh`, `cd app/backend && ./gradlew test`. Flags do Jira e de escrita só valem no `app/.env`.
 - Nenhuma chamada ao Jira; só fixtures e builders em memória. `JIRA_LIVE_ENABLED=false`.
 - **Indício, não prova:** aviso fixo em toda tela e em toda resposta (`aviso = "INDICIO_NAO_PROVA"`). **LGPD:** confirmar a base legal com o DPO antes de usar com dados reais; até lá, só fixtures e modo demonstração.
 - **Quem pode alterar** (spec 7.1): Reporter (PL), coordenadores e gerente, ou Squad Leader do squad do responsável, **com os papéis vigentes na data civil de Manaus da alteração**.
@@ -263,9 +264,9 @@ docs/analise/diferencas-esperadas-auditoria.md
 
 ---
 
-### Tarefa 6: `AuditStore` sobre PostgreSQL
+### Tarefa 6: `AuditStore` sobre SQLite
 
-**Arquivos:** Criar `auditoria/AuditStore.kt`; Teste `auditoria/AuditStoreTest.kt` (Testcontainers; dados gravados com `PostgresIssueStore.upsert` a partir de JSON de fixture, como no `SyncerTest`).
+**Arquivos:** Criar `auditoria/AuditStore.kt`; Teste `auditoria/AuditStoreTest.kt` (SQLite em arquivo temporário; dados gravados com `SqliteIssueStore.upsert` a partir de JSON de fixture, como no `SyncerTest`).
 
 **Interfaces:**
 - Produz (interface nova; `IssueStore` não muda):
@@ -277,9 +278,9 @@ docs/analise/diferencas-esperadas-auditoria.md
       fun paresTaskReview(instance: String, vinculos: VinculosConfig): ParesLidos     // pares pelo issue_link (4A T12), não pelo parent_key
       fun issue(instance: String, key: String): AuditIssue?
   }
-  class PostgresAuditStore(private val ds: DataSource) : AuditStore
+  class SqliteAuditStore(private val ds: DataSource) : AuditStore
   ```
-  Campo comparado sem diferenciar maiúsculas (`lower(field)`); `summary` de `raw->'fields'->>'summary'`; eventos em lote por `issue_id = ANY(?)` ordenados por `(at, id)`; tudo parametrizado.
+  Campo comparado sem diferenciar maiúsculas (`lower(field)`, que no SQLite só vale para ASCII, o caso dos nomes de campo do Jira); `summary` de `json_extract(raw, '$.fields.summary')` (`raw` é `TEXT` com JSON); eventos em lote por `issue_id IN (SELECT value FROM json_each(?))` com `idsEmJson()` de `db/SqlSupport.kt`, ordenados por `(at, id)` (`at` é `INTEGER` em milissegundos UTC: use `setTimestamp`/`getTimestamp`); tudo parametrizado.
   `paresTaskReview`: lê `IssueLinkStore.ativos(instance, vinculos.tipoDeLink)` (4A, Tarefa 12), monta `tipoDe` com o `issue_type` das issues da instância com `removida_em IS NULL` (as duas pontas precisam estar ativas), chama `ParesTaskReview.resolver(...)` e carrega as `AuditIssue` das duas pontas de cada par com todos os eventos. `semVinculos = true` quando não há nenhum vínculo ativo do tipo configurado na instância. O `parent_key` não entra nesta consulta.
 
 - [ ] **Passo 1: Testes que falham:**
@@ -384,7 +385,7 @@ docs/analise/diferencas-esperadas-auditoria.md
 
 - **Cobertura da spec:** 7.1 (quem pode alterar, vigência por data: T2), 7.2 (11 dos 12 itens da tabela: T3, T4, T5; "estimativa reduzida ou worklog retroativo" declarado fora por falta de dado), 7.3 (aviso fixo, consulta auditada, coordenação e gerente: T7 e T8), 4.2 (duas métricas lado a lado, labels em YAML: T1 e T5), 9 (gravidade e "perto do vencimento" configuráveis: T1), 10 (todo sinal detectado em fixture com fronteiras de 2 dias, fuso e autorizado × não autorizado: T3 a T5). Integridade (12 sinais) fica na Fase 7.
 - **Pareamento Task × Review:** só pelo link "Blocks / is blocked by" (`issue_link`, `ParesTaskReview.resolver` e `VinculosConfig` do 4A, Tarefa 12), nas duas direções; `parentKey` fica só para hierarquia/Epic (T5 `parentKeyNaoFormaPar`, T6 `paresPeloVinculoBlocks`). `tiposReview` tem uma fonte só (`vinculos.yaml`).
-- **Consistência de tipos:** `AuditIssue` (T2) é produzido pelo `PostgresAuditStore` (T6) e consumido por `AuditTimeline`, detectores (T3, T4), `TaskReview`/`NoPrazo`/`AuditCalculator` (T5) e rotas (T7); `CodigoSinal` nasce completo na T1 (as regras do YAML o referenciam) e `Sinal` na T3; `ResultadoAuditoria` (T5) vira `AuditoriaDto` (T7), espelhado no frontend (T8).
+- **Consistência de tipos:** `AuditIssue` (T2) é produzido pelo `SqliteAuditStore` (T6) e consumido por `AuditTimeline`, detectores (T3, T4), `TaskReview`/`NoPrazo`/`AuditCalculator` (T5) e rotas (T7); `CodigoSinal` nasce completo na T1 (as regras do YAML o referenciam) e `Sinal` na T3; `ResultadoAuditoria` (T5) vira `AuditoriaDto` (T7), espelhado no frontend (T8).
 - **Pendências deliberadas:** formato real de `duedate`, `labels` e do `from/to` do assignee só na 1ª conexão real, com a flag ligada pelo usuário (checklist, Passo 4); o leitor aceita os dois formatos conhecidos.
 
 ## Decisões

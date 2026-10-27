@@ -29,16 +29,16 @@ Siglas da coluna "Onde": **C** = `CLAUDE.md` · **R** = `.clinerules/00-regras-d
 | 2.5 | Nunca `git add -A` (o usuário mantém `legacy/.env.example` modificado fora de commit) nem `git add -f` | G, K |
 | 2.6 | Token, senha e URL com credencial nunca em `toString`, log, erro, resposta HTTP, relatório nem no terminal (mesmo com a flag `true`) | G, P4A (Decisão 10) |
 | 2.7 | Banco, log e `raw` sem dados pessoais (`displayName`, e-mail, avatar, `accountId`, texto livre) | G |
-| 2.8 | A senha do banco (`POSTGRES_PASSWORD`) é obrigatória, descartável e nunca vai para arquivo versionado | C, G |
+| 2.8 | A flag do Jira vale só no `app/.env` (terminal e sistema são ignorados); o `.env` real nunca vai para arquivo versionado | C, G |
 | 2.9 | Arquivos que o projeto declara só locais (`.superpowers/`, segredos) não são commitados | GL, `.gitignore` |
 
-## 3. Docker e banco
+## 3. Banco (sem Docker)
 
 | # | Regra | Onde |
 |---|---|---|
-| 3.1 | Docker sempre ativo antes de testes, build ou banco: `docker info`; se parado, `sh .claude/hooks/ensure-docker.sh` | C, H, W |
-| 3.2 | Nunca trocar o PostgreSQL real por H2 ou mock porque o Docker estava parado: inicie-o ou relate | C, R |
-| 3.3 | Reiniciar o Docker Desktop (derruba contêineres do usuário) só com autorização | G |
+| 3.1 | Sem Docker nem servidor de banco (a empresa os bloqueia): banco SQLite em arquivo (`DATABASE_PATH`), JDK 21 e Node/pnpm | C, G |
+| 3.2 | Nunca trocar o SQLite real por H2 ou mock nos testes; nunca reintroduzir Testcontainers/PostgreSQL | C, R |
+| 3.3 | Um painel por arquivo de banco (trava `<banco>.lock`); apagar `app/data/painel.db` só com o painel parado | G |
 | 3.4 | Migração Flyway nova no próximo número livre; nunca editar migração já mesclada | P4A |
 
 ## 4. Idioma e comunicação
@@ -60,7 +60,7 @@ Siglas da coluna "Onde": **C** = `CLAUDE.md` · **R** = `.clinerules/00-regras-d
 | 5.3 | Tarefa a tarefa, na ordem do plano, um commit por tarefa, Conventional Commits em pt-BR | R, G, GL |
 | 5.4 | Arquivo de progresso versionado `docs/superpowers/progresso/<plano>.md` com tarefas concluídas e Rulings | G |
 | 5.5 | Ao fim do plano: suíte completa, revisão do conjunto, varredura de dados pessoais, `HANDOFF.md` e índice atualizados, push, PR, volta à `main` e `pull` | R, G, H, W (`fim-de-branch.md`) |
-| 5.6 | **Nunca mesclar PR nem apagar branch com código fora da `main` sem o usuário mandar** | R, G, H |
+| 5.6 | **Mesclar PR só pelo fluxo de entrega (7 condições, `docs/superpowers/fluxo-de-entrega.md`); Plano 16 só com ordem expressa do usuário; nunca apagar branch com código fora da `main`** | R, G, H |
 | 5.7 | Branches empilhadas mescladas da base para o topo, cada PR refeita contra a `main` | GL |
 | 5.8 | Trabalho em partes pequenas e mescláveis; funcionalidade incompleta atrás de flag | GL |
 | 5.9 | Fim de sessão: `HANDOFF.md` atualizado; nada de commit só local nem branch sem PR (ou registrar o motivo e a próxima ação) | GL, G, H |
@@ -82,7 +82,7 @@ Siglas da coluna "Onde": **C** = `CLAUDE.md` · **R** = `.clinerules/00-regras-d
 
 | # | Regra | Onde |
 |---|---|---|
-| 7.1 | Stack Kotlin/Ktor + PostgreSQL + React/Vite; `legacy/` só referência | C |
+| 7.1 | Stack Kotlin/Ktor + SQLite + React/Vite; `legacy/` só referência | C |
 | 7.2 | Fuso America/Manaus; dias úteis por padrão; relógio e calendário injetados | C, G |
 | 7.3 | Concluída = categoria done **e** `resolution`; divergência vai para Qualidade dos dados | C |
 | 7.4 | "No prazo" e "no prazo ajustado" lado a lado | C |

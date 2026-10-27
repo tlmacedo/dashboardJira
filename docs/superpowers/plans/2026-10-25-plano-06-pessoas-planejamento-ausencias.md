@@ -6,7 +6,7 @@
 
 **Arquitetura (Architecture):** Três arquivos YAML (equipes, ausências e regras de planejamento) alimentam um motor puro de capacidade: `HorasDaIssue` → `Capacidade` → `Demanda`/`Ocupacao` → `Agenda` (previsão pela capacidade, com e sem ausência). Os cards são `CardDeLeitura` da Fase 5 sobre o `IssueSnapshot` do `WorkStore`; a `Agenda` passa a implementar `PrevisaoDeTermino` (Riscos e Previsão da Fase 5). A sincronização ganha o worklog (sem comentário), que alimenta Esforço e horas registradas.
 
-**Stack (Tech Stack):** Kotlin 2 + Ktor 3.3.1, kaml (YAML estrito), PostgreSQL + Flyway + Testcontainers 2.0.3, Ktor `MockEngine`; React + TypeScript (Vite, Vitest, Testing Library, TanStack Query).
+**Stack (Tech Stack):** Kotlin 2 + Ktor 3.3.1, kaml (YAML estrito), SQLite embutido + Flyway (testes com SQLite real em arquivo temporário), Ktor `MockEngine`; React + TypeScript (Vite, Vitest, Testing Library, TanStack Query).
 
 **Spec:** `docs/superpowers/specs/2026-10-24-painel-squads-kotlin-react-design.md` (seções 4.2 "Capacidade", "Horas sem estimativa", "Heurísticas", "Esforço por task fechada"; 4.3; 4.4; 5.4; 6.2; 6.3; 8 item 6; 9). Inventário: `docs/analise/relatorio-cards-app-atual.md` (seções 2.2, 3, 4.14 a 4.16, 6 achados 8 a 11, 7.2). Visual: `docs/design/plano-visual-frontend.md` (seções 6.3 e 6.5).
 
@@ -30,6 +30,7 @@ Antes da Tarefa 1, o executor confere estes nomes na `main` e, se mudaram, atual
 
 ## Restrições globais (Global Constraints)
 
+- **Plataforma (adendo de 27/10, `plans/2026-10-27-adendo-plataforma-sqlite-sem-docker.md`):** SQLite embutido, sem Docker e sem servidor de banco; o adendo vence qualquer menção antiga a PostgreSQL, Docker ou Testcontainers. SQL novo segue a tradução da seção 2 do adendo (instantes em `INTEGER` ms UTC, datas em `TEXT` ISO, listas em JSON com `json_each`, helpers de `db/SqlSupport.kt`). Comandos de terminal: Windows 11 PowerShell (principal), por exemplo `cd app\backend; .\gradlew.bat test` e `cd app\frontend; pnpm test`; em `sh`, `cd app/backend && ./gradlew test`. Flags do Jira e de escrita só valem no `app/.env`.
 - Nenhuma chamada ao Jira; fixtures e `MockEngine` (`https://jira.exemplo.invalid`). `JIRA_LIVE_ENABLED=false`; nenhuma variável nova começa com `JIRA_`; arquivos que citem variáveis do Jira são escritos com Write/Edit, nunca heredoc. Hook `BLOQUEADO` = parar e relatar.
 - **Ausências e feriados:** YAML versionado, **somente leitura**; nenhuma rota grava ausência; a ausência **não tem motivo** (chave `motivo` é recusada na carga). Calendário único do time (`calendario.yaml`).
 - Configs reais (`equipes.yaml`, `ausencias.yaml`, `papeis.yaml`) fora do git e da imagem; versionar só `*.exemplo.yaml`; fallback para `.exemplo` só em modo desenvolvimento; em produção o arquivo real é obrigatório (mensagem com o caminho).
@@ -40,7 +41,7 @@ Antes da Tarefa 1, o executor confere estes nomes na `main` e, se mudaram, atual
 - Heurísticas (foco, horas por tipo, limiares, pesos do esforço) em YAML versionado; a versão sai em toda resposta (`versaoRegras`).
 - Todo número clicável abre as tasks que o compõem, com o mesmo tamanho; status sem mapeamento → 200 com aviso; toda consulta grava `access_log`.
 - Fuso America/Manaus; dias úteis por padrão; semana de segunda a domingo; a semana atual vai de hoje até domingo.
-- Cor nunca é o único sinal; pt-BR e inglês; três temas. Migração no próximo número livre. Docker ativo; banco real por Testcontainers.
+- Cor nunca é o único sinal; pt-BR e inglês; três temas. Migração no próximo número livre. Sem Docker: banco SQLite real em arquivo temporário (`testContextComBanco`/`BancoEmArquivo`); a suíte só exige JDK 21.
 - Commits Conventional Commits pt-BR (`feat(pessoas): ...`, `feat(sync): ...`); comentários em pt-BR.
 
 ## Foco da revisão (Review Focus)
@@ -104,7 +105,7 @@ docs/analise/diferencas-esperadas-pessoas-e-planejamento.md
   }
   ```
   `planejamento.exemplo.yaml`: `versao: 1`, `focoPadrao: 0.7`, `horasMinimas: 0.5`, `horasPorTipo: {Checklist: 6.0, "Checklist TG": 6.0, "Checklist Review": 2.0}`, `horasPadrao: 6.0`, `semanasMinimasDemanda: 2`, `semanasSemVencimentoIniciada: 2`, `semanasSemVencimentoNaoIniciada: 4`, `ocupacaoAtencao: 0.85`, `ocupacaoAlta: 1.10`, `folga: 0.50`, `tetoJain: 3.0`, `wipPorStatus: {"In Progress": 12, "Submitted": 5}`, `wipPorPessoa: 3`, `slaRevisaoDias: 2`, `diaCriticoCapacidade: 0.6`, `horizonteCoberturaDias: 30`. Todos estritos (chave desconhecida falha citando arquivo e chave).
-- [ ] **Passo 1: Testes que falham:** `carregaEquipesDoExemplo`; `membroForaDoPapeisFalha` (cita o id); `limitesDeEquipe` (`horasSemanais` 0..60, `foco` (0,1], `alocacao` [0,1], competência fora de `[a-z0-9-]`); `ausenciaSemMotivo` (chave `motivo` → falha com "ausências não guardam motivo"); `ausenciaDePessoaDesconhecidaFalha`; `datasInvertidasFalham`; `sobreposicaoDaMesmaPessoaFalha`; `fracaoEm` (CAP-1: `bruno` 10/11 → `0.5`; `ana` 04/11 → `1.0`; `ana` 03/11 → `0.0`); `maisNaoAlteraOOriginal`; `regrasEstritasELimites` (`ocupacaoAtencao < ocupacaoAlta`, `folga < ocupacaoAtencao`); `appContextCarregaComFallbackDeDev`; `producaoSemArquivoRealFalha`; `arquivosReaisNoGitignoreENoDockerignore` (`.gitignore` e `app/.dockerignore` citam `config/equipes.yaml` e `config/ausencias.yaml`).
+- [ ] **Passo 1: Testes que falham:** `carregaEquipesDoExemplo`; `membroForaDoPapeisFalha` (cita o id); `limitesDeEquipe` (`horasSemanais` 0..60, `foco` (0,1], `alocacao` [0,1], competência fora de `[a-z0-9-]`); `ausenciaSemMotivo` (chave `motivo` → falha com "ausências não guardam motivo"); `ausenciaDePessoaDesconhecidaFalha`; `datasInvertidasFalham`; `sobreposicaoDaMesmaPessoaFalha`; `fracaoEm` (CAP-1: `bruno` 10/11 → `0.5`; `ana` 04/11 → `1.0`; `ana` 03/11 → `0.0`); `maisNaoAlteraOOriginal`; `regrasEstritasELimites` (`ocupacaoAtencao < ocupacaoAlta`, `folga < ocupacaoAtencao`); `appContextCarregaComFallbackDeDev`; `producaoSemArquivoRealFalha`; `arquivosReaisNoGitignore` (o `.gitignore` cita `config/equipes.yaml` e `config/ausencias.yaml`).
 - [ ] **Passo 2: Rodar** `cd app/backend && ./gradlew test --tests '*EquipesTest*' --tests '*AusenciasTest*' --tests '*RegrasDePlanejamentoTest*' --tests '*AppContextTest*' --tests '*ArquivosReaisForaDoGitTest*'` → FALHA. **Passo 3: Implementar.** **Passo 4: Rodar** → PASSA e suíte completa. **Passo 5: Commit** `feat(pessoas): equipes, ausências e regras de planejamento em YAML somente leitura`.
 
 ---
@@ -277,7 +278,7 @@ docs/analise/diferencas-esperadas-pessoas-e-planejamento.md
 
 ### Tarefa 10: Sincronização do worklog (sem comentário)
 
-**Arquivos:** Criar `sync/WorklogParser.kt`, `sync/WorklogStore.kt`, `resources/db/migration/V{n}__worklog_por_instancia.sql`, `src/test/resources/fixtures/dc/search-com-worklog.json`, `fixtures/dc/worklog-tg-301-completo.json`; Modificar `jira/JiraClient.kt` (`worklogs`), `sync/Syncer.kt`, `sync/IssueStore.kt` (grava worklogs na mesma transação; `raw` sem o campo `worklog`), `app/config/cards/sincronizacao.card.yaml` (campos `worklog` e `timespent`), `cards/carga/CargaCalculator.kt` (`horasRegistradas30d`), `docs/jira/checklist-primeira-conexao.md` e `docs/jira/matriz-compatibilidade.md` (endpoint de worklog "não validado"); Teste `sync/WorklogParserTest.kt`, `sync/SyncerTest.kt`, `sync/WorklogStoreTest.kt`, `jira/JiraClientTest.kt`.
+**Arquivos:** Criar `sync/WorklogParser.kt`, `sync/WorklogStore.kt`, `resources/db/migration/V{n}__worklog_por_instancia.sql` (`{n}` = próxima migração livre, hoje V2; nunca editar a V1; instantes em `INTEGER` ms, datas em `TEXT` ISO), `src/test/resources/fixtures/dc/search-com-worklog.json`, `fixtures/dc/worklog-tg-301-completo.json`; Modificar `jira/JiraClient.kt` (`worklogs`), `sync/Syncer.kt`, `sync/IssueStore.kt` (grava worklogs na mesma transação; `raw` sem o campo `worklog`), `app/config/cards/sincronizacao.card.yaml` (campos `worklog` e `timespent`), `cards/carga/CargaCalculator.kt` (`horasRegistradas30d`), `docs/jira/checklist-primeira-conexao.md` e `docs/jira/matriz-compatibilidade.md` (endpoint de worklog "não validado"); Teste `sync/WorklogParserTest.kt`, `sync/SyncerTest.kt`, `sync/WorklogStoreTest.kt`, `jira/JiraClientTest.kt`.
 
 **Interfaces:**
 - Migração: `worklog` ganha `instance text`, `jira_id text`, índice único `(instance, jira_id)`; linhas antigas sem `jira_id` ficam (nenhuma existe hoje).
@@ -290,7 +291,7 @@ docs/analise/diferencas-esperadas-pessoas-e-planejamento.md
       fun porIssue(instance: String, keys: Set<String>): Map<String, List<WorklogRecord>>
       fun horasPorAutor(instance: String, de: Instant, ate: Instant): Map<String, Double>
   }
-  class PostgresWorklogStore(private val ds: DataSource) : WorklogStore
+  class SqliteWorklogStore(private val ds: DataSource) : WorklogStore
   ```
   O `Syncer` lê `fields.worklog` da busca; se `total > worklogs.size`, chama `worklogs(key)`. Ao gravar a issue, os worklogs dela são **substituídos** (o que sumiu no Jira sai). Autor por `name` normalizado; `JIRAUSER*` traduzido por `ChavesDeUsuario`. `comment`, `updateAuthor` e `self` nunca são lidos.
 - [ ] **Passo 1: Testes que falham:** `worklogSemComentario` (fixture com `comment` → nenhuma coluna nem `raw` contém o texto); `rawNaoGuardaWorklog`; `autorJirauserTraduzido`; `worklogIdempotente` (duas sincronizações → mesma contagem); `worklogTruncadoBuscaCompleto` (o `MockEngine` recebe `/issue/TG-301/worklog`, 2 páginas); `worklogRemovidoNoJiraSaiNaRessincronizacao`; `liveDesligadoNaoBuscaWorklog` (fábrica com live `false`: `JiraLiveDisabledException` e 0 requisições); `orcamentoContaRequisicaoDeWorklog`; `retencaoApagaWorklogAntigo` (já coberto pelo `Retention`; acrescentar caso com `instance`); `horasRegistradas30dNaCarga` (`ana` 10 h nos últimos 30 dias → `10.0`).

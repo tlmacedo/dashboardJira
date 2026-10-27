@@ -10,7 +10,7 @@
 
 Todo código novo é testado **offline**, com respostas sintéticas em `src/test/resources/fixtures/validacao/` (hosts `.invalid`, nomes fictícios). **Nenhum teste automático toca o Jira real**, mesmo com a flag `true` (a tarefa `test` do Gradle fixa a flag em `false`, Plano 4A, T11). As etapas que falam com o Jira são **passos de runbook**, executados pela IA só com a flag ligada pelo usuário.
 
-**Stack (Tech Stack):** Kotlin 2 + Ktor 3.3.1, kotlinx.serialization (JSON), kaml (YAML estrito), PostgreSQL + Testcontainers 2.0.3, Ktor `MockEngine`.
+**Stack (Tech Stack):** Kotlin 2 + Ktor 3.3.1, kotlinx.serialization (JSON), kaml (YAML estrito), SQLite embutido (testes com SQLite real em arquivo temporário), Ktor `MockEngine`.
 
 **Spec da fase (ler primeiro):** `docs/superpowers/specs/2026-10-25-spec-fase-14-primeira-conexao-validacao-e-calibracao.md`. **Spec mestra:** `docs/superpowers/specs/2026-10-24-painel-squads-kotlin-react-design.md` (seções 3, 4.2 "Heurísticas", 4.6 "Oráculo de números", 5.5, 9, 10 e 11). Documentos de base: `docs/jira/checklist-primeira-conexao.md`, `docs/jira/runbook-sincronizacao.md`, `docs/jira/matriz-compatibilidade.md`. Lacunas de origem: `docs/superpowers/cobertura-do-projeto.md`, C2, A6 e M6.
 
@@ -34,6 +34,7 @@ Todo código novo é testado **offline**, com respostas sintéticas em `src/test
 
 ## Restrições globais (Global Constraints)
 
+- **Plataforma (adendo de 27/10, `plans/2026-10-27-adendo-plataforma-sqlite-sem-docker.md`):** SQLite embutido, sem Docker e sem servidor de banco; o adendo vence qualquer menção antiga a PostgreSQL, Docker ou Testcontainers. SQL novo segue a tradução da seção 2 do adendo (instantes em `INTEGER` ms UTC, datas em `TEXT` ISO, listas em JSON com `json_each`, helpers de `db/SqlSupport.kt`). Comandos de terminal: Windows 11 PowerShell (principal), por exemplo `cd app\backend; .\gradlew.bat test` e `cd app\frontend; pnpm test`; em `sh`, `cd app/backend && ./gradlew test`. Flags do Jira e de escrita só valem no `app/.env`.
 - **A flag é a única trava, e só o usuário a muda.** A IA executora **nunca** liga `JIRA_LIVE_ENABLED`, nem dentro de um comando. Na Tarefa 1 ela **pergunta** ao usuário e **espera**. Com a flag `false`, nenhuma etapa de runbook deste plano roda; as tarefas de código seguem offline.
 - **Nenhum teste automático acessa o Jira real**, mesmo com a flag `true`. Testes usam fixtures sintéticas e `MockEngine`.
 - **Primeira conexão segue o checklist**, na ordem, uma instância por vez, com os limites dele (`maxResults=1` no Passo 3, uma issue no Passo 4). **Pare no primeiro 401, 403, 429, 5xx ou CAPTCHA**: não repetir, não trocar credencial; relatar ao usuário e esperar.
@@ -77,6 +78,20 @@ HANDOFF.md, docs/superpowers/plans/2026-10-24-indice-dos-planos.md
 
 ## Bloco 14a — primeira conexão (depois do Plano 4A)
 
+### Tarefa 0 (pré-requisito do 14a): os hooks de proteção passam a ler a flag do arquivo de variáveis do app
+
+**Por quê:** desde 27/10 o app lê a flag do Jira **somente** de `app/.env` (`config/ArquivoEnv.kt`), mas os hooks de proteção (`.claude/hooks/guard.sh` e `.clinerules/hooks/PreToolUse` / `PreToolUse.ps1`) ainda leem a variável da flag do **ambiente do processo** da IA. Resultado: o usuário liga a flag no `app/.env`, o painel passa a acessar o Jira, mas o hook continua barrando todo comando da IA que cite o Jira. Duas chaves para a mesma trava é o que a decisão de 27/10 quer evitar.
+
+**Interim (se esta tarefa ainda não foi feita):** o usuário, além de editar o `app/.env`, define a variável de usuário do Windows com o mesmo nome e valor (pelo painel "Variáveis de ambiente" do Windows ou por `[Environment]::SetEnvironmentVariable` no PowerShell dele) e reinicia o VS Code. A IA **não** faz isso por ele.
+
+**Arquivos:** modificar `.clinerules/hooks/PreToolUse.ps1`, `.clinerules/hooks/PreToolUse`, `.claude/hooks/guard.sh` e os três testes (`test-PreToolUse.ps1`, `test-PreToolUse.sh`, `test-guard.sh`); atualizar `docs/ferramentas-claude-para-o-cline/hooks.md` e a "Hooks e a flag" do `HANDOFF.md`.
+
+- [ ] **Passo 1: Testes que falham** (nos três arquivos de teste, com um arquivo de variáveis temporário apontado por variável de teste, nunca o arquivo real): `flagVemDoArquivoDeVariaveis` (flag verdadeira no arquivo libera; falsa ou ausente bloqueia); `ambienteDoProcessoNaoLiga` (ambiente verdadeiro e arquivo falso ou ausente: bloqueia); `ambienteDoProcessoNaoDesliga` (arquivo verdadeiro, ambiente falso: libera); `arquivoIlegivelFalhaFechado` (arquivo inexistente, sem permissão ou valor inválido: bloqueia); `leituraDaIaAoArquivoContinuaBarrada` (o hook lê o arquivo para si, mas continua negando que a IA o leia, escreva ou versione: os casos antigos seguem passando).
+- [ ] **Passo 2: Implementar.** O hook localiza o arquivo na raiz do repositório (`<raiz>/app/.env`; a raiz vem do próprio caminho do hook, não de variável da IA), lê **só a linha da flag** (mesma regra de `ArquivoEnv`: `NOME=valor`, aspas e comentário final opcionais, sem diferenciar maiúsculas no valor) e trata qualquer erro como "flag desligada". Nunca imprime o conteúdo do arquivo nem o valor de outras variáveis. Mantenha todas as demais travas (texto que liga a flag, arquivo de variáveis protegido contra a IA etc.).
+- [ ] **Passo 3: Rodar** as três suítes de hook (`sh .claude/hooks/test-guard.sh`; `sh .clinerules/hooks/test-PreToolUse.sh`; `powershell.exe -NoProfile -ExecutionPolicy Bypass -File .clinerules\hooks\test-PreToolUse.ps1`) e a suíte do backend.
+- [ ] **Passo 4: Revisão adversarial** (é código de segurança: peça ao revisor a mutação real dos testes e a tentativa de contornar: caminho relativo, symlink, variável de ambiente de nome parecido, arquivo com a flag duplicada, a última ocorrência vence).
+- [ ] **Passo 5: Commit** `fix(hooks): a flag do Jira é lida do arquivo de variáveis do app, igual ao painel`.
+
 ### Tarefa 1: Pedir ao usuário que ligue a flag e preparar a sessão
 
 **Arquivos:** Criar `docs/validacao/roteiro-primeira-conexao.md`; Modificar `.gitignore` (`validacao-local/`); Teste `validacao/RoteiroDocTest.kt`.
@@ -86,10 +101,10 @@ HANDOFF.md, docs/superpowers/plans/2026-10-24-indice-dos-planos.md
 - [ ] **Passo 1: Testes que falham:** `roteiroApontaChecklistERunbook` (links para os dois documentos), `roteiroDizQueSoOUsuarioLigaAFlag`, `roteiroSemHostRealNemToken` (mesma regra de `documentosDeJiraNaoTemHostRealTokenNemEmail`), `validacaoLocalIgnoradaPeloGit` (o `.gitignore` contém `validacao-local/`).
 - [ ] **Passo 2: Rodar** `cd app/backend && ./gradlew test --tests '*RoteiroDocTest*'` → FALHA. **Passo 3: Escrever.** **Passo 4: Rodar** → PASSA. **Passo 5: Commit** `docs(validacao): roteiro da primeira conexão`.
 - [ ] **Passo 6: Ponto de parada: perguntar ao usuário** e **esperar a resposta** antes de qualquer acesso ao Jira:
-  - "Eu (usuário) ligo a flag `JIRA_LIVE_ENABLED=true` agora, na instância Samsung DC, e a IA segue o checklist (Recomendada)": o usuário exporta a flag e o token no ambiente dele (terminal ou `.claude/settings.local.json`, nunca arquivo versionado) e reabre a sessão; consequência: a IA executa os Passos 1 a 5 na ordem, parando no primeiro erro.
+  - "Eu (usuário) ligo a flag `JIRA_LIVE_ENABLED=true` agora, na instância Samsung DC, e a IA segue o checklist (Recomendada)": o usuário liga a flag e preenche URL e token da instância **dentro de `app/.env`** (o painel só lê a flag ali; o arquivo nunca é versionado nem lido pela IA), faz o interim da Tarefa 0 se ela ainda não estiver feita (variável de usuário do Windows para os hooks + reiniciar o VS Code) e reinicia o painel; consequência: a IA executa os Passos 1 a 5 na ordem, parando no primeiro erro.
   - "Eu (usuário) ligo a flag, mas eu mesmo rodo as consultas e passo as respostas salvas à IA": consequência: a IA só roda as ferramentas offline sobre os arquivos que o usuário colocar em `$HOME/painel-validacao/`.
   - "Ainda não": consequência: o bloco 14a para aqui; registrar no `HANDOFF.md` a pendência com data e seguir com a sequência principal.
-- [ ] **Passo 7: Conferir** (só depois do "sim"): `JIRA_LIVE_ENABLED` vale `true` **no ambiente que o usuário configurou** (a IA lê, não escreve); o token está só em variável de ambiente; `git status` limpo de arquivos de config real. Se algo falhar, parar e relatar.
+- [ ] **Passo 7: Conferir** (só depois do "sim"): `JIRA_LIVE_ENABLED` vale `true` **no `app/.env` que o usuário configurou** (a flag só vale ali; a IA lê, não escreve); o token está só no `app/.env` (fora do git); `git status` limpo de arquivos de config real. Se algo falhar, parar e relatar.
 
 ---
 
@@ -197,7 +212,7 @@ HANDOFF.md, docs/superpowers/plans/2026-10-24-indice-dos-planos.md
 - [ ] Se **Reporter = PL** for refutado, **Ponto de parada: perguntar ao usuário**: "Manter o Reporter como PL e registrar a exceção (Recomendada se as exceções forem raras)"; "Criar um campo de PL por squad em `equipes.yaml` (vira tarefa do Plano 4 reaberta)"; "Desligar o sinal de auditoria que depende do PL até decidir".
 - [ ] Nenhuma regra refutada: registrar `Ruling: nenhuma correção necessária` e seguir.
 
-**Fim do 14a:** suíte completa, varredura de dados pessoais (`git diff main..HEAD` sem chave, username, host, `customfield` real), PR `feat(validacao): primeira conexão (14a)`. Não mesclar sem o usuário mandar.
+**Fim do 14a:** suíte completa, varredura de dados pessoais (`git diff main..HEAD` sem chave, username, host, `customfield` real), PR `feat(validacao): primeira conexão (14a)`. Mesclar pelo fluxo de entrega (`docs/superpowers/fluxo-de-entrega.md`).
 
 ---
 
@@ -319,7 +334,7 @@ HANDOFF.md, docs/superpowers/plans/2026-10-24-indice-dos-planos.md
 - [ ] **Passo 1: Conferir** `git status` (nenhum arquivo de config real, nada de `validacao-local/`); apagar `$HOME/painel-validacao/` e registrar a remoção.
 - [ ] **Passo 2: Rodar** as suítes completas (backend e frontend), `pnpm build`, `sh .claude/hooks/test-guard.sh` → PASSA.
 - [ ] **Passo 3: Varredura** de dados pessoais e hosts em `git diff main..HEAD`.
-- [ ] **Passo 4: Commit** `docs(validacao): fechamento da validação com dados reais`; PR do bloco 14b. Não mesclar sem o usuário mandar.
+- [ ] **Passo 4: Commit** `docs(validacao): fechamento da validação com dados reais`; PR do bloco 14b. Mesclar pelo fluxo de entrega (`docs/superpowers/fluxo-de-entrega.md`).
 
 ---
 

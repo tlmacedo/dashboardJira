@@ -62,7 +62,7 @@ A fase começa em duas velocidades. A sincronização depende só do 4A, por iss
 
 **Configs reais** fora do git e da imagem. **DPO** antes de Auditoria e Integridade com dados reais.
 
-**Ambiente.** Docker ativo; banco real por Testcontainers; comentários e commits em pt-BR.
+**Ambiente.** Sem Docker; banco SQLite real em arquivo temporário (`testContextComBanco`/`BancoEmArquivo`); comentários e commits em pt-BR.
 
 ### 3.2 Restrições específicas desta fase
 
