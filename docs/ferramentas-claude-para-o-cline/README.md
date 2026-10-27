@@ -18,7 +18,7 @@ Para quem vai continuar o Painel de Squads com o **ClineSR** (variante Samsung d
 
 | Workflow | Quando usar |
 |---|---|
-| `/continuar.md` | Início de toda sessão: lê o `HANDOFF.md`, confere git, PRs e Docker, diz onde estamos e o próximo passo |
+| `/continuar.md` | Início de toda sessão: lê o `HANDOFF.md`, confere git, PRs e ambiente, diz onde estamos e o próximo passo |
 | `/executar-plano.md` | Executar um plano tarefa a tarefa (TDD, revisão, commit, progresso) |
 | `/revisar-tarefa.md` | Revisar uma tarefa ou o plano inteiro (checklist de 12 itens, mutação mental, lentes extras) |
 | `/fim-de-branch.md` | Fechar a branch: verificação, varredura de dados pessoais, push, PR, volta à `main`; nunca mesclar sem o usuário mandar |
@@ -42,7 +42,7 @@ Skills próprias do projeto (`.cline/skills/`, carregadas pela descrição ou po
 | Git for Windows | clone, commits, `git` no terminal; traz o Git Bash | Antes de clonar, nada a configurar: o `.gitattributes` do projeto fixa LF nos `.sh`, no hook sem extensão e nas regras/workflows/skills (`.md` lidos pelas IAs) e CRLF nos `.ps1`. Se um `.sh` aparecer com CRLF, rode `git add --renormalize .` só depois de perguntar ao usuário |
 | JDK 21 (por exemplo Eclipse Temurin 21) | backend Kotlin (`jvmToolchain(21)` no `build.gradle.kts`) | `JAVA_HOME` apontando para o JDK |
 | Node.js 22 e pnpm | frontend | `corepack enable` e depois `pnpm --version`, ou instalar o pnpm à parte |
-| Docker Desktop (com WSL 2) | PostgreSQL e Testcontainers | Precisa estar aberto antes dos testes de banco |
+| JDK 21 e Node 22 com pnpm | Backend (Gradle) e frontend (Vite) | Sem Docker nem banco a instalar: o banco é um arquivo SQLite |
 | PowerShell 7 (opcional, recomendado) | o Cline usa o `pwsh` para o hook quando existe | Sem ele, o Cline usa o Windows PowerShell 5.1, que já vem no Windows |
 | VS Code + ClineSR | executor | Ligar **Enable Hooks** (Settings → Features) |
 
@@ -50,10 +50,10 @@ Skills próprias do projeto (`.cline/skills/`, carregadas pela descrição ou po
 
 | Tarefa | macOS/Linux (documentos do projeto) | Windows 11 (PowerShell) |
 |---|---|---|
-| Docker ativo? | `docker info` | `docker info` (se falhar: `Start-Process "$env:ProgramFiles\Docker\Docker\Docker Desktop.exe"` e esperar; o `ensure-docker.sh` não funciona no Windows) |
+| Ambiente ok? | `java -version` | `java -version` (Temurin/OpenJDK 21) |
 | Testes do backend | `cd app/backend && ./gradlew test` | `cd app\backend; .\gradlew.bat test` |
 | Testes do frontend | `cd app/frontend && pnpm vitest run && pnpm build` | `cd app\frontend; pnpm vitest run; if ($?) { pnpm build }` |
-| Subir tudo local | `cd app && POSTGRES_PASSWORD=<descartável> docker compose up --build -d` | `cd app; $env:POSTGRES_PASSWORD='<descartável>'; docker compose up --build -d` (a senha só na sessão do terminal, nunca em arquivo) |
+| Subir tudo local | `cd app && sh iniciar.sh` | `cd app; .\iniciar.ps1` (variáveis em `app/.env`; a flag do Jira só vale ali) |
 | Teste do hook | `sh .clinerules/hooks/test-PreToolUse.sh` | `powershell.exe -NoProfile -ExecutionPolicy Bypass -File .clinerules\hooks\test-PreToolUse.ps1` e o mesmo com `pwsh` |
 | Instalar skills de terceiros | (ver [skills.md](skills.md)) | `powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\instalar-skills-cline.ps1` |
 | Flag do Jira | variável de ambiente | Só o usuário define (variáveis de ambiente do usuário no Windows) e reabre o VS Code; a IA nunca usa `setx`/`$env:` para ela |
@@ -81,7 +81,7 @@ O limite de contexto e de raciocínio do Gauss 3.7 não é conhecido aqui; trate
 | Skills de fluxo (superpowers etc.) | plugins em `~/.claude/plugins/` e `~/.claude/skills/` | Skills em `.cline/skills/` ou `%USERPROFILE%\.cline\skills\` (mesmo formato `SKILL.md`); o Cline **não** lê `~/.claude/` | Fluxos do projeto portados como workflows; terceiros instalados todos pelo script, com precedência do projeto ([skills.md](skills.md)) |
 | Skills próprias | recomendadas e não criadas (`HANDOFF.md`) | `.cline/skills/convencoes-painel-squads`, `.cline/skills/novo-card-painel` | Criadas |
 | Hook trava Jira/arquivos | `.claude/hooks/guard.sh` via `PreToolUse` | macOS/Linux: `.clinerules/hooks/PreToolUse` (adaptador que chama o `guard.sh`); Windows: `.clinerules/hooks/PreToolUse.ps1` (regras reescritas em PowerShell); precisa ligar "Enable Hooks" | Porte feito; o `.ps1` **não foi executado no Windows** (só PowerShell 7 no macOS) ([hooks.md](hooks.md)) |
-| Hook Docker | `ensure-docker.sh` no início e antes de `gradlew`/`docker` | Passo manual em `/continuar.md` e `/executar-plano.md` | Checklist |
+| Hook Docker (obsoleto) | `ensure-docker.sh` virou no-op | Nenhum passo | Nada a fazer |
 | Subagentes (Haiku) e revisores | `CLAUDE_CODE_SUBAGENT_MODEL=haiku`; agentes do `pr-review-toolkit` | Documentação: subagentes só na CLI/Desktop; na extensão VS Code, não confirmado | Você executa e revisa em sequência (`/revisar-tarefa.md`) |
 | Advisor (Opus) | `advisorModel: opus`, modelo principal `sonnet` | "Use different models for Plan and Act" (modelo forte no Plan) | Equivalente parcial |
 | Modos | não há modo de planejar separado | Plan (lê e discute, não edita) e Act (executa); `/deep-planning` | Use Plan para ler o plano e Act para executar |

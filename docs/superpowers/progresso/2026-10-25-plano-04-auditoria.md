@@ -2,6 +2,8 @@
 
 Tarefas 1 a 3 já estão na `main` (PR #15, mesclada com squash em 26/10). Continue numa **branch nova a partir da `main`** (ex.: `feat/auditoria-2`); a antiga `feat/auditoria` foi apagada. **Plano 4 NÃO está terminado**: este arquivo diz exatamente de onde continuar. Quem continuar deve ler antes `docs/guia-execucao-outra-ia.md` e `docs/superpowers/progresso/2026-10-25-plano-04a-sincronizacao.md` (limites aceitos, regras dos hooks, o que o 4A deixou).
 
+> **Nota (27/10/2026):** o projeto saiu do Docker/PostgreSQL (SQLite embutido; ver `docs/superpowers/plans/2026-10-27-adendo-plataforma-sqlite-sem-docker.md`). Na retomada, siga também `docs/superpowers/fluxo-de-entrega.md`; a Fase 0 (`2026-10-27-plano-00-pc-da-empresa.md`) vem antes. Menções a Testcontainers, compose e migrações V4+ neste arquivo são históricas.
+
 ## Estado por tarefa
 
 | Tarefa | Estado | Commit | Observações |
@@ -11,7 +13,7 @@ Tarefas 1 a 3 já estão na `main` (PR #15, mesclada com squash em 26/10). Conti
 | 3 Sinais de vencimento, responsável, passa-bola e cancelamento | Concluída. A revisão reprovou 1 Important (DoS na contagem de dias úteis com datas absurdas), corrigido na rodada seguinte | `0e34a05` + `35d7326` | A contagem em `UTIL` para ao passar de `pertoDoVencimentoDias + 1`; anos fora de 2000..2100 são ilegíveis; sem re-revisão separada (o teste de tempo passaria também no código antigo: pega só regressão grosseira) |
 | 4 a 9 | Não iniciadas (decisão do usuário em 26/10: parar após a Tarefa 3) | | Ordem do plano; **comece pela Tarefa 4** |
 
-Testes no último ponto verde conhecido: backend 744, 0 falhas (PostgreSQL real). Confirme com `cd app/backend && ./gradlew test` antes de seguir.
+Testes no último ponto verde conhecido: backend 745+, 0 falhas (SQLite real, desde a saída do Docker; era 744 com PostgreSQL). Confirme com `cd app/backend && ./gradlew test` antes de seguir.
 
 **Minor da revisão da Tarefa 3:** `JIRAUSER*`/conta de serviço saem `NAO_AUTORIZADO` (o brief fixa isso; decidir se a Tarefa 4 ou a tela rotula como autor desconhecido); empate de instante usa `<` estrito e a ordem do empate depende da entrada; texto ilegível de `VENCIMENTO_REMOVIDO` sem limite de tamanho; em `UTIL`, sábado com vencimento na sexta anterior dá distância 0 e conta como "perto"; `from=" "` contra `to=null` conta como troca; autorização avaliada duas vezes por sinal (duplicação trivial); faltam testes de vigência, de empate, de feriado em `UTIL` e de `to` ilegível.
 

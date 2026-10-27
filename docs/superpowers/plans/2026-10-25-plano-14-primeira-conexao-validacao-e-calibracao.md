@@ -10,7 +10,7 @@
 
 Todo código novo é testado **offline**, com respostas sintéticas em `src/test/resources/fixtures/validacao/` (hosts `.invalid`, nomes fictícios). **Nenhum teste automático toca o Jira real**, mesmo com a flag `true` (a tarefa `test` do Gradle fixa a flag em `false`, Plano 4A, T11). As etapas que falam com o Jira são **passos de runbook**, executados pela IA só com a flag ligada pelo usuário.
 
-**Stack (Tech Stack):** Kotlin 2 + Ktor 3.3.1, kotlinx.serialization (JSON), kaml (YAML estrito), PostgreSQL + Testcontainers 2.0.3, Ktor `MockEngine`.
+**Stack (Tech Stack):** Kotlin 2 + Ktor 3.3.1, kotlinx.serialization (JSON), kaml (YAML estrito), SQLite embutido (testes com SQLite real em arquivo temporário), Ktor `MockEngine`.
 
 **Spec da fase (ler primeiro):** `docs/superpowers/specs/2026-10-25-spec-fase-14-primeira-conexao-validacao-e-calibracao.md`. **Spec mestra:** `docs/superpowers/specs/2026-10-24-painel-squads-kotlin-react-design.md` (seções 3, 4.2 "Heurísticas", 4.6 "Oráculo de números", 5.5, 9, 10 e 11). Documentos de base: `docs/jira/checklist-primeira-conexao.md`, `docs/jira/runbook-sincronizacao.md`, `docs/jira/matriz-compatibilidade.md`. Lacunas de origem: `docs/superpowers/cobertura-do-projeto.md`, C2, A6 e M6.
 
@@ -34,6 +34,7 @@ Todo código novo é testado **offline**, com respostas sintéticas em `src/test
 
 ## Restrições globais (Global Constraints)
 
+- **Plataforma (adendo de 27/10, `plans/2026-10-27-adendo-plataforma-sqlite-sem-docker.md`):** SQLite embutido, sem Docker e sem servidor de banco; o adendo vence qualquer menção antiga a PostgreSQL, Docker ou Testcontainers. SQL novo segue a tradução da seção 2 do adendo (instantes em `INTEGER` ms UTC, datas em `TEXT` ISO, listas em JSON com `json_each`, helpers de `db/SqlSupport.kt`). Comandos de terminal: Windows 11 PowerShell (principal), por exemplo `cd app\backend; .\gradlew.bat test` e `cd app\frontend; pnpm test`; em `sh`, `cd app/backend && ./gradlew test`. Flags do Jira e de escrita só valem no `app/.env`.
 - **A flag é a única trava, e só o usuário a muda.** A IA executora **nunca** liga `JIRA_LIVE_ENABLED`, nem dentro de um comando. Na Tarefa 1 ela **pergunta** ao usuário e **espera**. Com a flag `false`, nenhuma etapa de runbook deste plano roda; as tarefas de código seguem offline.
 - **Nenhum teste automático acessa o Jira real**, mesmo com a flag `true`. Testes usam fixtures sintéticas e `MockEngine`.
 - **Primeira conexão segue o checklist**, na ordem, uma instância por vez, com os limites dele (`maxResults=1` no Passo 3, uma issue no Passo 4). **Pare no primeiro 401, 403, 429, 5xx ou CAPTCHA**: não repetir, não trocar credencial; relatar ao usuário e esperar.
@@ -89,7 +90,7 @@ HANDOFF.md, docs/superpowers/plans/2026-10-24-indice-dos-planos.md
   - "Eu (usuário) ligo a flag `JIRA_LIVE_ENABLED=true` agora, na instância Samsung DC, e a IA segue o checklist (Recomendada)": o usuário exporta a flag e o token no ambiente dele (terminal ou `.claude/settings.local.json`, nunca arquivo versionado) e reabre a sessão; consequência: a IA executa os Passos 1 a 5 na ordem, parando no primeiro erro.
   - "Eu (usuário) ligo a flag, mas eu mesmo rodo as consultas e passo as respostas salvas à IA": consequência: a IA só roda as ferramentas offline sobre os arquivos que o usuário colocar em `$HOME/painel-validacao/`.
   - "Ainda não": consequência: o bloco 14a para aqui; registrar no `HANDOFF.md` a pendência com data e seguir com a sequência principal.
-- [ ] **Passo 7: Conferir** (só depois do "sim"): `JIRA_LIVE_ENABLED` vale `true` **no ambiente que o usuário configurou** (a IA lê, não escreve); o token está só em variável de ambiente; `git status` limpo de arquivos de config real. Se algo falhar, parar e relatar.
+- [ ] **Passo 7: Conferir** (só depois do "sim"): `JIRA_LIVE_ENABLED` vale `true` **no `app/.env` que o usuário configurou** (a flag só vale ali; a IA lê, não escreve); o token está só no `app/.env` (fora do git); `git status` limpo de arquivos de config real. Se algo falhar, parar e relatar.
 
 ---
 

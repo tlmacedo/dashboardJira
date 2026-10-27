@@ -57,7 +57,7 @@ Esta fase fecha a identidade visual com os ativos oficiais, quando o usuário os
 
 **Dados pessoais.** Registros de treinamento e de entrega só com papéis, contagens e datas.
 
-**Ambiente.** Docker ativo para os testes do backend; comentários e commits em pt-BR.
+**Ambiente.** Sem Docker (testes do backend só com JDK 21); comentários e commits em pt-BR.
 
 ### 3.2 Restrições específicas desta fase
 

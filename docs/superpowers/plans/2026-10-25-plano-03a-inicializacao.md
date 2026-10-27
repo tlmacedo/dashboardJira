@@ -1,5 +1,7 @@
 # Inicialização da aplicação (Plano 3A, a "Tarefa 0" do Plano 3) — Plano de implementação
 
+> **Nota (27/10):** executado antes da saída do Docker/PostgreSQL; o banco hoje é SQLite (ver `plans/2026-10-27-adendo-plataforma-sqlite-sem-docker.md`). Onde o texto abaixo diz PostgreSQL, Docker ou Testcontainers, vale o adendo.
+
 > **Para executores:** USE superpowers:subagent-driven-development (recomendado) ou superpowers:executing-plans. Os passos usam caixas `- [ ]`.
 
 **Objetivo:** Ligar na subida do app as peças já entregues (calendário, papéis, banco, cliente Jira) e fechar as lacunas apontadas pelas revisões finais dos Planos 1 e 2, para que o Plano 3 (card Tempo em status) só consuma um contexto pronto.

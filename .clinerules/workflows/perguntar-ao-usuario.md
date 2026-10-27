@@ -4,9 +4,9 @@ Regra global do usuário e regra 4 do `CLAUDE.md`: **toda dúvida, pendência, f
 
 ## Quando perguntar
 
-- Ação irreversível ou destrutiva (apagar branch, reescrever histórico, `docker compose down -v`).
+- Ação irreversível ou destrutiva (apagar branch, reescrever histórico, apagar `app/data/painel.db` com dados que não sejam de demonstração).
 - Segurança que o plano não resolve.
-- Efeito fora do repositório: merge, push em branch compartilhada, publicação, reiniciar o Docker Desktop.
+- Efeito fora do repositório: merge, push em branch compartilhada, publicação, configuração do repositório no GitHub.
 - Decisão de produto que muda o que é construído.
 - Plano tão quebrado que todo caminho é palpite.
 - Qualquer necessidade de acessar o Jira (a resposta padrão é "não").

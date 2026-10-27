@@ -10,7 +10,7 @@ Esta spec é autossuficiente: quem a lê não precisa do histórico das conversa
 
 ## 1. Intenção e porquê
 
-O app Python atual (`legacy/`) tem cards de trabalho e de resultado (Abertas, Negligenciadas, Fechadas, Metas, Negativas, Riscos, Previsão, Épicos) com números que divergem entre telas (fuso UTC × Manaus, contagens duplicadas, "concluída" só pelo status) e sem atraso justificado. Esta fase os recria sobre os dados já sincronizados no PostgreSQL, com **uma regra só** para "dia", "concluída" e "no prazo" em todas as telas, percentis por tipo de issue, eventos contados pela data do changelog e previsão Monte Carlo com taxa de chegada.
+O app Python atual (`legacy/`) tem cards de trabalho e de resultado (Abertas, Negligenciadas, Fechadas, Metas, Negativas, Riscos, Previsão, Épicos) com números que divergem entre telas (fuso UTC × Manaus, contagens duplicadas, "concluída" só pelo status) e sem atraso justificado. Esta fase os recria sobre os dados já sincronizados no SQLite, com **uma regra só** para "dia", "concluída" e "no prazo" em todas as telas, percentis por tipo de issue, eventos contados pela data do changelog e previsão Monte Carlo com taxa de chegada.
 
 Ela também cria o **modelo de leitura único** (`IssueSnapshot` e `WorkStore`), as métricas transversais (`Fluxo`) e a **rota genérica de card** (`CardDeLeitura`/`rotaDeCard`), que as Fases 6 e 7 reaproveitam.
 
@@ -52,7 +52,7 @@ Ela também cria o **modelo de leitura único** (`IssueSnapshot` e `WorkStore`),
 - **Fuso America/Manaus** para todo "dia"; **dias úteis por padrão**, `unit=corrido` alterna e fica na URL; semana = segunda a domingo de Manaus.
 - **Interface:** temas Claro, Escuro e Sidia; pt-BR e inglês completos (teste de paridade de chaves); WCAG AA; a cor nunca é o único sinal (`✓`, `●`, `▲` com texto); foco e `Esc` na gaveta; CSV com neutralização de fórmula.
 - **Dados pessoais:** fixtures só com nomes fictícios; nunca editar nem commitar configs reais.
-- **Banco real nos testes** (Testcontainers); **fail-closed** em produção (YAML real obrigatório; `.exemplo` só em dev).
+- **Banco real nos testes** (SQLite em arquivo temporário); **fail-closed** em produção (YAML real obrigatório; `.exemplo` só em dev).
 - Conversa e comentários em pt-BR; commits em Conventional Commits pt-BR (`feat(cards): ...`).
 
 ### Restrições técnicas da fase
@@ -88,7 +88,7 @@ Ela também cria o **modelo de leitura único** (`IssueSnapshot` e `WorkStore`),
 
 ## 5. O que fica para quem implementa
 
-- Estrutura interna dos calculadores e do `PostgresWorkStore`, com as assinaturas exatas do plano.
+- Estrutura interna dos calculadores e do `SqliteWorkStore`, com as assinaturas exatas do plano.
 - Biblioteca de gráficos (no máximo dois gráficos por tela), textos de i18n e layout fino dentro do kit (`CardPage`, `KpiCard`, `DrillDrawer`).
 - Mock de desenvolvimento do Vite (dados fictícios só no servidor de dev).
 - Conferir no `legacy/` cada fórmula antes de aceitar um teste de compatibilidade.
@@ -134,7 +134,7 @@ Ela também cria o **modelo de leitura único** (`IssueSnapshot` e `WorkStore`),
 | `StatusMap`, `StatusCategory`, `UnmappedStatusException` | `domain/StatusMap.kt` (Plano 3) |
 | `Percentiles.of/median`, `TimeUnitMode { UTIL, CORRIDO }` | `domain/Percentiles.kt`, `domain/TimeInStatusCalculator.kt` (Plano 3) |
 | `BusinessCalendar.businessDays/calendarDays/localDate/isBusinessDay` | `time/BusinessCalendar.kt` (Plano 1) |
-| `ChangeEventRecord`, `ChangelogParser`, `PostgresIssueStore.upsert`, `OsVersionExtrator` | `sync/` (Plano 3) |
+| `ChangeEventRecord`, `ChangelogParser`, `SqliteIssueStore.upsert`, `OsVersionExtrator` | `sync/` (Plano 3) |
 | `AvisoDto` (com `params` desde o 4A), `DrillRow` | `cards/TempoEmStatusDto.kt` (Plano 3) |
 | `Visibility.visibleUserIds`, `RoleDirectory.membersOf/squadOf/squadsLedBy`, `Principal`, `Role` | `security/` (Plano 1) |
 | `AccessLog.record`, `testContextComBanco` | `db/AccessLog.kt`, testes (Plano 3) |
@@ -144,7 +144,7 @@ Ela também cria o **modelo de leitura único** (`IssueSnapshot` e `WorkStore`),
 | `DadosDeDemonstracao`, `DASHBOARD_DEMO_DATA` | Plano 4A (Tarefa 10) |
 | `shared/csv.ts` (`linhaFiltrosCsv`), `Shell`, `t()` | frontend (Planos 3 e 4) |
 
-Nomes que esta fase **produz** e as Fases 6 e 7 consomem: `IssueSnapshot`, `WorkStore`/`PostgresWorkStore`, `Fluxo` (inclusive `AMOSTRA_MINIMA` e `avisosDeAmostra`), `MonteCarlo`, `FiltrosDeCard`, `Escopo`/`escopoDe`, `CardDeLeitura`/`rotaDeCard`, `NoPrazo.noUniverso` e `NoPrazo.calcular` (regra única de "no prazo"), `WorkStore.candidatasNoPrazo` (única leitura das candidatas, usada por Fechadas e por `MetasCalculator.calcular(candidatasNoPrazo, resolvidasNoPeriodo, ...)`), `NoPrazo.classificar`, `ConsultaDeTrabalho.vencimentoDe/vencimentoAte`, `PrevisaoDeTermino`, kit `CardPage`/`KpiCard`/`useCard`/`Filtros`/`shared/DrillDrawer`.
+Nomes que esta fase **produz** e as Fases 6 e 7 consomem: `IssueSnapshot`, `WorkStore`/`SqliteWorkStore`, `Fluxo` (inclusive `AMOSTRA_MINIMA` e `avisosDeAmostra`), `MonteCarlo`, `FiltrosDeCard`, `Escopo`/`escopoDe`, `CardDeLeitura`/`rotaDeCard`, `NoPrazo.noUniverso` e `NoPrazo.calcular` (regra única de "no prazo"), `WorkStore.candidatasNoPrazo` (única leitura das candidatas, usada por Fechadas e por `MetasCalculator.calcular(candidatasNoPrazo, resolvidasNoPeriodo, ...)`), `NoPrazo.classificar`, `ConsultaDeTrabalho.vencimentoDe/vencimentoAte`, `PrevisaoDeTermino`, kit `CardPage`/`KpiCard`/`useCard`/`Filtros`/`shared/DrillDrawer`.
 
 **Cenário de teste TRB-1** (relógio sexta 30/10/2026, 08:00 de Manaus; feriados 12/10 e 02/11; pessoas `ana`, `bruno` do Alfa, `carla` do Beta, `lider.alfa`, `coord.um`, `gerente.exemplo`): definido por inteiro no plano, antes do bloco 5a. É a base de todos os números esperados.
 

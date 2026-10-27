@@ -9,7 +9,7 @@ Porte do comando `/continuar` do Claude Code (`.claude/commands/continuar.md`). 
    - `git fetch`
    - `git branch -r --no-merged origin/main`
    - `gh pr list` (se o `gh` existir; senão, diga que não deu para ver as PRs)
-3. Confira o ambiente. macOS/Linux: `docker info` (se parado, `sh .claude/hooks/ensure-docker.sh` e espere). Windows PowerShell: `docker info`; se parado, abra o Docker Desktop com `Start-Process "C:\Program Files\Docker\Docker\Docker Desktop.exe"` e espere `docker info` responder (`do { Start-Sleep 5; docker info *> $null } until ($LASTEXITCODE -eq 0)`); não use `sh`/`bash`. Diga se o hook do Cline está ligado ("Enable Hooks" e `.clinerules/hooks/PreToolUse` executável); se não estiver, avise que as proibições dependem só de você.
+3. Confira o ambiente (não há Docker nem banco a iniciar): `java -version` deve mostrar 21 e `git status` deve estar limpo; Windows PowerShell: use `;` no lugar de `&&` e não use `sh`/`bash`. Diga se o hook do Cline está ligado ("Enable Hooks" e `.clinerules/hooks/PreToolUse.ps1` no Windows); se não estiver, avise que as proibições dependem só de você.
 4. Leia o arquivo de progresso do plano em andamento, se existir (`docs/superpowers/progresso/*.md`), e diga qual foi a última tarefa concluída.
 5. Responda em poucas linhas, em pt-BR:
    - onde estamos (branch, último commit, plano e tarefa);

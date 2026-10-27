@@ -19,7 +19,7 @@ Objetivo: quem continuar a execução dos planos (a partir do Plano 4A) deve ter
 
 ## 2. O que já existe (não refaça)
 
-Planos 1, 2, 3A e 3 estão **mesclados na `main`** (PRs #5 a #9). Há backend Ktor (`app/backend`, pacote `br.sidia.painel`), frontend React (`app/frontend`), PostgreSQL com Flyway (V1 a V3), Docker e compose. Itens-chave:
+Planos 1, 2, 3A, 3, 3B (saída do Docker), 4A e as Tarefas 1 a 3 do Plano 4 estão **mesclados na `main`** (PRs #5 a #19). Há backend Ktor (`app/backend`, pacote `br.sidia.painel`), frontend React (`app/frontend`), SQLite em arquivo com Flyway (migração única V1; a próxima é a V2), sem Docker. Itens-chave:
 
 | Peça | Onde | Regra a respeitar |
 |---|---|---|
@@ -35,12 +35,12 @@ Planos 1, 2, 3A e 3 estão **mesclados na `main`** (PRs #5 a #9). Há backend Kt
 
 ## 3. Ambiente e comandos
 
-- Backend: `cd app/backend && ./gradlew test` (Kotlin 2.2, Ktor 3.3, Testcontainers 2.0; **Docker ativo**).
+- Backend: `cd app/backend && ./gradlew test` (Kotlin 2.2, Ktor 3.3, SQLite; só JDK 21, **sem Docker**).
 - Frontend: `cd app/frontend && pnpm install && pnpm vitest run && pnpm build` (pnpm; dependências em versões fixas).
-- Subir tudo: ver `app/README.md` (`POSTGRES_PASSWORD` obrigatória e descartável, nunca em arquivo versionado).
+- Subir tudo: `app/iniciar.ps1` (Windows) ou `app/iniciar.sh`; ver `app/README.md`. Variáveis em `app/.env` (copiado de `app/.env.example`); **a flag do Jira vale só ali**.
 - Flags: `JIRA_LIVE_ENABLED=false` e `DASHBOARD_DEV_MODE=true` por padrão. `DASHBOARD_DEV_MODE=true` = sem login, principal `dev` com papel GERENTE, faixa vermelha na tela.
-- Se o Docker travar (daemon responde 500): peça ao usuário autorização antes de reiniciar o Docker Desktop (isso derruba outros contêineres dele).
-- **Windows 11 (PowerShell):** backend `cd app\backend; .\gradlew.bat test`; frontend `cd app\frontend; pnpm install; pnpm vitest run; if ($?) { pnpm build }`; Docker `docker info` (o `ensure-docker.sh` não roda no Windows: abra o Docker Desktop e espere); senha do banco só na sessão (`$env:POSTGRES_PASSWORD='<descartável>'`). No PowerShell 5.1 não há `&&`: use `;` e confira `$?`. `~` = `%USERPROFILE%`. Lista completa em `docs/ferramentas-claude-para-o-cline/README.md`.
+- Antes de qualquer plano, no PC da empresa, execute a Fase 0: `docs/superpowers/plans/2026-10-27-plano-00-pc-da-empresa.md` (proxy, certificado da empresa, espelhos, testes, subida).
+- **Windows 11 (PowerShell):** backend `cd app\backend; .\gradlew.bat test`; frontend `cd app\frontend; pnpm install --frozen-lockfile; pnpm vitest run; if ($LASTEXITCODE -eq 0) { pnpm build }`. No PowerShell 5.1 não há `&&`: use `;` e confira `$LASTEXITCODE`. `~` = `%USERPROFILE%`. Lista completa em `docs/ferramentas-claude-para-o-cline/README.md`.
 
 ## 4. Como executar um plano (substitui as skills/subagentes do Claude)
 
@@ -56,8 +56,8 @@ Para cada plano, em ordem:
    5. **Autorrevisão obrigatória** (checklist da seção 5). Corrija antes de commitar.
    6. Um commit por tarefa, mensagem em pt-BR no padrão Conventional Commits (`feat(...)`, `fix(...)`, `docs(...)`, `test(...)`), corpo curto. `git add` só dos arquivos da tarefa (nunca `git add -A`: o usuário mantém `legacy/.env.example` modificado e fora de commit).
    7. Atualize o arquivo de progresso.
-4. Ao terminar todas as tarefas: suíte completa das duas camadas, **revisão final do conjunto** (seção 5 inteira sobre `git diff main..HEAD`), varredura de dados pessoais (seção 6), atualização do `HANDOFF.md` e do índice dos planos, `git push -u origin <branch>` e `gh pr create --base main` com descrição em pt-BR (o que traz, segurança, verificação, pendências). Depois `git checkout main && git pull`.
-5. **Não mescle.** Informe o usuário, em pergunta com opções (mesclar com squash, esperar revisão dele, começar o próximo plano em outra branch), e só mescle quando ele mandar. Não empilhe branches sem necessidade: o próximo plano parte da `main` já atualizada.
+4. Ao terminar todas as tarefas: siga **`docs/superpowers/fluxo-de-entrega.md`** (seções 3 a 6): onda final, suíte completa sem cache, revisão final do conjunto em contexto limpo, varredura de dados pessoais (seção 6 deste guia), HANDOFF e progresso, push, PR, CI verde, merge (squash) quando as 7 condições forem verdadeiras, `git checkout main`, `git pull --ff-only origin main` e suíte na `main`.
+5. **Merge:** por decisão do usuário (27/10/2026), a IA mescla a PR do plano/bloco **por conta própria somente quando todas as condições da seção 5 do fluxo de entrega forem verdadeiras**; faltando qualquer uma, pergunta (pergunta com opções). Não empilhe branches: o próximo plano parte da `main` já atualizada e mesclada.
 
 ## 5. Checklist de revisão (use em cada tarefa e no conjunto)
 
@@ -84,12 +84,12 @@ Estes foram os defeitos que as revisões do Claude mais encontraram; procure-os 
 
 ## 7. Parar e perguntar ao usuário (em forma de pergunta com opções)
 
-Ação irreversível ou destrutiva; qualquer coisa de segurança que o plano não resolva; efeito fora do repositório (merge, push em branch compartilhada, publicação, reiniciar Docker); decisão de produto que muda o que é construído; plano tão quebrado que todo caminho é palpite; qualquer necessidade de acessar o Jira (**a resposta padrão é "não"**: a flag `JIRA_LIVE_ENABLED` só o usuário liga, e a primeira conexão real segue `docs/jira/checklist-primeira-conexao.md`).
+Ação irreversível ou destrutiva; qualquer coisa de segurança que o plano não resolva; efeito fora do repositório (push em branch compartilhada, publicação, mudar configuração do GitHub, merge fora das condições do fluxo de entrega); decisão de produto que muda o que é construído; plano tão quebrado que todo caminho é palpite; qualquer necessidade de acessar o Jira (**a resposta padrão é "não"**: a flag `JIRA_LIVE_ENABLED` só o usuário liga, e a primeira conexão real segue `docs/jira/checklist-primeira-conexao.md`).
 
 ## 8. Fim de sessão
 
-Atualize o `HANDOFF.md` (estado, próximo passo, pendências), faça push da branch e abra a PR (ou registre no progresso o motivo e a próxima ação). Não deixe commits só locais.
+Atualize o `HANDOFF.md` (estado, próximo passo, pendências), faça push da branch e abra a PR (em rascunho se o plano estiver incompleto; fluxo de entrega, seção 7). Não deixe commits só locais.
 
 ## 9. Ordem dos planos e dependências
 
-A ordem de execução e as dependências estão no índice (`docs/superpowers/plans/2026-10-24-indice-dos-planos.md`), que é a fonte única: ele lista as fases 4A a 15 (o Plano 4 depende do 4A; a 14 começa em parte logo após o 4A, quando o usuário ligar a flag). Cada plano é executável offline com fixtures; dados reais só depois que o usuário ligar `JIRA_LIVE_ENABLED` e seguir o checklist da primeira conexão.
+A ordem de execução e as dependências estão no índice (`docs/superpowers/plans/2026-10-24-indice-dos-planos.md`), que é a fonte única: ele lista a Fase 0 (PC da empresa) e as fases 9 a 16 na ordem de execução (a 14a vem logo após a 9, quando o usuário ligar a flag em `app/.env`). Cada plano é executável offline com fixtures; dados reais só depois que o usuário ligar `JIRA_LIVE_ENABLED` e seguir o checklist da primeira conexão.

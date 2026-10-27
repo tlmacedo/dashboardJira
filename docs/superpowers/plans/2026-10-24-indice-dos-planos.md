@@ -1,9 +1,10 @@
 # Índice dos planos do Painel de Squads
 
-Spec mestra: `docs/superpowers/specs/2026-10-24-painel-squads-kotlin-react-design.md`. Cada plano gera software testável sozinho. Os planos 1 a 3 (com o 3A) estão executados e mesclados; os planos 4A a 15 estão detalhados e aguardam execução, com as decisões em aberto resolvidas em 25/10 (usuário ou valor padrão recomendado, reversível). Como dependem das interfaces das fases anteriores, cada plano abre com uma seção "Estado herdado (confirmar na execução)" em que o executor confere os nomes na `main` antes da Tarefa 1.
+Spec mestra: `docs/superpowers/specs/2026-10-24-painel-squads-kotlin-react-design.md`. Cada plano gera software testável sozinho. **Estado em 27/10/2026:** executados e mesclados os planos 1, 2, 3A, 3, **3B (saída do Docker/PostgreSQL)**, **4A** e as Tarefas 1 a 3 do Plano 4; a **Fase 0 (PC da empresa)** e os planos 9, 14 a 16, 4 (Tarefas 4 a 9), 5 a 8 e 10 a 13 estão escritos e aguardam execução. **Todos os planos valem sobre SQLite embutido, sem Docker** (ver o adendo abaixo); os 8, 9, 12 e 13 foram reescritos para isso.
 
 ## Como começar (ClineSR ou outra IA)
 
+0. **Leia antes de tudo, nesta ordem:** `docs/superpowers/plans/2026-10-27-adendo-plataforma-sqlite-sem-docker.md` (a plataforma mudou: SQLite, sem Docker; vence qualquer trecho antigo de plano) e `docs/superpowers/fluxo-de-entrega.md` (revisão, validação, commit, push, PR, **merge** e volta à `main`, ao fim de cada plano/bloco). Num PC novo da empresa, execute primeiro a **Fase 0**: `2026-10-27-plano-00-pc-da-empresa.md`.
 1. **Leia primeiro `docs/guia-execucao-outra-ia.md`**, inteiro. Ele dá a ordem de leitura (`.clinerules/00-regras-do-projeto.md`, `CLAUDE.md`, `PRODUCT.md`, `HANDOFF.md`, spec mestra), o fluxo por tarefa (TDD, autorrevisão, um commit por tarefa), o arquivo de progresso em `docs/superpowers/progresso/` e quando parar e perguntar.
 2. Para a fase da vez, leia **a spec da fase** (coluna "Spec da fase" abaixo) e depois **o plano**. A spec diz o porquê, as regras que se aplicam, as decisões já tomadas, os critérios de aceitação e o glossário do que a fase consome; o plano diz o como, tarefa a tarefa.
 3. **Precedência em caso de conflito:** `CLAUDE.md` > `docs/guia-execucao-outra-ia.md` > spec da fase > plano > spec mestra de 24/10 (que ainda traz a regra antiga de acesso ao Jira, substituída em 25/10).
@@ -11,7 +12,9 @@ Spec mestra: `docs/superpowers/specs/2026-10-24-painel-squads-kotlin-react-desig
 
 **Ordem de execução** (cada item é um PR a partir da `main` atualizada; nada é mesclado sem o usuário mandar; o próximo só começa depois que o anterior estiver na `main`):
 
-4A Sincronização → 9 CI e endurecimento → 4 Auditoria → 5a Cards de trabalho → 5b Negativas, Riscos, Previsão e Épicos → 6a Capacidade e planejamento → 6b Worklog, posse, esforço e cobertura → 7a Checklist × Review e Integridade → 7b Distribuição, Governança e início → 10 Complementos de telas e filtros → 11 Auditoria completa e LGPD → 8 Preparação final (a remoção do `legacy/` só depois do "sim" do usuário ao documento de equivalência; sem ele, vira PR próprio depois) → 12 Operação em produção → 13 Implantação real → 14 Primeira conexão, validação e calibração → 15 Identidade final, inglês e entrega.
+**Fase 0 PC da empresa** → 9 CI e endurecimento → 14a Primeira conexão (quando o usuário ligar a flag em `app/.env`) → 4 Auditoria (Tarefas 4 a 9) → 5a Cards de trabalho → 5b Negativas, Riscos, Previsão e Épicos → 6a Capacidade e planejamento → 6b Worklog, posse, esforço e cobertura → 7a Checklist × Review e Integridade → 7b Distribuição, Governança e início → 10 Complementos de telas e filtros → 11 Auditoria completa e LGPD → 14b Validação e calibração dos cards (depois do 7) → 8 Preparação final (a remoção do `legacy/` só depois do "sim" do usuário ao documento de equivalência; sem ele, vira PR próprio depois) → 12 Operação em produção → 13 Implantação real → 15 Identidade final, inglês e entrega. O **Plano 16** (escrita no Jira pelo painel) é futuro: só com decisão do usuário.
+
+**Por que a 9 e a 14a vêm antes do restante da Auditoria:** a 9 cria o CI (hoje não existe `.github/`), que passa a ser condição do merge automático; a 14a calibra campos, status e vínculos com o Jira real logo cedo, antes de seis planos de cards que dependem desses nomes. Argumento contra: a 14a depende de o usuário ligar a flag e de a rede da empresa estar liberada; se isso atrasar, pule para o Plano 4 (que roda com fixtures) e volte à 14a quando puder, registrando o `Ruling`.
 
 Por quê: a 14 já pode começar em parte (bloco 14a, sincronização) logo depois do 4A, quando o usuário ligar a flag, em PR próprio e sem migração; a validação dos cards (bloco 14b) vem depois do 7, e a posição 14 da lista é a do fechamento.
 
@@ -21,12 +24,14 @@ Por quê: a 14 já pode começar em parte (bloco 14a, sincronização) logo depo
 
 | Fase | Plano | Spec da fase | Estado |
 |---|---|---|---|
+| 0 | `2026-10-27-plano-00-pc-da-empresa.md` | `../specs/2026-10-27-spec-fase-00-pc-da-empresa.md` | Escrito, aguardando execução (primeira a executar no PC da empresa) |
 | 1 | `2026-10-24-plano-01-fundacao.md` | — (spec mestra) | Executado (PR #6) |
 | 2 | `2026-10-24-plano-02-dicionario-e-jql.md` | — (spec mestra) | Executado (PR #7) |
 | 3A | `2026-10-25-plano-03a-inicializacao.md` | — (spec mestra) | Executado (PR #8) |
 | 3 | `2026-10-24-plano-03-tempo-em-status.md` | — (spec mestra) | Executado (PR #9) |
-| 4A (12 tarefas) | `2026-10-25-plano-04a-sincronizacao.md` | `../specs/2026-10-25-spec-fase-04a-sincronizacao.md` | Escrito, aguardando execução |
-| 4 | `2026-10-25-plano-04-auditoria.md` | `../specs/2026-10-25-spec-fase-04-auditoria.md` | Escrito, aguardando execução |
+| 3B | — (adendo) | `../specs/2026-10-27-spec-fase-3b-saida-do-docker-sqlite.md` | Executado (PRs #18 e #19): SQLite, sem Docker |
+| 4A (12 tarefas) | `2026-10-25-plano-04a-sincronizacao.md` | `../specs/2026-10-25-spec-fase-04a-sincronizacao.md` | Executado (PR #14) |
+| 4 | `2026-10-25-plano-04-auditoria.md` | `../specs/2026-10-25-spec-fase-04-auditoria.md` | Parcial: Tarefas 1 a 3 na `main` (PR #15); continuar pela Tarefa 4 |
 | 5 | `2026-10-25-plano-05-cards-trabalho-e-prazos.md` | `../specs/2026-10-25-spec-fase-05-cards-trabalho-e-prazos.md` | Escrito, aguardando execução |
 | 6 | `2026-10-25-plano-06-pessoas-planejamento-ausencias.md` | `../specs/2026-10-25-spec-fase-06-pessoas-planejamento-ausencias.md` | Escrito, aguardando execução |
 | 7 | `2026-10-25-plano-07-checklist-integridade-distribuicao-governanca.md` | `../specs/2026-10-25-spec-fase-07-checklist-integridade-distribuicao-governanca.md` | Escrito, aguardando execução |
@@ -79,20 +84,17 @@ Detalhada em `2026-10-25-plano-14-primeira-conexao-validacao-e-calibracao.md` (1
 Detalhada em `2026-10-25-plano-15-identidade-final-ingles-e-entrega.md` (11 tarefas): ativos de marca (ponto de parada, com caminho alternativo); logo saneado; fonte com alternativa de sistema; azul `#1329A0` único, moldura do tema Sidia e tema sem piscada; `DESIGN.md` verificado contra os tokens; guia e FAQ em inglês; treinamento por papel; sessões registradas; dono da manutenção e checklist de entrega; fechamento.
 
 ## Migrações
-O 4A ocupa V4, V5 e V6. Os demais planos usam `V{n}` e **confirmam a próxima numeração livre na execução** (nunca editar migração mesclada); a tabela é a sequência esperada, na ordem de execução acima.
+Desde 26/10 (saída do Docker/PostgreSQL) existe **uma só migração, a `V1__base.sql`**, com o esquema final (as antigas V4 a V6 do 4A estão incorporadas nela). **A próxima é a `V2`.** Os rótulos "V7" a "V13" que ainda aparecem nos planos são apenas nomes de ordem: na execução, confirme o próximo número livre com `ls app/backend/src/main/resources/db/migration` e nunca edite migração já mesclada. A tabela é a sequência esperada, na ordem de execução acima.
 
-| Migração | Plano | Observação |
+| Ordem | Plano | Observação |
 |---|---|---|
-| V4 | 4A, Tarefa 2 | `V4__sincronizacao.sql` |
-| V5 | 4A, correção da Tarefa 2 | `V5__marcador_de_falhas.sql` |
-| V6 | 4A, Tarefa 12 | `V6__vinculos_entre_issues.sql` |
-| V7 | 5a | campos de trabalho |
-| V8 | 6b | worklog por instância |
-| V9 | 7b | decisão de distribuição |
-| V10 | 10 | campos do dicionário |
-| V11 | 11 | condicional (ponto de parada da Tarefa 3, ou remoção de `person`) |
-| V12 | 8 | condicional (índices de leitura, só se a Tarefa 6 pedir) |
-| V12 ou V13 | 12 | execução de backup: V12 se a do 8 não existir, V13 se existir |
-| próximo livre | 16 | escrita no Jira (futuro) |
+| 1ª | 5a | campos de trabalho (provável `V2`) |
+| 2ª | 6b | worklog por instância |
+| 3ª | 7b | decisão de distribuição |
+| 4ª | 10 | campos do dicionário |
+| 5ª | 11 | condicional (ponto de parada da Tarefa 3, ou remoção de `person`) |
+| 6ª | 8 | condicional (índices de leitura, só se a Tarefa 6 pedir) |
+| 7ª | 12 | execução de backup |
+| 8ª | 16 | escrita no Jira (futuro) |
 
-Sem migração: 9, 4, 13, 14 e 15. Se a V11 não for criada, o Plano 8 usa V11; blocos em branches paralelas renumeram a migração do PR que mesclar depois, antes do merge.
+Sem migração: 0, 9, 4 (Tarefas 4 a 9), 13, 14 e 15. Blocos em branches paralelas renumeram a migração do PR que mesclar depois, antes do merge. Em SQLite não existe `ALTER COLUMN`: mudança de tipo ou restrição recria a tabela dentro da migração (adendo, seção 2).

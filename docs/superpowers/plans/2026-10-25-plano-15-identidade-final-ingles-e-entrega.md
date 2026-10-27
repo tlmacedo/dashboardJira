@@ -31,6 +31,7 @@ Antes da Tarefa 1, o executor confere na `main` que as Fases 8, 9 e 14 (ao menos
 
 ## Restrições globais (Global Constraints)
 
+- **Plataforma (adendo de 27/10, `plans/2026-10-27-adendo-plataforma-sqlite-sem-docker.md`):** SQLite embutido, sem Docker e sem servidor de banco; o adendo vence qualquer menção antiga a PostgreSQL, Docker ou Testcontainers. SQL novo segue a tradução da seção 2 do adendo (instantes em `INTEGER` ms UTC, datas em `TEXT` ISO, listas em JSON com `json_each`, helpers de `db/SqlSupport.kt`). Comandos de terminal: Windows 11 PowerShell (principal), por exemplo `cd app\backend; .\gradlew.bat test` e `cd app\frontend; pnpm test`; em `sh`, `cd app/backend && ./gradlew test`. Flags do Jira e de escrita só valem no `app/.env`.
 - **Jira:** a única trava é `JIRA_LIVE_ENABLED` (regra 1 do `CLAUDE.md`); este plano não acessa o Jira. Capturas de tela e material de treinamento usam **só dados de demonstração** (`DASHBOARD_DEMO_DATA=true`, `DASHBOARD_DEV_MODE=true`, flag do Jira `false`).
 - **Nenhum ativo inventado.** Sem logo oficial, o menu mostra o nome "Painel de Squads" em texto (plano visual, seção 2). Sem a fonte Mark e a licença, vale a pilha de sistema (`system-ui`, `Segoe UI`, `Roboto`, `Helvetica Neue`). Nada é baixado de terceiros.
 - **Licença da fonte e visibilidade do repositório:** a fonte só entra no repositório se a licença permitir **e** o repositório for privado; caso contrário, segue o caminho alternativo do ponto de parada da Tarefa 1.
@@ -108,7 +109,7 @@ Sem logo (T1, terceira opção): criar só `Marca.tsx` com o texto, os testes `m
 
 ### Tarefa 3: Fonte da marca com alternativa de sistema
 
-**Arquivos:** Criar `theme/fontes.css`, `a11y/fonte.test.ts`; Modificar `theme/tokens.css` (`--fonte-texto`), `main.tsx` (importa `fontes.css`), `.gitignore` e `app/Dockerfile` (só no caminho "licença não permite cópia"); Teste backend `http/CabecalhosDeSegurancaTest.kt` (caso `cspContinuaComFontSelf`).
+**Arquivos:** Criar `theme/fontes.css`, `a11y/fonte.test.ts`; Modificar `theme/tokens.css` (`--fonte-texto`), `main.tsx` (importa `fontes.css`), e `.gitignore` (só no caminho "licença não permite cópia"); Teste backend `http/CabecalhosDeSegurancaTest.kt` (caso `cspContinuaComFontSelf`).
 
 **Interfaces:**
 - `@font-face { font-family: "Mark"; src: url("/fonts/mark-regular.woff2") format("woff2"); font-display: swap; }` e as variações recebidas (no máximo regular, médio e negrito); `--fonte-texto: "Mark", system-ui, "Segoe UI", Roboto, "Helvetica Neue", sans-serif`.
