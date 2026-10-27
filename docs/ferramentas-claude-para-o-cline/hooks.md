@@ -8,8 +8,6 @@ Configurados em `.claude/settings.json` (versionado):
 
 | Evento (Claude) | Quando | Script | O que faz |
 |---|---|---|---|
-| `SessionStart` (assíncrono) | Ao abrir a sessão | `.claude/hooks/ensure-docker.sh` | Se o Docker não responde, abre o Docker Desktop em segundo plano e espera até 120 s; com `POSTGRES_PASSWORD` definida, sobe o `postgres` do `app/docker-compose.yml` |
-| `PreToolUse` em `Bash(*gradlew*)` e `Bash(docker *)` | Antes de testes e comandos Docker | `ensure-docker.sh` | O mesmo, antes de precisar do banco |
 | `PreToolUse` em ferramentas MCP `*tlassian*` e `Bash` | Antes de cada comando | `.claude/hooks/guard.sh jira` | Bloqueia: ferramentas MCP do Atlassian; qualquer variável `JIRA_*` (exceto a própria flag); URL com `jira`/`atlassian`; ferramenta de rede (`curl`, `wget`, `ssh`...) junto da palavra Jira; `jiradash check`, `sync` ou `serve`; ligar `JIRA_LIVE_ENABLED` dentro do comando |
 | `PreToolUse` em `Write`, `Edit`, `NotebookEdit`, `Bash` | Antes de escrever ou rodar | `.claude/hooks/guard.sh arquivos` | Bloqueia editar `.env` (exceto `.env.example`/`.env.sample`) e `config/{equipes,ausencias,papeis,squads}.yaml`; bloqueia comandos que escrevem, copiam, removem ou versionam esses arquivos; bloqueia `git add -f`/`--force`. **Só o usuário altera** `.claude/settings*.json`, `*compose*override*` e **todo** `*compose*.y*ml` (inclusive `app/docker-compose.yml`): escrita pela IA bloqueada, leitura liberada. Caminho normalizado antes de casar; comando que cita esses arquivos é **negado por padrão** (só leitura conhecida passa); gravar texto que liga a flag em **qualquer** arquivo é bloqueado (detalhes abaixo) |
 
@@ -46,7 +44,7 @@ Vale nos três hooks (`guard.sh`, `PreToolUse` e `PreToolUse.ps1`), com **qualqu
 |---|---|---|
 | `guard.sh jira` + `guard.sh arquivos` (macOS/Linux) | `.clinerules/hooks/PreToolUse` (bash, executável): adaptador que chama o `guard.sh` e acrescenta os extras do Cline | **Testado no macOS** (`sh .clinerules/hooks/test-PreToolUse.sh`, 447 casos, 0 falhas em 26/10/2026) |
 | `guard.sh` (Windows) | `.clinerules/hooks/PreToolUse.ps1`: as regras do `guard.sh` **reescritas** em PowerShell, mais os extras do Cline, sem `jq`, `sh` nem `bash` | **Não executado no Windows.** Rodado só com PowerShell 7.5 no macOS (`test-PreToolUse.ps1`, 562 casos, 0 falhas em 26/10/2026). PowerShell 5.1 e Windows 11: **o ClineSR roda o teste primeiro** (abaixo) |
-| `ensure-docker.sh` no início da sessão e antes de `gradlew`/`docker` | Passo do workflow `/continuar.md` e de `/executar-plano.md` | Checklist manual. No Windows o script `.sh` não abre o Docker Desktop: veja o comando PowerShell no `README.md` |
+| (obsoleto) `ensure-docker.sh` | Nenhum | O projeto não usa mais Docker; o script virou no-op |
 
 ### O que os hooks do Cline bloqueiam (os dois, `PreToolUse` e `PreToolUse.ps1`)
 
@@ -118,6 +116,6 @@ O hook pode estar desligado, não existir no ClineSR, ou ser contornado por acid
 > 3. Nunca use `git add -A`, `git add .` sem conferir, nem `git add -f`/`--force`.
 > 4. Nunca exiba token, senha ou URL com credencial no terminal, em log, em erro ou em commit; nunca liste todas as variáveis de ambiente.
 > 5. Nunca reescreva um comando bloqueado para ele passar. Pare e relate ao usuário.
-> 6. Se o Docker estiver parado, inicie-o ou relate; nunca troque o PostgreSQL real por H2 ou mock.
+> 6. Sem Docker nem servidor de banco: o banco é SQLite em arquivo e os testes o usam de verdade; nunca troque por H2 ou mock.
 
 Checklist manual antes de cada comando que toca rede ou arquivo sensível: "este comando ou URL fala com o Jira?", "a flag é `true`?", "toca `.env` ou config real?", "vai para o git?". Qualquer dúvida: pergunta ao usuário com opções (`/perguntar-ao-usuario.md`).

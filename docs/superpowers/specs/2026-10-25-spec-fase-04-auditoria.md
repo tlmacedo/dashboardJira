@@ -61,7 +61,7 @@ Esta fase detecta essas alterações no changelog já gravado no banco (`change_
 - **Interface:** temas Claro, Escuro e Sidia; pt-BR e inglês completos; WCAG AA; a cor nunca é o único sinal (`✓` autorizado, `▲` auditoria/não autorizado, `●` alerta, sempre com texto).
 - **LGPD:** auditoria trata dados pessoais. Até a base legal ser confirmada com o DPO, usar só fixtures e o **modo de demonstração** (`DASHBOARD_DEMO_DATA=true`, entregue no Plano 4A, Tarefa 10, que traz casos fictícios para cada sinal).
 - **Dados pessoais:** só nomes fictícios em fixtures (`.invalid`); `change_event` guarda valor só dos campos permitidos; nunca editar nem commitar configs reais.
-- **Banco real nos testes** (Testcontainers); **fail-closed** em produção (YAML real obrigatório; `.exemplo` só em dev).
+- **Banco real nos testes** (SQLite em arquivo temporário); **fail-closed** em produção (YAML real obrigatório; `.exemplo` só em dev).
 - Conversa e comentários em pt-BR; commits em Conventional Commits pt-BR (`feat(auditoria): ...`).
 
 ### Restrições técnicas da fase
@@ -111,7 +111,7 @@ Esta fase detecta essas alterações no changelog já gravado no banco (`change_
 
 ## 5. O que fica para quem implementa
 
-- Estrutura interna dos detectores e do `PostgresAuditStore` (SQL parametrizado, eventos em lote), com as assinaturas exatas do plano.
+- Estrutura interna dos detectores e do `SqliteAuditStore` (SQL parametrizado, eventos em lote), com as assinaturas exatas do plano.
 - Textos de i18n dos códigos, motivos e avisos (pt-BR e inglês), e o layout fino das telas densas dentro do kit existente.
 - O mock de desenvolvimento do Vite (dados fictícios só no servidor de dev, fora do bundle).
 - Escolhas que o plano deixa abertas: a mais segura e reversível, registrada como `Ruling` no arquivo de progresso.
@@ -151,7 +151,7 @@ Esta fase detecta essas alterações no changelog já gravado no banco (`change_
 | Nome | Onde | O que é |
 |---|---|---|
 | `ChangeEventRecord`, `ChangelogParser` | `sync/ChangelogParser.kt` (Plano 3; `toEvents(issue, changelog, chaves)` desde o 4A) | Eventos do changelog; valor só de `status`, `assignee`, `resolution`, `duedate`, `labels`, `OS Version` |
-| `IssueStore`, `PostgresIssueStore` | `sync/IssueStore.kt` | Modelo de SQL; `issue` única por `(instance, key)`; `removida_em` desde o 4A |
+| `IssueStore`, `SqliteIssueStore` | `sync/IssueStore.kt` | Modelo de SQL; `issue` única por `(instance, key)`; `removida_em` desde o 4A |
 | `StatusMap`, `StatusCategory`, `UnmappedStatusException` | `domain/StatusMap.kt` | Mapa de status para categorias (`TODO`, `ACTIVE`, `WAIT`, `BLOCKED`, `DONE`) |
 | `BusinessCalendar` | `time/BusinessCalendar.kt` | Calendário de Manaus, dias úteis e corridos |
 | `RoleDirectory` (`rolesOf`, `squadOf`, `squadsLedBy`, `isReporterAuthorized`) | `security/RoleDirectory.kt` | Papéis com vigência por datas |
@@ -159,7 +159,7 @@ Esta fase detecta essas alterações no changelog já gravado no banco (`change_
 | `AccessLog` | `db/AccessLog.kt` | Registro de toda consulta |
 | `AvisoDto` (com `params`), `DrillRow` | `cards/TempoEmStatusDto.kt` | Avisos com código e gravidade; linhas de drill |
 | `ORDEM_NATURAL_DE_CHAVES` | `domain/` | Ordem natural de chaves de issue |
-| `testContextComBanco` | testes | Contexto com PostgreSQL (Testcontainers) |
+| `testContextComBanco` | testes | Contexto com SQLite real em arquivo temporário (`BancoEmArquivo`) |
 | `FiltroDeFicha`, `ctx.fichas` | Plano 4A (T3, T8) | Filtro de leitura pela ficha do card |
 | `DadosDeDemonstracao`, `DASHBOARD_DEMO_DATA` | Plano 4A (T10) | Dados fictícios com casos de cada sinal, para ver a tela sem Jira |
 | `PreparacaoDocsTest.cadaPassoDoChecklistConfirmaAFlag` | Plano 4A (T11) | Substituto de `cadaPassoDoChecklistExigeAutorizacaoExpressa` |

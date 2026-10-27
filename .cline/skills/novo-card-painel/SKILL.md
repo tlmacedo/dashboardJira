@@ -27,6 +27,6 @@ Skill própria do projeto. O card **Tempo em status** (Plano 3, `docs/superpower
 5. **Regras de negócio:** concluída = categoria done **e** `resolution`; fuso America/Manaus; dias úteis por padrão (corridos opcionais); relógio e calendário injetados; "no prazo" e "no prazo ajustado" lado a lado quando houver prazo.
 6. **Dado ruim não derruba o card:** issue inconsistente vira aviso com código e gravidade.
 7. **Tela:** filtros na URL, KPIs clicáveis que abrem a gaveta (drill), foco e `Esc` na gaveta, CSV com neutralização de fórmula, pt-BR e inglês completos, três temas com WCAG AA, símbolos (▲ ● ✓ ⏸) junto da cor, pessoas em ordem alfabética.
-8. **Testes:** TDD em cada camada; o backend usa PostgreSQL real (Testcontainers) e `MockEngine` para o Jira.
+8. **Testes:** TDD em cada camada; o backend usa SQLite real em arquivo temporário (`testContextComBanco`) e `MockEngine` para o Jira.
 
 Execute a implementação pelo workflow `/executar-plano.md` e revise com `/revisar-tarefa.md`.

@@ -75,7 +75,7 @@ As skills de terceiros foram escritas para o Claude Code (e outros agentes) e ci
 | superpowers `using-superpowers` | Manda carregar skills antes de qualquer resposta, inclusive perguntas | Não siga isso à risca: com o Gauss 3.7, carregar várias skills consome o contexto. Siga os workflows do projeto e carregue uma skill só quando ela acrescentar algo |
 | superpowers `subagent-driven-development`, `dispatching-parallel-agents` | Dependem de subagentes | Use `/executar-plano.md` (sequencial) |
 | superpowers `brainstorming`, `writing-plans` | Têm o próprio formato e local de spec/plano | Use `/escrever-plano.md` e o padrão de `docs/superpowers/` |
-| superpowers `finishing-a-development-branch` | Oferece mesclar ou descartar a branch | Use `/fim-de-branch.md`: **nunca mesclar nem apagar branch sem o usuário mandar** |
+| superpowers `finishing-a-development-branch` | Oferece mesclar ou descartar a branch | Use `/fim-de-branch.md`: **mescle só pelo fluxo de entrega (7 condições) e nunca apague branch com código fora da `main`** |
 | superpowers `using-git-worktrees` | Cria worktrees | Só com o usuário pedindo |
 | mattpocock `setup-matt-pocock-skills` | Escreve uma seção em `AGENTS.md`/`CLAUDE.md`, `docs/agents/` e configura rastreador de issues | **Não rode** sem o usuário pedir: o `CLAUDE.md` é a fonte da verdade do projeto |
 | mattpocock `to-tickets`, `triage`, `to-spec`, `pr` | Abrem issues ou PRs (`gh`) | Efeito fora do repositório: só com pergunta ao usuário |

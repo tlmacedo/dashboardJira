@@ -6,7 +6,7 @@
 
 **Arquitetura (Architecture):** Tudo é calculado na leitura sobre o `IssueSnapshot` (Plano 5), com detectores e calculadores puros e regras em YAML versionado. Checklist × Review parte dos pares de `TaskReview.pares(issues, vinculos)` do Plano 4 (pelo adaptador `toAuditIssue`), em que os `vinculos` (`ParDeChaves`) vêm já resolvidos pelo link "Blocks / is blocked by" (`ParesLidos` do Plano 4, a partir de `issue_link`, 4A Tarefa 12; nunca pelo `parentKey`), e filtra as tasks pelos tipos de checklist, para que Divergência e Checklist × Review usem o mesmo pareamento. A Integridade segue o desenho da Auditoria (detectores `fun interface`, sinais com gravidade, rota restrita e `access_log`). Distribuição e Rebalanceamento são motores puros sobre `Demanda`/`Capacidade` (Plano 6); só as **decisões** (aprovar, trocar, rejeitar) são gravadas numa tabela local, nunca no Jira. As telas de início compõem os calculadores existentes, e cada item leva ao card de destino com o mesmo número.
 
-**Stack (Tech Stack):** Kotlin 2 + Ktor 3.3.1, kaml (YAML estrito), PostgreSQL + Flyway + Testcontainers 2.0.3; React + TypeScript (Vite, Vitest, Testing Library, TanStack Query).
+**Stack (Tech Stack):** Kotlin 2 + Ktor 3.3.1, kaml (YAML estrito), SQLite embutido + Flyway (testes com SQLite real em arquivo temporário); React + TypeScript (Vite, Vitest, Testing Library, TanStack Query).
 
 **Spec:** `docs/superpowers/specs/2026-10-24-painel-squads-kotlin-react-design.md` (seções 2 "Antiobjetivos", 4.2 "Central de atenção" e "Heurísticas", 4.3, 4.6 "Subtask Review", 7.2 (12 sinais de integridade), 7.3, 8 item 7, 10). Inventário: `docs/analise/relatorio-cards-app-atual.md` (seções 4.1, 4.2, 4.12, 4.13, 4.17, 4.18; achados 2, 11, 12). Visual: `docs/design/plano-visual-frontend.md` (seções 4, 6.1, 6.5).
 
@@ -30,6 +30,7 @@ Antes da Tarefa 1, o executor confere estes nomes na `main` e, se mudaram, atual
 
 ## Restrições globais (Global Constraints)
 
+- **Plataforma (adendo de 27/10, `plans/2026-10-27-adendo-plataforma-sqlite-sem-docker.md`):** SQLite embutido, sem Docker e sem servidor de banco; o adendo vence qualquer menção antiga a PostgreSQL, Docker ou Testcontainers. SQL novo segue a tradução da seção 2 do adendo (instantes em `INTEGER` ms UTC, datas em `TEXT` ISO, listas em JSON com `json_each`, helpers de `db/SqlSupport.kt`). Comandos de terminal: Windows 11 PowerShell (principal), por exemplo `cd app\backend; .\gradlew.bat test` e `cd app\frontend; pnpm test`; em `sh`, `cd app/backend && ./gradlew test`. Flags do Jira e de escrita só valem no `app/.env`.
 - Nenhuma chamada ao Jira; fixtures e builders em memória. `JIRA_LIVE_ENABLED=false`. **Escrita no Jira continua desligada:** Distribuição e Rebalanceamento só sugerem; as decisões ficam numa tabela do painel.
 - **Integridade só para GERENTE** (COORDENADOR, SQUAD_LEADER e USUARIO → 403, também na Central) e **toda consulta é registrada** (200, 400, 403, 404); falha ao registrar → 503 sem dados. Aviso fixo "Indício, não prova" e "Validar a base legal com o DPO antes do uso real" em toda resposta e tela de Integridade.
 - **Sem ranking de pessoas:** tabelas por pessoa em ordem alfabética; nenhuma lista ordenada por pontos, score, carga ou atraso; a Distribuição mostra a sugestão e os fatores de cada candidato em ordem alfabética.
@@ -37,7 +38,7 @@ Antes da Tarefa 1, o executor confere estes nomes na `main` e, se mudaram, atual
 - Central de atenção: "Sem atualização" e "Paradas no status" são **dois itens separados**; cada item tem o mesmo número do card de destino e abre a mesma lista.
 - Todo número clicável abre as tasks que o compõem, com o mesmo tamanho; status sem mapeamento → 200 com aviso; agregados só do visível.
 - Fuso America/Manaus; dias úteis por padrão. Cor nunca é o único sinal; pt-BR e inglês; três temas.
-- Migração no próximo número livre. Docker ativo; banco real por Testcontainers. Commits Conventional Commits pt-BR (`feat(checklist): ...`, `feat(integridade): ...`, `feat(distribuicao): ...`, `feat(governanca): ...`, `feat(inicio): ...`); comentários em pt-BR.
+- Migração na próxima livre (hoje só existe a V1, então a V2; nunca editar a V1). Sem Docker: banco SQLite real em arquivo temporário (`testContextComBanco`/`BancoEmArquivo`); a suíte só exige JDK 21. Commits Conventional Commits pt-BR (`feat(checklist): ...`, `feat(integridade): ...`, `feat(distribuicao): ...`, `feat(governanca): ...`, `feat(inicio): ...`); comentários em pt-BR.
 
 ## Foco da revisão (Review Focus)
 
@@ -277,7 +278,7 @@ docs/analise/diferencas-esperadas-checklist-integridade-governanca.md
 **Arquivos:** Criar `resources/db/migration/V{n}__decisao_distribuicao.sql`, `distribuicao/DecisaoStore.kt`, `distribuicao/DistribuicaoRoutes.kt`, `distribuicao/DistribuicaoDto.kt`; Modificar `Application.kt`; Teste `distribuicao/DecisaoStoreTest.kt`, `distribuicao/DistribuicaoRoutesTest.kt`, `jira/SemEscritaNoJiraTest.kt`.
 
 **Interfaces:**
-- Migração: `decisao_distribuicao(id identity, instance text NOT NULL, tipo text NOT NULL CHECK (tipo IN ('DISTRIBUICAO','REBALANCEAMENTO')), issue_key text NOT NULL, sugerido text, escolhido text, decisao text NOT NULL CHECK (decisao IN ('APROVADA','TROCADA','REJEITADA')), motivo text, decidido_por text NOT NULL, decidido_em timestamptz NOT NULL, versao_regras text NOT NULL, chave_sugestao text NOT NULL UNIQUE)`; `chave_sugestao` = hash de (instance, tipo, issue_key, sugerido, versão, dia de Manaus).
+- Migração (arquivo `V{n}__decisao_distribuicao.sql`, `{n}` = próxima migração livre, hoje V2; nunca editar a V1): `decisao_distribuicao(id INTEGER PRIMARY KEY AUTOINCREMENT, instance TEXT NOT NULL, tipo TEXT NOT NULL CHECK (tipo IN ('DISTRIBUICAO','REBALANCEAMENTO')), issue_key TEXT NOT NULL, sugerido TEXT, escolhido TEXT, decisao TEXT NOT NULL CHECK (decisao IN ('APROVADA','TROCADA','REJEITADA')), motivo TEXT, decidido_por TEXT NOT NULL, decidido_em INTEGER NOT NULL /* ms UTC */, versao_regras TEXT NOT NULL, chave_sugestao TEXT NOT NULL UNIQUE)`; `chave_sugestao` = hash de (instance, tipo, issue_key, sugerido, versão, dia de Manaus).
 - Produz:
   ```kotlin
   enum class Decisao { APROVADA, TROCADA, REJEITADA }
@@ -285,7 +286,7 @@ docs/analise/diferencas-esperadas-checklist-integridade-governanca.md
       val motivo: String?, val decididoPor: String, val decididoEm: Instant, val versaoRegras: String)
   interface DecisaoStore { fun registrar(instance: String, r: RegistroDecisao, chaveSugestao: String): Boolean   // false = já decidida
       fun listar(instance: String, de: Instant, ate: Instant, issueKeys: Set<String>?): List<RegistroDecisao> }
-  class PostgresDecisaoStore(private val ds: DataSource) : DecisaoStore
+  class SqliteDecisaoStore(private val ds: DataSource) : DecisaoStore
   ```
   Rotas (liderança; Squad Leader só issues e pessoas do próprio squad):
   ```

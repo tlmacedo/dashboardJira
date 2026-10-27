@@ -6,7 +6,7 @@
 
 **Arquitetura (Architecture):** A trava é um objeto puro (`TravaDpo`) derivado **só do `Settings`** (aceite do DPO, modo dev e flag do Jira), nunca do conteúdo do banco; as rotas sensíveis a consultam dentro de `executarAuditado`, que responde 403 com `ErroDto("AGUARDANDO_ACEITE_DPO")` e grava `access_log`. Os sinais novos são detectores puros no mesmo molde do Plano 4 (`Detector` sobre `AuditTimeline`), alimentados por dois dados novos: o valor de `timeoriginalestimate`/`timeestimate` no `change_event` e a data de criação do worklog. A retenção passa a ter um prazo por categoria. O titular consulta os próprios dados por uma rota que só aceita o principal da chamada. Inventário, relatório e comunicação são documentos versionados com testes que os ligam ao esquema e ao código.
 
-**Stack (Tech Stack):** Kotlin 2.2.20 + Ktor 3.3.1, kaml, PostgreSQL 16 + Flyway + Testcontainers 2.0.3, Ktor `MockEngine`; React 19 + TypeScript (Vite, Vitest, Testing Library, TanStack Query).
+**Stack (Tech Stack):** Kotlin 2.2.20 + Ktor 3.3.1, kaml, SQLite embutido + Flyway (testes com SQLite real em arquivo temporário), Ktor `MockEngine`; React 19 + TypeScript (Vite, Vitest, Testing Library, TanStack Query).
 
 **Spec da fase (ler primeiro):** `docs/superpowers/specs/2026-10-25-spec-fase-11-auditoria-completa-e-lgpd.md`. **Spec mestra:** seções 3 ("Dados pessoais sensíveis"), 4.6 (retenção), 7.1, 7.2, 7.3, 10 ("a auditoria detecta cada sinal da seção 7"), 11 (LGPD). **Auditoria:** `docs/superpowers/cobertura-do-projeto.md` (lacunas C3 e C4; B.2 seções 3, 7.2, 11; B.5 LGPD).
 
@@ -20,11 +20,11 @@ Antes da Tarefa 1, conferir na `main` que os Planos 4A, 9, 4, 5, 6, 7 e 10 foram
 |---|---|
 | `Settings.fromEnv`, `booleano(env, nome, padrao)`, `retentionMonths` | `config/Settings.kt` (Plano 1) |
 | `executarAuditado(auditoria, ctx, bloco)` | `cards/RotaAuditada.kt` (Plano 4, T7) |
-| `CodigoSinal` (11 valores), `Sinal`, `Resultado`, `Detector`, `ContextoDeteccao`, `RegrasDeAuditoria`, `RegraSinal`, `MotivoAutorizacao`, `Autorizacao`, `AuditTimeline`, `AuditIssue`, `AuditStore`, `PostgresAuditStore`, `AuditCalculator` | `auditoria/` (Plano 4) |
+| `CodigoSinal` (11 valores), `Sinal`, `Resultado`, `Detector`, `ContextoDeteccao`, `RegrasDeAuditoria`, `RegraSinal`, `MotivoAutorizacao`, `Autorizacao`, `AuditTimeline`, `AuditIssue`, `AuditStore`, `SqliteAuditStore`, `AuditCalculator` | `auditoria/` (Plano 4) |
 | `auditoria.exemplo.yaml` (`sinais:` exige uma regra por código: `todoCodigoTemRegra`) | Plano 4, T1 |
 | `todoCodigoDetectadoNoCenarioCompleto`, `documentoCitaTodosOsCodigos` | Plano 4, T5 e T9 |
 | `ChangelogParser` com `CAMPOS_COM_VALOR = listOf("status", "resolution", "duedate", "labels", "OS Version")` (mais `assignee` normalizado); `ChangeEventRecord.changelogId` = chave + id do histórico + posição | `sync/ChangelogParser.kt` (Plano 3) |
-| `PostgresIssueStore.upsert`: `INSERT INTO change_event ... ON CONFLICT (issue_id, changelog_id) DO NOTHING` | `sync/IssueStore.kt` (Plano 3) |
+| `SqliteIssueStore.upsert`: `INSERT INTO change_event ... ON CONFLICT (issue_id, changelog_id) DO NOTHING` | `sync/IssueStore.kt` (Plano 3) |
 | `WorklogRecord(jiraId, autor, started, seconds)`, `WorklogParser`, `WorklogStore.porIssue`, tabela `worklog` com `instance` e `jira_id` | Plano 6, T10 |
 | `SinalIntegridade.ESTIMATIVA_AUMENTADA` (inativo em `integridade.exemplo.yaml`), aviso `SINAL_SEM_DADO`, `DetectoresDePrazoEFluxo` | Plano 7, T4 e T5 |
 | Rotas `/api/auditoria/*`, `/api/drill/auditoria`, `/api/cards/task-review`, `/api/drill/task-review` | Plano 4, T7 |
@@ -36,18 +36,19 @@ Antes da Tarefa 1, conferir na `main` que os Planos 4A, 9, 4, 5, 6, 7 e 10 foram
 | `AccessLog.listar` | Plano 7, T14 |
 | `ErroDto`, `CodigosDeMensagem` | Planos 9 (T4) e 10 (T9) |
 | `MeDto(userId, roles)` (`/api/me`), `nav.ts` | Planos 3 e 1 |
-| Último número de migração na `main` (esperado V10, do Plano 10) | `resources/db/migration/` |
+| Último número de migração na `main` (confirme com `ls`; hoje só existe a V1) | `resources/db/migration/` |
 
 ## Restrições globais (Global Constraints)
 
+- **Plataforma (adendo de 27/10, `plans/2026-10-27-adendo-plataforma-sqlite-sem-docker.md`):** SQLite embutido, sem Docker e sem servidor de banco; o adendo vence qualquer menção antiga a PostgreSQL, Docker ou Testcontainers. SQL novo segue a tradução da seção 2 do adendo (instantes em `INTEGER` ms UTC, datas em `TEXT` ISO, listas em JSON com `json_each`, helpers de `db/SqlSupport.kt`). Comandos de terminal: Windows 11 PowerShell (principal), por exemplo `cd app\backend; .\gradlew.bat test` e `cd app\frontend; pnpm test`; em `sh`, `cd app/backend && ./gradlew test`. Flags do Jira e de escrita só valem no `app/.env`.
 - **A única trava de acesso ao Jira é a flag `JIRA_LIVE_ENABLED`** (regra 1 do `CLAUDE.md`, 25/10). Este plano não acessa o Jira: tudo roda com fixtures e `MockEngine`. A trava do DPO **não** é uma trava de acesso ao Jira: ela só decide se as telas de Auditoria e Integridade mostram dados; nada aqui liga ou desliga a sincronização.
 - **A trava do DPO é decidida só por configuração** (`DASHBOARD_DPO_ACEITE`, `DASHBOARD_DPO_ACEITE_REF`, `DASHBOARD_DEV_MODE`, `JIRA_LIVE_ENABLED`), nunca olhando o banco. Fail-closed: qualquer valor ausente, vazio ou inválido = bloqueada fora do modo dev offline.
-- **Só o usuário (depois do parecer do DPO) liga o aceite.** Nenhuma IA define `DASHBOARD_DPO_ACEITE=true` em arquivo, comando ou compose; o `.env.example` e o compose trazem `false`.
+- **Só o usuário (depois do parecer do DPO) liga o aceite.** Nenhuma IA define `DASHBOARD_DPO_ACEITE=true` em arquivo (inclusive o `app/.env`, onde a flag só vale) ou comando; o `.env.example` traz `false`.
 - **Indício, não prova:** os sinais novos seguem o aviso fixo `INDICIO_NAO_PROVA`; Integridade continua só do gerente; Auditoria, de coordenação e gerente.
 - **Minimização:** o `change_event` só passa a guardar valor de campos numéricos de estimativa (segundos), nunca texto livre; o worklog continua sem comentário. Nenhum dado novo de pessoa além do que já existe (`author_ref`).
 - **Titular:** a rota de dados próprios só devolve dados do principal da chamada; nenhum parâmetro escolhe outra pessoa.
 - Toda rota nova grava `access_log` (inclusive 400, 403 e 404); falha ao gravar → 503.
-- **Migração:** uma só, `V{n}__dados_para_auditoria_completa.sql`, com `n` = próximo número livre (esperado V11). Seu conteúdo depende da resposta do ponto de parada da Tarefa 3. Nunca editar migração mesclada.
+- **Migração:** uma só, `V{n}__dados_para_auditoria_completa.sql`, com `n` = próxima migração livre (confirme com `ls app/backend/src/main/resources/db/migration`; hoje só existe a V1, então a V2; nunca editar a V1). Seu conteúdo depende da resposta do ponto de parada da Tarefa 3. Nunca editar migração mesclada.
 - Documentos sem nomes reais, hosts reais, tokens nem e-mails reais. Não afirmar base legal: o DPO decide; os documentos apresentam candidatas como perguntas.
 - Variáveis novas começam com `DASHBOARD_` ou `RETENTION_` (nunca `JIRA_`).
 - Comentários em pt-BR; commits Conventional Commits pt-BR (`feat(lgpd): ...`, `feat(auditoria): ...`, `docs(lgpd): ...`).
@@ -76,7 +77,7 @@ app/backend/src/main/kotlin/br/sidia/painel/
   db/Retention.kt
 app/config/{auditoria.exemplo.yaml, integridade.exemplo.yaml}
 app/frontend/src/{nav/nav.ts, shell/Menu.tsx, screens/MeusDados/, screens/Central/, shared/EstadoDaTela.tsx, i18n/}
-app/.env.example, app/docker-compose.yml, app/README.md
+app/.env.example, app/README.md
 docs/lgpd/{inventario-de-dados.md, relatorio-para-o-dpo.md, comunicacao-a-equipe.md, atendimento-ao-titular.md}
 docs/analise/diferencas-esperadas-auditoria.md, docs/jira/checklist-primeira-conexao.md
 ```
@@ -85,7 +86,7 @@ docs/analise/diferencas-esperadas-auditoria.md, docs/jira/checklist-primeira-con
 
 ### Tarefa 1: Trava do DPO no backend (fail-closed, só por configuração)
 
-**Arquivos:** Criar `lgpd/LgpdSettings.kt`, `lgpd/TravaDpo.kt`; Modificar `config/Settings.kt` (campo `lgpd`), `cards/RotaAuditada.kt` (`executarAuditado` mapeia `BloqueadoPeloDpoException`), as rotas de `auditoria/AuditoriaRoutes.kt` e `integridade/IntegridadeRoutes.kt`, `inicio/CentralCalculator.kt` (itens sensíveis), `tarefa/TarefaRoutes.kt` (campo `historico`), a rota `/api/me` (`MeDto`), `http/CodigosDeMensagem.kt`, `app/.env.example`, `app/docker-compose.yml` (`DASHBOARD_DPO_ACEITE: ${DASHBOARD_DPO_ACEITE:-false}`, sem `REF`); Teste `lgpd/TravaDpoTest.kt`, `lgpd/TravaDpoRoutesTest.kt`, `config/SettingsTest.kt`.
+**Arquivos:** Criar `lgpd/LgpdSettings.kt`, `lgpd/TravaDpo.kt`; Modificar `config/Settings.kt` (campo `lgpd`), `cards/RotaAuditada.kt` (`executarAuditado` mapeia `BloqueadoPeloDpoException`), as rotas de `auditoria/AuditoriaRoutes.kt` e `integridade/IntegridadeRoutes.kt`, `inicio/CentralCalculator.kt` (itens sensíveis), `tarefa/TarefaRoutes.kt` (campo `historico`), a rota `/api/me` (`MeDto`), `http/CodigosDeMensagem.kt`, `app/.env.example` (a chave do aceite sempre `false` e sem `REF`; o valor real vive só no `app/.env`, lido por `config/ArquivoEnv.kt`); Teste `lgpd/TravaDpoTest.kt`, `lgpd/TravaDpoRoutesTest.kt`, `config/SettingsTest.kt`.
 
 **Interfaces:**
 - Produz:
@@ -158,17 +159,17 @@ Registrar a resposta, a data e a opção no `HANDOFF.md` e no progresso. **Sem r
 
 **Interfaces:**
 - **Estimativas (opção A):** `CAMPOS_COM_VALOR` ganha `timeoriginalestimate` e `timeestimate`. Para esses dois campos o parser grava `from`/`to` **brutos** (segundos, como texto decimal), nunca `fromString`/`toString` (texto humanizado, como "1d 2h"). Valor não numérico → `null` (sem exceção).
-- **Regravar eventos já existentes:** o `INSERT` de `change_event` passa de `DO NOTHING` para `ON CONFLICT (issue_id, changelog_id) DO UPDATE SET from_value = EXCLUDED.from_value, to_value = EXCLUDED.to_value WHERE change_event.field = ANY(?) AND change_event.from_value IS NULL AND change_event.to_value IS NULL` (o array = os dois campos de estimativa). Nenhum outro campo é regravado; idempotente.
-- **Worklog (opções A e B):** `WorklogRecord` ganha `val criado: Instant?` (campo `created` do worklog do DC); tabela `worklog` ganha `criado_em timestamptz` (anulável); `WorklogParser` lê `created`; `WorklogStore` grava e lê.
+- **Regravar eventos já existentes:** o `INSERT` de `change_event` passa de `DO NOTHING` para `ON CONFLICT (issue_id, changelog_id) DO UPDATE SET from_value = EXCLUDED.from_value, to_value = EXCLUDED.to_value WHERE change_event.field IN (SELECT value FROM json_each(?)) AND change_event.from_value IS NULL AND change_event.to_value IS NULL` (o parâmetro é a lista JSON dos dois campos de estimativa, montada com `emJson()` de `db/SqlSupport.kt`; `DO UPDATE ... WHERE` e `EXCLUDED` funcionam no SQLite ≥ 3.24). Nenhum outro campo é regravado; idempotente.
+- **Worklog (opções A e B):** `WorklogRecord` ganha `val criado: Instant?` (campo `created` do worklog do DC); tabela `worklog` ganha `criado_em INTEGER` (anulável; milissegundos UTC, gravado com `setTimestamp`); `WorklogParser` lê `created`; `WorklogStore` grava e lê.
 - **Migração `V{n}__dados_para_auditoria_completa.sql`** (o conteúdo segue a resposta):
-  - A e B: `ALTER TABLE worklog ADD COLUMN criado_em timestamptz;`
+  - A e B: `ALTER TABLE worklog ADD COLUMN criado_em INTEGER;`
   - A: `UPDATE sync_state SET watermark = NULL;` (a próxima sincronização, **só quando o usuário ligar a flag**, refaz a carga com changelog e preenche os valores; ver custo na spec). Confirmar na execução que o cursor do `SyncStateStore.cursor` lê `sync_state.watermark`; se for outra coluna, zerar essa e registrar `Ruling`.
   - A, B e C: se `grep -rn "person" app/backend/src/main` não achar uso da tabela `person` (V1: `jira_ref`, `name`), `DROP TABLE IF EXISTS person;` (minimização: nome de pessoa sem finalidade). Se houver uso, não remover e registrar no inventário (T8).
   - C sem remoção de `person` aplicável: **não criar migração** (registrar no progresso).
 - Aviso informativo novo `HISTORICO_DE_ESTIMATIVA_INCOMPLETO` (`params["n"]`): eventos de estimativa sem valor ainda guardados (antes da nova carga). Entra em `CodigosDeMensagem` e no i18n.
 
 - [ ] **Passo 1: Testes que falham** (conforme a opção):
-  - A: `estimativaGuardaSegundosBrutos` (item `{"field":"timeoriginalestimate","from":"36000","fromString":"10h","to":"28800","toString":"8h"}` → `from="36000"`, `to="28800"`); `estimativaNaoNumericaViraNula`; `textoLivreContinuaSemValor` (`description` e `summary` → `from`/`to` nulos, como hoje); `regravaSoEstimativaSemValor` (evento antigo com valores nulos é preenchido; evento de `status` já gravado não muda; segunda gravação idêntica não muda nada); `cursorZeradoPelaMigracao` (`MigracaoDadosAuditoriaTest`: banco com V1..V8, cursor preenchido → nulo depois da migração; linhas preservadas).
+  - A: `estimativaGuardaSegundosBrutos` (item `{"field":"timeoriginalestimate","from":"36000","fromString":"10h","to":"28800","toString":"8h"}` → `from="36000"`, `to="28800"`); `estimativaNaoNumericaViraNula`; `textoLivreContinuaSemValor` (`description` e `summary` → `from`/`to` nulos, como hoje); `regravaSoEstimativaSemValor` (evento antigo com valores nulos é preenchido; evento de `status` já gravado não muda; segunda gravação idêntica não muda nada); `cursorZeradoPelaMigracao` (`MigracaoDadosAuditoriaTest`: banco migrado até a V1 (ou até a migração anterior à nova), cursor preenchido → nulo depois da migração; linhas preservadas).
   - A e B: `worklogGuardaCriacao` (`"created":"2026-10-20T15:00:00.000-0400"` → instante correto); `worklogSemCriacaoFicaNulo`; `migracaoAcrescentaCriadoEm`.
   - A, B e C: `tabelaPersonRemovidaQuandoSemUso` (só se a remoção se aplica).
   - `FlagDesligadaZeroRequisicoesTest` continua verde (a migração não faz requisição).
@@ -198,7 +199,7 @@ Registrar a resposta, a data e a opção no `HANDOFF.md` e no progresso. **Sem r
 
 ### Tarefa 5: Sinal "worklog retroativo" (opções A e B)
 
-**Arquivos:** Criar `auditoria/DetectoresDeWorklog.kt`; Modificar `auditoria/Sinais.kt` (`CodigoSinal.WORKLOG_RETROATIVO`), `auditoria/AuditModel.kt` (`AuditIssue` ganha `val worklogs: List<WorklogRecord> = emptyList()`), `auditoria/AuditStore.kt` (`PostgresAuditStore` lê os worklogs pela `WorklogStore`; `comEventos` inclui issues com worklog **criado** em `[de, ate)`), `auditoria/RegrasDeAuditoria.kt` (chave `worklogRetroativoDiasUteis`), `auditoria/AuditCalculator.kt`, `app/config/auditoria.exemplo.yaml`, i18n; Teste `auditoria/DetectoresDeWorklogTest.kt`, `auditoria/AuditStoreTest.kt`.
+**Arquivos:** Criar `auditoria/DetectoresDeWorklog.kt`; Modificar `auditoria/Sinais.kt` (`CodigoSinal.WORKLOG_RETROATIVO`), `auditoria/AuditModel.kt` (`AuditIssue` ganha `val worklogs: List<WorklogRecord> = emptyList()`), `auditoria/AuditStore.kt` (`SqliteAuditStore` lê os worklogs pela `WorklogStore`; `comEventos` inclui issues com worklog **criado** em `[de, ate)`), `auditoria/RegrasDeAuditoria.kt` (chave `worklogRetroativoDiasUteis`), `auditoria/AuditCalculator.kt`, `app/config/auditoria.exemplo.yaml`, i18n; Teste `auditoria/DetectoresDeWorklogTest.kt`, `auditoria/AuditStoreTest.kt`.
 
 **Interfaces:**
 - `object DetectoresDeWorklog { val todos: List<Detector> }` com `WORKLOG_RETROATIVO` (`AUDITORIA`, qualquer autor) quando, para um worklog com `criado` não nulo:
@@ -263,15 +264,15 @@ Registrar a resposta, a data e a opção no `HANDOFF.md` e no progresso. **Sem r
 
 **Interfaces:**
 - O inventário tem uma tabela com uma linha por `tabela.coluna` do esquema `public` (menos `flyway_schema_history`), com as colunas: `Tabela.coluna` | `Dado` | `Pessoal?` (`sim`, `indireto`, `não`) | `Finalidade` | `Origem` (Jira, painel, configuração) | `Quem vê` (papéis) | `Retenção` (variável de T7 ou "enquanto a issue existir") | `Base legal` (sempre "a definir pelo DPO"). Depois da tabela: os arquivos de configuração com dados de pessoas (`papeis.yaml`, `equipes.yaml`, `ausencias.yaml`, `squads.yaml`: o que guardam, onde ficam, quem edita), os logs do servidor (o que nunca entra: token, texto livre, e-mail) e as categorias que o painel **não** trata (comentários, descrição, e-mail, avatar, nome de exibição).
-- Teste (Testcontainers, banco migrado até a última versão):
-  - `todaColunaEstaNoInventario` (lê `information_schema.columns`; cada `tabela.coluna` aparece na tabela do documento; a mensagem de falha cita a coluna);
+- Teste (SQLite real em arquivo temporário, `testContextComBanco`/`BancoEmArquivo`, banco migrado até a última versão):
+  - `todaColunaEstaNoInventario` (lê `sqlite_master` e `pragma_table_info('tabela')`, que o SQLite oferece no lugar de `information_schema`; cada `tabela.coluna` aparece na tabela do documento; a mensagem de falha cita a coluna);
   - `nenhumaColunaInventariadaSumiu` (linha do documento sem coluna no banco → falha);
   - `colunaPessoalTemRetencaoEQuemVe`;
   - `baseLegalNaoAfirmada` (toda célula de base legal é "a definir pelo DPO");
   - `semDadosReais` (nenhum `@` fora de `.invalid`, nenhum `https://` fora de `.invalid`).
 
 - [ ] **Passo 1: Escrever o teste** e rodar `./gradlew test --tests '*InventarioDeDadosTest*'` → FALHA (documento inexistente).
-- [ ] **Passo 2: Escrever o inventário** a partir do banco migrado (listar as colunas pelo próprio teste ou por `\d+` num contêiner local).
+- [ ] **Passo 2: Escrever o inventário** a partir do banco migrado (listar as colunas pelo próprio teste ou por `\d+` no SQLite local (`pragma_table_info`/`sqlite_master`)).
 - [ ] **Passo 3: Rodar** → PASSA.
 - [ ] **Passo 4: Conferir** que `raw` (`issue.raw`) está descrito com o que o `SanitizadorRaw` remove e que `filters` (`access_log`) está descrito com o saneamento do `AccessLog`.
 - [ ] **Passo 5: Commit** `docs(lgpd): inventário dos dados tratados, verificado contra o esquema`.

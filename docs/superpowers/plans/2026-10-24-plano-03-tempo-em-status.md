@@ -1,5 +1,7 @@
 # Fatia vertical: card Tempo em status (Fase 3) — Plano de implementação
 
+> **Nota (27/10):** executado antes da saída do Docker/PostgreSQL; o banco hoje é SQLite (ver `plans/2026-10-27-adendo-plataforma-sqlite-sem-docker.md`). Onde o texto abaixo diz PostgreSQL, Docker ou Testcontainers, vale o adendo.
+
 > **Para executores:** USE superpowers:subagent-driven-development (recomendado) ou superpowers:executing-plans. Os passos usam caixas `- [ ]`.
 
 **Objetivo:** Entregar o card **Tempo em status** de ponta a ponta (sincronização simulada, cálculo, API com filtro por papel, detalhamento e tela), validando a arquitetura antes de portar os demais cards.

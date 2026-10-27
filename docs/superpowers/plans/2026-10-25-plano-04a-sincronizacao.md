@@ -1,5 +1,7 @@
 # Sincronização periódica com o Jira (Plano 4A) — Plano de implementação
 
+> **Nota (27/10):** executado antes da saída do Docker/PostgreSQL; o banco hoje é SQLite (ver `plans/2026-10-27-adendo-plataforma-sqlite-sem-docker.md`). Onde o texto abaixo diz PostgreSQL, Docker ou Testcontainers, vale o adendo.
+
 > **Para executores:** USE superpowers:subagent-driven-development (recomendado) ou superpowers:executing-plans. Os passos usam caixas `- [ ]`.
 
 **Objetivo (Goal):** Montar o `Syncer` em produção com **toda** a sincronização (carga inicial, incremental, reconciliação diária, retenção, agendador no ciclo de vida do Ktor e status), tendo como **única trava** de acesso ao Jira DC a flag `JIRA_LIVE_ENABLED` (o `LiveGuard` já existente): com `false` (padrão) nenhum caminho fala com o Jira (cliente, agendador, carga, reconciliação) e o status mostra "desligado pela flag"; só o usuário muda a flag para `true`, e então a sincronização periódica roda sozinha pelo agendador. A execução deste plano é 100% offline (MockEngine e fixtures), com prova de 0 requisições com a flag `false`, inclusive pelo agendador. Fecha com três complementos: **dados de demonstração** fictícios para ver o painel com números sem Jira, só em desenvolvimento (Tarefa 10), o **hook do Claude e o checklist alinhados à flag** (Tarefa 11) e os **vínculos entre issues** "Blocks / is blocked by" (`fields.issuelinks`) gravados em `issue_link`, que ligam cada Review (`Checklist Review`) à sua task para o card Task × Review do Plano 4 (Tarefa 12, executada por último). São 12 tarefas.

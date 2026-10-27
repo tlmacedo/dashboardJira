@@ -29,3 +29,5 @@ Filtros_Status_tool.txt.bak
 **/.kotlin/
 **/node_modules/
 **/dist/
+# Log do diagnóstico de conexão (contém dados pessoais do Jira)
+diagnostico_jira_*.txt

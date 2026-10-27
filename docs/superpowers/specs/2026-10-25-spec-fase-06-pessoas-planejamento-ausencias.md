@@ -48,7 +48,7 @@ A gestão do time TG-Basic precisa saber, por pessoa e por squad, **quanto traba
 - **Auditoria de consulta:** toda rota de dados grava `access_log` (inclusive as negadas); falha ao gravar → 503 sem dados.
 - **DPO antes do uso real:** ausências, carga e esforço por pessoa são dados pessoais; validar a base legal com o DPO antes de usar com dados reais. Até lá, só fixtures e modo demonstração.
 - **Configs reais fora do git e da imagem** (`equipes.yaml`, `ausencias.yaml`, `papeis.yaml`, `squads.yaml`); versionar só os modelos `.exemplo`. Em produção o arquivo real é obrigatório (falha na subida citando o caminho); só o modo desenvolvimento cai no modelo.
-- Docker ativo; banco real por Testcontainers (nunca H2 nem mock). Comentários em pt-BR; commits Conventional Commits em pt-BR.
+- Sem Docker: banco SQLite real em arquivo temporário (`testContextComBanco`/`BancoEmArquivo`; nunca H2 nem mock). Comentários em pt-BR; commits Conventional Commits em pt-BR.
 
 ### 3.2 Restrições específicas desta fase
 - **Capacidade por dia útil** = horas semanais ÷ 5 × foco × alocação × (1 − fração de ausência); fim de semana e feriado = 0. Foco nulo usa `focoPadrao`.
@@ -86,15 +86,15 @@ A gestão do time TG-Basic precisa saber, por pessoa e por squad, **quanto traba
 
 - Nomes internos de funções auxiliares, organização de SQL e consultas em lote, desde que as **assinaturas públicas do plano** fiquem exatamente iguais.
 - Mensagens de erro de carga do YAML (precisam citar arquivo, chave ou id/linha; sem stack trace genérico).
-- Número da migração do worklog (`V{n}__worklog_por_instancia.sql`): o próximo livre na `main`; nunca editar migração mesclada.
+- Número da migração do worklog (`V{n}__worklog_por_instancia.sql`): o próximo livre na `main` (hoje só existe a V1, então a V2); nunca editar migração mesclada.
 - Layout fino das telas dentro do plano visual (densa nas telas de trabalho; Calendário conforme o wireframe 6.3; Esforço conforme 6.5).
 - Escolhas onde o plano deixa margem: decidir a mais segura e reversível e registrar como `Ruling: <o que> — <por quê> — <custo se errado>` no arquivo de progresso `docs/superpowers/progresso/2026-10-25-plano-06-pessoas-planejamento-ausencias.md` (o plano cita `progress.md`; vale o caminho do guia). As instruções "USE superpowers:..." do plano equivalem, para o ClineSR, à seção 4 do guia.
 
 ## 6. Critérios de aceitação verificáveis
 
-Todos com Docker ativo. Os nomes são os testes do plano; cada um precisa falhar antes da implementação pelo motivo certo.
+Todos sem Docker: só JDK 21 e SQLite real em arquivo temporário. Os nomes são os testes do plano; cada um precisa falhar antes da implementação pelo motivo certo.
 
-1. **Configuração (T1):** `cd app/backend && ./gradlew test --tests '*EquipesTest*' --tests '*AusenciasTest*' --tests '*RegrasDePlanejamentoTest*' --tests '*AppContextTest*' --tests '*ArquivosReaisForaDoGitTest*'` passa, incluindo `ausenciaSemMotivo`, `ausenciaDePessoaDesconhecidaFalha`, `producaoSemArquivoRealFalha`, `arquivosReaisNoGitignoreENoDockerignore`.
+1. **Configuração (T1):** `cd app/backend && ./gradlew test --tests '*EquipesTest*' --tests '*AusenciasTest*' --tests '*RegrasDePlanejamentoTest*' --tests '*AppContextTest*' --tests '*ArquivosReaisForaDoGitTest*'` passa, incluindo `ausenciaSemMotivo`, `ausenciaDePessoaDesconhecidaFalha`, `producaoSemArquivoRealFalha`, `arquivosReaisNoGitignore`.
 2. **Capacidade sem sentinela (T2, T3):** `semanaSemCapacidade` (`carla` semana de 02/11 → `0.0` e `SemCapacidade` com demanda 3,0 h), `vencidaViraAtrasoAcumulado` (TG-205 → 6,0 h, `horasAssumidas=true`), `semanaAtualDeHojeAteDomingo`, `jain` (`[0.5, 1.0]` → `0.9`; um valor → `null`).
 3. **Agenda ligada à Fase 5 (T4):** `terminoPelaCapacidade` (TG-202 → 06/11, `atrasa=true`), `semAusenciaNaoAtrasa`, `previsaoAposVencimentoNoRisco`, `previsaoPorIssuePelaCapacidade`.
 4. **Visibilidade e sem ranking (T5, T6, T7):** `usuarioNaoVeAgregadoDoSquad`, `calendarioDoUsuarioSoAPropriaLinha`, `linhasAlfabeticasSemPosicao`, `contagensNoLugarDeExtremos`, `capacidadeSoLideranca`, `tendenciaSoLideranca`, `pessoasAlfabeticas`; `drillTemOMesmoTamanhoDoCard` em cada rota.
@@ -128,7 +128,7 @@ Legenda: **[main]** existe hoje na `main`; **[Plano N]** previsto pelo plano N (
 | `Retention` | `.../db/Retention.kt` | [main] Plano 1; agendada no Plano 4A |
 | `StatusMap`, `StatusCategory` | `.../domain/StatusMap.kt`, `StatusCategory.kt` | [main] Plano 3; `StatusMap.ordem` no Plano 5 |
 | `TimelineBuilder.intervals`, `IssueTimeline`, `TimeInStatusCalculator`, `TimeUnitMode`, `Percentiles` | `.../domain/` | [main] Plano 3 (cenário TG-1) |
-| `Syncer`, `ChangelogParser`, `IssueStore`/`PostgresIssueStore`, `SanitizadorRaw` | `.../sync/` | [main] Plano 3 |
+| `Syncer`, `ChangelogParser`, `IssueStore`/`SqliteIssueStore`, `SanitizadorRaw` | `.../sync/` | [main] Plano 3 |
 | `JiraClient`, `JiraClientFactory` (construtor `internal` com `MockEngine`), `LiveGuard` | `.../jira/` | [main] Planos 1 e 3A |
 | `AppContext`, `testContext`, `testContextComBanco` | `.../AppContext.kt`; `src/test/.../TestContext.kt`, `TestContextComBanco.kt` | [main] |
 | `AvisoDto`, `DrillRow` | `.../cards/TempoEmStatusDto.kt` | [main] Plano 3 |

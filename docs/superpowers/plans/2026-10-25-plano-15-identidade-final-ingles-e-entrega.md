@@ -31,6 +31,7 @@ Antes da Tarefa 1, o executor confere na `main` que as Fases 8, 9 e 14 (ao menos
 
 ## Restrições globais (Global Constraints)
 
+- **Plataforma (adendo de 27/10, `plans/2026-10-27-adendo-plataforma-sqlite-sem-docker.md`):** SQLite embutido, sem Docker e sem servidor de banco; o adendo vence qualquer menção antiga a PostgreSQL, Docker ou Testcontainers. SQL novo segue a tradução da seção 2 do adendo (instantes em `INTEGER` ms UTC, datas em `TEXT` ISO, listas em JSON com `json_each`, helpers de `db/SqlSupport.kt`). Comandos de terminal: Windows 11 PowerShell (principal), por exemplo `cd app\backend; .\gradlew.bat test` e `cd app\frontend; pnpm test`; em `sh`, `cd app/backend && ./gradlew test`. Flags do Jira e de escrita só valem no `app/.env`.
 - **Jira:** a única trava é `JIRA_LIVE_ENABLED` (regra 1 do `CLAUDE.md`); este plano não acessa o Jira. Capturas de tela e material de treinamento usam **só dados de demonstração** (`DASHBOARD_DEMO_DATA=true`, `DASHBOARD_DEV_MODE=true`, flag do Jira `false`).
 - **Nenhum ativo inventado.** Sem logo oficial, o menu mostra o nome "Painel de Squads" em texto (plano visual, seção 2). Sem a fonte Mark e a licença, vale a pilha de sistema (`system-ui`, `Segoe UI`, `Roboto`, `Helvetica Neue`). Nada é baixado de terceiros.
 - **Licença da fonte e visibilidade do repositório:** a fonte só entra no repositório se a licença permitir **e** o repositório for privado; caso contrário, segue o caminho alternativo do ponto de parada da Tarefa 1.
@@ -80,7 +81,7 @@ CLAUDE.md, PRODUCT.md, README.md, HANDOFF.md, docs/superpowers/plans/2026-10-24-
      - "Ainda não há logo oficial": consequência: o menu continua com o nome em texto; a T2 só cria o componente `Marca` com o caminho alternativo.
   2. **Fonte Mark e licença.**
      - "Fornecer os arquivos `.woff2` e a licença, que permite uso web e cópia em repositório privado (Recomendada)": consequência: a T3 versiona os arquivos em `public/fonts/`.
-     - "Fornecer os arquivos, mas a licença não permite cópia no repositório": consequência: os arquivos ficam fora do git e entram na imagem no build a partir de um diretório local ignorado (`app/frontend/fontes-licenciadas/`), documentado na T3; o CI usa a pilha de sistema.
+     - "Fornecer os arquivos, mas a licença não permite cópia no repositório": consequência: os arquivos ficam fora do git e entram no pacote no build a partir de um diretório local ignorado (`app/frontend/fontes-licenciadas/`), documentado na T3; o CI usa a pilha de sistema.
      - "Não usar a Mark": consequência: pilha de sistema permanente (decisão registrada).
   3. **Manual de marca.**
      - "Não há manual: manter o azul `#1329A0` e as cores do plano visual (Recomendada)".
@@ -108,7 +109,7 @@ Sem logo (T1, terceira opção): criar só `Marca.tsx` com o texto, os testes `m
 
 ### Tarefa 3: Fonte da marca com alternativa de sistema
 
-**Arquivos:** Criar `theme/fontes.css`, `a11y/fonte.test.ts`; Modificar `theme/tokens.css` (`--fonte-texto`), `main.tsx` (importa `fontes.css`), `.gitignore` e `app/Dockerfile` (só no caminho "licença não permite cópia"); Teste backend `http/CabecalhosDeSegurancaTest.kt` (caso `cspContinuaComFontSelf`).
+**Arquivos:** Criar `theme/fontes.css`, `a11y/fonte.test.ts`; Modificar `theme/tokens.css` (`--fonte-texto`), `main.tsx` (importa `fontes.css`), e `.gitignore` (só no caminho "licença não permite cópia"); Teste backend `http/CabecalhosDeSegurancaTest.kt` (caso `cspContinuaComFontSelf`).
 
 **Interfaces:**
 - `@font-face { font-family: "Mark"; src: url("/fonts/mark-regular.woff2") format("woff2"); font-display: swap; }` e as variações recebidas (no máximo regular, médio e negrito); `--fonte-texto: "Mark", system-ui, "Segoe UI", Roboto, "Helvetica Neue", sans-serif`.
@@ -213,7 +214,7 @@ Sem logo (T1, terceira opção): criar só `Marca.tsx` com o texto, os testes `m
 
 - [ ] **Passo 1: Rodar** `claudeMdSemCaminhoInexistente` (Plano 8) e as suítes completas (backend e frontend), `pnpm build`, `node scripts/orcamento-bundle.mjs`, `sh .claude/hooks/test-guard.sh` → PASSA.
 - [ ] **Passo 2: Varredura** de dados pessoais, hosts e segredos em `git diff main..HEAD`; conferir que nenhuma fonte com licença restrita foi versionada.
-- [ ] **Passo 3: Commit** `docs: fechamento do projeto e entrega ao time`; PR para a `main`. Não mesclar sem o usuário mandar.
+- [ ] **Passo 3: Commit** `docs: fechamento do projeto e entrega ao time`; PR para a `main`. Mesclar pelo fluxo de entrega (`docs/superpowers/fluxo-de-entrega.md`).
 
 ---
 

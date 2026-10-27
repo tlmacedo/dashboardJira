@@ -15,7 +15,7 @@ Para cada teste importante:
 - Ele falharia se a linha principal do código fosse removida ou invertida? Faça a **mutação mental**; se houver dúvida, faça a real: quebre a linha, rode o teste, veja falhar, desfaça.
 - A asserção compara o valor esperado de verdade (não só "não nulo" ou "não vazio")?
 - Cobre a fronteira (dia que vira, lista vazia, um item, papel sem permissão)?
-- Usa PostgreSQL real (Testcontainers) e `MockEngine` para o Jira? Nada de H2, mock de banco ou rede real.
+- Usa SQLite real em arquivo temporário (`testContextComBanco`) e `MockEngine` para o Jira? Nada de H2, mock de banco ou rede real.
 
 ## 2. Checklist do projeto
 

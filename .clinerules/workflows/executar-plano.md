@@ -13,10 +13,10 @@ Porte do fluxo que o Claude Code fazia com as skills `superpowers:subagent-drive
 2. Leia a spec da fase, o índice `docs/superpowers/plans/2026-10-24-indice-dos-planos.md` e **o plano inteiro**, inclusive "Restrições globais", "Foco da revisão" e "Decisões".
 3. Prepare a branch com comandos separados:
    - `git checkout main`
-   - `git pull`
+   - `git pull --ff-only origin main`
    - `git branch -r --no-merged origin/main` e `gh pr list`: havendo trabalho fora da `main`, pare e pergunte.
    - `git checkout -b feat/<nome-do-plano>`
-4. macOS/Linux: `docker info` (se parado, `sh .claude/hooks/ensure-docker.sh`). Windows PowerShell: `docker info`; se parado, abra o Docker Desktop com `Start-Process "C:\Program Files\Docker\Docker\Docker Desktop.exe"` e espere `docker info` responder (`do { Start-Sleep 5; docker info *> $null } until ($LASTEXITCODE -eq 0)`); não use `sh`/`bash`.
+4. Ambiente: sem Docker nem banco a iniciar (SQLite em arquivo). Confira `java -version` (21). Windows PowerShell: use `;` no lugar de `&&`; não use `sh`/`bash`. Fluxo de fechamento do plano (revisão final, validação, PR e merge): `docs/superpowers/fluxo-de-entrega.md`.
 5. Crie `docs/superpowers/progresso/<arquivo-do-plano>.md` com a primeira linha `# Progresso — plano: <caminho do plano>`.
 
 ## Para cada tarefa (na ordem do plano)
@@ -34,7 +34,7 @@ Porte do fluxo que o Claude Code fazia com as skills `superpowers:subagent-drive
 
 ## Quando o plano deixa uma escolha em aberto
 
-Escolha a opção mais segura e reversível, registre como Ruling e siga. Pare e pergunte (`/perguntar-ao-usuario.md`) só para: ação irreversível; segurança que o plano não resolve; efeito fora do repositório (merge, push em branch compartilhada, publicação, reiniciar o Docker); decisão de produto; plano tão quebrado que todo caminho é palpite; qualquer necessidade de acessar o Jira (resposta padrão: não).
+Escolha a opção mais segura e reversível, registre como Ruling e siga. Pare e pergunte (`/perguntar-ao-usuario.md`) só para: ação irreversível; segurança que o plano não resolve; efeito fora do repositório (merge, push em branch compartilhada, publicação); decisão de produto; plano tão quebrado que todo caminho é palpite; qualquer necessidade de acessar o Jira (resposta padrão: não).
 
 ## Quando algo falha
 

@@ -2,11 +2,11 @@
 
 > **Para executores:** USE superpowers:subagent-driven-development (recomendado) ou superpowers:executing-plans. Os passos usam caixas `- [ ]`.
 
-**Objetivo (Goal):** Recriar, a partir dos dados já sincronizados no PostgreSQL, os cards de trabalho em curso e de resultados do app atual (Abertas, Negligenciadas, Fechadas, Metas e prazos, Negativas, Riscos, Previsão e Épicos), com "no prazo" e "no prazo ajustado", percentis por tipo de issue, eventos pela data do changelog e Monte Carlo com taxa de chegada.
+**Objetivo (Goal):** Recriar, a partir dos dados já sincronizados no SQLite, os cards de trabalho em curso e de resultados do app atual (Abertas, Negligenciadas, Fechadas, Metas e prazos, Negativas, Riscos, Previsão e Épicos), com "no prazo" e "no prazo ajustado", percentis por tipo de issue, eventos pela data do changelog e Monte Carlo com taxa de chegada.
 
 **Arquitetura (Architecture):** Um modelo de leitura único (`IssueSnapshot`: campos atuais + linha do tempo + eventos) sai de um `WorkStore` sobre `issue` e `change_event`, e é reaproveitado nas Fases 6 e 7. Métricas transversais puras (`Fluxo`) e um calculador puro por card produzem DTOs; uma rota genérica (`CardDeLeitura` + `rotaDeCard`) aplica filtros, `Visibility`, aviso de status sem mapeamento e `access_log`, e serve card e detalhamento com o mesmo cálculo. As telas usam um kit comum (`CardPage`, `KpiCard`, `DrillDrawer`).
 
-**Stack (Tech Stack):** Kotlin 2 + Ktor 3.3.1, kaml (YAML estrito), PostgreSQL + Flyway + Testcontainers 2.0.3; React + TypeScript (Vite, Vitest, Testing Library, TanStack Query).
+**Stack (Tech Stack):** Kotlin 2 + Ktor 3.3.1, kaml (YAML estrito), SQLite embutido + Flyway (testes com SQLite real em arquivo temporário); React + TypeScript (Vite, Vitest, Testing Library, TanStack Query).
 
 **Spec da fase (ler primeiro):** `docs/superpowers/specs/2026-10-25-spec-fase-05-cards-trabalho-e-prazos.md`. **Spec mestra:** `docs/superpowers/specs/2026-10-24-painel-squads-kotlin-react-design.md` (seções 4.2, 4.3, 5.2, 6.1, 8 item 5, 10). Inventário e fórmulas: `docs/analise/relatorio-cards-app-atual.md` (seções 3, 4.3 a 4.11, 6 e 7.1). Visual: `docs/design/plano-visual-frontend.md` (seções 5 e 7).
 
@@ -22,7 +22,7 @@ Este plano consome nomes dos Planos 3, 4A e 4. **Antes da Tarefa 1**, o executor
 | `StatusMap`, `StatusCategory`, `UnmappedStatusException` | `domain/StatusMap.kt` (Plano 3) |
 | `Percentiles.of/median`, `TimeUnitMode { UTIL, CORRIDO }` | `domain/Percentiles.kt`, `domain/TimeInStatusCalculator.kt` (Plano 3) |
 | `BusinessCalendar.businessDays/calendarDays/localDate/isBusinessDay` | `time/BusinessCalendar.kt` (Plano 1) |
-| `ChangeEventRecord`, `ChangelogParser`, `PostgresIssueStore.upsert`, `OsVersionExtrator` | `sync/` (Plano 3) |
+| `ChangeEventRecord`, `ChangelogParser`, `SqliteIssueStore.upsert`, `OsVersionExtrator` | `sync/` (Plano 3) |
 | `AvisoDto` (com `params: Map<String, String>` desde o Plano 4A, Tarefa 8), `DrillRow` | `cards/TempoEmStatusDto.kt` (Plano 3) |
 | `DadosDeDemonstracao`, `DASHBOARD_DEMO_DATA` (dados fictícios para conferir as telas sem Jira) | `demo/` (Plano 4A, Tarefa 10) |
 | `Visibility.visibleUserIds`, `RoleDirectory.membersOf/squadOf/squadsLedBy`, `Principal`, `Role` | `security/` (Plano 1) |
@@ -34,6 +34,7 @@ Este plano consome nomes dos Planos 3, 4A e 4. **Antes da Tarefa 1**, o executor
 
 ## Restrições globais (Global Constraints)
 
+- **Plataforma (adendo de 27/10, `plans/2026-10-27-adendo-plataforma-sqlite-sem-docker.md`):** SQLite embutido, sem Docker e sem servidor de banco; o adendo vence qualquer menção antiga a PostgreSQL, Docker ou Testcontainers. SQL novo segue a tradução da seção 2 do adendo (instantes em `INTEGER` ms UTC, datas em `TEXT` ISO, listas em JSON com `json_each`, helpers de `db/SqlSupport.kt`). Comandos de terminal: Windows 11 PowerShell (principal), por exemplo `cd app\backend; .\gradlew.bat test` e `cd app\frontend; pnpm test`; em `sh`, `cd app/backend && ./gradlew test`. Flags do Jira e de escrita só valem no `app/.env`.
 - Nenhuma chamada ao Jira; só fixtures, builders em memória e `MockEngine`. `JIRA_LIVE_ENABLED=false`. Hook `BLOQUEADO` = parar e relatar. Variáveis novas nunca começam com `JIRA_`.
 - Fuso America/Manaus para todo "dia"; **dias úteis por padrão** (`unit=corrido` alterna e fica na URL); semana = segunda a domingo de Manaus.
 - **Concluída** = categoria `DONE` **e** `resolution` preenchida **e** `resolved` preenchido; resolução negativa (lista em `status_map`) = cancelada; divergência vai para aviso `DONE_SEM_RESOLUTION` (Qualidade dos dados, Fase 7).
@@ -45,7 +46,7 @@ Este plano consome nomes dos Planos 3, 4A e 4. **Antes da Tarefa 1**, o executor
 - Heurísticas (pesos do risco, parâmetros da previsão) em YAML versionado; a versão sai em toda resposta (`versaoRegras`). Monte Carlo com semente injetável; em produção a semente é derivada do dia de Manaus e dos filtros (card, detalhamento e recarga no mesmo dia mostram o mesmo número).
 - JQL só por `CardQueryFactory`; cada card tem ficha `app/config/cards/<id>.card.yaml` com teste de snapshot do JQL. A leitura no banco aplica `FiltroDeFicha.de(ficha)` e `removida_em IS NULL`.
 - Cor nunca é o único sinal (`✓` `●` `▲` com texto); pt-BR e inglês; três temas.
-- Migração: próximo número livre na execução; nunca editar migração mesclada. Docker ativo (`sh .claude/hooks/ensure-docker.sh`); banco real por Testcontainers.
+- Migração: próxima migração livre (confirme com `ls app/backend/src/main/resources/db/migration`; hoje só existe a V1, então a próxima é a V2; o esquema novo entra sempre numa migração nova, nunca editando a V1). Sem Docker: banco SQLite real em arquivo temporário (`testContextComBanco`/`BancoEmArquivo`); a suíte só exige JDK 21.
 - Comentários em pt-BR; commits Conventional Commits pt-BR (`feat(cards): ...`).
 
 ## Foco da revisão (Review Focus)
@@ -64,7 +65,7 @@ Este plano consome nomes dos Planos 3, 4A e 4. **Antes da Tarefa 1**, o executor
 app/backend/src/main/kotlin/br/sidia/painel/
   domain/StatusMap.kt                                    # + ordem do fluxo e resoluções negativas
   sync/CamposDeTrabalho.kt, sync/IssueStore.kt           # extração de prioridade, estimativas, pontos, épico, flag
-  trabalho/IssueSnapshot.kt, WorkStore.kt                # modelo de leitura e leitura no PostgreSQL
+  trabalho/IssueSnapshot.kt, WorkStore.kt                # modelo de leitura e leitura no SQLite
   trabalho/Fluxo.kt, MonteCarlo.kt                       # métricas transversais
   cards/FiltrosDeCard.kt, EscopoVisivel.kt, CardDeLeitura.kt   # rota genérica de card
   cards/abertas/, negligenciadas/, fechadas/, metas/, negativas/, riscos/, previsao/, epicos/   # calculador + DTO + card
@@ -100,10 +101,10 @@ As concluídas vão direto de In Progress para Closed. Ciclo em dias úteis: TG-
 
 ### Tarefa 1: Campos de trabalho, ordem do fluxo e resoluções negativas
 
-**Arquivos:** Criar `sync/CamposDeTrabalho.kt`, `resources/db/migration/V{n}__campos_de_trabalho.sql`; Modificar `domain/StatusMap.kt`, `sync/IssueStore.kt` (`upsert` grava as colunas novas), `app/config/jira_campos.exemplo.yaml`, `app/config/cards/sincronizacao.card.yaml` (4A), `app/config/status_map.exemplo.yaml`, `docs/jira/checklist-primeira-conexao.md` (conferir os nomes dos campos novos); Teste `sync/CamposDeTrabalhoTest.kt`, `domain/StatusMapTest.kt`, `sync/SyncerTest.kt` (acrescentar), `jql/CardQueryFactoryTest.kt`.
+**Arquivos:** Criar `sync/CamposDeTrabalho.kt`, `resources/db/migration/V{n}__campos_de_trabalho.sql` (`{n}` = próxima livre; hoje V2); Modificar `domain/StatusMap.kt`, `sync/IssueStore.kt` (`upsert` grava as colunas novas), `app/config/jira_campos.exemplo.yaml`, `app/config/cards/sincronizacao.card.yaml` (4A), `app/config/status_map.exemplo.yaml`, `docs/jira/checklist-primeira-conexao.md` (conferir os nomes dos campos novos); Teste `sync/CamposDeTrabalhoTest.kt`, `domain/StatusMapTest.kt`, `sync/SyncerTest.kt` (acrescentar), `jql/CardQueryFactoryTest.kt`.
 
 **Interfaces:**
-- Migração: `issue` ganha `priority text`, `remaining_s bigint`, `story_points numeric`, `epic_key text`, `flagged boolean NOT NULL DEFAULT false`, `components text[] NOT NULL DEFAULT '{}'`. Conferir que `estimate_s` vem de `timeoriginalestimate` e `spent_s` de `timespent`; se não, corrigir no `upsert` (sem nova coluna).
+- Migração: `issue` ganha `priority text`, `remaining_s INTEGER`, `story_points REAL`, `epic_key TEXT`, `flagged INTEGER NOT NULL DEFAULT 0 CHECK (flagged IN (0,1))`, `components TEXT NOT NULL DEFAULT '[]'` (lista em JSON; leia com `jsonParaTextos()` e grave com `emJson()`, de `db/SqlSupport.kt`); `priority` também é `TEXT`. Cada coluna entra por `ALTER TABLE issue ADD COLUMN` na migração nova; confira o que a V1 já tem antes. Conferir que `estimate_s` vem de `timeoriginalestimate` e `spent_s` de `timespent`; se não, corrigir no `upsert` (sem nova coluna).
 - Dicionário (instância `samsung`): `priority` SELECT, `timeoriginalestimate`, `timeestimate`, `timespent` NUMBER, `components` SELECT, e com `finalidade: "a confirmar"` `Story Points` NUMBER, `Epic Link` TEXT, `Flagged` SELECT. A ficha de sincronização passa a pedi-los.
 - Produz:
   ```kotlin
@@ -123,7 +124,7 @@ As concluídas vão direto de In Progress para Closed. Ciclo em dias úteis: TG-
 
 ### Tarefa 2: Modelo de leitura `IssueSnapshot` e `WorkStore`
 
-**Arquivos:** Criar `trabalho/IssueSnapshot.kt`, `trabalho/WorkStore.kt`; Teste `trabalho/WorkStoreTest.kt` (Testcontainers; dados gravados com `PostgresIssueStore.upsert` a partir de JSON de fixture do TRB-1).
+**Arquivos:** Criar `trabalho/IssueSnapshot.kt`, `trabalho/WorkStore.kt`; Teste `trabalho/WorkStoreTest.kt` (SQLite em arquivo temporário; dados gravados com `SqliteIssueStore.upsert` a partir de JSON de fixture do TRB-1).
 
 **Interfaces:**
 - Consome: `IssueTimeline`, `ChangelogParser`, `ChangeEventRecord`, `FiltroDeFicha`, `AuditIssue`.
@@ -145,11 +146,11 @@ As concluídas vão direto de In Progress para Closed. Ciclo em dias úteis: TG-
       fun comEventoEntre(instance: String, filtro: FiltroDeFicha?, campos: Set<String>, de: Instant, ate: Instant): List<IssueSnapshot>  // com TODOS os eventos
       fun temCamposDeTrabalho(instance: String): Boolean           // alguma issue com priority não nula
   }
-  class PostgresWorkStore(private val ds: DataSource) : WorkStore
+  class SqliteWorkStore(private val ds: DataSource) : WorkStore
   ```
-  `ABERTAS` = `resolved IS NULL`; `RESOLVIDAS` em `[resolvidasDe, resolvidasAte)`; sempre `removida_em IS NULL`; eventos em lote por `issue_id = ANY(?)` ordenados por `(at, id)`; tudo parametrizado.
+  `ABERTAS` = `resolved IS NULL`; `RESOLVIDAS` em `[resolvidasDe, resolvidasAte)`; sempre `removida_em IS NULL`; eventos em lote por `issue_id IN (SELECT value FROM json_each(?))` (parâmetro montado com `idsEmJson()`), ordenados por `(at, id)`; tudo parametrizado.
 - [ ] **Passo 1: Testes que falham:** `abertasEResolvidas` (TRB-1: 4 abertas; resolvidas de 10-01 a 10-31 → 6); `fronteiraDoPeriodo` (`resolved == de` entra, `== ate` fica fora); `filtroDeFichaAplicado` (tipo fora da ficha não vem); `removidaNaoAparece`; `eventosDeOutrasDatasVemJuntos`; `vencimentoOriginalPeloPrimeiroEvento` (TG-111 → `2026-10-08`); `adaptadorParaAuditIssue` (mesmos `key`, `duedate`, `labels`, `events`); `instanciaSeparada`; `semPrioridadeEmNenhumaIssue` (`temCamposDeTrabalho == false`).
-- [ ] **Passo 2: Rodar** `./gradlew test --tests '*WorkStoreTest*'` → FALHA. **Passo 3: Implementar.** **Passo 4: Rodar** → PASSA. **Passo 5: Commit** `feat(cards): modelo de leitura das issues e leitura no PostgreSQL`.
+- [ ] **Passo 2: Rodar** `./gradlew test --tests '*WorkStoreTest*'` → FALHA. **Passo 3: Implementar.** **Passo 4: Rodar** → PASSA. **Passo 5: Commit** `feat(cards): modelo de leitura das issues e leitura no SQLite`.
 
 ---
 
@@ -300,13 +301,13 @@ As concluídas vão direto de In Progress para Closed. Ciclo em dias úteis: TG-
 
 ### Tarefa 7: Metas e prazos (domínio e API)
 
-**Arquivos:** Modificar `domain/NoPrazo.kt` (regra única do universo e classificação por issue; `NoPrazoTest` segue verde), `trabalho/WorkStore.kt` (leitura por vencimento), `cards/fechadas/FechadasCalculator.kt` e `cards/fechadas/CardFechadas.kt` (bloco "no prazo" pela regra única), `auditoria/AuditStore.kt` (só se o `PostgresAuditStore` não ler as candidatas de "no prazo" por vencimento em `[de, ate]`); Criar `cards/metas/{MetasCalculator.kt,MetasDto.kt,CardMetas.kt,RegrasDeMetas.kt}`, `app/config/cards/metas.card.yaml`, `app/config/metas.exemplo.yaml`; Teste `cards/metas/MetasCalculatorTest.kt`, `cards/MetasRoutesTest.kt`, `domain/NoPrazoTest.kt`, `trabalho/WorkStoreTest.kt`, `cards/RegraUnicaNoPrazoTest.kt`.
+**Arquivos:** Modificar `domain/NoPrazo.kt` (regra única do universo e classificação por issue; `NoPrazoTest` segue verde), `trabalho/WorkStore.kt` (leitura por vencimento), `cards/fechadas/FechadasCalculator.kt` e `cards/fechadas/CardFechadas.kt` (bloco "no prazo" pela regra única), `auditoria/AuditStore.kt` (só se o `SqliteAuditStore` não ler as candidatas de "no prazo" por vencimento em `[de, ate]`); Criar `cards/metas/{MetasCalculator.kt,MetasDto.kt,CardMetas.kt,RegrasDeMetas.kt}`, `app/config/cards/metas.card.yaml`, `app/config/metas.exemplo.yaml`; Teste `cards/metas/MetasCalculatorTest.kt`, `cards/MetasRoutesTest.kt`, `domain/NoPrazoTest.kt`, `trabalho/WorkStoreTest.kt`, `cards/RegraUnicaNoPrazoTest.kt`.
 
 **Regra única de "no prazo" (antiobjetivo da spec mestra 2: números divergentes entre telas).** Auditoria (Plano 4), Fechadas (T6) e Metas (esta tarefa) usam **a mesma função** para decidir o universo e contar, sem cópia de regra em nenhum calculador:
 - **Universo** (`NoPrazo.noUniverso`): categoria `DONE` **e** `resolution` preenchida **e** `resolved` preenchido **e** `resolution` fora de `StatusMap.resolucoesNegativas` (canceladas ficam fora) **e** tipo diferente de `Epic` (sem diferenciar maiúsculas) **e** vencimento (dia) em `[de, ate]`. É o mesmo critério de `Fluxo.concluidaPositiva` mais "não Epic" e "vence no período".
 - **Contagem** (`NoPrazo.calcular`, assinatura do Plano 4 mantida): aplica `noUniverso` e `classificar`; no prazo = dia de Manaus de `resolved` ≤ vencimento; ajustado = no prazo **ou** label que `justifica`.
 - **Candidatas lidas por vencimento:** quem chama passa as issues com vencimento em `[de, ate]`, não "as resolvidas no período" (uma issue resolvida em 28/09 que vence em 05/10 entra em outubro nas três telas). Fechadas continua usando as resolvidas no período para os demais KPIs; só o bloco `noPrazo`/`noPrazoAjustado`/`comVencimento`/taxas vem da regra única.
-- **Uma só leitura das candidatas:** `WorkStore.candidatasNoPrazo` (abaixo) é o único jeito de obter a lista que entra em `NoPrazo.calcular` nos cards; a Auditoria (Plano 4) passa as issues do `PostgresAuditStore` com vencimento em `[de, ate]`.
+- **Uma só leitura das candidatas:** `WorkStore.candidatasNoPrazo` (abaixo) é o único jeito de obter a lista que entra em `NoPrazo.calcular` nos cards; a Auditoria (Plano 4) passa as issues do `SqliteAuditStore` com vencimento em `[de, ate]`.
 - `NoPrazoTest.noPrazoEAjustado` do Plano 4 não muda (TG-21 a TG-25 não são canceladas nem Epic). Os números do TRB-1 em Fechadas (T6) e Metas também não mudam, porque nenhuma issue do TRB-1 resolvida antes de 01/10 vence em outubro (conferir na fixture antes do Passo 2; se houver, atualizar os valores esperados e registrar `Ruling:`).
 
 **Interfaces:**
@@ -355,7 +356,7 @@ As concluídas vão direto de In Progress para Closed. Ciclo em dias úteis: TG-
   - Rotas: `drillTemOMesmoTamanhoDoCard` (`noPrazo`, `ajustado`, `faixa:D`, `atrasadas`, `semVencimento`); `granularidadeInvalida400`; `versaoDasRegrasNaResposta` (`"metas v1, labels v1"`).
   - `NoPrazoTest`: `canceladaComVencimentoForaDoUniverso` (`resolution = "Won't Do"`, vence no período → `noUniverso == false`); `epicForaDoUniverso`; `resolvidaAntesDoPeriodoComVencimentoDentroEntra` (resolvida 28/09, vence 05/10, período outubro → `true`).
   - `WorkStoreTest.porVencimento` (`vencimentoDe`/`vencimentoAte` inclusivos; `removida_em IS NULL` mantido).
-  - `RegraUnicaNoPrazoTest.mesmoUniversoComCanceladaEpicEResolvidaAntes` (Testcontainers, cenário **TRB-1P** = TRB-1 sem alteração **mais** três issues fictícias, todas de `ana`: `TG-150` status `Cancelled`, `resolution = "Won't Do"`, resolvida 19/10, vence 20/10; `TG-151` tipo `Epic`, `Resolved` + `Done`, resolvida 18/10, vence 20/10; `TG-152` tipo `Task`, `Resolved` + `Done`, resolvida 28/09, vence 05/10). Chamadas como `gerente.exemplo` com `de=2026-10-01` e `ate=2026-10-30` **explícitos** nas três rotas (a Auditoria tem padrão de 30 dias e as outras de 90): `/api/auditoria/sinais` (`noPrazo`), `/api/cards/fechadas` e `/api/cards/metas` devolvem o mesmo trio `(universo/concluidas/comVencimento, noPrazo, noPrazoAjustado) == (5, 4, 5)`. Com as regras antigas divergiriam (Auditoria contaria `TG-150` e `TG-151` → 7; Fechadas pelas resolvidas no período contaria `TG-150`/`TG-151` e perderia `TG-152` → 6; Metas, conforme a lista que a rota passasse, daria 4 ou 5); o teste prova que o resultado não depende da tela. `TG-150` continua contando em `canceladas` de Fechadas (FE-06).
+  - `RegraUnicaNoPrazoTest.mesmoUniversoComCanceladaEpicEResolvidaAntes` (SQLite em arquivo temporário, cenário **TRB-1P** = TRB-1 sem alteração **mais** três issues fictícias, todas de `ana`: `TG-150` status `Cancelled`, `resolution = "Won't Do"`, resolvida 19/10, vence 20/10; `TG-151` tipo `Epic`, `Resolved` + `Done`, resolvida 18/10, vence 20/10; `TG-152` tipo `Task`, `Resolved` + `Done`, resolvida 28/09, vence 05/10). Chamadas como `gerente.exemplo` com `de=2026-10-01` e `ate=2026-10-30` **explícitos** nas três rotas (a Auditoria tem padrão de 30 dias e as outras de 90): `/api/auditoria/sinais` (`noPrazo`), `/api/cards/fechadas` e `/api/cards/metas` devolvem o mesmo trio `(universo/concluidas/comVencimento, noPrazo, noPrazoAjustado) == (5, 4, 5)`. Com as regras antigas divergiriam (Auditoria contaria `TG-150` e `TG-151` → 7; Fechadas pelas resolvidas no período contaria `TG-150`/`TG-151` e perderia `TG-152` → 6; Metas, conforme a lista que a rota passasse, daria 4 ou 5); o teste prova que o resultado não depende da tela. `TG-150` continua contando em `canceladas` de Fechadas (FE-06).
 - [ ] **Passo 2: Rodar** `./gradlew test --tests '*MetasCalculatorTest*' --tests '*MetasRoutesTest*' --tests '*NoPrazoTest*' --tests '*WorkStoreTest*' --tests '*RegraUnicaNoPrazoTest*' --tests '*FechadasCalculatorTest*' --tests '*AuditCalculatorTest*'` → FALHA. **Passo 3: Implementar.** **Passo 4: Rodar** → PASSA. **Passo 5: Commit** `feat(cards): Metas e prazos com data original e atraso justificado`.
 
 ---
