@@ -13,7 +13,7 @@
 
 ## Onde paramos
 
-As PRs #5, #6, #7 e #8 (planejamento, Planos 1, 2 e 3A) foram **mescladas na `main` em 25/10** (`5afb93f`), a pedido do usuário, depois do CI. O repositório `tlmacedo/dashboardJira` está PRIVADO (o histórico tem usernames reais). As branches locais mescladas foram apagadas; as remotas correspondentes ainda existem no GitHub (apagar só se o usuário quiser). **Plano 3 (`feat/tempo-em-status`) executado e revisado (tarefas 0A a 7, onda final de Minor e revisão final); mesclado na `main` em 25/10 (PR #9).** Os Planos 1, 2 e 3A estão executados e revisados.
+As PRs #5, #6, #7 e #8 (planejamento, Planos 1, 2 e 3A) foram **mescladas na `main` em 25/10** (`5afb93f`), a pedido do usuário, depois do CI. O repositório `tlmacedo/dashboardJira` é **PÚBLICO** (decisão do usuário em 26/10; o histórico antigo tem 3 usernames reais do time, aceitos e documentados; nada novo com dado real entra). As branches locais mescladas foram apagadas; as remotas correspondentes ainda existem no GitHub (apagar só se o usuário quiser). **Plano 3 (`feat/tempo-em-status`) executado e revisado (tarefas 0A a 7, onda final de Minor e revisão final); mesclado na `main` em 25/10 (PR #9).** Os Planos 1, 2 e 3A estão executados e revisados.
 
 **Regra de fim de branch (usuário, 25/10):** revisão, commit, push, PR, voltar a `main` e `pull`, sempre. Antes do push, checar dados pessoais no histórico a publicar (usernames reais, nomes, segredos, informação interna) e a visibilidade do repositório.
 

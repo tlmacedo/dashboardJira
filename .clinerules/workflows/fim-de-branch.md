@@ -18,7 +18,7 @@ Procure: e-mails reais, usernames reais do time (compare de cabeça com os do `F
 
 Confira também:
 - `git status` não lista `.env`, `papeis.yaml`, `equipes.yaml`, `ausencias.yaml`, `squads.yaml` nem `Filtros_Status_tool.txt`.
-- O repositório é **privado**: `gh repo view --json visibility` (o histórico já tem usernames reais; nunca torná-lo público).
+- O repositório é **público** (decisão do usuário em 26/10): `gh repo view --json visibility`. O histórico antigo tem 3 usernames reais (aceito e documentado), então a varredura acima é ainda mais importante: nada novo com dado real entra. Se a visibilidade mudar sem o usuário ter dito, pare e pergunte.
 
 Qualquer achado: pare e pergunte (`/perguntar-ao-usuario.md`). Nunca publique "para corrigir depois".
 

@@ -79,7 +79,7 @@ Estes foram os defeitos que as revisões do Claude mais encontraram; procure-os 
 ## 6. Antes de qualquer push
 
 - `git log main..HEAD --format='%ae %s'` e `git diff main..HEAD` varridos por: e-mails reais, usernames reais do time (compare com os nomes que existem no `Filtros_Status_tool.txt` local, **sem copiar esses nomes para lugar nenhum**), hosts internos da empresa, tokens, chaves, senhas.
-- Confirme que o repositório está **PRIVADO** (`gh repo view tlmacedo/dashboardJira --json visibility`). O histórico já contém usernames reais; nunca torne-o público sem limpar o histórico.
+- O repositório é **PÚBLICO** por decisão do usuário (26/10): confira com `gh repo view tlmacedo/dashboardJira --json visibility`. O histórico antigo contém 3 usernames reais (aceito e documentado), então nada novo com dado real entra; se a visibilidade mudar sem o usuário ter dito, pare e pergunte.
 - `git status` não pode listar `.env`, `papeis.yaml`, `equipes.yaml`, `ausencias.yaml`, `squads.yaml` nem `Filtros_Status_tool.txt`.
 
 ## 7. Parar e perguntar ao usuário (em forma de pergunta com opções)
