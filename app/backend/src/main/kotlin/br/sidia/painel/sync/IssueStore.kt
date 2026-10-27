@@ -5,11 +5,13 @@ import br.sidia.painel.jql.CardSpec
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import java.sql.Connection
-import java.sql.Date
 import java.sql.Timestamp
 import java.time.Instant
 import java.time.LocalDate
 import javax.sql.DataSource
+import br.sidia.painel.db.emJson
+import br.sidia.painel.db.idsEmJson
+import br.sidia.painel.db.jsonParaTextos
 
 /** Persistência das issues e do changelog. */
 interface IssueStore {
@@ -111,9 +113,9 @@ private val ESPACOS_OS_VERSION = Regex("[\\s\\p{Z}]+")
 /** Forma normalizada de um OS Version: sem espaços nas pontas e com os internos colapsados em um só. */
 fun normalizarOsVersion(valor: String): String = valor.trim().replace(ESPACOS_OS_VERSION, " ")
 
-/** Implementação sobre PostgreSQL (JDBC). Todas as consultas são parametrizadas. */
-class PostgresIssueStore(private val ds: DataSource) : IssueStore, IssueIndex {
-    private val links = PostgresIssueLinkStore(ds)
+/** Implementação sobre SQLite (JDBC). Todas as consultas são parametrizadas; listas entram como JSON em `json_each(?)`. */
+class SqliteIssueStore(private val ds: DataSource) : IssueStore, IssueIndex {
+    private val links = SqliteIssueLinkStore(ds)
 
     override fun indice(instance: String, atualizadasDesde: Instant): List<IndiceIssue> =
         ds.connection.use { con ->
@@ -138,11 +140,11 @@ class PostgresIssueStore(private val ds: DataSource) : IssueStore, IssueIndex {
         if (ids.isEmpty()) return 0
         return ds.connection.use { con ->
             con.prepareStatement(
-                "UPDATE issue SET removida_em = ? WHERE instance = ? AND id = ANY (?) AND removida_em IS NULL",
+                "UPDATE issue SET removida_em = ? WHERE instance = ? AND id IN (SELECT value FROM json_each(?)) AND removida_em IS NULL",
             ).use { ps ->
                 ps.setTimestamp(1, Timestamp.from(at))
                 ps.setString(2, instance)
-                ps.setArray(3, con.createArrayOf("bigint", ids.toTypedArray()))
+                ps.setString(3, ids.idsEmJson())
                 ps.executeUpdate()
             }
         }
@@ -157,7 +159,7 @@ class PostgresIssueStore(private val ds: DataSource) : IssueStore, IssueIndex {
                 // A chave antiga é lida antes: os vínculos que a citam passam para a nova na mesma transação.
                 val antiga = con.prepareStatement(
                     "SELECT key FROM issue WHERE instance = ? AND jira_id = ? AND key <> ? " +
-                        "AND NOT EXISTS (SELECT 1 FROM issue o WHERE o.instance = ? AND o.key = ?) FOR UPDATE",
+                        "AND NOT EXISTS (SELECT 1 FROM issue o WHERE o.instance = ? AND o.key = ?)",
                 ).use { ps ->
                     ps.setString(1, instance)
                     ps.setLong(2, jiraId)
@@ -237,11 +239,12 @@ class PostgresIssueStore(private val ds: DataSource) : IssueStore, IssueIndex {
     private fun liberarJiraIdDaChaveAntiga(con: Connection, c: CamposDaIssue, instance: String) {
         val jiraId = c.jiraId ?: return
         con.prepareStatement(
-            "UPDATE issue SET removida_em = now(), jira_id = NULL WHERE instance = ? AND jira_id = ? AND key <> ? RETURNING key",
+            "UPDATE issue SET removida_em = ?, jira_id = NULL WHERE instance = ? AND jira_id = ? AND key <> ? RETURNING key",
         ).use { ps ->
-            ps.setString(1, instance)
-            ps.setLong(2, jiraId)
-            ps.setString(3, c.key)
+            ps.setTimestamp(1, Timestamp.from(Instant.now()))
+            ps.setString(2, instance)
+            ps.setLong(3, jiraId)
+            ps.setString(4, c.key)
             val antigas = ps.executeQuery().use { rs -> buildList { while (rs.next()) add(rs.getString(1)) } }
             // Os vínculos da chave antiga deixam de valer na mesma transação; os da chave nova vêm no `substituir`.
             for (antiga in antigas) links.marcarRemovidosDaChave(con, instance, antiga)
@@ -254,7 +257,7 @@ class PostgresIssueStore(private val ds: DataSource) : IssueStore, IssueIndex {
             INSERT INTO issue (key, instance, project, issue_type, status, resolution, assignee_ref, reporter_ref,
                                created, updated, resolved, duedate, labels, parent_key, estimate_s, spent_s, raw,
                                os_version, jira_id)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CAST(? AS jsonb), ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT (instance, key) DO UPDATE SET
                 project = EXCLUDED.project, issue_type = EXCLUDED.issue_type,
                 status = EXCLUDED.status, resolution = EXCLUDED.resolution, assignee_ref = EXCLUDED.assignee_ref,
@@ -277,8 +280,8 @@ class PostgresIssueStore(private val ds: DataSource) : IssueStore, IssueIndex {
             ps.setTimestamp(9, c.created?.let(Timestamp::from))
             ps.setTimestamp(10, c.updated?.let(Timestamp::from))
             ps.setTimestamp(11, c.resolved?.let(Timestamp::from))
-            ps.setDate(12, c.duedate?.let { Date.valueOf(LocalDate.parse(it.take(10))) })
-            ps.setArray(13, con.createArrayOf("text", c.labels.toTypedArray()))
+            ps.setString(12, c.duedate?.let { LocalDate.parse(it.take(10)).toString() })
+            ps.setString(13, c.labels.emJson())
             ps.setString(14, c.parentKey)
             if (c.estimateS != null) ps.setLong(15, c.estimateS) else ps.setNull(15, java.sql.Types.BIGINT)
             if (c.spentS != null) ps.setLong(16, c.spentS) else ps.setNull(16, java.sql.Types.BIGINT)
@@ -336,11 +339,11 @@ class PostgresIssueStore(private val ds: DataSource) : IssueStore, IssueIndex {
         val filtros = StringBuilder("instance = ? AND removida_em IS NULL AND created IS NOT NULL")
         val params = mutableListOf<Any>(instance)
         if (filtro != null && filtro.tipos.isNotEmpty()) {
-            filtros.append(" AND lower(coalesce(issue_type, '')) = ANY (?)")
+            filtros.append(" AND lower(coalesce(issue_type, '')) IN (SELECT value FROM json_each(?))")
             params.add(minusculas(filtro.tipos))
         }
         if (filtro != null && filtro.statusExcluidos.isNotEmpty()) {
-            filtros.append(" AND lower(coalesce(status, '')) <> ALL (?)")
+            filtros.append(" AND lower(coalesce(status, '')) NOT IN (SELECT value FROM json_each(?))")
             params.add(minusculas(filtro.statusExcluidos))
         }
         if (osVersion != null) {
@@ -361,22 +364,20 @@ class PostgresIssueStore(private val ds: DataSource) : IssueStore, IssueIndex {
                 params += Timestamp.from(closedTo)
             }
         }
-        val sql = "SELECT id, key, raw->'fields'->>'summary', issue_type, status, resolution, assignee_ref, " +
+        val sql = "SELECT id, key, json_extract(raw, '$.fields.summary'), issue_type, status, resolution, assignee_ref, " +
             "created, resolved, labels FROM issue WHERE $filtros ORDER BY key"
         ds.connection.use { con ->
             val linhas = con.prepareStatement(sql).use { ps ->
                 params.forEachIndexed { i, p ->
                     when (p) {
                         is Timestamp -> ps.setTimestamp(i + 1, p)
-                        is Array<*> -> ps.setArray(i + 1, con.createArrayOf("text", p))
                         else -> ps.setString(i + 1, p as String)
                     }
                 }
                 ps.executeQuery().use { rs ->
                     buildList {
                         while (rs.next()) {
-                            @Suppress("UNCHECKED_CAST")
-                            val labels = (rs.getArray(10)?.array as? Array<String>)?.toList().orEmpty()
+                            val labels = jsonParaTextos(rs.getString(10))
                             add(
                                 LinhaIssue(
                                     rs.getLong(1), rs.getString(2), rs.getString(3).orEmpty(), rs.getString(4).orEmpty(),
@@ -400,16 +401,19 @@ class PostgresIssueStore(private val ds: DataSource) : IssueStore, IssueIndex {
         }
     }
 
-    /** Valores em minúsculas (fixas, sem depender do idioma) como array de parâmetro, para comparar sem diferenciar maiúsculas. */
-    private fun minusculas(valores: Set<String>): Array<String> =
-        valores.map { it.lowercase(java.util.Locale.ROOT) }.toTypedArray()
+    /**
+     * Valores em minúsculas (fixas, sem depender do idioma) como JSON de parâmetro, para comparar sem diferenciar
+     * maiúsculas. O `lower()` do SQLite só rebaixa ASCII: letras maiúsculas acentuadas gravadas na base não casam.
+     */
+    private fun minusculas(valores: Set<String>): String =
+        valores.map { it.lowercase(java.util.Locale.ROOT) }.emJson()
 
     private fun eventosDe(con: Connection, linhas: List<LinhaIssue>): Map<Long, List<ChangeEventRecord>> {
         val chaves = linhas.associate { it.id to it.key }
         val sql = "SELECT issue_id, changelog_id, field, from_value, to_value, at, author_ref " +
-            "FROM change_event WHERE issue_id = ANY (?) ORDER BY at, id"
+            "FROM change_event WHERE issue_id IN (SELECT value FROM json_each(?)) ORDER BY at, id"
         con.prepareStatement(sql).use { ps ->
-            ps.setArray(1, con.createArrayOf("bigint", chaves.keys.toTypedArray()))
+            ps.setString(1, chaves.keys.idsEmJson())
             ps.executeQuery().use { rs ->
                 val saida = HashMap<Long, MutableList<ChangeEventRecord>>()
                 while (rs.next()) {

@@ -4,7 +4,9 @@ import br.sidia.painel.AppContext
 import br.sidia.painel.sync.ChangelogParser
 import br.sidia.painel.sync.ChavesDeUsuario
 import br.sidia.painel.sync.IssueLinks
-import br.sidia.painel.sync.PostgresIssueStore
+import br.sidia.painel.db.emJson
+import br.sidia.painel.db.tuplasEmJson
+import br.sidia.painel.sync.SqliteIssueStore
 import com.charleskorn.kaml.Yaml
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
@@ -79,7 +81,7 @@ private val CHAVES_DE_DATA_NO_CHANGELOG = listOf("from", "to", "fromString", "to
  */
 class DadosDeDemonstracao(
     private val ds: DataSource,
-    private val store: PostgresIssueStore,
+    private val store: SqliteIssueStore,
     private val clock: Clock,
     private val zone: ZoneId,
     private val pasta: String = "demo",
@@ -115,10 +117,10 @@ class DadosDeDemonstracao(
 
     /** Se existe alguma issue de chave com prefixo de demonstração, em qualquer instância. */
     fun existemDados(): Boolean {
-        val padroes = lerManifestoDemo(pasta).instancias.values.map { "${it.prefixo}-%" }.toTypedArray()
+        val padroes = lerManifestoDemo(pasta).instancias.values.map { "${it.prefixo}-%" }
         return ds.connection.use { con ->
-            con.prepareStatement("SELECT EXISTS (SELECT 1 FROM issue WHERE key LIKE ANY (?))").use { ps ->
-                ps.setArray(1, con.createArrayOf("text", padroes))
+            con.prepareStatement("SELECT EXISTS (SELECT 1 FROM issue WHERE EXISTS (SELECT 1 FROM json_each(?) WHERE issue.key LIKE value))").use { ps ->
+                ps.setString(1, padroes.emJson())
                 ps.executeQuery().use { it.next() && it.getBoolean(1) }
             }
         }
@@ -129,14 +131,13 @@ class DadosDeDemonstracao(
      * instâncias do manifesto COM o prefixo de demonstração dela; vale também para instâncias fora do manifesto.
      */
     private fun exigirSemDadosReais(con: Connection, manifesto: ManifestoDemo) {
-        val instancias = manifesto.instancias.keys.toTypedArray()
-        val padroes = manifesto.instancias.values.map { "${it.prefixo}-%" }.toTypedArray()
+        val pares = manifesto.instancias.map { (id, inst) -> listOf(id, "${inst.prefixo}-%") }
         val real = con.prepareStatement(
             "SELECT EXISTS (SELECT 1 FROM issue i WHERE NOT EXISTS (" +
-                "SELECT 1 FROM unnest(?::text[], ?::text[]) AS d(inst, pat) WHERE i.instance = d.inst AND i.key LIKE d.pat))",
+                "SELECT 1 FROM json_each(?) d WHERE i.instance = json_extract(d.value, '$[0]') " +
+                "AND i.key LIKE json_extract(d.value, '$[1]')))",
         ).use { ps ->
-            ps.setArray(1, con.createArrayOf("text", instancias))
-            ps.setArray(2, con.createArrayOf("text", padroes))
+            ps.setString(1, pares.tuplasEmJson())
             ps.executeQuery().use { it.next() && it.getBoolean(1) }
         }
         if (real) throw DemoRecusadaException("BANCO_COM_DADOS_REAIS")
@@ -247,7 +248,7 @@ class DadosDeDemonstracao(
 fun prepararDemonstracao(ctx: AppContext) {
     val s = ctx.settings
     val ds = ctx.dataSource ?: return
-    val demo = DadosDeDemonstracao(ds, PostgresIssueStore(ds), ctx.clock, s.zone)
+    val demo = DadosDeDemonstracao(ds, SqliteIssueStore(ds), ctx.clock, s.zone)
     try {
         if (!s.dashboardDemoData) {
             // Produção (sem modo dev) nunca convive com dado fictício remanescente; com o Jira ligado também não.

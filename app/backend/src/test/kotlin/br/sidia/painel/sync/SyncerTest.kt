@@ -1,5 +1,6 @@
 package br.sidia.painel.sync
 
+import br.sidia.painel.BancoEmArquivo
 import br.sidia.painel.AppContext
 import br.sidia.painel.config.Settings
 import br.sidia.painel.jira.JiraAuthKind
@@ -31,7 +32,6 @@ import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import org.junit.jupiter.api.AfterAll
-import org.testcontainers.postgresql.PostgreSQLContainer
 import java.time.Clock
 import java.time.Instant
 import java.time.ZoneOffset
@@ -48,12 +48,12 @@ import kotlin.time.Duration.Companion.seconds
 /** Sincronização contra PostgreSQL real (Testcontainers) e Jira simulado por MockEngine; nenhuma rede real. */
 class SyncerTest {
     companion object {
-        private val pg = PostgreSQLContainer("postgres:16").apply { start() }
+        private val pg = BancoEmArquivo()
 
         @JvmStatic
         @AfterAll
-        fun pararContainer() {
-            pg.stop()
+        fun apagarBanco() {
+            pg.apagar()
         }
 
         private fun fixture(nome: String) =
@@ -65,12 +65,12 @@ class SyncerTest {
     private val eventosEsperados = 10 // TG-1: 3, TG-2: 3, TG-3: 1, TG-4 (completo): 3
 
     private lateinit var ctx: AppContext
-    private lateinit var store: PostgresIssueStore
+    private lateinit var store: SqliteIssueStore
 
     @BeforeTest
     fun preparar() {
         ctx = testContextComBanco(Settings(), pg)
-        store = PostgresIssueStore(requireNotNull(ctx.dataSource))
+        store = SqliteIssueStore(requireNotNull(ctx.dataSource))
     }
 
     @AfterTest
@@ -124,7 +124,7 @@ class SyncerTest {
         assertEquals(8, r1.issues)
         // Blocks TG-2->TG-1 (visto pelas duas pontas), TG-3->TG-4 (idem), TG-5->TG-6 (idem) e Relates TG-1~TG-7; o item malformado cai.
         assertEquals(4, contar("issue_link"))
-        val links = PostgresIssueLinkStore(requireNotNull(ctx.dataSource))
+        val links = SqliteIssueLinkStore(requireNotNull(ctx.dataSource))
         assertEquals(
             listOf(
                 VinculoRecord("TG-2", "TG-1", "Blocks", DirecaoVinculo.OUTWARD),
@@ -141,7 +141,7 @@ class SyncerTest {
         syncer.run(consulta)
         assertEquals(4, contar("issue_link"))
         val raws = requireNotNull(ctx.dataSource).connection.use { c ->
-            c.createStatement().executeQuery("SELECT raw::text FROM issue").use { rs ->
+            c.createStatement().executeQuery("SELECT raw FROM issue").use { rs ->
                 buildList { while (rs.next()) add(rs.getString(1)) }
             }
         }
@@ -271,7 +271,7 @@ class SyncerTest {
         assertEquals(eventosEsperados + 1, contar("change_event"))
         val linha = requireNotNull(ctx.dataSource).connection.use { c ->
             c.createStatement().executeQuery(
-                "SELECT status, resolution, assignee_ref, (resolved IS NOT NULL)::text, array_to_string(labels, ',') FROM issue WHERE key = 'TG-3'",
+                "SELECT status, resolution, assignee_ref, CASE WHEN resolved IS NOT NULL THEN 'true' ELSE 'false' END, (SELECT group_concat(value, ',') FROM json_each(labels)) FROM issue WHERE key = 'TG-3'",
             ).use { it.next(); listOf(it.getString(1), it.getString(2), it.getString(3), it.getString(4), it.getString(5)) }
         }
         assertEquals(listOf("Done", "Done", "bruno", "true", "acesso,feito"), linha)
@@ -342,7 +342,7 @@ class SyncerTest {
             )
         }
         Syncer(cliente(jira(busca = busca)), store, "samsung").run(consulta)
-        val raw = texto("SELECT raw::text FROM issue WHERE key = 'TG-1'").single().orEmpty()
+        val raw = texto("SELECT raw FROM issue WHERE key = 'TG-1'").single().orEmpty()
         for (proibido in listOf("displayName", "emailAddress", "avatarUrls", "Ana Silva", "ana@exemplo", "avatar.exemplo", "JIRAUSER1", "\"self\"")) {
             assertFalse(proibido in raw, "raw ainda contém $proibido")
         }
@@ -396,7 +396,7 @@ class SyncerTest {
 
     // ---- Tarefa 4: fluxo, chaves internas e issues incompletas ----
 
-    private fun repositorioDeChaves() = PostgresSyncStateStore(requireNotNull(ctx.dataSource))
+    private fun repositorioDeChaves() = SqliteSyncStateStore(requireNotNull(ctx.dataSource))
 
     private fun buscaChaves() = fixture("search-jirauser-keys.json")
 
@@ -423,8 +423,8 @@ class SyncerTest {
     fun mapaVemDoJsonAntesDaSanitizacao() = runBlocking {
         Syncer(cliente(jira(busca = buscaChaves())), store, "samsung", chaves = repositorioDeChaves()).run(consulta)
         // o raw não guarda a key do usuário, mas o mapa persistido a conhece
-        assertEquals("false", valor("SELECT (raw->'fields'->'assignee' ? 'key')::text FROM issue WHERE key = 'TG-10'"))
-        assertFalse("JIRAUSER10500" in valor("SELECT raw::text FROM issue WHERE key = 'TG-10'").orEmpty())
+        assertEquals("false", valor("SELECT CASE WHEN json_extract(raw, '$.fields.assignee.key') IS NOT NULL THEN 'true' ELSE 'false' END FROM issue WHERE key = 'TG-10'"))
+        assertFalse("JIRAUSER10500" in valor("SELECT raw FROM issue WHERE key = 'TG-10'").orEmpty())
         assertEquals("ana.silva", repositorioDeChaves().chavesDeUsuario("samsung")["JIRAUSER10500"])
         assertEquals(emptyMap(), repositorioDeChaves().chavesDeUsuario("sidia"))
     }
@@ -509,14 +509,14 @@ class SyncerTest {
     fun jiraIdGravadoEReentradaLimpaRemovida() = runBlocking {
         val syncer = Syncer(cliente(jira(busca = buscaChaves())), store, "samsung")
         syncer.run(consulta)
-        assertEquals("10010", valor("SELECT jira_id::text FROM issue WHERE key = 'TG-10'"))
+        assertEquals("10010", valor("SELECT CAST(jira_id AS TEXT) FROM issue WHERE key = 'TG-10'"))
         requireNotNull(ctx.dataSource).connection.use { c ->
-            c.createStatement().executeUpdate("UPDATE issue SET removida_em = now() WHERE key = 'TG-10'")
+            c.createStatement().executeUpdate("UPDATE issue SET removida_em = (CAST(strftime('%s','now') AS INTEGER) * 1000) WHERE key = 'TG-10'")
         }
-        assertNotNull(valor("SELECT removida_em::text FROM issue WHERE key = 'TG-10'"))
+        assertNotNull(valor("SELECT CAST(removida_em AS TEXT) FROM issue WHERE key = 'TG-10'"))
         syncer.run(consulta)
-        assertEquals(null, valor("SELECT removida_em::text FROM issue WHERE key = 'TG-10'"))
-        assertEquals("10010", valor("SELECT jira_id::text FROM issue WHERE key = 'TG-10'"))
+        assertEquals(null, valor("SELECT CAST(removida_em AS TEXT) FROM issue WHERE key = 'TG-10'"))
+        assertEquals("10010", valor("SELECT CAST(jira_id AS TEXT) FROM issue WHERE key = 'TG-10'"))
     }
 
     @Test
@@ -524,6 +524,6 @@ class SyncerTest {
         Syncer(cliente(jira(busca = buscaChaves())), store, "samsung").run(consulta)
         val semId = buscaChaves().replace("\"id\": \"10010\",", "")
         Syncer(cliente(jira(busca = semId)), store, "samsung").run(consulta)
-        assertEquals("10010", valor("SELECT jira_id::text FROM issue WHERE key = 'TG-10'"))
+        assertEquals("10010", valor("SELECT CAST(jira_id AS TEXT) FROM issue WHERE key = 'TG-10'"))
     }
 }

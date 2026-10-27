@@ -1,5 +1,6 @@
 package br.sidia.painel.sync
 
+import br.sidia.painel.BancoEmArquivo
 import br.sidia.painel.AppContext
 import br.sidia.painel.config.JiraInstanceSettings
 import br.sidia.painel.config.Settings
@@ -23,7 +24,6 @@ import io.ktor.server.application.ApplicationCall
 import io.ktor.server.testing.testApplication
 import kotlinx.serialization.json.Json
 import org.junit.jupiter.api.AfterAll
-import org.testcontainers.postgresql.PostgreSQLContainer
 import java.time.Clock
 import java.time.Instant
 import java.time.LocalDate
@@ -42,12 +42,12 @@ import kotlin.test.assertTrue
  */
 class SyncStatusRoutesTest {
     companion object {
-        private val pg = PostgreSQLContainer("postgres:16").apply { start() }
+        private val pg = BancoEmArquivo()
 
         @JvmStatic
         @AfterAll
-        fun pararContainer() {
-            pg.stop()
+        fun apagarBanco() {
+            pg.apagar()
         }
 
         private const val TOKEN = "token-de-teste-123"
@@ -93,7 +93,7 @@ class SyncStatusRoutesTest {
     private fun contexto(live: Boolean): AppContext =
         testContextComBanco(settings(live), pg, diretorio, relogio).also { ctx = it }
 
-    private fun estado(c: AppContext) = PostgresSyncStateStore(requireNotNull(c.dataSource))
+    private fun estado(c: AppContext) = SqliteSyncStateStore(requireNotNull(c.dataSource))
 
     private fun linhasDoAccessLog(c: AppContext): List<Triple<String, String, String>> =
         requireNotNull(c.dataSource).connection.use { con ->

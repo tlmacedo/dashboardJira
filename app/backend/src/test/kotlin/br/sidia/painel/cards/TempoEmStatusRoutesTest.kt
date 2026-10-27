@@ -1,5 +1,6 @@
 package br.sidia.painel.cards
 
+import br.sidia.painel.BancoEmArquivo
 import br.sidia.painel.AppContext
 import br.sidia.painel.config.Settings
 import br.sidia.painel.module
@@ -13,7 +14,7 @@ import br.sidia.painel.security.RoleDirectory
 import br.sidia.painel.security.Vigencia
 import br.sidia.painel.security.principalFor
 import br.sidia.painel.sync.ChangeEventRecord
-import br.sidia.painel.sync.PostgresIssueStore
+import br.sidia.painel.sync.SqliteIssueStore
 import br.sidia.painel.testContextComBanco
 import io.ktor.client.HttpClient
 import io.ktor.client.request.get
@@ -28,7 +29,6 @@ import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonObject
 import org.junit.jupiter.api.AfterAll
-import org.testcontainers.postgresql.PostgreSQLContainer
 import java.net.URLEncoder
 import java.time.Clock
 import java.time.Instant
@@ -48,12 +48,12 @@ import kotlin.test.assertTrue
  */
 class TempoEmStatusRoutesTest {
     companion object {
-        private val pg = PostgreSQLContainer("postgres:16").apply { start() }
+        private val pg = BancoEmArquivo()
 
         @JvmStatic
         @AfterAll
-        fun pararContainer() {
-            pg.stop()
+        fun apagarBanco() {
+            pg.apagar()
         }
     }
 
@@ -126,7 +126,7 @@ class TempoEmStatusRoutesTest {
         val registros = eventos.mapIndexed { i, e ->
             ChangeEventRecord("$chave:h$i:0", chave, e.campo, e.de, e.para, t(e.quando).toInstant(), "autor")
         }
-        PostgresIssueStore(requireNotNull(ctx.dataSource)).upsert(json, registros, "samsung", ID_OS)
+        SqliteIssueStore(requireNotNull(ctx.dataSource)).upsert(json, registros, "samsung", ID_OS)
     }
 
     // OS Version por issue: A em TG-1, TG-3, TG-5, TG-9 e TG-6 (aberta); B em TG-2 e TG-4; as demais sem valor.

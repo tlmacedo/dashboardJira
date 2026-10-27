@@ -12,7 +12,7 @@ Este documento não contém host, token nem username: eles ficam só no ambiente
   - o `timeZone` lido em `/myself` está anotado e vira `SYNC_FUSO_SERVIDOR` (se o servidor não estiver em America/Manaus);
   - o `customId` de cada campo está preenchido no `jira_campos.yaml` real;
   - o `status_map.yaml` real tem os status reais do TG-Basic.
-- Docker ativo (PostgreSQL do compose).
+- JDK 21 e Node 22 com pnpm instalados (o painel roda direto na máquina, com banco SQLite em arquivo).
 - Configs reais criadas a partir dos modelos (próxima seção) e **nunca versionadas**.
 
 ## Configs reais necessárias
@@ -21,7 +21,7 @@ Todas ficam em `app/config/` (ou em `PAINEL_CONFIG_DIR`). Crie cada uma copiando
 
 | Arquivo real | Modelo | Observação |
 |---|---|---|
-| `.env` (em `app/`) | `.env.example` | URL e token de cada instância, `POSTGRES_PASSWORD`, flags e `SYNC_*`. O `.env` é ignorado pelo git. |
+| `.env` (em `app/`) | `.env.example` | URL e token de cada instância, flags e `SYNC_*`. O `.env` é ignorado pelo git. |
 | `papeis.yaml` | `papeis.exemplo.yaml` | O `id` de cada pessoa é o username do Jira (igual ao `assignee`). |
 | `calendario.yaml` | `calendario.exemplo.yaml` | Feriados e dias não úteis reais; obrigatório em produção; sem dado pessoal, mas fica fora do git como os demais reais. |
 | `status_map.yaml` | `status_map.exemplo.yaml` | Nomes de status reais; obrigatório em produção. |
@@ -53,23 +53,9 @@ Copy-Item app\config\vinculos.exemplo.yaml app\config\vinculos.yaml
 
 Confira com `git status` que nenhum desses arquivos aparece como novo. Se aparecer, pare: o `.gitignore` está incompleto.
 
-**Como os arquivos chegam ao contêiner.** O `docker-compose.yml` monta a pasta `app/config/` do host em `/app/config`, somente leitura (`:ro`), por cima da config embutida na imagem (que só traz os modelos `.exemplo`). Portanto os arquivos reais acima, e as fichas em `cards/`, são lidos sem rebuild de imagem: basta criar o arquivo e reiniciar (`docker compose up -d`). Nada com dado pessoal é copiado para a imagem nem para o repositório. Um arquivo `vinculos` (vínculo Blocks), quando existir, segue o mesmo caminho.
+**Como os arquivos chegam ao painel.** O painel lê `app/config/` direto do disco (ou `PAINEL_CONFIG_DIR`) e as variáveis de `app/.env` na subida; variáveis já definidas no terminal têm precedência sobre o arquivo. Basta criar o arquivo e reiniciar o painel (`sh iniciar.sh` ou `.\iniciar.ps1`). Nada com dado pessoal vai para o repositório.
 
-**Conferência dos arquivos carregados.** Depois de subir, o log da subida avisa, em modo desenvolvimento, de cada arquivo real ausente que foi trocado pelo modelo (`usando o modelo ... .exemplo.yaml`). Sem esse aviso para papéis, mapa de status e dicionário de campos, os reais foram carregados (o log nunca mostra o conteúdo). Em produção a ausência de um obrigatório derruba a subida.
-
-macOS (zsh), a partir da pasta `app`:
-
-```sh
-docker compose logs painel | grep "usando o modelo"
-```
-
-Windows 11 (PowerShell), a partir da pasta `app`:
-
-```powershell
-docker compose logs painel | Select-String "usando o modelo"
-```
-
-Saída vazia = nenhum modelo em uso.
+**Conferência dos arquivos carregados.** Depois de subir, o log da subida avisa, em modo desenvolvimento, de cada arquivo real ausente que foi trocado pelo modelo (`usando o modelo ... .exemplo.yaml`). Sem esse aviso para papéis, mapa de status e dicionário de campos, os reais foram carregados (o log nunca mostra o conteúdo). Em produção a ausência de um obrigatório derruba a subida. O log aparece no próprio terminal em que o painel foi iniciado: procure por `usando o modelo` (macOS: `| grep "usando o modelo"`; PowerShell: `| Select-String "usando o modelo"`). Saída vazia = nenhum modelo em uso.
 
 ## Variáveis
 
@@ -90,61 +76,55 @@ A sincronização liga **somente** pela flag `JIRA_LIVE_ENABLED` (valor verdadei
 | `RETENTION_MONTHS` | `24` | 6 a 600 | Meses de dados locais mantidos (ver Retenção). |
 | `ACCESS_LOG_RETENTION_MONTHS` | `24` | 12 a 600 | Meses da auditoria de acessos (`access_log`), independente de `RETENTION_MONTHS`. |
 
-O `docker-compose.yml` já repassa ao contêiner todas as variáveis acima, as de conexão (`JIRA_SAMSUNG_URL`, `JIRA_SAMSUNG_TOKEN`, `JIRA_SIDIA_URL`, `JIRA_SIDIA_USER`, `JIRA_SIDIA_TOKEN`) e `DASHBOARD_DEMO_DATA`, sempre no formato `NOME: ${NOME:-}` (sem valor no arquivo; vazio = padrão do código). Os valores vêm do `.env`.
+Todas as variáveis acima, as de conexão (`JIRA_SAMSUNG_URL`, `JIRA_SAMSUNG_TOKEN`, `JIRA_SIDIA_URL`, `JIRA_SIDIA_USER`, `JIRA_SIDIA_TOKEN`), `DATABASE_PATH` e `DASHBOARD_DEMO_DATA` são lidas de `app/.env` (vazio = padrão do código). O banco é o arquivo `data/painel.db`.
 
 ## Etapa 1: primeiro ciclo, pequeno
 
 Objetivo: ver o app falar com o Jira com o menor volume possível. Todos os comandos rodam na pasta `app/` (a partir da raiz do repositório).
 
 1. No `.env`, defina `SYNC_MAX_ITENS=50` e `SYNC_MAX_REQUISICOES=5`, mais URL e token da instância. **Ainda com `JIRA_LIVE_ENABLED=false`.**
-2. **Conferência antes de ligar a flag.** Veja o que o contêiner vai receber, sem imprimir segredo. Nunca rode `docker compose config` sem filtro: ele mostra a senha do banco e o token.
+2. **Conferência antes de ligar a flag.** Confirme que o `.env` tem os tetos e que as credenciais da instância estão preenchidas, sem imprimir segredo (mostra só o nome das variáveis, nunca o valor).
 
    macOS (zsh):
 
    ```sh
-   cd app
-   docker compose config | grep -E "JIRA_LIVE_ENABLED|DASHBOARD_|SYNC_|RETENTION_MONTHS"
-   docker compose config | grep -E "JIRA_[A-Z]+_(URL|USER|TOKEN):" | awk '{print $1, ($2 == "\"\"" ? "VAZIA" : "preenchida")}'
+   grep -E "^(JIRA_LIVE_ENABLED|DASHBOARD_|SYNC_|RETENTION_MONTHS)" app/.env
+   grep -E "^JIRA_[A-Z]+_(URL|USER|TOKEN)=" app/.env | awk -F= '{print $1, ($2 == "" ? "VAZIA" : "preenchida")}'
    ```
 
    Windows 11 (PowerShell):
 
    ```powershell
-   Set-Location app
-   docker compose config | Select-String "JIRA_LIVE_ENABLED|DASHBOARD_|SYNC_|RETENTION_MONTHS"
-   docker compose config | Select-String "JIRA_[A-Z]+_(URL|USER|TOKEN):" | ForEach-Object {
-     $p = $_.Line.Trim() -split ":\s*", 2
-     "$($p[0]): " + $(if ($p[1] -in '""', "''", "") { "VAZIA" } else { "preenchida" })
+   Select-String -Path app\.env -Pattern "^(JIRA_LIVE_ENABLED|DASHBOARD_|SYNC_|RETENTION_MONTHS)"
+   Select-String -Path app\.env -Pattern "^JIRA_[A-Z]+_(URL|USER|TOKEN)=" | ForEach-Object {
+     $p = $_.Line.Trim() -split "=", 2
+     "$($p[0]): " + $(if ($p[1] -eq "") { "VAZIA" } else { "preenchida" })
    }
    ```
 
-   Esperado: `JIRA_LIVE_ENABLED: "false"`, `SYNC_MAX_ITENS: "50"`, `SYNC_MAX_REQUISICOES: "5"` e as credenciais da instância como `preenchida` (a da outra instância `VAZIA`). Se um teto aparecer vazio, a variável não chegou ao contêiner: pare e corrija o `.env`.
-3. **O usuário, à mão**, liga a flag `JIRA_LIVE_ENABLED` (muda o valor de `false` para o verdadeiro) no `.env`. Os hooks barram a IA de editar o arquivo de ambiente, o compose e as settings: se uma IA estiver conduzindo este runbook, ela para aqui e pede ao usuário (o passo 2 também é do usuário, porque o `config` do compose cita as variáveis de conexão do Jira).
-4. Suba (ou recrie) o app. O agendador faz a carga inicial sozinho, dentro desses tetos.
+   Esperado: `JIRA_LIVE_ENABLED=false`, `SYNC_MAX_ITENS=50`, `SYNC_MAX_REQUISICOES=5` e as credenciais da instância como `preenchida` (a da outra instância `VAZIA`).
+3. **O usuário, à mão**, liga a flag `JIRA_LIVE_ENABLED` (muda o valor de `false` para o verdadeiro) no `.env`. Os hooks barram a IA de editar o arquivo de ambiente e as settings: se uma IA estiver conduzindo este runbook, ela para aqui e pede ao usuário (o passo 2 também é do usuário, porque lê as variáveis de conexão do Jira).
+4. Suba (ou reinicie) o painel. O agendador faz a carga inicial sozinho, dentro desses tetos.
 
    macOS (zsh), na pasta `app`:
 
    ```sh
-   docker compose up --build -d
+   sh iniciar.sh --sem-build-do-front
    ```
 
    Windows 11 (PowerShell), na pasta `app`:
 
    ```powershell
-   docker compose up --build -d
+   .\iniciar.ps1 -SemBuildDoFront
    ```
 
 5. Espere um ciclo e confira `/api/sync/status` e o card (próxima seção). O primeiro ciclo termina quando o app esgota o teto de 50 issues ou de 5 requisições; um código `TETO_ITENS` ou `ORCAMENTO_REQUISICOES` aqui é esperado, não é falha do Jira.
 
-Para acompanhar o log (macOS e PowerShell, na pasta `app`):
-
-```sh
-docker compose logs -f painel
-```
+Para acompanhar o log, olhe o terminal em que o painel está rodando (Ctrl+C para parar).
 
 ## Etapa 2: limites padrão
 
-1. Se a Etapa 1 estiver limpa, apague `SYNC_MAX_ITENS` e `SYNC_MAX_REQUISICOES` do `.env` (ou deixe vazios) e reinicie (`docker compose up -d`).
+1. Se a Etapa 1 estiver limpa, apague `SYNC_MAX_ITENS` e `SYNC_MAX_REQUISICOES` do `.env` (ou deixe vazios) e reinicie o painel.
 2. O app faz a carga completa e depois incrementais a cada `SYNC_INTERVALO_MIN`.
 3. Reconfira o status. Carga grande pode levar mais de um ciclo; o cursor só avança até o que foi gravado.
 
@@ -206,9 +186,9 @@ Registre o código e o instante, e só volte a ligar depois de decidir a correç
 ## Como desligar
 
 1. No `.env`, ponha `JIRA_LIVE_ENABLED=false`.
-2. Reinicie o app (`docker compose up -d` recarrega o ambiente).
+2. Reinicie o painel (o `.env` é relido na subida).
 
-Nenhuma outra variável liga ou desliga a sincronização. Com `false`, o gate nega qualquer acesso e o status mostra `DESLIGADO_PELA_FLAG`. Os dados já gravados ficam no banco local. Para apagá-los: `docker compose down -v`.
+Nenhuma outra variável liga ou desliga a sincronização. Com `false`, o gate nega qualquer acesso e o status mostra `DESLIGADO_PELA_FLAG`. Os dados já gravados ficam no banco local. Para apagá-los: pare o painel e apague o arquivo `data/painel.db`.
 
 ## Retenção
 
@@ -222,26 +202,26 @@ Todo dia, em `SYNC_HORA_RETENCAO`, o app apaga **só dados locais** antigos; nun
 
 ## Dados de demonstração
 
-Para ver o painel e a tela Sincronização sem tocar no Jira, com a flag `false`, use os dados de demonstração (100% fictícios; seção "Ver o painel hoje em 3 comandos" de `app/README.md`).
+Para ver o painel e a tela Sincronização sem tocar no Jira, com a flag `false`, use os dados de demonstração (100% fictícios; seção "Ver o painel hoje com dados fictícios" de `app/README.md`).
 
 macOS ou Linux (a partir da raiz do repositório):
 
 ```sh
 cd app
-POSTGRES_PASSWORD=<valor descartável> DASHBOARD_DEMO_DATA=true docker compose up --build -d
-open http://localhost:8080        # Linux: xdg-open
+DASHBOARD_DEMO_DATA=true sh iniciar.sh
 ```
 
 Windows (PowerShell, a partir da raiz do repositório):
 
 ```powershell
 cd app
-$env:POSTGRES_PASSWORD = "<valor descartável>"; $env:DASHBOARD_DEMO_DATA = "true"
-docker compose up --build -d
-Start-Process http://localhost:8080
+$env:DASHBOARD_DEMO_DATA = "true"
+.\iniciar.ps1
 ```
 
-**Pré-requisito para ligar a flag do Jira: banco sem dados de demonstração.** O painel recusa subir com a flag `JIRA_LIVE_ENABLED` ligada quando o banco ainda tem issues de demonstração (`DASHBOARD_DEMO_DATA` também precisa estar `false`, ou a subida cai). Nada é apagado automaticamente: antes de ligar a flag, use um volume novo (`docker compose down -v`) e suba de novo **sem** `DASHBOARD_DEMO_DATA`. Do mesmo jeito, um banco com issues reais recusa a carga de demonstração.
+Abra <http://localhost:8080>.
+
+**Pré-requisito para ligar a flag do Jira: banco sem dados de demonstração.** O painel recusa subir com a flag `JIRA_LIVE_ENABLED` ligada quando o banco ainda tem issues de demonstração (`DASHBOARD_DEMO_DATA` também precisa estar `false`, ou a subida cai). Nada é apagado automaticamente: antes de ligar a flag, pare o painel, apague o arquivo `data/painel.db` e suba de novo **sem** `DASHBOARD_DEMO_DATA`. Do mesmo jeito, um banco com issues reais recusa a carga de demonstração.
 
 ## Depois do primeiro ciclo
 

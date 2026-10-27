@@ -17,7 +17,6 @@ import io.ktor.server.testing.testApplication
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.io.TempDir
 import org.slf4j.LoggerFactory
-import org.testcontainers.postgresql.PostgreSQLContainer
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
@@ -36,14 +35,13 @@ import kotlin.test.assertTrue
 
 class AppContextTest {
     companion object {
-        private val pg = PostgreSQLContainer("postgres:16").apply { start() }
-        private const val SENHA = "segredo-super-123"
+        private val pg = BancoEmArquivo()
 
-        /** Para o contêiner explicitamente, sem depender do Ryuk. */
+        /** Apaga a pasta temporária dos bancos de teste. */
         @JvmStatic
         @AfterAll
-        fun pararContainer() {
-            pg.stop()
+        fun apagarBanco() {
+            pg.apagar()
         }
     }
 
@@ -101,7 +99,7 @@ class AppContextTest {
         copiarFichas()
         val s = Settings(
             dashboardDevMode = true, configDir = pasta,
-            databaseUrl = pg.jdbcUrl, databaseUser = pg.username, databasePassword = pg.password,
+            databasePath = pg.arquivo,
         )
         AppContext.load(s).use { ctx ->
             assertTrue(ctx.labelsDeAtraso.justifica("ONHOLDBY-PL"))
@@ -133,7 +131,7 @@ class AppContextTest {
     fun auditoriaInvalidaFalhaSemVazarConteudo() {
         escreverArquivosReais()
         Files.writeString(pasta.resolve("auditoria.yaml"), "versao: 1\nsegredo-xyz: 1\n")
-        val e = assertFailsWith<IllegalStateException> { AppContext.load(producao(senha = pg.password)) }
+        val e = assertFailsWith<IllegalStateException> { AppContext.load(producao()) }
         assertTrue(pasta.resolve("auditoria.yaml").toString() in e.message.orEmpty(), e.message)
         assertFalse("segredo-xyz" in e.stackTraceToString())
     }
@@ -146,7 +144,7 @@ class AppContextTest {
         copiarFichas()
         val s = Settings(
             dashboardDevMode = true, configDir = pasta,
-            databaseUrl = pg.jdbcUrl, databaseUser = pg.username, databasePassword = pg.password,
+            databasePath = pg.arquivo,
         )
         AppContext.load(s).use { ctx ->
             assertEquals("Blocks", ctx.vinculos.tipoDeLink)
@@ -193,9 +191,7 @@ class AppContextTest {
         val s = Settings(
             dashboardDevMode = true,
             configDir = pasta,
-            databaseUrl = pg.jdbcUrl,
-            databaseUser = pg.username,
-            databasePassword = pg.password,
+            databasePath = pg.arquivo,
         )
         AppContext.load(s).use { ctx ->
             assertTrue(ctx.fichas.keys.containsAll(listOf("tempo-em-status", "sincronizacao")), ctx.fichas.keys.toString())
@@ -211,7 +207,7 @@ class AppContextTest {
         Files.delete(pasta.resolve("jira_campos.yaml"))
         // o modelo existe, mas com o Jira ligado em produção só o arquivo real vale
         Files.copy(TestPaths.configDir.resolve("jira_campos.exemplo.yaml"), pasta.resolve("jira_campos.exemplo.yaml"))
-        val s = producao(senha = pg.password).copy(
+        val s = producao().copy(
             jiraLiveEnabled = true,
             jiraInstances = mapOf(
                 "samsung" to JiraInstanceSettings("https://jira.exemplo.invalid/", JiraAuthKind.BEARER, null, "tk-12345"),
@@ -225,7 +221,7 @@ class AppContextTest {
     fun fichaInvalidaFalhaNaSubidaSemVazarConteudo() {
         escreverArquivosReais()
         Files.writeString(pasta.resolve("cards/quebrada.card.yaml"), "id: q\nchaveInventada: segredo-xyz\n")
-        val e = assertFailsWith<IllegalStateException> { AppContext.load(producao(senha = pg.password)) }
+        val e = assertFailsWith<IllegalStateException> { AppContext.load(producao()) }
         assertTrue("quebrada.card.yaml" in e.message.orEmpty(), e.message)
         assertFalse("segredo-xyz" in e.stackTraceToString())
     }
@@ -234,15 +230,19 @@ class AppContextTest {
         Files.copy(TestPaths.configDir.resolve("status_map.exemplo.yaml"), pasta.resolve("status_map.yaml"))
     }
 
-    private fun producao(senha: String = SENHA, url: String = pg.jdbcUrl) = Settings(
+    private fun producao() = Settings(
         dashboardDevMode = false,
         configDir = pasta,
-        databaseUrl = url,
-        databaseUser = pg.username,
-        databasePassword = senha,
+        databasePath = pg.arquivo,
     )
 
-    private val urlFechada = "jdbc:postgresql://127.0.0.1:1/painel"
+    /** Caminho que não pode ser aberto (o "diretório pai" é um arquivo comum): a subida para ao chegar no banco. */
+    private val caminhoInvalido: Path
+        get() {
+            val arquivoComum = pasta.resolve("nao-e-pasta.txt")
+            if (!Files.exists(arquivoComum)) Files.writeString(arquivoComum, "x")
+            return arquivoComum.resolve("painel.db")
+        }
 
     @Test
     fun producaoSemPapeisFalha() {
@@ -272,9 +272,7 @@ class AppContextTest {
         val s = Settings(
             dashboardDevMode = true,
             configDir = pasta,
-            databaseUrl = pg.jdbcUrl,
-            databaseUser = pg.username,
-            databasePassword = pg.password,
+            databasePath = pg.arquivo,
         )
         AppContext.load(s).use { ctx ->
             assertTrue(Role.GERENTE in ctx.roles.rolesOf("gerente.exemplo", java.time.LocalDate.parse("2026-10-25")))
@@ -296,44 +294,22 @@ class AppContextTest {
     }
 
     @Test
-    fun producaoComSenhaVaziaFalha() {
+    fun bancoQueNaoPodeSerAbertoFalhaSemVazarCaminhoNemCausa() {
         escreverArquivosReais()
-        val e = assertFailsWith<IllegalStateException> { AppContext.load(producao(senha = "")) }
-        assertEquals("DATABASE_PASSWORD obrigatório em produção", e.message)
+        val e = assertFailsWith<IllegalStateException> { AppContext.load(producao().copy(databasePath = caminhoInvalido)) }
+        assertTrue(e.message.orEmpty().startsWith("Falha ao abrir o banco"), e.message)
+        assertNull(e.cause)
     }
 
     @Test
-    fun devComSenhaVaziaApenasAvisa() {
+    fun doisPaineisNoMesmoBancoNaoSobemJuntos() {
         escreverArquivosReais()
-        val s = Settings(
-            dashboardDevMode = true,
-            configDir = pasta,
-            databaseUrl = urlFechada,
-            databasePassword = "",
-        )
-        // sobe até tentar o banco (inalcançável): a falha é de conexão, nunca a da senha obrigatória
-        val e = assertFailsWith<IllegalStateException> { AppContext.load(s) }
-        assertFalse("DATABASE_PASSWORD obrigatório" in e.message.orEmpty(), e.message)
-        assertTrue(avisos().any { "DATABASE_PASSWORD" in it }, avisos().toString())
-    }
-
-    @Test
-    fun bancoIndisponivelFalhaSemSenhaNaMensagem() {
-        escreverArquivosReais()
-        // URL jdbc válida, porta fechada de localhost, senha no parâmetro e como senha do usuário.
-        val url = "jdbc:postgresql://127.0.0.1:1/painel?user=painel&password=$SENHA"
-        val e = assertFailsWith<IllegalStateException> { AppContext.load(producao(url = url)) }
-        var t: Throwable? = e
-        while (t != null) {
-            assertFalse(SENHA in t.message.orEmpty(), "senha vazou na mensagem: ${t.javaClass}")
-            assertFalse(SENHA in t.stackTraceToString(), "senha vazou no stack trace: ${t.javaClass}")
-            t = t.cause
+        AppContext.load(producao()).use {
+            val e = assertFailsWith<IllegalStateException> { AppContext.load(producao()) }
+            assertEquals("Já existe outro painel usando este banco. Feche-o antes de abrir este.", e.message)
         }
-        // Nenhuma linha capturada (mensagem, stack trace impresso, causa), de qualquer logger.
-        appender.list.forEach {
-            val texto = it.formattedMessage + "\n" + (it.throwableProxy?.let(ThrowableProxyUtil::asString) ?: "")
-            assertFalse(SENHA in texto, "senha vazou no log de ${it.loggerName}: ${it.formattedMessage}")
-        }
+        // Fechado o primeiro, o banco volta a poder ser aberto.
+        AppContext.load(producao()).use { assertNotNull(it.dataSource) }
     }
 
     @Test
@@ -357,7 +333,6 @@ class AppContextTest {
         val relogio = Clock.fixed(Instant.parse("2026-10-25T12:00:00Z"), ZoneId.of("America/Manaus"))
         val e = assertFailsWith<IllegalStateException> { AppContext.load(producao(), relogio) }
         assertTrue(pasta.resolve("papeis.yaml").toString() in e.message.orEmpty(), e.message)
-        assertFalse(SENHA in e.message.orEmpty())
     }
 
     @Test
@@ -373,7 +348,7 @@ class AppContextTest {
                   - papel: COORDENADOR
             """.trimIndent(),
         )
-        val s = Settings(dashboardDevMode = true, configDir = pasta, databaseUrl = urlFechada)
+        val s = Settings(dashboardDevMode = true, configDir = pasta, databasePath = caminhoInvalido)
         // chega até o banco (inalcançável): a falha é de conexão, não de gerente
         val e = assertFailsWith<IllegalStateException> { AppContext.load(s) }
         assertFalse("GERENTE" in e.message.orEmpty(), e.message)
@@ -381,13 +356,13 @@ class AppContextTest {
     }
 
     @Test
-    fun carregaComBancoRealETestcontainers() {
+    fun carregaComBancoSqliteReal() {
         escreverArquivosReais()
-        val ctx = AppContext.load(producao(senha = pg.password))
+        val ctx = AppContext.load(producao())
         val ds = assertNotNull(ctx.dataSource) as HikariDataSource
         val tabelas = ds.connection.use { c ->
             c.createStatement().executeQuery(
-                "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'",
+                "SELECT name FROM sqlite_master WHERE type = 'table'",
             ).use { rs -> generateSequence { if (rs.next()) rs.getString(1) else null }.toSet() }
         }
         assertTrue(tabelas.containsAll(setOf("person", "issue", "change_event")), tabelas.toString())
@@ -399,7 +374,7 @@ class AppContextTest {
     @Test
     fun poolUsaOTamanhoConfigurado() {
         escreverArquivosReais()
-        AppContext.load(producao(senha = pg.password).copy(databasePoolSize = 3)).use { ctx ->
+        AppContext.load(producao().copy(databasePoolSize = 3)).use { ctx ->
             assertEquals(3, (assertNotNull(ctx.dataSource) as HikariDataSource).maximumPoolSize)
         }
     }
@@ -441,7 +416,7 @@ class AppContextTest {
             jiraLiveEnabled = true,
             dashboardDevMode = true,
             configDir = pasta,
-            databaseUrl = urlFechada,
+            databasePath = caminhoInvalido,
             jiraInstances = mapOf(
                 "samsung" to JiraInstanceSettings("http://jira.exemplo.invalid/", JiraAuthKind.BEARER, null, token),
             ),
@@ -454,7 +429,7 @@ class AppContextTest {
     @Test
     fun jiraLigadoComInstanciasValidasSobe() {
         escreverArquivosReais()
-        val s = producao(senha = pg.password).copy(
+        val s = producao().copy(
             jiraLiveEnabled = true,
             jiraInstances = mapOf(
                 "samsung" to JiraInstanceSettings("https://jira.exemplo.invalid/", JiraAuthKind.BEARER, null, "tk-12345"),

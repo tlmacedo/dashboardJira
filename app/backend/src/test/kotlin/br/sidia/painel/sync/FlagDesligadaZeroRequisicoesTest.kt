@@ -1,5 +1,6 @@
 package br.sidia.painel.sync
 
+import br.sidia.painel.BancoEmArquivo
 import br.sidia.painel.config.JiraInstanceSettings
 import br.sidia.painel.config.Settings
 import br.sidia.painel.jira.JiraAuthKind
@@ -18,12 +19,12 @@ import kotlin.test.assertFailsWith
 /** Prova de que, com a flag `false`, nenhum caminho da sincronização fala com o Jira. */
 class FlagDesligadaZeroRequisicoesTest {
     companion object {
-        private val pg = org.testcontainers.postgresql.PostgreSQLContainer("postgres:16").apply { start() }
+        private val pg = br.sidia.painel.BancoEmArquivo()
 
         @JvmStatic
         @org.junit.jupiter.api.AfterAll
-        fun pararContainer() {
-            pg.stop()
+        fun apagarBanco() {
+            pg.apagar()
         }
     }
 
@@ -44,8 +45,8 @@ class FlagDesligadaZeroRequisicoesTest {
         val ctx = br.sidia.painel.testContextComBanco(settings, pg, jira = fabrica)
         ctx.use {
             val ds = requireNotNull(ctx.dataSource)
-            val estado = PostgresSyncStateStore(ds)
-            val servico = SyncService(ctx, PostgresIssueStore(ds), estado, SyncGate(false, settings.sync), ctx.clock)
+            val estado = SqliteSyncStateStore(ds)
+            val servico = SyncService(ctx, SqliteIssueStore(ds), estado, SyncGate(false, settings.sync), ctx.clock)
             val negada = ResultadoExecucao.Negada(MotivoNegacao.DESLIGADO_PELA_FLAG)
             // carga inicial (sem cursor)
             assertEquals(negada, servico.incremental("samsung"))
@@ -80,8 +81,8 @@ class FlagDesligadaZeroRequisicoesTest {
         val ctx = br.sidia.painel.testContextComBanco(settings, pg, jira = fabrica)
         ctx.use {
             val ds = requireNotNull(ctx.dataSource)
-            val estado = PostgresSyncStateStore(ds)
-            val servico = SyncService(ctx, PostgresIssueStore(ds), estado, SyncGate(false, settings.sync), ctx.clock)
+            val estado = SqliteSyncStateStore(ds)
+            val servico = SyncService(ctx, SqliteIssueStore(ds), estado, SyncGate(false, settings.sync), ctx.clock)
             assertEquals(ResultadoExecucao.Negada(MotivoNegacao.DESLIGADO_PELA_FLAG), servico.reconciliar("samsung"))
             assertEquals(0, contador.get())
             assertEquals(0, provedor.get())

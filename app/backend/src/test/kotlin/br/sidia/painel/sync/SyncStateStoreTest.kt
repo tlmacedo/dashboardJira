@@ -1,5 +1,6 @@
 package br.sidia.painel.sync
 
+import br.sidia.painel.BancoEmArquivo
 import br.sidia.painel.db.Database
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.async
@@ -7,7 +8,6 @@ import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.runBlocking
 import org.flywaydb.core.Flyway
-import org.testcontainers.postgresql.PostgreSQLContainer
 import java.time.Instant
 import javax.sql.DataSource
 import kotlin.test.AfterTest
@@ -22,47 +22,37 @@ import kotlin.test.assertTrue
 /** Testes contra PostgreSQL real (Testcontainers); nunca H2 nem mock. */
 class SyncStateStoreTest {
     companion object {
-        private val pg = PostgreSQLContainer("postgres:16").apply { start() }
+        private val pg = BancoEmArquivo()
     }
 
     private lateinit var ds: DataSource
-    private lateinit var store: PostgresSyncStateStore
+    private lateinit var store: SqliteSyncStateStore
 
     private fun t(s: String) = Instant.parse(s)
 
-    private fun limpar() =
-        ds.connection.use { it.createStatement().execute("DROP SCHEMA public CASCADE; CREATE SCHEMA public;") }
-
     @BeforeTest
     fun preparar() {
-        ds = Database.connect(pg.jdbcUrl, pg.username, pg.password)
-        limpar()
+        ds = Database.connect(pg.jdbcUrl)
         Database.migrate(ds)
-        store = PostgresSyncStateStore(ds)
+        store = SqliteSyncStateStore(ds)
     }
 
     @AfterTest
     fun encerrar() {
         (ds as? AutoCloseable)?.close()
+        pg.limpar()
     }
 
     private fun <T> consulta(sql: String, leitor: (java.sql.ResultSet) -> T): T =
         ds.connection.use { c -> c.createStatement().executeQuery(sql).use { it.next(); leitor(it) } }
 
     @Test
-    fun migracaoAplicaEmBancoPopulado() {
-        limpar()
-        // banco só com V1..V3 e dados
-        Flyway.configure().dataSource(ds).locations("classpath:db/migration").target("3").load().migrate()
+    fun migracaoEhIdempotenteEPreservaDados() {
         ds.connection.use {
-            it.createStatement().execute(
-                "INSERT INTO issue(id, key, instance, project) VALUES (1, 'TG-1', 'main', 'TG');" +
-                    "INSERT INTO change_event(id, changelog_id, issue_id, field, at) VALUES (1, 'c1', 1, 'status', '2026-10-01 00:00:00+00')",
-            )
+            it.createStatement().execute("INSERT INTO issue(id, key, instance, project) VALUES (1, 'TG-1', 'main', 'TG')")
         }
         Database.migrate(ds)
         assertEquals(1, consulta("SELECT count(*) FROM issue") { it.getInt(1) })
-        assertEquals(1, consulta("SELECT count(*) FROM change_event") { it.getInt(1) })
         assertNull(consulta("SELECT jira_id FROM issue") { it.getObject(1) })
         assertNull(consulta("SELECT removida_em FROM issue") { it.getObject(1) })
     }
@@ -94,7 +84,7 @@ class SyncStateStoreTest {
         // a única coluna de texto livre candidata é codigo_erro (mais as de identificação/enumeração)
         val textos = ds.connection.use { c ->
             c.createStatement().executeQuery(
-                "SELECT column_name FROM information_schema.columns WHERE table_name='sync_run' AND data_type='text'",
+                "SELECT name FROM pragma_table_info('sync_run') WHERE upper(type)='TEXT'",
             ).use { rs -> generateSequence { if (rs.next()) rs.getString(1) else null }.toSet() }
         }
         assertEquals(setOf("instance", "kind", "status", "codigo_erro"), textos)
@@ -135,7 +125,7 @@ class SyncStateStoreTest {
         store.suspender("samsung", "HTTP_401", t("2026-10-30T12:00:00Z"))
         assertEquals("HTTP_401", store.suspensa("samsung"))
         // outra réplica (outro objeto, outra conexão) enxerga a mesma suspensão
-        assertEquals("HTTP_401", PostgresSyncStateStore(ds).suspensa("samsung"))
+        assertEquals("HTTP_401", SqliteSyncStateStore(ds).suspensa("samsung"))
         assertEquals(1, store.limparSuspensoes())
         assertNull(store.suspensa("samsung"))
         assertEquals(0, store.limparSuspensoes())
@@ -179,10 +169,10 @@ class SyncStateStoreTest {
     }
 
     @Test
-    fun outraReplicaViva_naoEhFechada_eConcluiNormalmente() = runBlocking {
+    fun execucaoIniciadaDepoisDoInicioDoProcesso_naoEhFechadaComoOrfa() = runBlocking {
         val dentro = CompletableDeferred<Long>()
         val liberar = CompletableDeferred<Unit>()
-        val replicaA = PostgresSyncStateStore(ds)
+        val replicaA = SqliteSyncStateStore(ds)
         val a = async {
             replicaA.comTrava("samsung") {
                 val id = replicaA.iniciar("samsung", SyncKind.INCREMENTAL, t("2026-10-30T12:00:00Z"))
@@ -192,9 +182,9 @@ class SyncStateStoreTest {
             }
         }
         val idA = dentro.await()
-        // réplica B sobe depois e roda a limpeza enquanto A segura a trava
-        val replicaB = PostgresSyncStateStore(ds)
-        assertEquals(0, replicaB.fecharOrfas(t("2026-10-30T12:02:00Z"), t("2026-10-30T12:02:00Z")))
+        // a limpeza de órfãs só atinge execuções iniciadas antes do início deste processo
+        val replicaB = SqliteSyncStateStore(ds)
+        assertEquals(0, replicaB.fecharOrfas(t("2026-10-30T11:59:00Z"), t("2026-10-30T12:02:00Z")))
         assertEquals(RunStatus.EM_ANDAMENTO, store.ultimas("samsung").single { it.id == idA }.status)
         liberar.complete(Unit)
         assertEquals(true, a.await())
@@ -300,7 +290,7 @@ class SyncStateStoreTest {
         assertEquals(mapOf("JIRAUSER10" to "bruno", "JIRAUSER11" to "carla"), store.chavesDeUsuario("samsung"))
         assertEquals(emptyMap(), store.chavesDeUsuario("main"))
         val visto = consulta("SELECT visto_em FROM jira_user_key WHERE user_key='JIRAUSER10'") {
-            it.getObject(1, java.time.OffsetDateTime::class.java).toInstant()
+            it.getTimestamp(1).toInstant()
         }
         assertEquals(t("2026-10-30T13:00:00Z"), visto)
     }

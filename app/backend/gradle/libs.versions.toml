@@ -5,8 +5,7 @@ logback = "1.5.20"
 kaml = "0.104.0"
 hikari = "7.0.2"
 flyway = "11.14.0"
-postgresql = "42.7.8"
-testcontainers = "2.0.3"
+sqlite = "3.50.3.0"
 
 [libraries]
 ktor-server-core = { module = "io.ktor:ktor-server-core-jvm", version.ref = "ktor" }
@@ -22,10 +21,7 @@ kaml = { module = "com.charleskorn.kaml:kaml-jvm", version.ref = "kaml" }
 logback-classic = { module = "ch.qos.logback:logback-classic", version.ref = "logback" }
 hikari = { module = "com.zaxxer:HikariCP", version.ref = "hikari" }
 flyway-core = { module = "org.flywaydb:flyway-core", version.ref = "flyway" }
-flyway-postgresql = { module = "org.flywaydb:flyway-database-postgresql", version.ref = "flyway" }
-postgresql = { module = "org.postgresql:postgresql", version.ref = "postgresql" }
-testcontainers-postgresql = { module = "org.testcontainers:testcontainers-postgresql", version.ref = "testcontainers" }
-testcontainers-junit = { module = "org.testcontainers:testcontainers-junit-jupiter", version.ref = "testcontainers" }
+sqlite-jdbc = { module = "org.xerial:sqlite-jdbc", version.ref = "sqlite" }
 
 [plugins]
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }

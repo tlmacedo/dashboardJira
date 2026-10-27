@@ -113,35 +113,27 @@ class PreparacaoDocsTest {
     }
 
     @Test
-    fun cadaVariavelDoRunbookTemRepasseNoComposeEExemploNoEnv() {
+    fun cadaVariavelDoRunbookTemExemploNoEnv() {
         val runbook = ler("docs/jira/runbook-sincronizacao.md")
         val env = ler("app/.env.example")
-        val compose = ler("app/docker-compose.yml")
         val nomes = (Regex("SYNC_[A-Z_]+").findAll(runbook).map { it.value } + sequenceOf("RETENTION_MONTHS", "ACCESS_LOG_RETENTION_MONTHS")).toSet()
         assertTrue("ACCESS_LOG_RETENTION_MONTHS" in Regex("[A-Z_]+").findAll(runbook).map { it.value }.toSet(), "Runbook sem ACCESS_LOG_RETENTION_MONTHS")
         assertTrue(nomes.size >= 10, "Esperadas as SYNC_* e RETENTION_MONTHS no runbook: $nomes")
         for (nome in nomes) {
             assertTrue(Regex("^#?\\s*$nome=", RegexOption.MULTILINE).containsMatchIn(env), "$nome sem exemplo no .env.example")
-            assertTrue(
-                Regex("^\\s+$nome: \\$\\{$nome:-\\}\\s*$", RegexOption.MULTILINE).containsMatchIn(compose),
-                "$nome sem repasse ativo no docker-compose.yml",
-            )
         }
-        for (nome in listOf("JIRA_SAMSUNG_URL", "JIRA_SAMSUNG_TOKEN", "JIRA_SIDIA_URL", "JIRA_SIDIA_USER", "JIRA_SIDIA_TOKEN")) {
-            assertTrue(
-                Regex("^\\s+$nome: \\$\\{$nome:-\\}\\s*$", RegexOption.MULTILINE).containsMatchIn(compose),
-                "$nome sem repasse ativo (sem valor padrão) no compose",
-            )
+        for (nome in listOf("JIRA_SAMSUNG_URL", "JIRA_SAMSUNG_TOKEN", "JIRA_SIDIA_URL", "JIRA_SIDIA_USER", "JIRA_SIDIA_TOKEN", "DATABASE_PATH")) {
+            assertTrue(Regex("^#?\\s*$nome=", RegexOption.MULTILINE).containsMatchIn(env), "$nome sem exemplo no .env.example")
         }
     }
 
     @Test
-    fun composeMontaAsConfigsReaisSomenteLeitura() {
-        val compose = ler("app/docker-compose.yml")
-        assertTrue(
-            Regex("^\\s+- \\./config:/app/config:ro\\s*$", RegexOption.MULTILINE).containsMatchIn(compose),
-            "Compose sem o volume ./config:/app/config:ro ativo",
-        )
+    fun projetoNaoDependeDeDockerNemPostgres() {
+        val proibidos = Regex("docker compose|docker run|postgres|testcontainers", RegexOption.IGNORE_CASE)
+        for (doc in listOf("app/.env.example", "app/README.md", "docs/jira/runbook-sincronizacao.md")) {
+            assertTrue(!proibidos.containsMatchIn(ler(doc)), "$doc ainda cita Docker/PostgreSQL")
+        }
+        assertTrue(!Files.exists(raiz.resolve("app/Dockerfile")), "app/Dockerfile deve ser removido")
     }
 
     @Test

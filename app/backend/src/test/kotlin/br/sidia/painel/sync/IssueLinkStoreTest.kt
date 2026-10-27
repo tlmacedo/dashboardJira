@@ -1,5 +1,6 @@
 package br.sidia.painel.sync
 
+import br.sidia.painel.BancoEmArquivo
 import br.sidia.painel.AppContext
 import br.sidia.painel.config.Settings
 import br.sidia.painel.testContextComBanco
@@ -7,7 +8,6 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonObject
 import org.junit.jupiter.api.AfterAll
-import org.testcontainers.postgresql.PostgreSQLContainer
 import java.time.Instant
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
@@ -20,27 +20,27 @@ import kotlin.test.assertTrue
 /** Gravação dos vínculos junto com a issue, contra PostgreSQL real (Testcontainers). */
 class IssueLinkStoreTest {
     companion object {
-        private val pg = PostgreSQLContainer("postgres:16").apply { start() }
+        private val pg = BancoEmArquivo()
 
         @JvmStatic
         @AfterAll
-        fun pararContainer() {
-            pg.stop()
+        fun apagarBanco() {
+            pg.apagar()
         }
     }
 
     private val t0 = Instant.parse("2026-10-30T12:00:00Z")
     private val t1 = Instant.parse("2026-10-30T13:00:00Z")
     private lateinit var ctx: AppContext
-    private lateinit var store: PostgresIssueStore
-    private lateinit var links: PostgresIssueLinkStore
+    private lateinit var store: SqliteIssueStore
+    private lateinit var links: SqliteIssueLinkStore
 
     @BeforeTest
     fun preparar() {
         ctx = testContextComBanco(Settings(), pg)
         val ds = requireNotNull(ctx.dataSource)
-        store = PostgresIssueStore(ds)
-        links = PostgresIssueLinkStore(ds)
+        store = SqliteIssueStore(ds)
+        links = SqliteIssueLinkStore(ds)
     }
 
     @AfterTest
@@ -162,7 +162,7 @@ class IssueLinkStoreTest {
     private fun inserirSimetrico(de: String, para: String, removida: Boolean = false) = requireNotNull(ctx.dataSource).connection.use { c ->
         c.createStatement().execute(
             "INSERT INTO issue_link(instance, from_key, to_key, link_type, direction, visto_em, removida_em) VALUES " +
-                "('samsung', '$de', '$para', 'Relates', 'SIMETRICO', now(), ${if (removida) "now()" else "NULL"})",
+                "('samsung', '$de', '$para', 'Relates', 'SIMETRICO', (CAST(strftime('%s','now') AS INTEGER) * 1000), ${if (removida) "(CAST(strftime('%s','now') AS INTEGER) * 1000)" else "NULL"})",
         )
     }
 
@@ -233,7 +233,7 @@ class IssueLinkStoreTest {
         val i = issue("TG-1", """{"type":{"name":"Blocks"},"inwardIssue":{"key":"TG-2","fields":{"summary":"segredo da outra ponta"}}}""")
         gravar(i)
         val raw = requireNotNull(ctx.dataSource).connection.use { c ->
-            c.createStatement().executeQuery("SELECT raw::text FROM issue WHERE key = 'TG-1'").use { it.next(); it.getString(1) }
+            c.createStatement().executeQuery("SELECT raw FROM issue WHERE key = 'TG-1'").use { it.next(); it.getString(1) }
         }
         assertTrue("segredo" !in raw && "issuelinks" !in raw, raw)
     }

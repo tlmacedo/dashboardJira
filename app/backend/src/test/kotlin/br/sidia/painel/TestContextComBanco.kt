@@ -6,26 +6,55 @@ import br.sidia.painel.domain.StatusMap
 import br.sidia.painel.jira.JiraClientFactory
 import br.sidia.painel.security.RoleDirectory
 import br.sidia.painel.time.BusinessCalendar
-import org.testcontainers.postgresql.PostgreSQLContainer
+import java.nio.file.Files
+import java.nio.file.Path
 import java.time.Clock
+import kotlin.io.path.deleteRecursively
 
 /**
- * Contexto de teste COM PostgreSQL real (Testcontainers; nunca H2 nem mock). O contêiner é do chamador:
- * cada classe de teste sobe um só (`companion object`) e o para no `@AfterAll`. O schema é recriado e
- * migrado a cada chamada, então cada teste começa com banco limpo. Calendário e papéis vêm dos
- * arquivos de exemplo. Nenhuma requisição ao Jira é aberta.
+ * Pasta temporária com arquivos SQLite de teste (nada de servidor nem Docker). Cada classe de teste cria uma
+ * (`companion object`) e a apaga no `@AfterAll`. [novoArquivo] devolve sempre um arquivo novo e vazio, então cada
+ * teste começa com banco limpo e nunca herda dados nem conexões de outro.
+ */
+class BancoEmArquivo {
+    private val pasta: Path = Files.createTempDirectory("painel-teste-")
+    private var contador = 0
+
+    /** Arquivo do banco "padrão" desta pasta (para testes que abrem o banco por conta própria). */
+    val arquivo: Path get() = pasta.resolve("painel.db")
+
+    /** URL JDBC do [arquivo] (sem ajustes de conexão: o [Database.connect] os acrescenta). */
+    val jdbcUrl: String get() = Database.urlDeArquivo(arquivo)
+
+    /** Um arquivo novo (inexistente) nesta pasta. */
+    fun novoArquivo(): Path = pasta.resolve("painel-${++contador}.db")
+
+    /** Esvazia o banco "padrão": apaga o arquivo e os auxiliares do WAL (chamar com o pool fechado ou antes de abrir). */
+    fun limpar() {
+        for (sufixo in listOf("", "-wal", "-shm")) runCatching { Files.deleteIfExists(pasta.resolve("painel.db$sufixo")) }
+    }
+
+    @OptIn(kotlin.io.path.ExperimentalPathApi::class)
+    fun apagar() {
+        runCatching { pasta.deleteRecursively() }
+    }
+}
+
+/**
+ * Contexto de teste COM SQLite real em arquivo (nunca mock). O [banco] é do chamador: cada classe de teste cria um só
+ * (`companion object`) e o apaga no `@AfterAll`. Cada chamada usa um arquivo novo, migrado do zero. Calendário e papéis
+ * vêm dos arquivos de exemplo. Nenhuma requisição ao Jira é aberta.
  */
 fun testContextComBanco(
     settings: Settings,
-    container: PostgreSQLContainer,
+    banco: BancoEmArquivo,
     roles: RoleDirectory = RoleDirectory.fromYaml(TestPaths.configDir.resolve("papeis.exemplo.yaml")),
     clock: Clock = Clock.system(settings.zone),
     jira: JiraClientFactory = JiraClientFactory(settings),
 ): AppContext {
     val campos = camposDeTeste()
     val vinculos = vinculosDeTeste()
-    val ds = Database.connect(container.jdbcUrl, container.username, container.password, poolSize = 4)
-    ds.connection.use { it.createStatement().execute("DROP SCHEMA public CASCADE; CREATE SCHEMA public;") }
+    val ds = Database.connect(Database.urlDeArquivo(banco.novoArquivo()), poolSize = 4)
     Database.migrate(ds)
     return AppContext(
         settings = settings,

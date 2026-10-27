@@ -1,5 +1,6 @@
 package br.sidia.painel.sync
 
+import br.sidia.painel.db.tuplasEmJson
 import br.sidia.painel.domain.ORDEM_NATURAL_DE_CHAVES
 import java.sql.Connection
 import java.sql.ResultSet
@@ -16,8 +17,8 @@ interface IssueLinkStore {
     fun daIssue(instance: String, key: String): List<VinculoRecord>
 }
 
-/** Implementação sobre PostgreSQL (JDBC). Todas as consultas são parametrizadas. */
-class PostgresIssueLinkStore(private val ds: DataSource) : IssueLinkStore {
+/** Implementação sobre SQLite (JDBC). Todas as consultas são parametrizadas. */
+class SqliteIssueLinkStore(private val ds: DataSource) : IssueLinkStore {
 
     override fun ativos(instance: String, tipo: String): List<VinculoRecord> =
         ds.connection.use { con ->
@@ -58,7 +59,7 @@ class PostgresIssueLinkStore(private val ds: DataSource) : IssueLinkStore {
      */
     internal fun renomearPonta(conn: Connection, instance: String, antiga: String, nova: String) {
         conn.prepareStatement(
-            "DELETE FROM issue_link a WHERE a.instance = ? AND (" +
+            "DELETE FROM issue_link AS a WHERE a.instance = ? AND (" +
                 "(a.from_key = ? AND (a.to_key = ? OR EXISTS (SELECT 1 FROM issue_link b WHERE b.instance = a.instance " +
                 "AND b.from_key = ? AND b.to_key = a.to_key AND b.link_type = a.link_type))) OR " +
                 "(a.to_key = ? AND (a.from_key = ? OR EXISTS (SELECT 1 FROM issue_link b WHERE b.instance = a.instance " +
@@ -88,11 +89,12 @@ class PostgresIssueLinkStore(private val ds: DataSource) : IssueLinkStore {
     /** A issue [chave] deixou de existir sob esse nome: seus vínculos ativos ganham `removida_em`, na transação do chamador. */
     internal fun marcarRemovidosDaChave(conn: Connection, instance: String, chave: String) {
         conn.prepareStatement(
-            "UPDATE issue_link SET removida_em = now() WHERE instance = ? AND removida_em IS NULL AND (from_key = ? OR to_key = ?)",
+            "UPDATE issue_link SET removida_em = ? WHERE instance = ? AND removida_em IS NULL AND (from_key = ? OR to_key = ?)",
         ).use { ps ->
-            ps.setString(1, instance)
-            ps.setString(2, chave)
+            ps.setTimestamp(1, Timestamp.from(Instant.now()))
+            ps.setString(2, instance)
             ps.setString(3, chave)
+            ps.setString(4, chave)
             ps.executeUpdate()
         }
     }
@@ -173,16 +175,15 @@ class PostgresIssueLinkStore(private val ds: DataSource) : IssueLinkStore {
         conn.prepareStatement(
             "UPDATE issue_link SET removida_em = ? WHERE instance = ? AND removida_em IS NULL " +
                 "AND (from_key = ? OR to_key = ?) " +
-                "AND NOT EXISTS (SELECT 1 FROM unnest(?::text[], ?::text[], ?::text[]) AS v(f, t, ty) " +
-                "WHERE v.f = issue_link.from_key AND v.t = issue_link.to_key AND v.ty = issue_link.link_type)",
+                "AND NOT EXISTS (SELECT 1 FROM json_each(?) v " +
+                "WHERE json_extract(v.value, '$[0]') = issue_link.from_key AND json_extract(v.value, '$[1]') = issue_link.to_key " +
+                "AND json_extract(v.value, '$[2]') = issue_link.link_type)",
         ).use { ps ->
             ps.setTimestamp(1, quando)
             ps.setString(2, instance)
             ps.setString(3, issueKey)
             ps.setString(4, issueKey)
-            ps.setArray(5, conn.createArrayOf("text", distintos.map { it.fromKey }.toTypedArray()))
-            ps.setArray(6, conn.createArrayOf("text", distintos.map { it.toKey }.toTypedArray()))
-            ps.setArray(7, conn.createArrayOf("text", distintos.map { it.tipo }.toTypedArray()))
+            ps.setString(5, distintos.map { listOf(it.fromKey, it.toKey, it.tipo) }.tuplasEmJson())
             ps.executeUpdate()
         }
         if (distintos.isEmpty()) return
