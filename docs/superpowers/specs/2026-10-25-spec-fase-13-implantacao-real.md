@@ -120,7 +120,7 @@ A fase termina com o painel em produção, login real, HTTPS no proxy, pacote ra
 10. **Atualização e reversão (T10).** `ScriptsDeImplantacaoTest` e `ReversaoComBackupTest` passam; `ensaio-troca` termina com `TROCA_OK` e `REVERSAO_OK`; `atualizar` segue a ordem parar, backup, trocar, iniciar, fumaça.
 11. **Fumaça (T11, T12).** `ensaio-local` termina com `ENSAIO_LOCAL_OK`; `fumaca` termina com `FUMACA_OK` em homologação e em produção (registro no `HANDOFF.md` sem host).
 12. **Documentos (T13).** `implantacaoSemHostRealNemSegredo` e `implantacaoSemPlataformaAntiga` passam; suítes completas, `pnpm build` e o teste do hook verdes.
-13. **Fim.** Varredura de dados pessoais e hosts antes do push; PR para a `main`; nada mesclado sem o usuário mandar.
+13. **Fim.** Varredura de dados pessoais e hosts antes do push; PR para a `main`; mescla pelo fluxo de entrega (`docs/superpowers/fluxo-de-entrega.md`, 7 condições).
 
 ## 7. Riscos, pendências e pontos de parada
 

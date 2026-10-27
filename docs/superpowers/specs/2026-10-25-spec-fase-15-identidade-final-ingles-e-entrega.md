@@ -97,7 +97,7 @@ Esta fase fecha a identidade visual com os ativos oficiais, quando o usuário os
 6. **Inglês (T6, T7).** `guiaEnMesmasSecoes`, `termosDoGuiaIguaisAosDaTela`, `faqTemAsPerguntasMinimas` e `faqMesmaOrdemNasDuasLinguas` passam.
 7. **Treinamento (T8, T9).** `treinamentoSoComTelasDoPapel`, `integridadeSoNoMaterialDoGerente`, `capturasSoDeDemonstracao` e `registroSemNomes` passam; o registro tem data, papel e contagem de cada sessão.
 8. **Entrega (T10).** `checklistDeEntregaCompleto` e `evidenciasExistem` passam; o papel do dono da manutenção está registrado com data.
-9. **Fim (T11).** Suítes completas, `pnpm build`, `test-guard.sh` e `claudeMdSemCaminhoInexistente` verdes; nenhuma fonte de licença restrita versionada; PR sem dado pessoal; nada mesclado sem o usuário mandar.
+9. **Fim (T11).** Suítes completas, `pnpm build`, `test-guard.sh` e `claudeMdSemCaminhoInexistente` verdes; nenhuma fonte de licença restrita versionada; PR sem dado pessoal; mescla pelo fluxo de entrega (`docs/superpowers/fluxo-de-entrega.md`, 7 condições).
 
 ## 7. Riscos, pendências e pontos de parada
 

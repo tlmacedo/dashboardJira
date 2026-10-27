@@ -204,7 +204,7 @@ Os critérios supõem apenas JDK 21 (SQLite real em arquivo temporário, sem Doc
 
 **Fim de cada bloco**
 
-12. As suítes completas das duas camadas ficam verdes, inclusive `SomenteAFabricaCriaClientesJira` e `sh .claude/hooks/test-guard.sh`. Antes do push, varrer dados pessoais. Abrir PR para a `main` e não mesclar sem o usuário mandar.
+12. As suítes completas das duas camadas ficam verdes, inclusive `SomenteAFabricaCriaClientesJira` e `sh .claude/hooks/test-guard.sh`. Antes do push, varrer dados pessoais. Abrir PR para a `main` e mesclar pelo fluxo de entrega (`docs/superpowers/fluxo-de-entrega.md`).
 
 ## 7. Riscos e pendências
 
