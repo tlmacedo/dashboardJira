@@ -69,7 +69,7 @@ Importantes (Important) da revisão final se corrigem **antes** do push, em comm
 
 Siga `/fim-de-branch.md`. Em resumo, nesta ordem:
 1. Suíte completa das duas camadas, **mostrando os números**.
-2. **Varredura de dados pessoais** do que vai ser publicado (diff e mensagens de commit): e-mails, usernames reais, hosts internos, tokens, chaves; `git status` sem `.env`, `papeis.yaml`, `equipes.yaml`, `ausencias.yaml`, `squads.yaml`, `Filtros_Status_tool.txt`; `gh repo view --json visibility` precisa dizer `PRIVATE`.
+2. **Varredura de dados pessoais** do que vai ser publicado (diff e mensagens de commit): e-mails, usernames reais, hosts internos, tokens, chaves; `git status` sem `.env`, `papeis.yaml`, `equipes.yaml`, `ausencias.yaml`, `squads.yaml`, `Filtros_Status_tool.txt`; `gh repo view --json visibility` diz `PUBLIC` (decisão do usuário em 26/10; o histórico antigo tem 3 usernames reais, aceitos): por isso nada novo com dado real entra, e se a visibilidade mudar sem o usuário ter dito, pare e pergunte.
 3. Atualize o arquivo de progresso, o `HANDOFF.md` (estado, próximo passo, pendências) e o índice dos planos.
 4. `git push -u origin <branch>`; `gh pr create --base main` com corpo em arquivo (`--body-file`): o que traz, segurança, verificação (números), o que **não** foi testado, pendências. Plano incompleto = PR em **rascunho** (`--draft`) com o estado exato.
 5. **Aguarde o CI** (`gh pr checks`).
