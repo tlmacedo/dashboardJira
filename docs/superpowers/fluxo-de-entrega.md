@@ -75,7 +75,7 @@ git diff main..HEAD | grep -n -i -E '@[a-z0-9-]+\.(com|br|net|org)|token|passwor
 git status --short; gh repo view tlmacedo/dashboardJira --json visibility
 ```
 
-Leia o resultado inteiro. Condições para seguir: nenhum e-mail real, username real do time, host interno, token, chave ou senha no diff nem nas mensagens (as ocorrências de "token"/"password" em **testes que verificam mascaramento** usam valores fictícios, como `abc123`/`sg1`: confirme valor a valor); `git status` sem `.env`, `papeis.yaml`, `equipes.yaml`, `ausencias.yaml`, `squads.yaml`, `calendario.yaml`, `status_map.yaml`, `jira_campos.yaml`, `vinculos.yaml`, `Filtros_Status_tool.txt` nem arquivos `*.db`; visibilidade `PRIVATE`. Qualquer dúvida: **pare e pergunte**. Nunca publique "para corrigir depois".
+Leia o resultado inteiro. Condições para seguir: nenhum e-mail real, username real do time, host interno, token, chave ou senha no diff nem nas mensagens (as ocorrências de "token"/"password" em **testes que verificam mascaramento** usam valores fictícios, como `abc123`/`sg1`: confirme valor a valor); `git status` sem `.env`, `papeis.yaml`, `equipes.yaml`, `ausencias.yaml`, `squads.yaml`, `calendario.yaml`, `status_map.yaml`, `jira_campos.yaml`, `vinculos.yaml`, `Filtros_Status_tool.txt` nem arquivos `*.db`; visibilidade `PUBLIC` (o repositório é público desde 26/10, decisão do usuário; se a visibilidade mudar sem o usuário ter dito, pare e pergunte). Qualquer dúvida: **pare e pergunte**. Nunca publique "para corrigir depois".
 
 ## 5. Push, PR e condições de merge
 
@@ -107,7 +107,7 @@ gh pr checks --watch
 1. Todas as tarefas do plano/bloco concluídas e revisadas; nenhuma "não iniciada".
 2. Revisão final: "PRONTA PARA PUSH/PR/MERGE", sem Critical/Important abertos (nem em re-revisão).
 3. Suíte completa sem cache verde nas duas camadas, números no corpo da PR. Em PR de documentação pura, a suíte ainda precisa estar verde.
-4. Varredura da seção 4 limpa e repositório `PRIVATE`.
+4. Varredura da seção 4 limpa (o repositório é público: nada com dado real entra).
 5. CI verde **no último commit** (`gh pr checks`), quando o Plano 9 já estiver na `main`. Antes dele não há CI: vale a suíte local. CI vermelho: ache a causa; **uma** nova tentativa só se o log mostrar falha de infraestrutura antes de qualquer teste; nunca desative nem pule teste, nunca empurre commit vazio para "chutar" o CI.
 6. A PR não está em rascunho, não tem conflito (`gh pr view --json mergeable,mergeStateStatus`) e nenhum comentário de revisão humana pendente.
 7. Nada nela liga a flag do Jira, altera `app/.env`, configuração do GitHub ou os hooks de proteção sem ter sido pedido pelo usuário.

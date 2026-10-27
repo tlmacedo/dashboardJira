@@ -17,7 +17,7 @@
 - **Na `main`:** Planos 1, 2, 3A, 3, **3B (saída do Docker/PostgreSQL, PRs #18 e #19)**, **4A** (sincronização periódica, PR #14) e as **Tarefas 1 a 3 do Plano 4** (Auditoria, PR #15). Backend: 745+ testes, 0 falhas, com SQLite real. Frontend: 48 testes.
 - **Nenhum acesso ao Jira foi feito** em todo o projeto. O primeiro ciclo real é do usuário (Plano 14a).
 - **Plano 4 (Auditoria)** continua pela **Tarefa 4**: estado e passo a passo em `docs/superpowers/progresso/2026-10-25-plano-04-auditoria.md`. Os planos 5 a 16 e suas specs estão escritos e ajustados à nova plataforma (SQLite, sem Docker); os Planos 8, 9, 12 e 13 foram reescritos.
-- O repositório `tlmacedo/dashboardJira` é PRIVADO (o histórico tem usernames reais: nunca torná-lo público sem limpar o histórico).
+- O repositório `tlmacedo/dashboardJira` é **PÚBLICO desde 26/10** (decisão do usuário). O histórico antigo tem 3 usernames reais (aceito e documentado); nada novo com dado real pode entrar, então a varredura antes do push é ainda mais importante.
 - Alerta do GitGuardian em `SettingsTest.kt` (3 "Generic Password"): falso positivo (valores fictícios de teste de mascaramento). O usuário pode marcá-lo como tal no painel do GitGuardian.
 
 ## O que o usuário precisa ter pronto (a IA não consegue sozinha)
