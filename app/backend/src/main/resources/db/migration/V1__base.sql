@@ -1,7 +1,7 @@
 -- Esquema do Painel de Squads em SQLite (arquivo local; sem servidor).
 -- Convenções: instantes em INTEGER (milissegundos desde 1970, UTC), prazo (duedate) em TEXT ISO aaaa-mm-dd,
 -- listas e o JSON bruto em TEXT (lidos com json_each/json_extract), booleanos em INTEGER 0/1.
--- Este arquivo consolida o esquema final (antes eram as migrações V1 a V6 do PostgreSQL).
+-- Este arquivo consolida o esquema final (as migrações V1 a V6 anteriores foram unificadas aqui).
 
 CREATE TABLE person (
     id       INTEGER PRIMARY KEY AUTOINCREMENT,

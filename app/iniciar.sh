@@ -1,5 +1,5 @@
 #!/bin/sh
-# Sobe o painel em Linux/macOS, sem Docker nem servidor de banco.
+# Sobe o painel em Linux/macOS.
 # Requisitos: JDK 21 e Node 22 com pnpm. Uso (a partir de app/):  sh iniciar.sh [--sem-build-do-front]
 # Variáveis: copie .env.example para .env e preencha. O banco é o arquivo data/painel.db.
 set -eu

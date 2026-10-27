@@ -16,7 +16,7 @@ Porte do fluxo que o Claude Code fazia com as skills `superpowers:subagent-drive
    - `git pull --ff-only origin main`
    - `git branch -r --no-merged origin/main` e `gh pr list`: havendo trabalho fora da `main`, pare e pergunte.
    - `git checkout -b feat/<nome-do-plano>`
-4. Ambiente: sem Docker nem banco a iniciar (SQLite em arquivo). Confira `java -version` (21). Windows PowerShell: use `;` no lugar de `&&`; não use `sh`/`bash`. Fluxo de fechamento do plano (revisão final, validação, PR e merge): `docs/superpowers/fluxo-de-entrega.md`.
+4. Ambiente: não há serviço a iniciar (o banco é um arquivo SQLite). Confira `java -version` (21). Windows PowerShell: use `;` no lugar de `&&`; não use `sh`/`bash`. Fluxo de fechamento do plano (revisão final, validação, PR e merge): `docs/superpowers/fluxo-de-entrega.md`.
 5. Crie `docs/superpowers/progresso/<arquivo-do-plano>.md` com a primeira linha `# Progresso — plano: <caminho do plano>`.
 
 ## Para cada tarefa (na ordem do plano)

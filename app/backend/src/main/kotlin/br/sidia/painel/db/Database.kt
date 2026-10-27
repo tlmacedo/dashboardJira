@@ -8,7 +8,7 @@ import java.nio.file.Path
 import javax.sql.DataSource
 
 /**
- * Acesso ao SQLite embutido (um arquivo local, sem servidor, sem Docker): pool de conexões e migrações.
+ * Acesso ao SQLite embutido (um arquivo local, sem servidor): pool de conexões e migrações.
  *
  * Cada conexão nasce com: WAL (leitores não bloqueiam o gravador), `busy_timeout` (espera o lock em vez de
  * falhar), chaves estrangeiras ligadas, transações de escrita já como IMMEDIATE (sem deadlock de upgrade de lock)

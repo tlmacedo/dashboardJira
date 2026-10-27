@@ -46,7 +46,7 @@ import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
 
 /**
- * Carga inicial e incremental contra PostgreSQL real (Testcontainers) e Jira simulado por MockEngine.
+ * Carga inicial e incremental contra SQLite real em arquivo temporário e Jira simulado por MockEngine.
  * "Hoje" é 2026-10-30 em Manaus; nenhuma rede real.
  */
 class SyncServiceTest {

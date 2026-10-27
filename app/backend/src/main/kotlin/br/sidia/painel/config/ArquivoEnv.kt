@@ -5,7 +5,7 @@ import java.nio.file.Path
 
 /**
  * Lê um arquivo de variáveis simples (`NOME=valor`, `#` comenta, aspas simples ou duplas opcionais ao redor do valor).
- * Sem o Docker para injetar as variáveis, é assim que o arquivo de variáveis local chega ao painel. Variáveis já
+ * É assim que o arquivo de variáveis local chega ao painel. Variáveis já
  * definidas no ambiente do processo têm precedência sobre o arquivo. Nunca registra valores (podem ser tokens).
  */
 object ArquivoEnv {

@@ -10,7 +10,7 @@ Objetivo: quem continuar a execução dos planos (a partir da Fase 0 e do Plano 
 
 ## 1. Ordem de leitura (obrigatória antes de escrever código)
 
-0. `docs/superpowers/fluxo-de-entrega.md` (revisão, validação, PR, merge) e `docs/superpowers/plans/2026-10-27-adendo-plataforma-sqlite-sem-docker.md` (SQLite, sem Docker); num PC novo, `docs/superpowers/plans/2026-10-27-plano-00-pc-da-empresa.md`.
+0. `docs/superpowers/fluxo-de-entrega.md` (revisão, validação, PR, merge) e `docs/superpowers/plans/2026-10-27-adendo-plataforma-sqlite-sem-docker.md` (SQLite); num PC novo, `docs/superpowers/plans/2026-10-27-plano-00-pc-da-empresa.md`.
 1. `.clinerules/00-regras-do-projeto.md` (proibições e decisões).
 2. `CLAUDE.md` e `PRODUCT.md` (regras sempre válidas e produto).
 3. `HANDOFF.md` (estado atual e próximos passos).
@@ -20,7 +20,7 @@ Objetivo: quem continuar a execução dos planos (a partir da Fase 0 e do Plano 
 
 ## 2. O que já existe (não refaça)
 
-Planos 1, 2, 3A, 3, 3B (saída do Docker), 4A e as Tarefas 1 a 3 do Plano 4 estão **mesclados na `main`** (PRs #5 a #19). Há backend Ktor (`app/backend`, pacote `br.sidia.painel`), frontend React (`app/frontend`), SQLite em arquivo com Flyway (migração única V1; a próxima é a V2), sem Docker. Itens-chave:
+Planos 1, 2, 3A, 3, 3B (banco SQLite), 4A e as Tarefas 1 a 3 do Plano 4 estão **mesclados na `main`** (PRs #5 a #19). Há backend Ktor (`app/backend`, pacote `br.sidia.painel`), frontend React (`app/frontend`), SQLite em arquivo com Flyway (migração única V1; a próxima é a V2), sem Docker. Itens-chave:
 
 | Peça | Onde | Regra a respeitar |
 |---|---|---|
@@ -36,7 +36,7 @@ Planos 1, 2, 3A, 3, 3B (saída do Docker), 4A e as Tarefas 1 a 3 do Plano 4 est�
 
 ## 3. Ambiente e comandos
 
-- Backend: `cd app/backend && ./gradlew test` (Kotlin 2.2, Ktor 3.3, SQLite; só JDK 21, **sem Docker**).
+- Backend: `cd app/backend && ./gradlew test` (Kotlin 2.2, Ktor 3.3, SQLite; só JDK 21, nenhum serviço).
 - Frontend: `cd app/frontend && pnpm install && pnpm vitest run && pnpm build` (pnpm; dependências em versões fixas).
 - Subir tudo: `app/iniciar.ps1` (Windows) ou `app/iniciar.sh`; ver `app/README.md`. Variáveis em `app/.env` (copiado de `app/.env.example`); **a flag do Jira vale só ali**.
 - Flags: `JIRA_LIVE_ENABLED=false` e `DASHBOARD_DEV_MODE=true` por padrão. `DASHBOARD_DEV_MODE=true` = sem login, principal `dev` com papel GERENTE, faixa vermelha na tela.

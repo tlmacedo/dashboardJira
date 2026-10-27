@@ -264,7 +264,7 @@ fun prepararDemonstracao(ctx: AppContext) {
             resumo.joinToString("; ") { "${it.instancia}: ${it.issues} issues, ${it.eventos} eventos" },
         )
     } catch (e: DemoRecusadaException) {
-        log.error("Subida recusada ({}): use um volume novo (docker compose down -v) e confira DASHBOARD_DEMO_DATA, DASHBOARD_DEV_MODE e JIRA_LIVE_ENABLED.", e.codigo)
+        log.error("Subida recusada ({}): apague o arquivo do banco (data/painel.db) e confira DASHBOARD_DEMO_DATA, DASHBOARD_DEV_MODE e JIRA_LIVE_ENABLED.", e.codigo)
         throw e
     }
 }

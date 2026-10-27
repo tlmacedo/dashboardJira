@@ -19,7 +19,7 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
-/** Testes contra PostgreSQL real (Testcontainers); nunca H2 nem mock. */
+/** Testes contra SQLite real em arquivo temporário; nunca H2 nem mock. */
 class SyncStateStoreTest {
     companion object {
         private val pg = BancoEmArquivo()

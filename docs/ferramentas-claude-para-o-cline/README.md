@@ -42,7 +42,7 @@ Skills próprias do projeto (`.cline/skills/`, carregadas pela descrição ou po
 | Git for Windows | clone, commits, `git` no terminal; traz o Git Bash | Antes de clonar, nada a configurar: o `.gitattributes` do projeto fixa LF nos `.sh`, no hook sem extensão e nas regras/workflows/skills (`.md` lidos pelas IAs) e CRLF nos `.ps1`. Se um `.sh` aparecer com CRLF, rode `git add --renormalize .` só depois de perguntar ao usuário |
 | JDK 21 (por exemplo Eclipse Temurin 21) | backend Kotlin (`jvmToolchain(21)` no `build.gradle.kts`) | `JAVA_HOME` apontando para o JDK |
 | Node.js 22 e pnpm | frontend | `corepack enable` e depois `pnpm --version`, ou instalar o pnpm à parte |
-| JDK 21 e Node 22 com pnpm | Backend (Gradle) e frontend (Vite) | Sem Docker nem banco a instalar: o banco é um arquivo SQLite |
+| JDK 21 e Node 22 com pnpm | Backend (Gradle) e frontend (Vite) | Nada mais a instalar: o banco é um arquivo SQLite |
 | PowerShell 7 (opcional, recomendado) | o Cline usa o `pwsh` para o hook quando existe | Sem ele, o Cline usa o Windows PowerShell 5.1, que já vem no Windows |
 | VS Code + ClineSR | executor | Ligar **Enable Hooks** (Settings → Features) |
 
@@ -81,7 +81,6 @@ O limite de contexto e de raciocínio do Gauss 3.7 não é conhecido aqui; trate
 | Skills de fluxo (superpowers etc.) | plugins em `~/.claude/plugins/` e `~/.claude/skills/` | Skills em `.cline/skills/` ou `%USERPROFILE%\.cline\skills\` (mesmo formato `SKILL.md`); o Cline **não** lê `~/.claude/` | Fluxos do projeto portados como workflows; terceiros instalados todos pelo script, com precedência do projeto ([skills.md](skills.md)) |
 | Skills próprias | recomendadas e não criadas (`HANDOFF.md`) | `.cline/skills/convencoes-painel-squads`, `.cline/skills/novo-card-painel` | Criadas |
 | Hook trava Jira/arquivos | `.claude/hooks/guard.sh` via `PreToolUse` | macOS/Linux: `.clinerules/hooks/PreToolUse` (adaptador que chama o `guard.sh`); Windows: `.clinerules/hooks/PreToolUse.ps1` (regras reescritas em PowerShell); precisa ligar "Enable Hooks" | Porte feito; o `.ps1` **não foi executado no Windows** (só PowerShell 7 no macOS) ([hooks.md](hooks.md)) |
-| Hook Docker (obsoleto) | `ensure-docker.sh` virou no-op | Nenhum passo | Nada a fazer |
 | Subagentes (Haiku) e revisores | `CLAUDE_CODE_SUBAGENT_MODEL=haiku`; agentes do `pr-review-toolkit` | Documentação: subagentes só na CLI/Desktop; na extensão VS Code, não confirmado | Você executa e revisa em sequência (`/revisar-tarefa.md`) |
 | Advisor (Opus) | `advisorModel: opus`, modelo principal `sonnet` | "Use different models for Plan and Act" (modelo forte no Plan) | Equivalente parcial |
 | Modos | não há modo de planejar separado | Plan (lê e discute, não edita) e Act (executa); `/deep-planning` | Use Plan para ler o plano e Act para executar |

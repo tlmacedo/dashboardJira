@@ -12,9 +12,13 @@
 
 (Quando o Claude Code for usado: abrir com `claude --advisor opus --subagents haiku` e digitar **`/continuar`**.)
 
+## Se o ClineSR mostrar "aborted"
+
+Quase sempre é o clone ou a tarefa antigos mandando usar contêiner/banco de servidor/WSL (bloqueados pela TI). Siga a seção "Se aparecer aborted" de `docs/superpowers/plans/2026-10-27-adendo-plataforma-sqlite-sem-docker.md`: `git pull --ff-only origin main`, tarefa nova no Cline, conferir as regras globais do Cline, terminal em PowerShell (nunca `bash`/`sh`/`wsl` no Windows).
+
 ## Onde paramos (27/10/2026)
 
-- **Na `main`:** Planos 1, 2, 3A, 3, **3B (saída do Docker/PostgreSQL, PRs #18 e #19)**, **4A** (sincronização periódica, PR #14) e as **Tarefas 1 a 3 do Plano 4** (Auditoria, PR #15). Backend: 745+ testes, 0 falhas, com SQLite real. Frontend: 48 testes.
+- **Na `main`:** Planos 1, 2, 3A, 3, **3B (banco SQLite embutido, PRs #18 e #19)**, **4A** (sincronização periódica, PR #14) e as **Tarefas 1 a 3 do Plano 4** (Auditoria, PR #15). Backend: 745+ testes, 0 falhas, com SQLite real. Frontend: 48 testes.
 - **Nenhum acesso ao Jira foi feito** em todo o projeto. O primeiro ciclo real é do usuário (Plano 14a).
 - **Plano 4 (Auditoria)** continua pela **Tarefa 4**: estado e passo a passo em `docs/superpowers/progresso/2026-10-25-plano-04-auditoria.md`. Os planos 5 a 16 e suas specs estão escritos e ajustados à nova plataforma (SQLite, sem Docker); os Planos 8, 9, 12 e 13 foram reescritos.
 - O repositório `tlmacedo/dashboardJira` é **PÚBLICO desde 26/10** (decisão do usuário). O histórico antigo tem 3 usernames reais (aceito e documentado); nada novo com dado real pode entrar, então a varredura antes do push é ainda mais importante.
@@ -41,7 +45,7 @@
 
 - **A única trava de acesso ao Jira é a flag `JIRA_LIVE_ENABLED`** (decisão do usuário em 25/10): `false` = bloqueado para todos (app, agendador, MCP, rede); `true` = liberado. Só o usuário muda a flag; hook em `.claude/hooks/guard.sh`.
 - Toda aprovação do usuário vem como **pergunta com opções**, a recomendada primeiro e marcada "(Recomendada)".
-- **Sem Docker nem PostgreSQL** (bloqueados na empresa): banco SQLite em arquivo (`DATABASE_PATH`, padrão `data/painel.db`), testes com SQLite real em arquivo temporário; JDK 21 e Node/pnpm; subida por `app/iniciar.sh` ou `app/iniciar.ps1`. Migração única `V1__base.sql`. O compose e os gatilhos de Docker já foram removidos (PR #19).
+- **Contêineres, servidor de banco e WSL são proibidos** (bloqueados pela TI): banco SQLite em arquivo (`DATABASE_PATH`, padrão `data/painel.db`), testes com SQLite real em arquivo temporário; JDK 21 e Node/pnpm; subida por `app/iniciar.sh` ou `app/iniciar.ps1`. Migração única `V1__base.sql`. O compose e os gatilhos de Docker já foram removidos (PR #19).
 - Conversar em pt-BR; comentários de código em pt-BR.
 - Não editar nem commitar `.env` nem as configs reais (`papeis.yaml`, `equipes.yaml`, `ausencias.yaml`, `squads.yaml`); usar `.exemplo`/`.demo`. `Filtros_Status_tool.txt` (usernames reais) está no `.gitignore`.
 - `DASHBOARD_DEV_MODE=true` e `JIRA_LIVE_ENABLED=false` são os padrões.
@@ -69,7 +73,6 @@
 
 - **Rulings reversíveis a conferir na 1ª conexão real (flag ligada pelo usuário):** usernames entre aspas no JQL; `resolved < dia seguinte` (data sem hora no Jira); `issuetype` e `status` com valores iniciais no dicionário; teto de páginas assume que o Jira honra o `pageSize`; `GET /issue/{key}/changelog` não verificado (plano B `expand=changelog`); conferir cada `id` de `papeis.yaml` no Jira, inclusive a caixa.
 - **Minor adiados** (ledgers dos três planos): parâmetro `settingsIgnorado` de `module`; limites da varredura da fábrica (`::JiraClient`, alias, `typealias`, `copy` aninhado); inverter a regra de `exigeAutenticacao`; teste do `delay` do retry com cancelamento; máscara do token escapado em JSON/URL; teste unitário de `resolverDentro` com symlink; acessibilidade da casca (contraste de `--line`, piscada do tema, `#1329A0` × `#0023A4`); CSP e X-Frame-Options; imagens Docker por digest; imagem com `DASHBOARD_DEV_MODE=true` por padrão.
-- Histórico: a intermitência "Could not connect to Ryuk" (Testcontainers) deixou de existir com a saída do Docker.
 - Aviso automático de segurança sobre `legacy/backend/.../routes.py` (webhook sem segredo): código legado que sai na Fase 8.
 - `legacy/.env.example` está modificado pelo usuário (fuso Manaus) e fora de commit.
 - Logo limpo (SVG ou PNG transparente) e manual de marca da Sidia: hoje há só um recorte e as cores públicas do site.

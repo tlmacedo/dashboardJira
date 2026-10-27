@@ -44,7 +44,7 @@ data class MetaResposta(val devMode: Boolean, val liveEnabled: Boolean, val zone
 private val log = LoggerFactory.getLogger("br.sidia.painel")
 
 fun main() {
-    // Sem Docker para injetar variáveis: lê o arquivo local (PAINEL_ENV_FILE ou ./.env) por baixo do ambiente do processo.
+    // Lê o arquivo de variáveis local (PAINEL_ENV_FILE ou ./.env) por baixo do ambiente do processo.
     val arquivoEnv = System.getenv("PAINEL_ENV_FILE")?.takeIf { it.isNotBlank() }?.let { java.nio.file.Path.of(it) }
         ?: java.nio.file.Path.of(".env")
     // A flag de acesso ao Jira vem SÓ desse arquivo (true liga; false ou ausente desliga).
