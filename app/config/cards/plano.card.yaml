@@ -1,0 +1,41 @@
+# Ficha do card "Plano de 4 a 8 semanas" (Plano 6). Estrita: chave desconhecida falha ao carregar.
+# A leitura no banco aplica estes tipos e a exclusão de status (FiltroDeFicha); o JQL só serve à sincronização e ao ensaio.
+
+id: plano
+titulo: Plano de 4 a 8 semanas
+instancia: samsung
+
+campos:
+  - OS Version
+  - priority
+  - timeoriginalestimate
+  - timeestimate
+  - timespent
+
+filtrosFixos:
+  project: ["TG-Basic"]
+  issuetype: ["Checklist", "Checklist TG", "Checklist Review"]
+
+filtrosExcluidos:
+  status: ["Cancelled", "Canceled", "Dropped"]
+
+parametros:
+  - nome: squad
+    tipo: squad
+    obrigatorio: false
+
+formula: >-
+  Para cada pessoa e semana (4 a 8 semanas; a atual conta de hoje até domingo): horas planejadas = demanda das tasks
+  espalhada até o vencimento (mínimo de semanas do planejamento.yaml), contra a capacidade líquida. Tasks sem vencimento
+  entram por regra (2 semanas se iniciadas, 4 se não) e a parte delas aparece à parte. Capacidade zero é "sem capacidade",
+  com as horas planejadas ao lado. Só liderança.
+
+exemplo: >-
+  semanas=8, squad=[dev.alfa].
+
+aceite:
+  - Semanas fora de 4 a 8 respondem 400.
+  - Cada célula abre as tasks que a ocupam.
+  - O usuário comum recebe 403.
+
+expandChangelog: false

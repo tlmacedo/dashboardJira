@@ -12,6 +12,13 @@ import { Fechadas } from './screens/Fechadas/Fechadas'
 import { FluxoDaSemana } from './screens/FluxoDaSemana/FluxoDaSemana'
 import { Negativas } from './screens/Negativas/Negativas'
 import { Previsao } from './screens/Previsao/Previsao'
+import { Calendario } from './screens/Calendario/Calendario'
+import { Capacidade } from './screens/Capacidade/Capacidade'
+import { Carga } from './screens/Carga/Carga'
+import { Gargalos } from './screens/Gargalos/Gargalos'
+import { Plano } from './screens/Plano/Plano'
+import { Tendencia } from './screens/Tendencia/Tendencia'
+import { Vencimentos } from './screens/Vencimentos/Vencimentos'
 import { Riscos } from './screens/Riscos/Riscos'
 import { Metas } from './screens/Metas/Metas'
 import { Negligenciadas } from './screens/Negligenciadas/Negligenciadas'
@@ -46,6 +53,13 @@ export default function App() {
                 <Route path="negativas" element={<Negativas />} />
                 <Route path="riscos" element={<Riscos />} />
                 <Route path="previsao" element={<Previsao />} />
+                <Route path="carga" element={<Carga />} />
+                <Route path="capacidade" element={<Capacidade />} />
+                <Route path="calendario" element={<Calendario />} />
+                <Route path="plano" element={<Plano />} />
+                <Route path="vencimentos" element={<Vencimentos />} />
+                <Route path="gargalos" element={<Gargalos />} />
+                <Route path="tendencia" element={<Tendencia />} />
                 <Route path="epicos" element={<Epicos />} />
                 <Route path="fluxoDaSemana" element={<FluxoDaSemana />} />
                 <Route path="agingWip" element={<AgingWip />} />

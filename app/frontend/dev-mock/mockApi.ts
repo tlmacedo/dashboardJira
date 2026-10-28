@@ -2,6 +2,7 @@
 // Não entra no bundle de produção: é carregada apenas pelo vite.config.ts em modo serve.
 import type { Plugin } from 'vite'
 import { agingMock, bloqueiosMock, catalogoFluxo, controleMock, cruzamentosMock, fluxoMock } from './mockFluxo.ts'
+import { cartoesDePessoasMock, mockPessoas } from './mockPessoas.ts'
 
 const STATUS = [
   { status: 'Em andamento', category: 'ACTIVE', median: 3.2, p85: 6.1, n: 212 },
@@ -448,7 +449,7 @@ function catalogo() {
     ...trabalho('previsao', 'pv', intervalo(6), 'FLUXO').map((c) => ({ ...c, grupo: 'trabalho', temDrill: c.id !== 'PV-05' })),
     ...trabalho('epicos', 'ep', [1], 'ESTOQUE').map((c) => ({ ...c, grupo: 'trabalho' })),
   ]
-  return { cartoes: [...ts, ...sy, ...au, ...tr, ...catalogoFluxo()] }
+  return { cartoes: [...ts, ...sy, ...au, ...tr, ...catalogoFluxo(), ...cartoesDePessoasMock()] }
 }
 
 export function mockApi(): Plugin {
@@ -477,7 +478,8 @@ export function mockApi(): Plugin {
         else if (url.pathname === '/api/cards/controle-ciclo') corpo = controleMock()
         else if (url.pathname === '/api/cards/cruzamentos') {
           corpo = cruzamentosMock(url.searchParams.get('linhas') ?? 'tipo', url.searchParams.get('colunas') ?? 'categoria', url.searchParams.get('medida') ?? 'contagem')
-        } else if (url.pathname === '/api/auditoria/sinais') corpo = auditoria()
+        } else if (mockPessoas(url.pathname, url.searchParams) !== undefined) corpo = mockPessoas(url.pathname, url.searchParams)
+        else if (url.pathname === '/api/auditoria/sinais') corpo = auditoria()
         else if (url.pathname.startsWith('/api/auditoria/historico/')) corpo = historico(decodeURIComponent(url.pathname.split('/')[4] ?? ''))
         else if (url.pathname === '/api/cards/task-review') corpo = taskReview()
         else if (url.pathname === '/api/cartoes/catalogo') corpo = catalogo()

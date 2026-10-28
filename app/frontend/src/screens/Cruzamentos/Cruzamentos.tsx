@@ -66,7 +66,7 @@ export function Cruzamentos() {
   const limiteAlto = maior * 0.75
   // Com pessoa em qualquer eixo não há destaque: seria um ranking visual de pessoas.
   const comPessoa = (dto?.linhasEixo ?? linhasEixo) === 'pessoa' || (dto?.colunasEixo ?? colunasEixo) === 'pessoa'
-  const ehAlta = (c: Celula) => !comPessoa && maior > 0 &&(idade ? (c.valor ?? 0) : c.n) >= limiteAlto && c.n > 0
+  const ehAlta = (c: Celula) => !comPessoa && maior > 0 && (idade ? (c.valor ?? 0) : c.n) >= limiteAlto && c.n > 0
 
   function exportar() {
     if (!dto) return

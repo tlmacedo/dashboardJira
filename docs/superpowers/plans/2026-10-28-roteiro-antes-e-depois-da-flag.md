@@ -20,7 +20,7 @@ Cada linha é um PR a partir da `main` atualizada; a seguinte só começa depois
 | A2 | Auditoria (continuação) | Plano 4, T4 a T9 | — | executada na branch `feat/auditoria-tarefas-4-a-9` (PR pendente) |
 | A3 | Cards de trabalho e prazos | Plano 5a (9 tarefas); regra I-06 (coluna "último movimento") | — | executada e mesclada (PR #33) |
 | A4 | Negativas, Riscos, Previsão, Épicos | Plano 5b (5 tarefas) | — | executada na branch `feat/cards-trabalho-5b` (PR pendente) |
-| A5 | Capacidade e planejamento | Plano 6a (9 tarefas) | local dos YAML reais: o documento recomenda a opção padrão; o código não depende | a fazer |
+| A5 | Capacidade e planejamento | Plano 6a (9 tarefas) | local dos YAML reais: o documento recomenda a opção padrão; o código não depende | executada na branch `feat/pessoas-planejamento-6a` (PR pendente) |
 | A6 | Worklog, posse, esforço, cobertura | Plano 6b (7 tarefas) | — | a fazer |
 | A7 | Checklist × Review e Integridade | Plano 7a (8 tarefas) | — | a fazer |
 | A8 | Distribuição, Governança, início do gerente/squad/usuário | Plano 7b (10 tarefas); verificação I-12 (labels fora do vocabulário); I-14 só se houver sub-tarefa na ficha (senão, fica para o 14b) | — | a fazer |

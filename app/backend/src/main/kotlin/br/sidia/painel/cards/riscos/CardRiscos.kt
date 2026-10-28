@@ -14,6 +14,7 @@ import br.sidia.painel.cards.linhaDe
 import br.sidia.painel.cards.metaDeTrabalho
 import br.sidia.painel.domain.ORDEM_NATURAL_DE_CHAVES
 import br.sidia.painel.domain.StatusCategory
+import br.sidia.painel.pessoas.MotorDePessoas
 import br.sidia.painel.sync.FiltroDeFicha
 import br.sidia.painel.trabalho.ConsultaDeTrabalho
 import br.sidia.painel.trabalho.Fluxo
@@ -50,7 +51,11 @@ object CardRiscos : CardDeLeitura<RiscosDto> {
         Fluxo.exigirStatusMapeados(map, abertas, historico)
 
         val temCampos = e.store.temCamposDeTrabalho(INSTANCIA_TRABALHO)
-        val calc = RiscoCalculator(ctx.calendar, map, regras)
+        // Previsão depois do vencimento: o término pela capacidade (Fase 6). A fila de cada pessoa usa todas as abertas dela
+        // dentro da visão, sem os filtros de tipo, prioridade e OS.
+        val filaDaVisao = e.store.snapshots(ConsultaDeTrabalho(INSTANCIA_TRABALHO, ficha, Situacao.ABERTAS)).filter { e.escopo.permiteAtual(it) }
+        val previsao = MotorDePessoas(ctx).agenda.comoPrevisao(filaDaVisao, e.hoje)
+        val calc = RiscoCalculator(ctx.calendar, map, regras, previsao)
         val riscos = calc.avaliar(abertas, historico, e.agora, temCampos)
         val porChave = abertas.associateBy { it.key }
 

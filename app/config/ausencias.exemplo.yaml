@@ -1,0 +1,37 @@
+# =====================================================================================
+# MODELO DE AUSÊNCIAS  (100% FICTÍCIO, versionado)
+# =====================================================================================
+#
+# PARA QUE SERVE
+#   Lista os períodos em que alguém não trabalha (férias, folgas, licenças). O painel
+#   desconta a ausência da capacidade da pessoa. SOMENTE LEITURA: nenhuma tela ou rota
+#   grava neste arquivo; quem muda é o responsável, editando o arquivo real.
+#
+# COMO USAR
+#   1. Copie para o arquivo real (o git ignora e nunca o commita):
+#        cp app/config/ausencias.exemplo.yaml app/config/ausencias.yaml
+#   2. Troque os ids pelos reais (os mesmos do papeis.yaml). NUNCA use dados reais aqui.
+#   Em produção o arquivo real é OBRIGATÓRIO (pode ter a lista vazia: "ausencias: []").
+#
+# CAMPOS (o leitor é ESTRITO)
+#   pessoa   obrigatório; id que exista no papeis.yaml.
+#   de, ate  obrigatórios; datas ISO aaaa-mm-dd, ambas INCLUSIVAS; "de" não pode ser depois de "ate".
+#   fracao   opcional (padrão 1.0); de 0 (exclusivo) a 1: 0,5 = meio dia de ausência por dia.
+#
+# SEM MOTIVO: este arquivo NÃO guarda o motivo da ausência. A chave "motivo" é recusada
+#   (é dado pessoal sensível e o painel não precisa dele). Duas ausências da mesma pessoa
+#   não podem se sobrepor.
+ausencias:
+  - pessoa: dev.alfa1
+    de: 2026-11-04
+    ate: 2026-11-06
+    fracao: 1.0
+
+  - pessoa: dev.beta1
+    de: 2026-11-16
+    ate: 2026-11-20
+
+  - pessoa: dev.alfa2
+    de: 2026-11-10
+    ate: 2026-11-10
+    fracao: 0.5

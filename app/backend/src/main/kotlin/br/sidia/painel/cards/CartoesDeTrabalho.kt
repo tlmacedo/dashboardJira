@@ -38,20 +38,20 @@ private val TODOS_OS_PAPEIS = Role.entries.toSet()
  */
 internal fun metaDeTrabalho(
     id: String, tela: String, grupo: GrupoDeCartao, natureza: Natureza, fontes: List<FonteDoDado>, exigeChangelog: Boolean = false,
-    temDrill: Boolean = true,
+    temDrill: Boolean = true, papeis: Set<Role> = TODOS_OS_PAPEIS,
 ): CartaoMeta {
     val chave = "card.${id.lowercase().replace("-", "")}"
     return CartaoMeta(
         id = id, grupo = grupo, natureza = natureza, tela = tela,
         tituloChave = "$chave.titulo", oQueMostraChave = "$chave.oQueMostra", comoCalculaChave = "$chave.comoCalcula",
-        fontes = fontes, papeis = TODOS_OS_PAPEIS, temDrill = temDrill, exigeChangelog = exigeChangelog, exigeWorklog = false,
+        fontes = fontes, papeis = papeis, temDrill = temDrill, exigeChangelog = exigeChangelog, exigeWorklog = false,
     )
 }
 
 /** Todos os cartões dos cards de trabalho e prazos, para o `catalogoPadrao()`. */
 internal fun cartoesDeTrabalho(): List<CartaoRegistrado> =
     cartoesDeAbertas() + cartoesDeNegligenciadas() + cartoesDeFechadas() + cartoesDeMetas() + cartoesDeNegativas() +
-        cartoesDeRiscos() + cartoesDePrevisao() + cartoesDeEpicos() + cartoesDeFluxo()
+        cartoesDeRiscos() + cartoesDePrevisao() + cartoesDeEpicos() + cartoesDeFluxo() + cartoesDePessoas()
 
 /** `GET /api/cards/{id}` de cada card de trabalho e prazos (o drill é a rota genérica dos cartões). */
 fun Route.rotasDosCardsDeTrabalho(ctx: AppContext, auditoria: AccessLog) {
@@ -65,4 +65,5 @@ fun Route.rotasDosCardsDeTrabalho(ctx: AppContext, auditoria: AccessLog) {
     rotaDeCard(ctx, store, auditoria, CardPrevisao)
     rotaDeCard(ctx, store, auditoria, CardEpicos)
     rotasDosCardsDeFluxo(ctx, auditoria)
+    rotasDosCardsDePessoas(ctx, store, auditoria)
 }

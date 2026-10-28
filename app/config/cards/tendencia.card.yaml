@@ -1,0 +1,41 @@
+# Ficha do card "Tendência de ocupação" (Plano 6). Estrita: chave desconhecida falha ao carregar.
+# A leitura no banco aplica estes tipos e a exclusão de status (FiltroDeFicha); o JQL só serve à sincronização e ao ensaio.
+
+id: tendencia
+titulo: Tendência de ocupação
+instancia: samsung
+
+campos:
+  - OS Version
+  - priority
+  - timeoriginalestimate
+  - timeestimate
+  - timespent
+
+filtrosFixos:
+  project: ["TG-Basic"]
+  issuetype: ["Checklist", "Checklist TG", "Checklist Review"]
+
+filtrosExcluidos:
+  status: ["Cancelled", "Canceled", "Dropped"]
+
+parametros:
+  - nome: squad
+    tipo: squad
+    obrigatorio: false
+
+formula: >-
+  Ocupação de cada pessoa nas últimas 12 semanas: em cada segunda-feira reconstrói, do changelog, as tasks abertas, o
+  responsável e o vencimento daquele momento e aplica a mesma demanda do Plano, com as HORAS DE HOJE (não há retrato semanal
+  gravado; a tela avisa). Padrão: recorrente = 3 ou mais das últimas 4 semanas acima do limite alto; pontual = 1 ou 2.
+  Pessoas em ordem alfabética, sem ranking. Só liderança.
+
+exemplo: >-
+  squad=[dev.alfa, dev.beta].
+
+aceite:
+  - O responsável e o vencimento são os da época, não os de hoje.
+  - A resposta traz o aviso de que as horas são as de hoje.
+  - O usuário comum recebe 403.
+
+expandChangelog: true
