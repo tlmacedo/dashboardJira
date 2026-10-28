@@ -8,6 +8,8 @@ import br.sidia.painel.security.Role
 import br.sidia.painel.testContext
 import io.ktor.client.request.get
 import io.ktor.client.request.header
+import io.ktor.client.request.post
+import io.ktor.client.statement.bodyAsText
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.ApplicationCall
 import io.ktor.server.response.respondText
@@ -84,6 +86,31 @@ class LogDeRequisicaoTest {
         val valido = client.get("/api/tarefa/TG-1") { header("X-Request-Id", "abc-12345678") }
         assertEquals("abc-12345678", valido.headers["X-Request-Id"])
         assertTrue(capturada.toString(Charsets.UTF_8).contains("\"requisicao\":\"abc-12345678\""))
+    }
+
+    @Test
+    fun excecaoNaoVazaChaveNemMensagemNoLog() = testApplication {
+        val s = Settings.fromEnv(emptyMap())
+        application { module(s, testContext(s)) }
+        routing { get("/api/auditoria/historico/{key}") { error("boom-segredo-da-excecao") } }
+        val r = client.get("/api/auditoria/historico/ABC-123?pessoa=ana.silva")
+        assertEquals(HttpStatusCode.InternalServerError, r.status)
+        assertEquals("", r.bodyAsText())
+        val tudo = capturada.toString(Charsets.UTF_8)
+        assertFalse("ABC-123" in tudo, tudo)
+        assertFalse("boom-segredo" in tudo, tudo)
+        assertFalse("ana.silva" in tudo, tudo)
+        assertTrue("/api/auditoria/historico/{key}" in tudo && "IllegalStateException" in tudo, tudo)
+    }
+
+    @Test
+    fun naoEncontradoEMetodoErradoNaoVazamCaminho() = testApplication {
+        val s = Settings.fromEnv(emptyMap())
+        application { module(s, testContext(s)) }
+        routing { get("/api/tarefa/{key}") { call.respondText("ok") } }
+        client.get("/api/inexistente/ZZZ-999")
+        client.post("/api/tarefa/ZZZ-999")
+        assertFalse("ZZZ-999" in capturada.toString(Charsets.UTF_8))
     }
 
     @Test

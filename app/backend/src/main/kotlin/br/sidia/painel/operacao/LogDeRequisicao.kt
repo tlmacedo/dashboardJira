@@ -10,6 +10,7 @@ import io.ktor.server.plugins.callid.CallId
 import io.ktor.server.plugins.callid.callIdMdc
 import io.ktor.server.plugins.calllogging.CallLogging
 import io.ktor.server.request.httpMethod
+import io.ktor.server.response.respond
 import io.ktor.server.request.path
 import io.ktor.server.routing.RoutingRoot
 import io.ktor.util.AttributeKey
@@ -39,6 +40,24 @@ fun Application.instalarLogDeRequisicao() {
     intercept(ApplicationCallPipeline.Setup) { call.attributes.put(INICIO, System.nanoTime()) }
     // A chamada que o CallLogging recebe não é a do roteador: guarda o modelo da rota casada quando o roteador a resolve.
     monitor.subscribe(RoutingRoot.RoutingCallStarted) { call -> call.attributes.put(ROTA, call.route.toString()) }
+    // Exceção não tratada: sem isto o Ktor loga "Unhandled: GET - <caminho real>" (com a chave da issue) e a pilha/mensagem
+    // crua. Aqui só o MODELO da rota e a CLASSE da exceção saem; a resposta é 500 sem corpo (400/404 para erros de requisição).
+    intercept(ApplicationCallPipeline.Plugins) {
+        try {
+            proceed()
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
+        } catch (e: Throwable) {
+            val status = when (e) {
+                is io.ktor.server.plugins.NotFoundException -> io.ktor.http.HttpStatusCode.NotFound
+                is io.ktor.server.plugins.BadRequestException -> io.ktor.http.HttpStatusCode.BadRequest
+                else -> io.ktor.http.HttpStatusCode.InternalServerError
+            }
+            LoggerFactory.getLogger("br.sidia.painel.requisicao")
+                .error("Falha não tratada rota={} classe={} status={}", modeloDaRota(call), e.javaClass.simpleName, status.value)
+            call.respond(status)
+        }
+    }
     install(CallLogging) {
         level = Level.INFO
         logger = LoggerFactory.getLogger("br.sidia.painel.requisicao")
