@@ -105,6 +105,7 @@ object MascaraDeLog {
             "(?i)((?:[A-Za-z0-9_.-]{0,$PREFIXO_MAXIMO}(?:password|senha|secret|token|apikey|api_key)|\\bpat)[\"']?\\s*[=:]\\s*[\"']?)[^\\s\"'&,;]+",
         ) to { m -> m.groupValues[1] + "***" },
         // `//usuario:senha@host` (tudo até o último `@` do trecho vira credencial: seguro por excesso)
-        Regex("(?<=://)[^\\s]{0,1024}@") to { _ -> "***@" },
+        // Credencial maior que o teto sem `@` dentro dele: mascara o trecho todo até o espaço (seguro por excesso).
+        Regex("(?<=://)(?:[^\\s]{0,1024}@|[^\\s]{1025,}+)") to { _ -> "***@" },
     )
 }
