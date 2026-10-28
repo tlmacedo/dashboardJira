@@ -46,6 +46,19 @@ Ponto de partida (main `ad17750`, 5a mesclado): backend 1129 testes, 0 falhas.
 
 | 13 Telas Negativas, Riscos, Previsão e Épicos | Concluída (frontend 231, 0 falhas; `pnpm build` ok; backend 1216, 0 falhas) | ver `git log` | Rotas no `App.tsx`; `FatoresDoRisco` (gaveta de pontos por fator); mock do Vite com os 4 cards e os cartões NE/RI/PV/EP |
 
+| 14 Diferenças esperadas (bloco 5b) | Concluída (backend 1220, 0 falhas) | ver `git log` | Seção 5b em `docs/analise/diferencas-esperadas-trabalho-e-prazos.md`; `CompatLegadoTrabalhoTest` confere `forecast.py` e `risk.py` (pulado se `legacy/` sumir); `DiferencasTrabalhoDocTest` exige NE-01..NE-10, RI, PV e EP-01; HANDOFF, índice e roteiro (A4) atualizados |
+
+### Minor ADIADOS do 5b (registrados, sem correção neste PR)
+
+- M1: o card Épicos lê TODAS as issues do escopo (qualquer situação) para calcular o progresso; com base grande pode pesar. Alternativa: filtro de épico no `WorkStore`. Arquivo: `cards/epicos/CardEpicos.kt`.
+- M2: Negativas e Riscos seguem a visão pelo responsável ATUAL (`permiteAtual`): o evento atribuído a um ex-responsável só aparece para quem vê a task hoje. Alternativa: `permitePosse` nas listas de evento (ver o Ruling de Negativas).
+- M3: `FatoresDoRisco` repete a lógica de foco e Tab da `GavetaDeTasks`; extrair um hook (`useGavetaModal`) quando houver uma terceira gaveta.
+- M4: a demonstração (`DadosDeDemonstracao`) não tem épicos: `ContratoDeCartoesTest.cadaTelaDeTrabalhoTemParPositivoNaDemonstracao` cobre NE, RI e PV, mas não EP (o `EpicosRoutesTest` cobre EP-01 com fixture própria). Ampliar a demonstração com `Epic Link` é trabalho do Plano 14b/demonstração.
+- M5: as semanas de 2, 4 e 8 do PV-05 e o mínimo de 5 ciclos do PV-06 estão no código; só os parâmetros de `previsao.yaml` são configuráveis.
+- M6: devolvidas ignoram transições em que `from` ou `to` estão fora da `ordem` (ex.: `On Hold`); só status da ordem entram.
+- M7: `TempoEmStatusRoutes` continua sem usar `FiltrosDeCard`/`escopoDe` (herdado do 5a).
+- M8: captura visual das quatro telas (1440 e 390 px, três temas) pendente: sem navegador no ambiente.
+
 ### Rulings do 5b
 
 - Ruling: telas do 5b (T13) — o Passo 5 do plano (captura visual, 1440 e 390 px, três temas) NÃO foi executado: o ambiente não tem navegador (mesma pendência do 5a, M8). Custo se errado: nenhum no código; falta a conferência visual do usuário.

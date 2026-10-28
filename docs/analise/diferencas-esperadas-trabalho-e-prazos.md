@@ -1,6 +1,6 @@
 # Trabalho e prazos (Abertas, Negligenciadas, Fechadas e Metas): diferenças esperadas em relação ao app atual
 
-Bloco 5a do Plano 5. Compara os cartões `AB`, `NG`, `FE` e `MT` do app Python (`legacy/`, inventário em `docs/analise/relatorio-cards-app-atual.md`) com as telas novas. Diferença listada aqui é intencional; qualquer outra divergência é defeito. Exemplos usam o cenário fictício TRB-1 (pessoas `ana`, `bruno` e `carla`; relógio de sexta 30/10/2026; feriados 12/10 e 02/11). Nada foi conferido no Jira real: a primeira conexão segue `docs/jira/checklist-primeira-conexao.md`.
+Blocos 5a (cartões `AB`, `NG`, `FE` e `MT`) e 5b (`NE`, `RI`, `PV` e `EP`, na última parte deste documento) do Plano 5. Compara os cartões do app Python (`legacy/`, inventário em `docs/analise/relatorio-cards-app-atual.md`) com as telas novas. Diferença listada aqui é intencional; qualquer outra divergência é defeito. Exemplos usam o cenário fictício TRB-1 (pessoas `ana`, `bruno` e `carla`; relógio de sexta 30/10/2026; feriados 12/10 e 02/11). Nada foi conferido no Jira real: a primeira conexão segue `docs/jira/checklist-primeira-conexao.md`.
 
 Legenda: **igual** (mesma conta do legado, conferida no código), **diferença esperada** (com o motivo) e **novo** (o app atual não tinha).
 
@@ -83,8 +83,63 @@ Novo nas seis listas: a coluna **último movimento** (último evento real do cha
 | MT-13 | novo na forma | Tabela por squad. |
 | MT-14 | diferença esperada | Tabela por pessoa, em ordem alfabética, sem posição. |
 
+# Bloco 5b: Negativas, Riscos, Previsão e Épicos
+
+Compara os cartões `NE`, `RI`, `PV` e `EP` do app Python com as telas novas. Exemplos usam os cenários fictícios NEG-1 (Negativas, período 01/10 a 30/10) e TRB-1 (demais). As diferenças gerais do bloco 5a (fuso de Manaus, dias úteis, concluída por categoria e `resolution`, cancelada, atraso justificado, escopo de quem vê, pessoas em ordem alfabética, acesso auditado) valem aqui também.
+
+## Diferenças que valem para vários cartões do 5b
+
+| Tema | App atual | Novo | Efeito (cenário) |
+|---|---|---|---|
+| Eventos pela data do changelog | Reabertas, devolvidas e trocas filtravam o período pela data da **última atualização** da task (achado 3 do relatório), e perdiam eventos antigos já atualizados depois | O período vale para a data do **evento** no changelog (a transição de status ou a troca de responsável) | A TG-133 foi reaberta em 20/09 e atualizada em 25/10: não conta em outubro (`NegativasCalculatorTest.reabertaForaDoPeriodoNaoConta`) e conta em setembro |
+| Taxa de chegada | Monte Carlo assumia que nenhum item novo entra (achado 6) | Por semana, também se sorteia a chegada (tasks criadas); `comChegada: false` em `previsao.yaml` reproduz o app anterior | Chegada igual ou maior que a vazão nunca converge: "mais de 104 semanas" em vez de um número inventado |
+| Amostra própria | A previsão do épico era participação do épico × vazão média do time (achado 7, aproximação grosseira) | Só a vazão do próprio épico, e só com um mínimo de entregas dele no histórico (`minItensEpico`, padrão 5); sem amostra própria é traço | Épico com 4 entregas: "—"; com 8 (1 por semana) e 3 abertas: 3 semanas |
+| Pesos e regras em YAML | Pesos do risco e parâmetros da previsão no código | `risco.yaml` e `previsao.yaml` (modelos `.exemplo`, versão em toda resposta, obrigatórios em produção) | `versaoRegras` na resposta |
+| Séries semanais | Cada tela contava as semanas do seu jeito | Uma função só, `SerieSemanal` (entradas por criação, saídas por conclusão positiva, canceladas à parte; semana de segunda a domingo de Manaus), compartilhada pela Previsão e pelo futuro "Fluxo da semana" | Teste de regressão do resultado do Monte Carlo |
+| Estado em símbolo e texto | Cor | `▲` acima de 20% nas taxas, `▲ ●` nos níveis de risco, `✓ ● ■` na confiança | Sempre com o texto ao lado |
+
+## Negativas (NE)
+
+| ID | Veredito | Detalhe |
+|---|---|---|
+| NE-01 | diferença esperada | Reabertas: transição de status de categoria `done` para outra, pela **data do evento**. Cada task conta uma vez. |
+| NE-02 | diferença esperada | Devolvidas: transição para um status de posição menor na `ordem` do fluxo (`status_map.yaml`), pela data do evento. **A reabertura não conta como devolvida** (no NEG-1 a TG-131 volta de `Closed` para `In Progress` e é só "reaberta"). Sem `ordem` configurada: 0 com o aviso `ORDEM_DO_FLUXO_AUSENTE`. |
+| NE-03 | igual | Canceladas (`resolution` de cancelamento), pela data de resolução em Manaus. |
+| NE-04 | diferença esperada | Concluídas com atraso e, ao lado, as **sem justificativa** (sem label de `labels_atraso.yaml`); a conta de atraso é a regra única de "no prazo" (`NoPrazo.classificar`). Lê as resolvidas no período (não o universo por vencimento de Metas). |
+| NE-05 | igual | Abertas vencidas: vencimento anterior a hoje de Manaus. |
+| NE-06 | igual | Estouro de estimativa: gasto acima de 125% da estimativa original, só com estimativa maior que zero (campos da própria issue; sem worklog até a Fase 6). |
+| NE-07 | diferença esperada | Muitas trocas: 3 ou mais mudanças de responsável **dentro do período**, pela data de cada troca no changelog (o legado olhava a task inteira pela data da última atualização, achado 3). |
+| NE-08 | diferença esperada | Taxas de reabertura, devolução, atraso e atraso sem justificativa sobre as concluídas do período; acima de 20% a tela marca `▲` com texto. O cartão abre as tasks do numerador (segmentos `taxa:*`). |
+| NE-09 | adiado | "Maior tempo" por status nas listas: continua no Plano 10, Tarefa 10 (`maiorTempoPorStatus`). Ainda não existe na tela. |
+| NE-10 | diferença esperada | Por responsável, em ordem alfabética: cada evento vai para quem era o responsável **no instante** do evento (a reabertura da TG-131 é da `ana`, mesmo a task tendo passado ao `bruno` depois). Só pessoas da sua visão; a task só aparece para quem a vê hoje. |
+
+## Riscos (RI)
+
+| ID | Veredito | Detalhe |
+|---|---|---|
+| RI-01 | igual | Risco alto (60 pontos ou mais) e médio (30 ou mais), com os pesos do legado conferidos no código (`CompatLegadoTrabalhoTest.riscoComPesosDoLegado`); total limitado a 100. No TRB-1: TG-101 = 85 e TG-103 = 63 (alto), TG-102 = 30 (médio). |
+| RI-02 | diferença esperada | A lista mostra só alto e médio, com o fator principal e a gaveta de pontos por fator; o **nível baixo** fica no drill `nivel:baixo` para conferência (o legado ocultava score < 30 sem como conferir; achado 13). A idade é comparada com o P50/P85 **do próprio tipo**, em dias úteis, e só pontua com histórico do tipo. Parada, sem atualização e bloqueada usam as regras de Negligenciadas: a parada tem piso de 3 dias úteis e vale sem mediana de status (o legado usava 2 dias e exigia a mediana); "sem atualização" vale só para tasks em andamento (o legado contava toda aberta). O fator "sem estimativa" não pontua enquanto a base não tem campos de trabalho sincronizados (aviso `CAMPOS_DE_TRABALHO_INDISPONIVEIS`). |
+| RI-03 | diferença esperada | Sinais por pessoa em **proporção** (tasks em risco sobre abertas da pessoa), em ordem alfabética e só com a sua visão; o legado contava fatores de issues em risco, sem proporção ao volume (achado 13). |
+
+## Previsão (PV)
+
+| ID | Veredito | Detalhe |
+|---|---|---|
+| PV-01 | igual | Backlog: abertas fora da categoria `done`, só as que o papel vê. |
+| PV-02 | diferença esperada | Termina em P50, P85 e P95 (semanas e data), pelo Monte Carlo **com taxa de chegada**; datas = segunda-feira da k-ésima semana inteira depois da semana em curso; mais que o limite (104 semanas) é "mais de 104 semanas". Percentis como o `np.percentile` do legado (interpolação linear); a diferença é a chegada. O cartão abre o backlog (o numerador). |
+| PV-03 | diferença esperada | Confiança pelas **semanas com dado** (baixa abaixo de 8, média até 16, alta com 16), e não só pelo tamanho da amostra; vem com símbolo e texto. O cartão abre as entregas da janela. |
+| PV-04 | diferença esperada | Vazão e chegada por semana fechada (segunda a domingo de Manaus); cada semana abre as suas tasks. A semana em curso não entra. |
+| PV-05 | igual | Quantos itens em 2, 4 e 8 semanas, com percentis conservadores (P85 = 15º percentil, P95 = 5º). Projeção sem tasks por trás: sem gaveta. |
+| PV-06 | pendente da Fase 6 | Previsão por task: o que falta pelo histórico de ciclos do mesmo tipo maiores que a idade (mínimo de 5, como o legado), só para tasks em andamento. As colunas **pela capacidade** e **Atrasa?** chegam na Fase 6 (Agenda, `PrevisaoDeTermino`). |
+
+## Épicos (EP)
+
+| ID | Veredito | Detalhe |
+|---|---|---|
+| EP-01 | diferença esperada | Itens sem os tipos de review **e sem as canceladas**; progresso = concluídos ÷ itens; a task aberta mais antiga, vencidos e pontos. A previsão (P85) usa só a **amostra própria** do épico e, sem ela, é traço com legenda. Respeita a visão (squad e pessoa); tipo e prioridade são ignorados, como no legado. Sem o campo de épico (`Epic Link`, "a confirmar" na 1ª conexão) a tabela vem vazia com o aviso `EPICO_INDISPONIVEL`. Os segmentos do drill usam um código derivado da chave do épico, para a chave não ir para o `access_log`. |
+
 ## Como foi conferido
 
 - `ConsistenciaEntreTelasTest`: o mesmo "no prazo" em Auditoria, Fechadas e Metas (inclusive com cancelada e Epic no cenário), a TG-120 no dia 15/10 de Manaus, e a mesma semana em Fechadas e Tempo em status.
-- `CompatLegadoTrabalhoTest`: ciclo corrido P50 de 6,5, faixas de idade e faixas de entrega contra o vencimento, conforme `legacy/backend/jiradash/metrics/core.py`, `analytics.py` e `reports.py`.
-- Limite: a captura visual das telas não foi feita neste ambiente (sem navegador); fica para a revisão do usuário.
+- `CompatLegadoTrabalhoTest`: ciclo corrido P50 de 6,5, faixas de idade e faixas de entrega contra o vencimento, conforme `legacy/backend/jiradash/metrics/core.py`, `analytics.py` e `reports.py`; no 5b, o Monte Carlo sem chegada (20 itens a 5 por semana = 4 semanas), o restante dada a idade (mínimo de 5) e os pesos e limiares do risco, lidos de `forecast.py` e `risk.py` (o teste é pulado se `legacy/` deixar de existir na Fase 8).
+- Limite: a captura visual das telas não foi feita neste ambiente (sem navegador); fica para a revisão do usuário. Nada foi conferido no Jira real.
