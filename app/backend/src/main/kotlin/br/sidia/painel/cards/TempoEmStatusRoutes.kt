@@ -260,7 +260,7 @@ private fun filtrosAuditados(call: ApplicationCall): Map<String, String> {
  * rota/cartão resolvido. A Auditoria (`ModuloSensivel.AUDITORIA`) NÃO está aqui nem passa pela `TravaDpo` ainda: é do Plano 11;
  * um módulo novo que passe pela trava acrescenta o seu prefixo aqui.
  */
-private val PREFIXOS_SENSIVEIS = listOf("/api/integridade", "/api/cartoes/in-")
+private val PREFIXOS_SENSIVEIS = listOf("/api/integridade", "/api/cartoes/in-", "/api/governanca/acessos")
 
 internal fun rotaSensivel(caminho: String): Boolean {
     val normal = normalizarCaminho(caminho).lowercase(java.util.Locale.ROOT)

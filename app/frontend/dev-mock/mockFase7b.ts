@@ -56,11 +56,32 @@ function qualidadeMock() {
   }
 }
 
+function acessosMock() {
+  return {
+    de: '2026-10-24', ate: '2026-10-30', proximo: null, tamanhoDaPagina: 200,
+    acessos: [
+      { quando: '2026-10-30T14:05:00Z', usuario: 'gerente.exemplo', rota: '/api/governanca/acessos', resultado: 200, filtros: ['de', 'ate'] },
+      { quando: '2026-10-30T13:40:00Z', usuario: 'lider.alfa', rota: '/api/governanca/configuracao', resultado: 403, filtros: [] },
+      { quando: '2026-10-30T13:10:00Z', usuario: 'coord.um', rota: '/api/cartoes/QD-01/tasks', resultado: 200, filtros: ['segmento'] },
+    ],
+  }
+}
+
+function configuracaoMock() {
+  const a = (nome: string, versao: number | null, origem: string, n: string) => ({ nome, versao, origem, sha256: n.repeat(64).slice(0, 64) })
+  return {
+    devMode: true, liveEnabled: false, modoSync: 'DEMONSTRACAO', pessoas: 12, squads: 3,
+    arquivos: [a('calendario', 1, 'exemplo', 'a'), a('cards/qualidade', null, 'real', 'b'), a('metas', 2, 'exemplo', 'c')],
+  }
+}
+
 /** Resposta do mock para as telas do bloco 7b; `undefined` quando a rota não é deste bloco. */
 export function mockFase7b(pathname: string): unknown | undefined {
   if (pathname === '/api/cards/qualidade') return qualidadeMock()
   if (pathname === '/api/distribuicao') return distribuicaoMock()
   if (pathname === '/api/rebalanceamento') return rebalanceamentoMock()
   if (pathname === '/api/governanca/decisoes') return decisoesMock()
+  if (pathname === '/api/governanca/acessos') return acessosMock()
+  if (pathname === '/api/governanca/configuracao') return configuracaoMock()
   return undefined
 }

@@ -36,6 +36,8 @@ import { Distribuicao } from './screens/Distribuicao/Distribuicao'
 import { Rebalanceamento } from './screens/Rebalanceamento/Rebalanceamento'
 import { Divergencia } from './screens/Divergencia/Divergencia'
 import { Qualidade } from './screens/Qualidade/Qualidade'
+import { RegistroDeAcesso } from './screens/RegistroDeAcesso/RegistroDeAcesso'
+import { Configuracao } from './screens/Configuracao/Configuracao'
 import { MapaDeCartoes } from './screens/MapaDeCartoes/MapaDeCartoes'
 import { Sincronizacao } from './screens/Sincronizacao/Sincronizacao'
 import { TempoEmStatus } from './screens/TempoEmStatus/TempoEmStatus'
@@ -91,6 +93,8 @@ export default function App() {
                 <Route path="rebalanceamento" element={<Rebalanceamento />} />
                 <Route path="decisoes" element={<Decisoes />} />
                 <Route path="qualidade" element={<Qualidade />} />
+                <Route path="registroAcesso" element={<RegistroDeAcesso />} />
+                <Route path="configuracao" element={<Configuracao />} />
                 <Route path="tempo" element={<TempoEmStatus />} />
                 <Route path="auditoria" element={<Auditoria />} />
                 <Route path="divergencia" element={<Divergencia />} />
