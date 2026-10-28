@@ -27,7 +27,7 @@ Os 12 sinais, com o nome técnico usado no código e na API:
 | Sinal | Gravidade padrão | Observação |
 |---|---|---|
 | `RESGATE_POR_PRORROGACAO` | 3 | Prorrogada depois de vencer e entregue entre o prazo antigo e o novo; nunca gera também `VENCIMENTO_PRORROGADO` |
-| `TROCA_ANTES_DE_FECHAR` | 3 | Só se o novo responsável foi quem fechou; limite de horas inclusivo |
+| `TROCA_ANTES_DE_FECHAR` | 3 | Só se o novo responsável foi quem fechou; limite de horas inclusivo. A pessoa do sinal é o autor da troca (o legado atribuía ao novo responsável que fechou) |
 | `CRIADA_E_FECHADA_RAPIDO` | 3 | Menos de N minutos entre criar e fechar |
 | `REABRE_E_FECHA_RAPIDO` | 3 | As duas pontas em menos de N horas |
 | `FECHAMENTO_EM_LOTE` | 3 | Janela de tempo, inclusive atravessando a meia-noite |
@@ -36,7 +36,7 @@ Os 12 sinais, com o nome técnico usado no código e na API:
 | `PULOU_O_FLUXO` | 2 | Nunca passou por status de categoria ativa |
 | `ESTIMATIVA_AUMENTADA` | 2 | Veja "estimativa" abaixo |
 | `LABEL_CRITICIDADE_REMOVIDA` | 2 | Removida até N dias antes do fechamento |
-| `FECHADA_POR_OUTRO` | 1 | Quem fechou não era o responsável no instante |
+| `FECHADA_POR_OUTRO` | 1 | Quem fechou não era o responsável no instante e nunca recebeu a task antes (como no legado). Líderes de squad NÃO são excluídos (veja M1 abaixo) |
 | `FECHADA_NO_LIMITE` | 1 | Hora local de Manaus, a partir do limite do YAML |
 
 Diferenças deliberadas:
@@ -46,6 +46,13 @@ Diferenças deliberadas:
 - **Estimativa: sem dado.** O sinal `ESTIMATIVA_AUMENTADA` precisa do valor da estimativa no changelog, que a sincronização ainda não guarda. Sem eventos com valor legível não há evidência e a tela mostra o aviso `SINAL_SEM_DADO` (só quando o sinal está ligado). O sinal fica desligado no modelo de YAML até uma decisão futura do usuário ampliar os campos com valor. Os sinais "estimativa reduzida" e "worklog retroativo" do relatório não têm dono neste bloco.
 - **Pessoa do sinal = autor do evento.** A pessoa é quem fez a ação no changelog (a troca, o fechamento); sem autor, o responsável no instante. O legado atribuía ao responsável atual da task, o que culpava quem recebeu a task depois.
 - **Um fechamento rápido gera um sinal só.** Como no legado (`if life_min < 15 ... elif not started`), a task fechada em menos de `criadaEFechadaMinutos` gera `CRIADA_E_FECHADA_RAPIDO` e NÃO também `PULOU_O_FLUXO` (o mais específico vence); a que foi fechada devagar sem passar por status ativo segue com `PULOU_O_FLUXO`. Com `CRIADA_E_FECHADA_RAPIDO` desligado, o pulo do fluxo volta a valer. Num lote de seis tasks rápidas a conta é 6 pontos por task (3 da criada e fechada, 3 do lote), igual ao legado.
+- **Desvios do legado que seguem o plano (achados da revisão final):**
+  - **M1, `FECHADA_POR_OUTRO`:** quem já foi responsável da task deixou de contar como "outro" (corrigido, como no legado). O legado também excluía o gerente do squad; o painel NÃO exclui líderes (o contexto dos detectores não tem papéis), então Squad Leader e PL que fecham task de terceiros geram o sinal, de gravidade 1. Falso positivo conhecido; se pesar, a correção é passar o diretório de papéis ao contexto da Integridade.
+  - **M2, `VENCIMENTO_PRORROGADO`:** conta qualquer extensão do prazo; o legado só contava a feita a até 2 dias do vencimento. O detalhe traz `diasAntesDoVencimento` para filtrar na leitura.
+  - **M3, `TROCA_ANTES_DE_FECHAR`:** a pessoa é o autor da troca; o legado atribuía ao novo responsável que fechou.
+  - **M4, `PULOU_O_FLUXO`:** ignora espera e bloqueio (só categoria ativa conta como trabalho) e não olha o tempo registrado; o legado considerava espera/bloqueio como "começou" e exigia tempo registrado zero.
+  - **M5, `FECHAMENTO_EM_LOTE`:** sem autor do fechamento a pessoa cai no responsável no instante; um lote na borda de `de` perde as tasks anteriores ao período (a janela só vê o que está no recorte).
+  - **M6, gaveta:** o texto do detalhe da gaveta ainda sai só em português (adiado, como nas demais gavetas).
 - **Só conclusão positiva gera sinal de fechamento.** Cancelamento (Won't Do, Duplicate) não é fechamento.
 - **Nível por pessoa.** Os limiares do legado foram mantidos (alto: 12 pontos, 3× a mediana e 3 sinais graves; médio: 6 pontos e 2×; taxa = pontos ÷ max(concluídas, 8); piso da mediana 0,05), agora configuráveis no YAML. A mediana usa só quem tem concluídas. A lista de pessoas traz só alto e médio, em **ordem alfabética**, sem posição, nota nem coluna ordenável, e o nível sempre vai em símbolo mais texto (▲ alto, ● médio).
 - **Recorte.** Os níveis e a mediana valem para o período e o squad inteiros; os filtros de sinal e de pessoa só recortam a lista de evidências.

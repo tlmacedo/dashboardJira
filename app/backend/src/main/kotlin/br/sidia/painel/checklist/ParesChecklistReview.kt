@@ -49,7 +49,7 @@ data class ParCR(
 /**
  * Pares Checklist × Review. Usa o MESMO pareamento da Divergência Task × Review (`TaskReview.pares` sobre os vínculos já
  * resolvidos pelo 4A, nas duas direções) e fica só com os pares cujo pai tem tipo em [RegrasChecklistReview.tiposPai] e cuja
- * review tem tipo em [tiposReview] (a lista da auditoria, fonte única). Status fora do mapa propaga `UnmappedStatusException`.
+ * review tem tipo em [tiposReview] (a lista do `vinculos.yaml`, fonte única, a mesma que resolve os vínculos). Status fora do mapa propaga `UnmappedStatusException`.
  */
 class ParesChecklistReview(
     private val regras: RegrasChecklistReview,
@@ -71,10 +71,15 @@ class ParesChecklistReview(
         }
     }
 
-    /** Checklists (tipos de pai) sem nenhum vínculo resolvido com uma Review: o "Checklists sem review". */
+    /**
+     * Checklists (tipos de pai) sem nenhuma review válida: o "Checklists sem review". Usa a MESMA lista de tipos de review dos
+     * [pares] (fonte única): um vínculo para uma issue carregada de tipo fora dela não conta como review, para o checklist não
+     * sumir das duas listas. Vínculo para uma issue não carregada segue contando (não dá para saber o tipo).
+     */
     fun semReview(issues: List<IssueSnapshot>, vinculos: List<ParDeChaves>): List<IssueSnapshot> {
-        val comVinculo = vinculos.map { it.task }.toSet()
-        return issues.filter { regras.ehPai(it.issueType) && it.key !in comVinculo }
+        val porChave = issues.associateBy { it.key }
+        val comReview = vinculos.filter { v -> porChave[v.review]?.let { ehReview(it.issueType) } ?: true }.map { it.task }.toSet()
+        return issues.filter { regras.ehPai(it.issueType) && it.key !in comReview }
     }
 
     private fun montar(pai: IssueSnapshot, review: IssueSnapshot, agora: Instant): ParCR {

@@ -52,7 +52,7 @@ object CardChecklistReview : CardDeLeitura<ChecklistReviewDto> {
         val todas = e.store.snapshots(ConsultaDeTrabalho(INSTANCIA_TRABALHO, ficha, Situacao.TODAS))
         Fluxo.exigirStatusMapeados(ctx.statusMap, todas)
         val lidos = SqliteAuditStore(requireNotNull(ctx.dataSource)).paresTaskReview(INSTANCIA_TRABALHO, ctx.vinculos)
-        val motor = ParesChecklistReview(regras, ctx.regrasAuditoria.tiposReview, ctx.statusMap, ctx.calendar)
+        val motor = ParesChecklistReview(regras, ctx.vinculos.tiposReview, ctx.statusMap, ctx.calendar)
 
         val filtrado = e.filtros.squad != null || e.filtros.pessoa != null
         fun doPai(pai: IssueSnapshot) = e.filtros.aceita(pai) && noPeriodo(pai, e) &&

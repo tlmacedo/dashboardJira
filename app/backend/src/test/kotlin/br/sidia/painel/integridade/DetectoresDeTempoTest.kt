@@ -163,6 +163,19 @@ class DetectoresDeTempoTest {
         assertEquals(1, e.gravidade)
     }
 
+    @Test
+    fun quemJaFoiResponsavelDaTaskNaoContaComoOutro() {
+        // carla recebeu a task, devolveu para ana e depois a fechou: já foi responsável, como no legado (M1).
+        val s = fechada(
+            "TG-535", resp = "ana", autorFim = "carla",
+            extras = listOf(
+                ev("TG-535", "assignee", "ana", "carla", "2026-10-05T12:00:00Z", "ana"),
+                ev("TG-535", "assignee", "carla", "ana", "2026-10-06T12:00:00Z", "carla"),
+            ),
+        )
+        assertEquals(emptyList(), de(SinalIntegridade.FECHADA_POR_OUTRO, listOf(s)))
+    }
+
     // ---- FECHADA_NO_LIMITE ----
 
     @Test

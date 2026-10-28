@@ -127,6 +127,10 @@ object DetectoresDeTempo {
             val autor = Fechamentos.autor(f.autor) ?: return@mapNotNull null
             val responsavel = Fluxo.responsavelEm(s, f.at) ?: return@mapNotNull null
             if (autor.equals(responsavel, ignoreCase = true)) return@mapNotNull null
+            // Quem já recebeu a task em algum momento (como no legado) não é "outro": fechou algo que já foi dele.
+            if (s.events.any { it.field.equals("assignee", ignoreCase = true) && it.to.equals(autor, ignoreCase = true) && !it.at.isAfter(f.at) }) {
+                return@mapNotNull null
+            }
             regras.evidencia(SinalIntegridade.FECHADA_POR_OUTRO, s, f.at, autor)
         }
     }

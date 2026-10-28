@@ -118,6 +118,21 @@ class ParesChecklistReviewTest {
     }
 
     @Test
+    fun paresESemReviewUsamAMesmaListaDeTiposReview() {
+        // Com uma lista de review que não cobre o tipo do vínculo, o checklist não pode sumir das DUAS listas (M8):
+        // sem par com review válida, ele é "sem review".
+        val outra = motor(revisao = setOf("Outro tipo"))
+        assertEquals(0, outra.pares(Cr1.issues, Cr1.vinculos, Cr1.agora).size)
+        val semReview = outra.semReview(Cr1.issues, Cr1.vinculos).map { it.key }
+        assertEquals(listOf("TG-401", "TG-403", "TG-405", "TG-407", "TG-409"), semReview.sorted())
+        // Com a lista certa, cada checklist está em exatamente uma das duas listas.
+        val m = motor()
+        val comPar = m.pares(Cr1.issues, Cr1.vinculos, Cr1.agora).map { it.pai.key }
+        val sem = m.semReview(Cr1.issues, Cr1.vinculos).map { it.key }
+        assertEquals(emptySet(), comPar.toSet() intersect sem.toSet())
+    }
+
+    @Test
     fun tiposPaiVemDoYamlDeChecklistReview() {
         val soTg = RegrasChecklistReview.PADRAO.copy(tiposPai = setOf("Checklist TG"))
         assertEquals(0, motor(soTg).pares(Cr1.issues, Cr1.vinculos, Cr1.agora).size)
