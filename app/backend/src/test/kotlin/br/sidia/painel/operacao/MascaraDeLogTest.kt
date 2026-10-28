@@ -1,0 +1,99 @@
+package br.sidia.painel.operacao
+
+import br.sidia.painel.config.Settings
+import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.BeforeEach
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
+
+class MascaraDeLogTest {
+    @BeforeEach
+    @AfterEach
+    fun limpar() = MascaraDeLog.limparRegistrosParaTeste()
+
+    @Test
+    fun bearerEBasicMascarados() {
+        val saida = MascaraDeLog.mascarar("falhou com Bearer abcdefghijklmnop e Basic dXNlcjpzZW5oYTEyMw== ok")
+        assertFalse("abcdefghijklmnop" in saida)
+        assertFalse("dXNlcjpzZW5oYTEyMw" in saida)
+        assertTrue("Bearer ***" in saida && "Basic ***" in saida, saida)
+        assertTrue(saida.startsWith("falhou com ") && saida.endsWith(" ok"), saida)
+    }
+
+    @Test
+    fun cabecalhoAuthorizationMascarado() {
+        val saida = MascaraDeLog.mascarar("Authorization: Token-qualquer-coisa\noutra linha")
+        assertEquals("Authorization: ***\noutra linha", saida)
+    }
+
+    @Test
+    fun senhaEmChaveValorMascarada() {
+        assertEquals("password=***", MascaraDeLog.mascarar("password=abc12345"))
+        assertEquals("senha: ***", MascaraDeLog.mascarar("senha: abc12345"))
+        assertEquals("SESSION_SECRET=*** fim", MascaraDeLog.mascarar("SESSION_SECRET=abc12345 fim"))
+        assertEquals("""{"token":"***"}""", MascaraDeLog.mascarar("""{"token":"abc12345"}"""))
+    }
+
+    @Test
+    fun credencialEmUrlMascarada() {
+        assertEquals("https://***@h.invalid/x", MascaraDeLog.mascarar("https://u:p@h.invalid/x"))
+    }
+
+    @Test
+    fun segredoRegistradoMascaradoTambemEscapado() {
+        val segredo = "abc/def+ghi12345"
+        MascaraDeLog.registrarSegredos(listOf(segredo))
+        val texto = "cru $segredo; url abc%2Fdef%2Bghi12345; json abc\\/def+ghi12345"
+        val saida = MascaraDeLog.mascarar(texto)
+        assertEquals("cru ***; url ***; json ***", saida)
+    }
+
+    @Test
+    fun segredoRegistradoMascaradoEmBase64() {
+        val segredo = "token-ficticio-9876"
+        MascaraDeLog.registrarSegredos(listOf(segredo))
+        val b64 = java.util.Base64.getEncoder().encodeToString(segredo.toByteArray())
+        assertFalse(b64 in MascaraDeLog.mascarar("auth $b64 fim"))
+    }
+
+    @Test
+    fun segredoCurtoNaoERegistrado() {
+        MascaraDeLog.registrarSegredos(listOf("abc"))
+        assertEquals("o abc passou", MascaraDeLog.mascarar("o abc passou"))
+    }
+
+    @Test
+    fun cookieDeSessaoMascarado() {
+        val saida = MascaraDeLog.mascarar("Cookie: painel_sessao=Zm9vYmFy; outro=1")
+        assertFalse("Zm9vYmFy" in saida)
+        val soValor = MascaraDeLog.mascarar("leu painel_sessao=Zm9vYmFy;")
+        assertEquals("leu painel_sessao=***;", soValor)
+    }
+
+    @Test
+    fun textoComumIntacto() {
+        val texto = "Sincronização OK em 12 ms; rota=/api/tarefa/{key} status=200 caminho path=/x"
+        assertEquals(texto, MascaraDeLog.mascarar(texto))
+    }
+
+    @Test
+    fun valorSecretoDoSettingsRegistrado() {
+        val settings = Settings.fromEnv(
+            mapOf(
+                "JIRA_SAMSUNG_URL" to "https://samsung.invalid",
+                "JIRA_SAMSUNG_TOKEN" to "tok-ficticio-AbC12345",
+            ),
+        )
+        val valores = settings.valoresSecretos()
+        assertTrue("tok-ficticio-AbC12345" in valores, "o token da instância deve vir de valoresSecretos()")
+        MascaraDeLog.registrarSegredos(valores)
+        assertEquals("erro *** fim", MascaraDeLog.mascarar("erro tok-ficticio-AbC12345 fim"))
+    }
+
+    @Test
+    fun settingsSemSegredosNaoDevolveNada() {
+        assertTrue(Settings().valoresSecretos().isEmpty())
+    }
+}

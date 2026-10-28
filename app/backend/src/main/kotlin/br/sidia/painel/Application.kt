@@ -17,6 +17,9 @@ import br.sidia.painel.http.ConfigCsrf
 import br.sidia.painel.http.cabecalhosDeSeguranca
 import br.sidia.painel.http.protecaoCsrf
 import br.sidia.painel.http.registrarNegacaoCsrf
+import br.sidia.painel.operacao.ConfiguradorDeLog
+import br.sidia.painel.operacao.MascaraDeLog
+import br.sidia.painel.operacao.instalarLogDeRequisicao
 import br.sidia.painel.security.Authenticator
 import br.sidia.painel.security.DevAuthenticator
 import br.sidia.painel.security.OidcAuthenticator
@@ -65,6 +68,10 @@ fun main() {
         ArquivoEnv.combinarComFlagSoDoArquivo(ArquivoEnv.ler(arquivoEnv), System.getenv()),
     )
     val settings = Settings.fromEnv(env)
+    // O Logback iniciou antes da leitura do arquivo de variáveis: reaplica formato e pasta de log e registra os segredos
+    // na máscara (nenhum token sai em log, nem escapado).
+    ConfiguradorDeLog.aplicar(settings.operacao.logFormato, settings.operacao.logDir)
+    MascaraDeLog.registrarSegredos(settings.valoresSecretos())
     // Falhas de configuração, papéis ou banco acontecem aqui, na subida, e não na primeira requisição.
     val context = AppContext.load(settings)
     // Dados fictícios (só em desenvolvimento, Jira desligado) ou recusa de banco misturado; ver DadosDeDemonstracao.
@@ -119,6 +126,8 @@ fun Application.module(
     }
     monitor.subscribe(ApplicationStopping) { runBlocking { agendador?.parar() } }
     install(ContentNegotiation) { json() }
+    // Id de requisição e uma linha de log por requisição, com o modelo da rota (ver LogDeRequisicao.kt).
+    instalarLogDeRequisicao()
     // CSP e demais cabeçalhos de segurança em toda resposta (ver CabecalhosDeSeguranca.kt).
     install(cabecalhosDeSeguranca(settings.dashboardDevMode))
     // Sem banco (só em testes) não há auditoria nem rotas de dados.

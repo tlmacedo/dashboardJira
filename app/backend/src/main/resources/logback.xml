@@ -1,10 +1,37 @@
 <configuration>
-    <!-- Registro enxuto: nível INFO, sem cabeçalhos nem corpos de requisição (podem conter tokens). -->
-    <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+    <!--
+        Registro enxuto: nível INFO, sem cabeçalhos nem corpos de requisição (podem conter tokens). Toda mensagem passa pela
+        máscara de segredos (MascaraDeLog). Formato por PAINEL_LOG_FORMATO (JSON, padrão, ou TEXTO) e arquivo opcional por
+        PAINEL_LOG_DIR. O Logback inicia antes do arquivo de variáveis ser lido: o ConfiguradorDeLog regrava as duas
+        propriedades no contexto e relê este arquivo no começo do main.
+    -->
+    <conversionRule conversionWord="msgSeguro" converterClass="br.sidia.painel.operacao.MensagemSeguraConverter"/>
+    <conversionRule conversionWord="excSeguro" converterClass="br.sidia.painel.operacao.ExcecaoSeguraConverter"/>
+
+    <appender name="JSON" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder class="br.sidia.painel.operacao.EncoderJsonSeguro"/>
+    </appender>
+
+    <appender name="TEXTO" class="ch.qos.logback.core.ConsoleAppender">
         <encoder>
-            <pattern>%d{HH:mm:ss.SSS} %-5level %logger{36} - %msg%n</pattern>
+            <pattern>%d{HH:mm:ss.SSS} %-5level %logger{36} - %msgSeguro%n%excSeguro</pattern>
         </encoder>
     </appender>
+
+    <!-- Só é referenciado quando há PAINEL_LOG_DIR; `lazy` evita criar o arquivo sem eventos. -->
+    <appender name="ARQUIVO" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <lazy>true</lazy>
+        <file>${PAINEL_LOG_DIR:-${java.io.tmpdir}}/painel.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+            <fileNamePattern>${PAINEL_LOG_DIR:-${java.io.tmpdir}}/painel.%d{yyyy-MM-dd}.%i.log</fileNamePattern>
+            <maxFileSize>20MB</maxFileSize>
+            <maxHistory>14</maxHistory>
+            <totalSizeCap>500MB</totalSizeCap>
+        </rollingPolicy>
+        <encoder class="br.sidia.painel.operacao.EncoderJsonSeguro"/>
+    </appender>
+
+    <appender name="NADA" class="ch.qos.logback.core.helpers.NOPAppender"/>
 
     <logger name="io.netty" level="WARN"/>
     <logger name="com.zaxxer.hikari" level="WARN"/>
@@ -12,6 +39,7 @@
     <logger name="org.flywaydb" level="WARN"/>
 
     <root level="INFO">
-        <appender-ref ref="STDOUT"/>
+        <appender-ref ref="${PAINEL_LOG_FORMATO:-JSON}"/>
+        <appender-ref ref="${PAINEL_LOG_ARQUIVO_REF:-NADA}"/>
     </root>
 </configuration>
