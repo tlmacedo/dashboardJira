@@ -113,3 +113,40 @@ Nenhuma asserção de comportamento foi alterada. Mudaram apenas as entradas dos
 - `DrillRow.responsavel` nulo não distingue "fora da visão" de "sem responsável"; a gaveta mostra `—` nos dois. Cenário: wireframe pede "outra pessoa" para fora da visão. Sugestão: campo `foraDaVisao` no DTO quando o 5a mexer no drill.
 - TS-05 ("Onde o tempo é gasto") está no registro e no Mapa de cartões, mas a tela de Tempo em status mostra TS-04 e TS-05 numa seção só (barras de mediana e P85). Cenário: o Mapa lista um cartão que não tem bloco próprio na tela. Sugestão: separar na revisão de design do 14b.
 - Capturas de tela nos três temas e três larguras (ver "Revisão visual").
+
+---
+
+# Bloco 17b (Tarefas 8 a 13), branch `feat/cards-de-fluxo-e-gestao`
+
+Executor: Claude Code (subagente implementador), sem o usuário presente. Por ordem do usuário em 28/10 o 17b roda ANTES do 14b (o ponto de parada PP5 está resolvido: a calibração com dados reais fica para depois). Pontos de parada resolvidos pela opção Recomendada e registrados como `Ruling:`. Sem migração, sem dependência npm nova, sem acesso ao Jira.
+
+Ponto de partida (main `b8d203b`, 5b mesclado): backend `./gradlew test --rerun-tasks` 1224 testes, 0 falhas; frontend 233 testes.
+
+## Checklist (17b)
+
+- [x] Tarefa 8: Fluxo da semana (I-01) — backend 1240 testes (+9 `FluxoDaSemanaCalculatorTest`, +7 `FluxoDaSemanaRoutesTest`), frontend 247 (+14 `FluxoDaSemana.test.tsx`); cartões `FX-01` e `FX-02`
+- [ ] Tarefa 9: Envelhecimento por etapa (I-05)
+- [ ] Tarefa 10: Bloqueios entre tasks (I-08)
+- [ ] Tarefa 11: Controle do ciclo e tendência (I-02 e I-03)
+- [ ] Tarefa 12: Aba Cruzamentos (I-10)
+- [ ] Tarefa 13: Fechamento do 17b
+
+## Estado herdado do 17b (conferido no código)
+
+| Nome do plano | Nome real | Observação |
+|---|---|---|
+| `SerieSemanal` (Previsão) | `trabalho/SerieSemanal.kt`, igual | O Fluxo da semana chama `SerieSemanal.calcular` (sem recalcular entradas, saídas e canceladas) |
+| `CardDeLeitura`/`rotaDeCard`, `Cartao`/`GavetaDeTasks` | iguais (5a e 17a) | |
+| `Fluxo.exigirStatusMapeados` | igual | |
+| `TimeInStatusCalculator` | `domain/`, igual | |
+| `issue_link`, `LinkJira` | `sync/IssueLinkStore.kt` (`from_key` bloqueia `to_key`), `cards/contrato/LinkJira.kt` | |
+| Cartões novos | prefixos `FX`, `AW`, `BQ`, `CT`, `CZ` | Escolhidos para não colidir com os do inventário (`VG`, `CR`, `IN`, `CA`, `CP`, `DI`, `MP`, `GA`, `SI`, `RB` ...) |
+
+## Rulings do 17b
+
+- Ruling: Fluxo da semana (T8) — a janela são 12 semanas que terminam na semana de HOJE (marcada `emCurso`, incompleta); o sinal "backlog crescendo" só olha as semanas FECHADAS (a entrada superou a saída, estritamente, em 3 ou mais seguidas até a última fechada). O wireframe 5.1 mostra `s-0` e o plano diz "últimas 12 semanas"; a Previsão usa só as fechadas, então a coerência é testada nas semanas fechadas em comum (`mesmaSerieQueAPrevisao`). Custo se errado: passar `ultimaSemanaFechada(hoje)` em `FluxoDaSemanaCalculator`.
+- Ruling: Fluxo da semana (T8) — "começaram" = `Fluxo.inicioAtivo` agrupado por `Fluxo.semanaDe`; é a única série que não vem de `SerieSemanal` (a função única só cobre entrada, saída e canceladas). O saldo do backlog é entrou − saiu − canceladas (o cancelamento sai do backlog sem ser entrega).
+- Ruling: Fluxo da semana (T8) — a ficha `fluxo-da-semana` é igual à da Previsão (3 tipos Checklist, sem excluir status), para a entrada e a saída coincidirem; novo código de aviso `AMOSTRA_PEQUENA_NA_JANELA` (o `AMOSTRA_PEQUENA` existente fala em percentis de um tipo, o que não serve a uma contagem). O plano pedia `AMOSTRA_PEQUENA`; o texto novo é `cardpage.aviso.AMOSTRA_PEQUENA_NA_JANELA`. Custo se errado: usar o código antigo e trocar o texto.
+- Ruling: Fluxo da semana (T8) — a linha tracejada do saldo acumulado do wireframe 5.1 não foi desenhada; o saldo acumulado está na tabela equivalente (colunas Saldo e Acumulado) e o saldo da janela no cartão. Custo se errado: acrescentar uma polilinha em `GraficoDeFluxo.tsx`.
+- Ruling: Fluxo da semana (T8) — as rotas de todos os cards do 17b são registradas por `rotasDosCardsDeFluxo` (chamada de dentro de `rotasDosCardsDeTrabalho`) e os cartões por `cartoesDeFluxo()` (chamada de `cartoesDeTrabalho()`), para não mexer em `Application.kt` nem em `CatalogoPadrao.kt` (arquivos disputados por outros planos).
+- Ruling: tradução — as chaves novas de pt e en ficam num único bloco contíguo logo depois de `nav.configuracao` (menos chance de conflito de merge com os Planos 6a e 12).

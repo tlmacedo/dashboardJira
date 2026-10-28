@@ -6,6 +6,7 @@ import { Abertas } from './screens/Abertas/Abertas'
 import { Auditoria } from './screens/Auditoria/Auditoria'
 import { Epicos } from './screens/Epicos/Epicos'
 import { Fechadas } from './screens/Fechadas/Fechadas'
+import { FluxoDaSemana } from './screens/FluxoDaSemana/FluxoDaSemana'
 import { Negativas } from './screens/Negativas/Negativas'
 import { Previsao } from './screens/Previsao/Previsao'
 import { Riscos } from './screens/Riscos/Riscos'
@@ -43,6 +44,7 @@ export default function App() {
                 <Route path="riscos" element={<Riscos />} />
                 <Route path="previsao" element={<Previsao />} />
                 <Route path="epicos" element={<Epicos />} />
+                <Route path="fluxoDaSemana" element={<FluxoDaSemana />} />
                 <Route path="tempo" element={<TempoEmStatus />} />
                 <Route path="auditoria" element={<Auditoria />} />
                 <Route path="divergencia" element={<Divergencia />} />

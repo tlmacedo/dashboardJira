@@ -144,7 +144,7 @@ class ContratoDeCartoesTest {
     fun cadaTelaDeTrabalhoTemParPositivoNaDemonstracao() {
         // Sem par positivo o contrato "número == drill" seria vácuo (0 == 0) para a tela inteira.
         val e = entrada("gerente.exemplo")
-        for (prefixo in listOf("AB", "NG", "FE", "MT", "NE", "RI", "PV")) {
+        for (prefixo in listOf("AB", "NG", "FE", "MT", "NE", "RI", "PV", "FX")) {
             val positivos = catalogo.visiveisPara(Role.GERENTE).filter { it.meta.id.startsWith("$prefixo-") && it.meta.temDrill }
                 .flatMap { c -> runBlocking { c.valores(e) }.filterValues { it > 0 }.keys.map { c to it } }
             assertTrue(positivos.isNotEmpty(), "$prefixo sem par positivo na demonstração: " + catalogo.visiveisPara(Role.GERENTE).filter { it.meta.id.startsWith("$prefixo-") }.map { c -> c.meta.id to runBlocking { c.valores(e) } })

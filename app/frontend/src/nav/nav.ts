@@ -51,6 +51,7 @@ export const NAV_ITEMS: NavItem[] = [
   item('negligenciadas', 'trabalho', 'all'),
   item('riscos', 'trabalho', 'all'),
   item('previsao', 'trabalho', 'all'),
+  item('fluxoDaSemana', 'trabalho', 'all'),
 
   item('fechadas', 'resultados', 'all'),
   item('negativas', 'resultados', 'all'),
