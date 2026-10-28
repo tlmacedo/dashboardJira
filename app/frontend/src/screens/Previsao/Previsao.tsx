@@ -11,6 +11,7 @@ import { TabelaOrdenavel, type Coluna } from '../../shared/TabelaOrdenavel'
 import { temBloqueio, useCard } from '../../shared/useCard'
 import type { PrevisaoDto, PrevisaoIssue } from './api'
 import '../../shared/tabela.css'
+import '../../shared/pessoas.css'
 
 type Gaveta = { cartaoId: string; segmento: string; titulo: string }
 
@@ -82,6 +83,20 @@ export function Previsao() {
     { id: 'p50', cabecalho: `${t('previsao.col.restante')} P50 (${unidade})`, valor: (l) => l.restanteP50, render: (l) => (l.restanteP50 == null ? traco : numero(l.restanteP50, lang)), numerica: true },
     { id: 'p85', cabecalho: `${t('previsao.col.restante')} P85 (${unidade})`, valor: (l) => l.restanteP85, render: (l) => (l.restanteP85 == null ? traco : numero(l.restanteP85, lang)), numerica: true },
     { id: 'n', cabecalho: t('previsao.col.ciclosMaisLongos'), valor: (l) => l.n, numerica: true },
+    {
+      id: 'capacidade', cabecalho: t('previsao.col.pelaCapacidade'), valor: (l) => l.pelaCapacidade ?? null,
+      render: (l) => (l.pelaCapacidade ? dataCurta(l.pelaCapacidade, lang) : t('previsao.semPrevisaoCapacidade')),
+    },
+    {
+      id: 'atrasa', cabecalho: t('previsao.col.atrasa'), valor: (l) => (l.atrasa == null ? null : l.atrasa ? 1 : 0),
+      // Símbolo e texto, nunca só cor: ▲ atrasa, ✓ no prazo; traço quando não há previsão ou vencimento.
+      render: (l) =>
+        l.atrasa == null ? traco : l.atrasa ? (
+          <span className="ocupacao ocupacao--problema"><span aria-hidden="true">▲</span> {t('previsao.atrasa.sim')}</span>
+        ) : (
+          <span className="ocupacao ocupacao--ok"><span aria-hidden="true">✓</span> {t('previsao.atrasa.nao')}</span>
+        ),
+    },
   ]
 
   const t50 = dto ? termina(dto.termina.semanasP50, dto.termina.p50) : { valor: traco }

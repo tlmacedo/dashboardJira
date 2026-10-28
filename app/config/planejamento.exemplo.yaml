@@ -1,0 +1,53 @@
+# =====================================================================================
+# MODELO DAS REGRAS DE PLANEJAMENTO  (100% FICTÍCIO, versionado; copie para planejamento.yaml)
+# =====================================================================================
+#
+# PARA QUE SERVE
+#   Heurísticas da capacidade e do planejamento: foco padrão, horas assumidas quando a task
+#   não tem estimativa, limiares de ocupação, WIP e prazos de alerta. Não leva dado pessoal.
+#   Os valores são PONTO DE PARTIDA: calibre com o histórico real depois da 1ª conexão.
+#   Em produção o arquivo real é OBRIGATÓRIO. A "versao" sai em toda resposta dos cards.
+#   O leitor é ESTRITO: chave desconhecida ou valor fora do limite recusa o arquivo.
+versao: 1
+
+# Foco usado quando a pessoa não tem "foco" no equipes.yaml (fração do dia dedicada a tasks).
+focoPadrao: 0.7
+
+# Horas restantes: Jira (restante) -> estimativa - registrado (mínimo abaixo) -> horas por tipo -> horasPadrao.
+# As duas últimas são ASSUMIDAS (a resposta marca "horasAssumidas" e a confiança cai).
+horasMinimas: 0.5
+horasPorTipo:
+  Checklist: 6.0
+  "Checklist TG": 6.0
+  "Checklist Review": 2.0
+horasPadrao: 6.0
+
+# Demanda semanal: a task é espalhada da semana atual até a do vencimento, no mínimo estas semanas.
+semanasMinimasDemanda: 2
+# Sem vencimento: quantas semanas ocupa, se já iniciada e se ainda não iniciada.
+semanasSemVencimentoIniciada: 2
+semanasSemVencimentoNaoIniciada: 4
+
+# Ocupação (demanda ÷ capacidade): abaixo de "folga" a pessoa tem folga; de "ocupacaoAtencao" para cima é atenção;
+# acima de "ocupacaoAlta" está acima da capacidade. Precisa valer folga < ocupacaoAtencao < ocupacaoAlta.
+ocupacaoAtencao: 0.85
+ocupacaoAlta: 1.10
+folga: 0.50
+
+# Teto de cada ocupação no índice de Jain (evita que um valor extremo domine o índice).
+tetoJain: 3.0
+
+# Limite de tasks em andamento por status (Gargalos) e por pessoa.
+wipPorStatus:
+  "In Progress": 12
+  "Submitted": 5
+wipPorPessoa: 3
+
+# Revisões pendentes: prazo (em dias) para a revisão começar.
+slaRevisaoDias: 2
+
+# Dia crítico no Calendário: dia útil com vencimentos e capacidade do time abaixo desta fração da bruta.
+diaCriticoCapacidade: 0.6
+
+# Cobertura por ausência: quantos dias à frente olhar.
+horizonteCoberturaDias: 30

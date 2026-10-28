@@ -1,0 +1,42 @@
+# Ficha do card "Calendário do time" (Plano 6). Estrita: chave desconhecida falha ao carregar.
+# A leitura no banco aplica estes tipos e a exclusão de status (FiltroDeFicha); o JQL só serve à sincronização e ao ensaio.
+
+id: calendario
+titulo: Calendário do time
+instancia: samsung
+
+campos:
+  - OS Version
+  - priority
+  - timeoriginalestimate
+  - timeestimate
+  - timespent
+
+filtrosFixos:
+  project: ["TG-Basic"]
+  issuetype: ["Checklist", "Checklist TG", "Checklist Review"]
+
+filtrosExcluidos:
+  status: ["Cancelled", "Canceled", "Dropped"]
+
+parametros:
+  - nome: squad
+    tipo: squad
+    obrigatorio: false
+
+formula: >-
+  Semana (7 dias) ou mês (4 semanas) a partir de uma data: feriados (calendario.yaml), ausências das pessoas (ausencias.yaml,
+  sem motivo), vencimentos das tasks abertas por dia e a capacidade do time no dia (capacidade líquida ÷ bruta das pessoas
+  que você vê). Dia crítico = dia útil com vencimentos e capacidade do time abaixo do limite do planejamento. Pessoas em
+  ordem alfabética.
+
+exemplo: >-
+  inicio=2026-11-02, modo=semana, squad=[dev.alfa, dev.beta].
+
+aceite:
+  - Feriado aparece com o nome e como dia não útil.
+  - O usuário recebe só a própria linha e a capacidade só dele.
+  - Cada dia abre as mesmas tasks que vencem nele.
+  - A resposta não tem motivo de ausência.
+
+expandChangelog: false

@@ -6,12 +6,13 @@ import type { CartaoCatalogo } from './useCatalogo'
  * Botão ⓘ do cartão: abre um balão NÃO modal com "O que mostra", "Como é calculado", "Fonte" e "Visível para".
  * O botão leva `aria-expanded`; `Esc` fecha e devolve o foco a ele. Todo texto vem das chaves do catálogo (pt/en).
  */
-export function AjudaDoCartao({ meta }: { meta: CartaoCatalogo }) {
+export function AjudaDoCartao({ meta, titulo }: { meta: CartaoCatalogo; titulo?: string }) {
   const { t } = useLang()
   const [aberto, setAberto] = useState(false)
   const botao = useRef<HTMLButtonElement>(null)
   const idDoBalao = useId()
-  const rotulo = t('cartao.ajuda.abrir')
+  // Com [titulo], o nome do botão é único quando a tela repete o mesmo cartão (ex.: dois números do CP-02).
+  const rotulo = titulo ? `${t('cartao.ajuda.abrir')}: ${titulo}` : t('cartao.ajuda.abrir')
 
   function aoTeclar(e: KeyboardEvent) {
     if (e.key === 'Escape' && aberto) {

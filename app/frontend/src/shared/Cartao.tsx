@@ -38,6 +38,8 @@ export type CartaoProps = {
   nivelDoTitulo?: 2 | 3
   /** Id do título, quando o corpo precisa nomear tabelas e regiões por ele (`aria-labelledby`). */
   idDoTitulo?: string
+  /** O botão ⓘ leva o título no nome acessível (para telas que repetem o mesmo cartão). */
+  ajudaComTitulo?: boolean
   /** Número já formatado pelo idioma, com unidade. Sempre renderizado como TEXTO. */
   valor?: string
   /** Símbolo decorativo antes do valor (ex.: ⏸); não substitui o texto do estado. */
@@ -208,7 +210,7 @@ export function Cartao(props: CartaoProps) {
             <span aria-hidden="true">{GLIFO_DA_NATUREZA[meta.natureza]}</span> {t(`catalogo.natureza.${meta.natureza}`)}
           </span>
         )}
-        {meta && <AjudaDoCartao meta={meta} />}
+        {meta && <AjudaDoCartao meta={meta} titulo={props.ajudaComTitulo ? props.titulo : undefined} />}
       </header>
       {situacao === 'carregando' && <p className="so-leitor">{t('cartao.carregando')}</p>}
       {corpo}

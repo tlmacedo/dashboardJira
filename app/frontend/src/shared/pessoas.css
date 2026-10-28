@@ -1,0 +1,81 @@
+/* Telas de pessoas e planejamento: ocupação, grades por pessoa e calendário. Só tokens dos temas; a cor nunca é o único sinal. */
+.ocupacao {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.ocupacao--ok {
+  color: var(--ok);
+}
+.ocupacao--atencao {
+  color: var(--warn);
+}
+.ocupacao--problema {
+  color: var(--bad);
+  font-weight: 600;
+}
+
+.grade-pessoas th,
+.grade-pessoas td {
+  padding: 4px 8px;
+}
+.grade-pessoas .celula-aus {
+  color: var(--text2);
+  font-weight: 600;
+}
+.grade-pessoas .celula-num {
+  display: block;
+  font-size: 11px;
+  color: var(--text2);
+}
+
+/* Calendário: ▓ ausência, ◆n vencimentos, ▲ dia crítico. */
+.calendario-grade th.dia-critico {
+  box-shadow: inset 0 -3px 0 var(--bad);
+}
+.calendario-grade th.dia-inutil {
+  background: var(--soft);
+  color: var(--text2);
+}
+.calendario-grade td.celula-ausente {
+  background: var(--soft);
+}
+.calendario-grade .marca {
+  font-size: 13px;
+}
+.legenda-simbolos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  margin: 6px 0;
+  font-size: 12.5px;
+  color: var(--text2);
+}
+.seg-pessoas {
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
+}
+
+/* Fluxo cumulativo: uma linha por status, a tabela de datas-chave é a versão acessível. */
+.faixa-fluxo {
+  display: grid;
+  grid-template-columns: 140px 1fr auto;
+  gap: 8px;
+  align-items: center;
+  padding: 4px 0;
+  border-bottom: 1px solid var(--line);
+}
+.faixa-fluxo svg {
+  width: 100%;
+  height: 36px;
+}
+.faixa-fluxo polyline {
+  fill: none;
+  stroke: var(--primary);
+  stroke-width: 2;
+}
+@media (max-width: 560px) {
+  .faixa-fluxo {
+    grid-template-columns: 1fr;
+  }
+}

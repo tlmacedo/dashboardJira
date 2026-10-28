@@ -54,6 +54,10 @@ fun testContextComBanco(
     /** Mapa de status e calendário próprios do cenário (padrão: os arquivos `.exemplo`). */
     statusMap: StatusMap? = null,
     calendar: BusinessCalendar? = null,
+    /** Equipe, ausências e regras de planejamento do cenário (padrão: os modelos `.exemplo`). */
+    equipes: br.sidia.painel.pessoas.Equipes = equipesDeTeste(),
+    ausencias: br.sidia.painel.pessoas.Ausencias = ausenciasDeTeste(),
+    regrasPlanejamento: br.sidia.painel.pessoas.RegrasDePlanejamento = regrasDePlanejamentoDeTeste(),
 ): AppContext {
     val campos = camposDeTeste()
     val vinculos = vinculosDeTeste()
@@ -75,6 +79,9 @@ fun testContextComBanco(
         regrasDeMetas = regrasDeMetasDeTeste(),
         regrasDeRisco = regrasDeRiscoDeTeste(),
         regrasDePrevisao = regrasDePrevisaoDeTeste(),
+        equipes = equipes,
+        ausencias = ausencias,
+        regrasPlanejamento = regrasPlanejamento,
     )
 }
 

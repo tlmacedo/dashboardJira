@@ -25,6 +25,9 @@ class BusinessCalendar(
     val zone: ZoneId,
     fixedHolidays: Set<MonthDay> = emptySet(),
     movableHolidays: Set<LocalDate> = emptySet(),
+    /** Nomes dos feriados (opcionais, só para exibir no Calendário do time); a data sem nome continua sendo feriado. */
+    private val fixedNames: Map<MonthDay, String> = emptyMap(),
+    private val movableNames: Map<LocalDate, String> = emptyMap(),
 ) {
     val fixedHolidays: Set<MonthDay> = fixedHolidays.toSet()
     val movableHolidays: Set<LocalDate> = movableHolidays.toSet()
@@ -32,6 +35,10 @@ class BusinessCalendar(
     /** Feriado: data móvel exata ou mês/dia fixo (MonthDay.from(29/02) só existe em ano bissexto). */
     fun isHoliday(date: LocalDate): Boolean =
         date in movableHolidays || MonthDay.from(date) in fixedHolidays
+
+    /** Nome do feriado do dia (a data móvel tem precedência); nulo se não é feriado ou o arquivo não deu nome. */
+    fun holidayName(date: LocalDate): String? =
+        if (!isHoliday(date)) null else (movableNames[date] ?: fixedNames[MonthDay.from(date)])?.takeIf { it.isNotBlank() }
 
     /** Dia civil do instante no fuso do calendário. */
     fun localDate(instant: Instant): LocalDate = instant.atZone(zone).toLocalDate()
@@ -99,7 +106,9 @@ class BusinessCalendar(
                 }
                 require(moveis.add(d)) { "$path: feriado móvel duplicado '${m.data}' ('${m.nome}')" }
             }
-            return BusinessCalendar(zone, fixos, moveis)
+            val nomesFixos = arquivo.feriadosFixos.associate { MonthDay.parse("--${it.mesDia}") to it.nome }
+            val nomesMoveis = arquivo.feriadosMoveis.associate { LocalDate.parse(it.data) to it.nome }
+            return BusinessCalendar(zone, fixos, moveis, nomesFixos, nomesMoveis)
         }
     }
 }

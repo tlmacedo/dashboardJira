@@ -1,0 +1,42 @@
+# Ficha do card "Gargalos e fluxo" (Plano 6). Estrita: chave desconhecida falha ao carregar.
+# A leitura no banco aplica estes tipos e a exclusão de status (FiltroDeFicha); o JQL só serve à sincronização e ao ensaio.
+
+id: gargalos
+titulo: Gargalos e fluxo
+instancia: samsung
+
+campos:
+  - OS Version
+  - priority
+  - timeoriginalestimate
+  - timeestimate
+  - timespent
+
+filtrosFixos:
+  project: ["TG-Basic"]
+  issuetype: ["Checklist", "Checklist TG", "Checklist Review"]
+
+filtrosExcluidos:
+  status: ["Cancelled", "Canceled", "Dropped"]
+
+parametros:
+  - nome: squad
+    tipo: squad
+    obrigatorio: false
+
+formula: >-
+  Fluxo cumulativo dos últimos 60 dias: quantas tasks estavam em cada status no fim de cada dia (reconstruído do
+  changelog, na ordem do fluxo; o status concluído fica de fora). Gargalo = etapa ativa ou de espera com mais tasks que o
+  limite de WIP do planejamento.yaml, ou cuja faixa cresceu pelo menos max(3, 30%) em 15 dias. Pessoas acima da capacidade
+  e com folga são contagens (sem ranking). Só liderança.
+
+exemplo: >-
+  squad=[dev.alfa, dev.beta].
+
+aceite:
+  - O status do fim de cada dia vem da linha do tempo do changelog.
+  - A etapa de categoria "a fazer" nunca é gargalo.
+  - Cada contagem abre as mesmas tasks que a formam.
+  - O usuário comum recebe 403.
+
+expandChangelog: true

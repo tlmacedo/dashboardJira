@@ -47,6 +47,22 @@ fun regrasDeRiscoDeTeste(): br.sidia.painel.riscos.RegrasDeRisco =
 fun regrasDePrevisaoDeTeste(): br.sidia.painel.previsao.RegrasDePrevisao =
     br.sidia.painel.previsao.RegrasDePrevisao.fromYaml(TestPaths.configDir.resolve("previsao.exemplo.yaml"))
 
+/** Regras de planejamento do modelo versionado (`planejamento.exemplo.yaml`). */
+fun regrasDePlanejamentoDeTeste(): br.sidia.painel.pessoas.RegrasDePlanejamento =
+    br.sidia.painel.pessoas.RegrasDePlanejamento.fromYaml(TestPaths.configDir.resolve("planejamento.exemplo.yaml"))
+
+/** Equipes do modelo (`equipes.exemplo.yaml`), conferidas contra os papéis do modelo (`papeis.exemplo.yaml`). */
+fun equipesDeTeste(): br.sidia.painel.pessoas.Equipes =
+    br.sidia.painel.pessoas.Equipes.fromYaml(
+        TestPaths.configDir.resolve("equipes.exemplo.yaml"), RoleDirectory.fromYaml(TestPaths.configDir.resolve("papeis.exemplo.yaml")),
+    )
+
+/** Ausências do modelo (`ausencias.exemplo.yaml`), conferidas contra os papéis do modelo. */
+fun ausenciasDeTeste(): br.sidia.painel.pessoas.Ausencias =
+    br.sidia.painel.pessoas.Ausencias.fromYaml(
+        TestPaths.configDir.resolve("ausencias.exemplo.yaml"), RoleDirectory.fromYaml(TestPaths.configDir.resolve("papeis.exemplo.yaml")),
+    )
+
 /** Contexto de teste sem banco (`dataSource = null`), com calendário, papéis, mapa de status, dicionário e fichas dos arquivos de exemplo. */
 fun testContext(settings: Settings): AppContext {
     val campos = camposDeTeste()
@@ -66,5 +82,8 @@ fun testContext(settings: Settings): AppContext {
         regrasDeMetas = regrasDeMetasDeTeste(),
         regrasDeRisco = regrasDeRiscoDeTeste(),
         regrasDePrevisao = regrasDePrevisaoDeTeste(),
+        equipes = equipesDeTeste(),
+        ausencias = ausenciasDeTeste(),
+        regrasPlanejamento = regrasDePlanejamentoDeTeste(),
     )
 }
