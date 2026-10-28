@@ -456,7 +456,7 @@ Caso '-' '{"preToolUse":{"toolName":"read_file","parameters":{"path":"README.md"
 
 # ---------- 28/10/2026: só ENDEREÇOS de Jira são bloqueados (a palavra solta não) ----------
 # 1) palavra jira solta: liberada (flag desligada)
-foreach ($c in @('cd /Volumes/Development/SIDIA/dashboardJira && ls', 'git clone https://github.com/tlmacedo/dashboardJira.git',
+foreach ($c in @('cd /Volumes/Development/SIDIA/dashboardJira && ls', 'git clone https://github.com/dono/dashboardJira.git',
         'curl -s http://127.0.0.1:8080/api/health', 'cd dashboardJira && curl -s http://localhost:8080/api/health',
         'curl -s -o jira-saida.txt http://127.0.0.1:8080/api/health', 'cat docs/jira/checklist-primeira-conexao.md', 'echo jira atlassian',
         'Start-Process notepad jira.md', 'Invoke-WebRequest http://127.0.0.1:8080/api/health -OutFile jira.json',
@@ -464,7 +464,7 @@ foreach ($c in @('cd /Volumes/Development/SIDIA/dashboardJira && ls', 'git clone
     Caso '-' (Cmd $c) $false "palavra solta: $c"
 }
 Caso '-' (Nav 'http://127.0.0.1:8080/dashboardJira') $false 'palavra solta: navegador no painel local com Jira no caminho'
-Caso '-' (Web 'web_fetch' 'https://github.com/tlmacedo/dashboardJira') $false 'palavra solta: web_fetch do repositório'
+Caso '-' (Web 'web_fetch' 'https://github.com/dono/dashboardJira') $false 'palavra solta: web_fetch do repositório'
 Caso '-' (Ler 'docs/jira/checklist-primeira-conexao.md') $false 'palavra solta: ler arquivo em pasta jira'
 Caso '-' (Mcp 'context7' 'get-library-docs' '{"library":"jira-client"}') $false 'palavra solta: argumento MCP sem URL'
 # 2) URL/host de Jira: bloqueada (com e sem esquema, porta, userinfo, maiúsculas, escapes, ponto final, burlas)

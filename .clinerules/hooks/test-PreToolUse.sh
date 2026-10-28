@@ -308,7 +308,7 @@ caso - "$(esc write_to_file 'C:\Users\USUARIO~1\x\README.md')" false "não regre
 # ===== 28/10/2026: só ENDEREÇOS de Jira são bloqueados (a palavra solta não) =====
 # 1) palavra jira solta: liberada (flag desligada)
 caso - "$(cmd 'cd /Volumes/Development/SIDIA/dashboardJira && ls')" false "palavra solta: caminho com dashboardJira"
-caso - "$(cmd 'git clone https://github.com/tlmacedo/dashboardJira.git')" false "palavra solta: git clone do repositório"
+caso - "$(cmd 'git clone https://github.com/dono/dashboardJira.git')" false "palavra solta: git clone do repositório"
 caso - "$(cmd 'curl -s http://127.0.0.1:8080/api/health')" false "palavra solta: curl local"
 caso - "$(cmd 'cd dashboardJira && curl -s http://localhost:8080/api/health')" false "palavra solta: curl local numa pasta dashboardJira"
 caso - "$(cmd 'curl -s -o jira-saida.txt http://127.0.0.1:8080/api/health')" false "palavra solta: arquivo de saída com jira no nome"
@@ -317,7 +317,7 @@ caso - "$(cmd 'echo jira atlassian')" false "palavra solta: texto"
 caso - "$(cmd 'Start-Process notepad jira.md')" false "palavra solta: Start-Process com arquivo jira.md"
 caso - "$(cmd 'Invoke-WebRequest http://127.0.0.1:8080/api/health -OutFile jira.json')" false "palavra solta: Invoke-WebRequest local, arquivo jira.json"
 caso - "$(nav 'http://127.0.0.1:8080/dashboardJira')" false "palavra solta: navegador no painel local com Jira no caminho"
-caso - "$(web web_fetch 'https://github.com/tlmacedo/dashboardJira')" false "palavra solta: web_fetch do repositório"
+caso - "$(web web_fetch 'https://github.com/dono/dashboardJira')" false "palavra solta: web_fetch do repositório"
 caso - "$(ler 'docs/jira/checklist-primeira-conexao.md')" false "palavra solta: ler arquivo em pasta jira"
 caso - "$(mcp context7 get-library-docs '{"library":"jira-client"}')" false "palavra solta: argumento MCP sem URL"
 # 2) URL/host de Jira: bloqueada

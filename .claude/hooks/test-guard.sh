@@ -266,14 +266,14 @@ done
 # bloqueiam; documentação pública (atlassian.com e subdomínios) é liberada pelo host REAL.
 # 1) palavra jira solta: liberada
 for c in 'cd /Volumes/Development/SIDIA/dashboardJira && ls' 'ls dashboardJira/docs/jira' 'cat docs/jira/checklist-primeira-conexao.md' \
-         'git clone https://github.com/tlmacedo/dashboardJira.git' 'git -C dashboardJira status' 'cd dashboardJira && curl -s http://localhost:8080/api/health' \
+         'git clone https://github.com/dono/dashboardJira.git' 'git -C dashboardJira status' 'cd dashboardJira && curl -s http://localhost:8080/api/health' \
          'curl -s http://127.0.0.1:8080/api/health' 'curl -s -o jira-saida.txt http://127.0.0.1:8080/api/health' \
          'wget -q -O jira.json http://127.0.0.1:8080/x' 'echo jira atlassian' 'grep -rn jira docs' 'git log --oneline -- docs/jira' \
          'curl -s -H "X-Projeto: dashboardJira" http://127.0.0.1:8080/x' 'ls /home/x/dashboardJira/app' 'ssh-add -l' \
          'python -m pytest tests/test_jira_client.py' 'curl -s file:///Users/x/dashboardJira/docs/a.html' \
          'curl -d "{\"nome\":\"jira\"}" http://127.0.0.1:8080/x' 'cat jira.md' 'cd app/backend && ./gradlew test --tests "*JiraClient*"' \
          'curl -s localhost:8080/api/jira-status' 'curl -s http://127.0.0.1:8080/jira.json' 'git add docs/jira/checklist-primeira-conexao.md' \
-         'git commit --author="Fulano <fulano@exemplo.invalid>" -m x' 'git clone git@github.com:tlmacedo/dashboardJira.git'; do
+         'git commit --author="Fulano <fulano@exemplo.invalid>" -m x' 'git clone git@github.com:dono/dashboardJira.git'; do
   j "$c" 0
 done
 # 2) URL/host de Jira: bloqueada (com e sem esquema, porta, userinfo, maiúsculas, escapes, ponto final)
