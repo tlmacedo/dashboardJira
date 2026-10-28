@@ -2,6 +2,8 @@ package br.sidia.painel.sync
 
 import br.sidia.painel.AppContext
 import br.sidia.painel.db.Retention
+import br.sidia.painel.operacao.EstadoComMetricas
+import br.sidia.painel.operacao.Metricas
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -128,11 +130,13 @@ fun montarAgendador(
     ctx: AppContext,
     clock: Clock = Clock.systemUTC(),
     dormir: suspend (Duration) -> Unit = { delay(it) },
+    /** Métricas do painel (opcional): conta as execuções concluídas e as linhas removidas pela retenção. */
+    metricas: Metricas? = null,
 ): Agendador? {
     val ds = ctx.dataSource ?: return null
     val settings = ctx.settings
     val cfg = settings.sync
-    val estado = SqliteSyncStateStore(ds)
+    val estado: SyncStateStore = SqliteSyncStateStore(ds).let { if (metricas != null) EstadoComMetricas(it, metricas) else it }
     val gate = SyncGate(settings.jiraLiveEnabled, cfg)
     val tarefas = ArrayList<TarefaAgendada>()
     if (gate.podeAgendar()) {
@@ -158,7 +162,7 @@ fun montarAgendador(
         SyncKind.RETENCAO,
         null,
         { agora, ultima -> Agenda.diariaDevida(agora, ultima, cfg.horaRetencao, settings.zone) },
-    ) { executarRetencao(ctx, estado, clock) }
+    ) { executarRetencao(ctx, estado, clock, metricas) }
     return Agendador(tarefas, estado, clock, dormir = dormir)
 }
 
@@ -183,13 +187,16 @@ private suspend fun executarDoJira(
 }
 
 /** Purga local (nenhuma requisição) registrada como `sync_run` RETENCAO, instância [INSTANCIA_RETENCAO]. */
-private suspend fun executarRetencao(ctx: AppContext, estado: SyncStateStore, clock: Clock) {
+private suspend fun executarRetencao(ctx: AppContext, estado: SyncStateStore, clock: Clock, metricas: Metricas?) {
     val ds = requireNotNull(ctx.dataSource)
     withContext(Dispatchers.IO) {
         val id = estado.iniciar(INSTANCIA_RETENCAO, SyncKind.RETENCAO, clock.instant())
         try {
             val hoje = LocalDate.now(clock.withZone(ctx.settings.zone))
-            val apagadas = Retention(ds, ctx.calendar).purge(hoje, ctx.settings.retentionMonths, ctx.settings.accessLogRetentionMonths)
+            val apagadas = Retention(ds, ctx.calendar).purge(
+                hoje, ctx.settings.retentionMonths, ctx.settings.accessLogRetentionMonths,
+                aoRemover = { categoria, n -> metricas?.retencaoRemoveu(categoria, n) },
+            )
             estado.concluir(id, RunStatus.OK, RunResumo(removidas = apagadas), null, null, clock.instant())
         } catch (e: Exception) {
             logMontagem.warn("Retenção falhou: {}", e.javaClass.simpleName)

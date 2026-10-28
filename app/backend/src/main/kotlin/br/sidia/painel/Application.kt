@@ -20,7 +20,13 @@ import br.sidia.painel.http.registrarNegacaoCsrf
 import br.sidia.painel.operacao.ConfiguradorDeLog
 import br.sidia.painel.operacao.comandoDeOperacao
 import kotlin.system.exitProcess
+import br.sidia.painel.db.ObservadorDeAccessLog
 import br.sidia.painel.operacao.MascaraDeLog
+import br.sidia.painel.operacao.Metricas
+import br.sidia.painel.operacao.instalarMetricasHttp
+import br.sidia.painel.operacao.iniciarServidorDeMetricas
+import com.zaxxer.hikari.HikariDataSource
+import com.zaxxer.hikari.metrics.micrometer.MicrometerMetricsTrackerFactory
 import br.sidia.painel.operacao.Prontidao
 import br.sidia.painel.operacao.prontidaoPadrao
 import br.sidia.painel.operacao.rotaProntidao
@@ -90,12 +96,29 @@ fun main(args: Array<String>) {
     }
     Runtime.getRuntime().addShutdownHook(Thread { context.close() })
     // O agendador para antes de o pool do banco fechar (AppContext.close); a retenção roda mesmo com o Jira desligado.
-    val agendador = montarAgendador(context)
+    val metricas = prepararMetricas(context)
+    val agendador = montarAgendador(context, metricas = metricas)
     agendador?.let { context.aoFechar { runBlocking { it.parar() } } }
     embeddedServer(Netty, port = 8080) {
-        module(context.settings, context, agendador = agendador)
+        module(context.settings, context, agendador = agendador, metricas = metricas)
         monitor.subscribe(ApplicationStopped) { context.close() }
     }.start(wait = true)
+}
+
+/**
+ * Monta as métricas do processo: binders da JVM, pool do banco, estado da sincronização, falhas do registro de acesso e o
+ * servidor da porta interna (fechado junto com o contexto). Tudo só observa; nada aqui pode impedir a subida.
+ */
+private fun prepararMetricas(context: AppContext): Metricas {
+    val metricas = Metricas().registrarBindersDaJvm()
+    (context.dataSource as? HikariDataSource)?.metricsTrackerFactory = MicrometerMetricsTrackerFactory(metricas.registro)
+    context.dataSource?.let {
+        metricas.vincularSincronizacao(SqliteSyncStateStore(it), context.settings.sync.instancias, context.clock)
+    }
+    ObservadorDeAccessLog.aoFalhar = { metricas.falhaDeAccessLog() }
+    val op = context.settings.operacao
+    iniciarServidorDeMetricas(metricas, op.metricasHost, op.metricasPorta)?.let { servidor -> context.aoFechar { servidor.close() } }
+    return metricas
 }
 
 /** Em desenvolvimento, sem login (relógio na zona do painel); em produção, o SSO/OIDC. */
@@ -115,6 +138,7 @@ fun Application.module(
     agendador: Agendador? = null,
     catalogo: CatalogoDeCartoes = catalogoPadrao(),
     prontidao: Prontidao? = prontidaoPadrao(context),
+    metricas: Metricas? = null,
 ) {
     val settings = context.settings
     val inicioDoProcesso = context.clock.instant()
@@ -136,6 +160,8 @@ fun Application.module(
     install(ContentNegotiation) { json() }
     // Id de requisição e uma linha de log por requisição, com o modelo da rota (ver LogDeRequisicao.kt).
     instalarLogDeRequisicao()
+    // Contadores e duração por requisição (rota pelo modelo); fecha o /metrics na porta pública.
+    metricas?.let { instalarMetricasHttp(it) }
     // CSP e demais cabeçalhos de segurança em toda resposta (ver CabecalhosDeSeguranca.kt).
     install(cabecalhosDeSeguranca(settings.dashboardDevMode))
     // Sem banco (só em testes) não há auditoria nem rotas de dados.

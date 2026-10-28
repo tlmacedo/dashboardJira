@@ -25,6 +25,7 @@ dependencies {
     implementation(libs.hikari)
     implementation(libs.flyway.core)
     implementation(libs.sqlite.jdbc)
+    implementation(libs.micrometer.registry.prometheus)
 
     testImplementation(libs.ktor.server.test.host)
     testImplementation(libs.ktor.client.mock)

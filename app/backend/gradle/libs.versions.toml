@@ -6,6 +6,8 @@ kaml = "0.104.0"
 hikari = "7.0.2"
 flyway = "11.14.0"
 sqlite = "3.50.3.0"
+# Última 1.15.x estável: o Ktor 3.3.1 declara micrometer-core 1.15.3, então ficamos na mesma linha (sem salto de minor).
+micrometer = "1.15.12"
 
 [libraries]
 ktor-server-core = { module = "io.ktor:ktor-server-core-jvm", version.ref = "ktor" }
@@ -24,6 +26,7 @@ logback-classic = { module = "ch.qos.logback:logback-classic", version.ref = "lo
 hikari = { module = "com.zaxxer:HikariCP", version.ref = "hikari" }
 flyway-core = { module = "org.flywaydb:flyway-core", version.ref = "flyway" }
 sqlite-jdbc = { module = "org.xerial:sqlite-jdbc", version.ref = "sqlite" }
+micrometer-registry-prometheus = { module = "io.micrometer:micrometer-registry-prometheus", version.ref = "micrometer" }
 
 [plugins]
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }

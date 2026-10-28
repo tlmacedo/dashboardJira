@@ -14,6 +14,10 @@ data class OperacaoSettings(
     val logDir: Path? = null,
     /** `PAINEL_DISCO_MIN_MB`: abaixo disso de espaço livre na pasta do banco o painel deixa de estar pronto (50 a 1.000.000). */
     val discoMinMb: Int = 500,
+    /** `PAINEL_METRICAS_PORTA`: porta interna de `/metrics` (1024 a 65535, diferente de 8080); `0` desliga o servidor de métricas. */
+    val metricasPorta: Int = 9464,
+    /** `PAINEL_METRICAS_HOST`: interface da porta interna; o padrão só atende a própria máquina. */
+    val metricasHost: String = "127.0.0.1",
 ) {
     companion object {
         fun fromEnv(env: Map<String, String>): OperacaoSettings {
@@ -22,7 +26,28 @@ data class OperacaoSettings(
                 logFormato = texto(env, "PAINEL_LOG_FORMATO"),
                 logDir = caminho(env, "PAINEL_LOG_DIR"),
                 discoMinMb = inteiro(env, "PAINEL_DISCO_MIN_MB", 50..1_000_000, padrao.discoMinMb),
+                metricasPorta = porta(env, padrao.metricasPorta),
+                metricasHost = host(env, padrao.metricasHost),
             )
+        }
+
+        private const val PORTA_PUBLICA = 8080
+
+        private fun porta(env: Map<String, String>, padrao: Int): Int {
+            val nome = "PAINEL_METRICAS_PORTA"
+            val valor = texto(env, nome)?.let {
+                it.toIntOrNull() ?: throw IllegalArgumentException("$nome inválido (esperado 0 ou inteiro de 1024 a 65535)")
+            } ?: return padrao
+            require(valor == 0 || valor in 1024..65535) { "$nome inválido (esperado 0 ou inteiro de 1024 a 65535)" }
+            require(valor != PORTA_PUBLICA) { "$nome inválido (não pode ser a porta pública do painel)" }
+            return valor
+        }
+
+        private fun host(env: Map<String, String>, padrao: String): String {
+            val nome = "PAINEL_METRICAS_HOST"
+            val valor = texto(env, nome) ?: return padrao
+            require(Regex("[A-Za-z0-9.:\\-]{1,253}").matches(valor)) { "$nome inválido (esperado nome de host ou endereço IP)" }
+            return valor
         }
 
         internal fun inteiro(env: Map<String, String>, nome: String, faixa: IntRange, padrao: Int): Int =
