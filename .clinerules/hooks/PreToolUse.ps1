@@ -19,11 +19,22 @@
 #   - CLI/SDK do Cline: .tool_call.name + .tool_call.input
 # Saída (stdout, UTF-8 sem BOM): {"cancel": bool, "contextModification": "", "errorMessage": "..."}; sempre exit 0.
 #
-# Flag JIRA_LIVE_ENABLED, lida do ambiente do processo do Cline (NÃO do app\.env nem do comando):
-#   - ausente, false ou inválida -> trava do Jira ATIVA: comandos de rede, variáveis JIRA_*, URLs com
-#     jira/atlassian, MCP do Atlassian e navegador/web_fetch para URLs com jira/atlassian são bloqueados;
-#   - true (sem diferenciar maiúsculas, como o Settings.kt do app) -> nada disso é bloqueado, exceto
-#     exibir token ou senha do Jira no terminal (Plano 4A, Decisão 10).
+# Flag JIRA_LIVE_ENABLED (Plano 14, Tarefa 0): lida do arquivo app\.env da raiz do repositório (raiz deduzida
+# do caminho deste script, nunca de variável de ambiente), igual ao painel (ArquivoEnv.kt): só a linha da flag,
+# NOME=valor, aspas e comentário final opcionais, a ÚLTIMA ocorrência vale. O ambiente do processo do Cline e o
+# comando NÃO ligam nem desligam a flag. Arquivo ausente, ilegível, sem a linha ou valor diferente de true
+# (espaços nas pontas ignorados, sem diferenciar maiúsculas) = trava ATIVA (falha fechada). Este hook lê o
+# arquivo só para si e nunca imprime o conteúdo; a IA continua proibida de ler, escrever ou versionar o arquivo.
+#   - trava ativa: variáveis JIRA_*, ENDEREÇOS de Jira (abaixo) em comandos, MCP do Atlassian, navegador e
+#     web_fetch são bloqueados;
+#   - true -> nada disso é bloqueado, exceto exibir token ou senha do Jira no terminal (Plano 4A, Decisão 10).
+# Regra de endereço (decisão de 28/10/2026): a palavra "jira" solta (pasta dashboardJira, nome de arquivo,
+# repositório, texto) NÃO bloqueia. Bloqueia URL/host com "jira" em algum rótulo, "jira"+"sidia" em
+# host+caminho ou *.atlassian.net com "sidia" (com ou sem esquema, porta, userinfo, maiúsculas, escapes %,
+# ponto final). Documentação pública (atlassian.com e subdomínios) é liberada; vale o host REAL (depois do
+# userinfo) e a URL aninhada em query é avaliada à parte. Barra invertida no userinfo (x\@jira.corp) examina
+# os dois hosts; host sem ponto (curl jira/rest) conta junto de ferramenta de rede; --connect-to, --resolve,
+# --proxy, Host:valor, git/rsync/socat entram. Espelho de AWK_URL do guard.sh.
 # Valem SEMPRE, com qualquer valor da flag: escrever, versionar ou LER `.env` e `config/{equipes,ausencias,
 # papeis,squads}.yaml` (os modelos `.env.example`, `.env.sample` e `*.exemplo.yaml` ficam liberados),
 # `git add -f` e listar todas as variáveis de ambiente (expõe tokens). As configs reais e o
@@ -72,6 +83,12 @@ function Casa([string]$texto, [string]$padrao) {
     return [regex]::IsMatch($texto, $padrao, $OPC_I)
 }
 
+# Comparações de texto ORDINAIS: StartsWith/EndsWith/IndexOf(string) comparam por cultura, e por cultura o
+# caractere U+FEFF (BOM) é "ignorável" (StartsWith(BOM) seria verdadeiro para QUALQUER texto). Use sempre estes.
+function Comeca-Com([string]$s, [string]$p) { return $s.StartsWith($p, [System.StringComparison]::Ordinal) }
+function Termina-Com([string]$s, [string]$p) { return $s.EndsWith($p, [System.StringComparison]::Ordinal) }
+function Indice-De([string]$s, [string]$p) { return $s.IndexOf($p, [System.StringComparison]::Ordinal) }
+
 function Ler-Prop($obj, [string]$nome) {
     # lê uma propriedade sem quebrar quando ela não existe
     if ($null -eq $obj) { return $null }
@@ -86,7 +103,7 @@ function Desfazer-Json($valor) {
     # valores que vieram como texto JSON ('{"command":"..."}') viram objeto; o resto fica como está
     if ($valor -is [string]) {
         $t = $valor.Trim()
-        if ($t.StartsWith('{') -or $t.StartsWith('[')) {
+        if ((Comeca-Com $t '{') -or (Comeca-Com $t '[')) {
             try { return ($t | ConvertFrom-Json) } catch { return $valor }
         }
     }
@@ -109,11 +126,258 @@ function Coletar-Textos($valor, $lista, [int]$profundidade) {
     [void]$lista.Add([string]$valor)
 }
 
+# ---------- flag lida do app\.env (espelho do bloco de leitura da flag do guard.sh e do ArquivoEnv.kt) ----------
+function Ler-Flag-Do-Arquivo {
+    # $true só se a ÚLTIMA linha da flag no app\.env da raiz do repositório vale true. Qualquer problema = $false.
+    try {
+        # raiz do repositório pelo caminho deste script (.clinerules\hooks -> ..\..); nunca por variável de ambiente
+        $raiz = [System.IO.Path]::GetFullPath([System.IO.Path]::Combine($PSScriptRoot, '..', '..'))
+        $arq = [System.IO.Path]::Combine($raiz, 'app', '.env')
+        if (-not [System.IO.File]::Exists($arq)) { return $false }
+        # UTF-8 estrito: byte inválido lança exceção (o painel também falha ao ler) e cai no catch = desligada
+        $linhas = [System.IO.File]::ReadAllLines($arq, (New-Object System.Text.UTF8Encoding($false, $true)))
+        $valor = $null
+        foreach ($bruta in $linhas) {
+            $l = ([string]$bruta).Trim()
+            # BOM: compara o primeiro CARACTERE (nunca StartsWith por cultura, que casaria com qualquer linha)
+            if ($l.Length -gt 0 -and $l[0] -eq [char]0xFEFF) { $l = $l.Substring(1) }
+            if ($l -eq '' -or (Comeca-Com $l '#')) { continue }
+            if (Comeca-Com $l 'export ') { $l = $l.Substring(7).Trim() }
+            $i = Indice-De $l '='
+            if ($i -le 0) { continue }
+            # comparação ORDINAL: -cne/-ceq usam a cultura invariante, onde caracteres "ignoráveis" (U+FFFD, U+200B...)
+            # somem da comparação e "<lixo>JIRA_LIVE_ENABLED" ficaria igual ao nome da flag
+            if (-not [string]::Equals($l.Substring(0, $i).Trim(), 'JIRA_LIVE_ENABLED', [System.StringComparison]::Ordinal)) { continue }
+            $v = $l.Substring($i + 1).Trim()
+            $aspa = ($v.Length -ge 2) -and (($v[0] -eq [char]34) -or ($v[0] -eq [char]39)) -and ($v[$v.Length - 1] -eq $v[0])
+            if ($aspa) { $v = $v.Substring(1, $v.Length - 2) }
+            else {
+                $j = Indice-De $v ' #'
+                if ($j -ge 0) { $v = $v.Substring(0, $j) }
+                $v = $v.Trim()
+            }
+            $valor = $v
+        }
+        if ($null -eq $valor) { return $false }
+        return [string]::Equals($valor.Trim(), 'true', [System.StringComparison]::OrdinalIgnoreCase)
+    }
+    catch { return $false }
+}
+
+# ---------- endereço de Jira (espelho do AWK_URL do guard.sh) ----------
+$REDE_FERRAMENTAS = @{}
+foreach ($x in 'curl wget http https httpie xh nc ncat telnet ssh scp sftp ftp openssl socat aria2c lynx w3m rsync invoke-webrequest invoke-restmethod iwr irm start-bitstransfer bitsadmin certutil test-netconnection tnc resolve-dnsname nslookup ping dig'.Split(' ')) { $REDE_FERRAMENTAS[$x] = $true }
+$ALVO_FERRAMENTAS = @{}
+foreach ($x in 'ssh scp sftp nc ncat telnet ftp socat ping dig nslookup tnc test-netconnection resolve-dnsname'.Split(' ')) { $ALVO_FERRAMENTAS[$x] = $true }
+# subcomandos do git que falam com um servidor (git entra como ferramenta de rede só com eles)
+$GIT_SUBCOMANDOS = @{}
+foreach ($x in 'clone fetch pull push remote ls-remote submodule'.Split(' ')) { $GIT_SUBCOMANDOS[$x] = $true }
+# valor de opção que é arquivo ou corpo (curl -o jira-saida.txt, -d, -OutFile...) não é host
+$PADRAO_OPCAO_COM_ARQUIVO = '^(-o|--output|--output-document|--upload-file|-d|--data|--data-raw|--data-binary|--cacert|--cert|--key|--config|-outfile|-infile|-body|-path|-filepath)$'
+
+function Decodifica-Percent([string]$s) {
+    # %XX -> caractere (controles e espaço viram espaço); o texto já vem em minúsculas
+    $sb = New-Object System.Text.StringBuilder
+    $i = 0
+    while ($i -lt $s.Length) {
+        if ($s[$i] -eq '%' -and ($i + 2) -lt $s.Length) {
+            $h = $s.Substring($i + 1, 2)
+            if ($h -match '^[0-9a-f]{2}$') {
+                $c = [Convert]::ToInt32($h, 16)
+                if ($c -gt 32 -and $c -lt 127) { [void]$sb.Append([char]$c) } else { [void]$sb.Append(' ') }
+                $i += 3
+                continue
+            }
+        }
+        [void]$sb.Append($s[$i])
+        $i++
+    }
+    return $sb.ToString()
+}
+
+function Host-Termina([string]$h, [string]$sufixo) {
+    return ($h.Length -gt $sufixo.Length) -and $h.EndsWith($sufixo, [System.StringComparison]::Ordinal)
+}
+
+function Host-De([string]$a) {
+    # um candidato a host de uma autoridade: tira o userinfo (até o ÚLTIMO @), corta na barra invertida e na porta
+    # ("" se for IPv6 entre colchetes). Espelho de host_de do guard.sh.
+    $temUser = $false
+    $i = $a.LastIndexOf([char]64)
+    if ($i -ge 0) { $a = $a.Substring($i + 1); $temUser = $true }
+    $b = $a.IndexOf([char]92)
+    if ($b -ge 0) { $a = $a.Substring(0, $b) }
+    $temPorta = $false
+    $hosp = ''
+    if (-not (Comeca-Com $a '[')) {
+        $j = $a.IndexOf([char]58)
+        if ($j -ge 0) { $temPorta = $true; $a = $a.Substring(0, $j) }
+        $hosp = $a.TrimEnd('.')
+    }
+    return [pscustomobject]@{ Hospedeiro = $hosp; TemPorta = $temPorta; TemUser = $temUser }
+}
+
+function Separa-Endereco([string]$u) {
+    # "usuario@host:porta/caminho" -> Hosts (candidatos), Resto, TemPorta, TemUser. A autoridade termina só em / ? #;
+    # a barra invertida fica DENTRO dela (curl trata "x\@jira.corp" como host jira.corp; navegadores tratam "\" como
+    # "/"). Havendo "\", os DOIS hosts (o do curl e o de antes da barra) são candidatos e o texto depois da primeira
+    # barra invertida entra no Resto. Espelho de separa do guard.sh.
+    $m = [regex]::Match($u, '[/?#]')
+    if ($m.Success) { $auth = $u.Substring(0, $m.Index); $resto = $u.Substring($m.Index) } else { $auth = $u; $resto = '' }
+    $hosts = New-Object System.Collections.ArrayList
+    $c1 = Host-De $auth
+    [void]$hosts.Add($c1.Hospedeiro)
+    $temPorta = $c1.TemPorta
+    $temUser = $c1.TemUser
+    $b = $auth.IndexOf([char]92)
+    if ($b -ge 0) {
+        $c2 = Host-De ($auth.Substring(0, $b))
+        [void]$hosts.Add($c2.Hospedeiro)
+        $temPorta = ($temPorta -or $c2.TemPorta)
+        $temUser = ($temUser -or $c2.TemUser)
+        $resto = $auth.Substring($b) + $resto
+    }
+    return [pscustomobject]@{ Hosts = @($hosts); Resto = $resto; TemPorta = $temPorta; TemUser = $temUser }
+}
+
+function Rotulo-Jira-Estrito([string]$h) {
+    # host sem ponto/porta/usuario: só vale se um rótulo (separado por . ou -) for exatamente "jira"
+    # (jira, jira-lab, meu-jira); "dashboardjira" não conta. Espelho de estrito do guard.sh.
+    foreach ($rotulo in $h.Split('.')) {
+        foreach ($parte in $rotulo.Split('-')) { if ($parte -eq 'jira') { return $true } }
+    }
+    return $false
+}
+
+function Campos-Jira([string]$w) {
+    # valor "a:b:c:d" de --connect-to / --resolve: examina o 1o e o 3o campo como hosts. Espelho de campos do guard.sh.
+    $f = $w.Split(':')
+    foreach ($k in 0, 2) {
+        if ($k -lt $f.Length) {
+            $h = $f[$k].TrimStart('+').TrimEnd('.')
+            if ($h -ne '' -and (Endereco-DeJira $h '')) { return $true }
+        }
+    }
+    return $false
+}
+
+function Endereco-DeJira([string]$hosp, [string]$resto) {
+    # $true = endereço de Jira (bloquear). Texto já em minúsculas.
+    if ($hosp -eq '') { return $false }
+    if ($hosp -eq 'atlassian.com' -or (Host-Termina $hosp '.atlassian.com')) {
+        # documentação pública; mas "@" ou "\" no resto com jira pode esconder outro host
+        if ($resto -match '[@\\]' -and $resto.Contains('jira')) { return $true }
+        return $false
+    }
+    foreach ($rotulo in $hosp.Split('.')) { if ($rotulo.Contains('jira')) { return $true } }
+    $hp = $resto
+    $q = $hp.IndexOfAny([char[]]@([char]63, [char]35))
+    if ($q -ge 0) { $hp = $hp.Substring(0, $q) }
+    $hp = $hosp + $hp
+    if ($hp.Contains('jira') -and $hp.Contains('sidia')) { return $true }
+    if (($hosp -eq 'atlassian.net' -or (Host-Termina $hosp '.atlassian.net')) -and ($hosp + $resto).Contains('sidia')) { return $true }
+    return $false
+}
+
+function Base-Palavra([string]$w) {
+    $b = [regex]::Replace($w, '^.*[/\\]', '')
+    return [regex]::Replace($b, '\.exe$', '')
+}
+
+function Texto-Cita-Jira([string]$texto, [string]$rede) {
+    # $true = o texto cita endereço de Jira. rede: '1' = procura host sem esquema em qualquer palavra;
+    # '0' = só URLs com esquema; 'auto' = host sem esquema só se houver ferramenta de rede no texto.
+    if ([string]::IsNullOrEmpty($texto)) { return $false }
+    $t = $texto.ToLowerInvariant()
+    $t = Decodifica-Percent (Decodifica-Percent (Decodifica-Percent $t))
+    $t = [regex]::Replace($t, '[\r\n]+', ' ')
+    # A) URLs com esquema (a URL aninhada na query é varrida à parte)
+    $rx = New-Object System.Text.RegularExpressions.Regex('[a-z][a-z0-9+.-]*://[^\s"''<>`|;&()]*')
+    $s = $t
+    while ($true) {
+        $m = $rx.Match($s)
+        if (-not $m.Success) { break }
+        $k = Indice-De $m.Value '://'
+        $e = Separa-Endereco ($m.Value.Substring($k + 3))
+        foreach ($h in $e.Hosts) { if ($h -ne '' -and (Endereco-DeJira $h $e.Resto)) { return $true } }
+        $s = $s.Substring($m.Index + $k + 3)
+    }
+    # B) host sem esquema
+    $palavras = [regex]::Split($t, '[\s"''`;|&()<>,=]+')
+    $r = ($rede -eq '1')
+    if ($rede -eq 'auto') {
+        foreach ($w in $palavras) { if ($REDE_FERRAMENTAS.ContainsKey((Base-Palavra $w))) { $r = $true; break } }
+        if ($t -match 'webclient|httpclient|xmlhttp|winhttp') { $r = $true }
+        # git só conta com subcomando que fala com servidor (clone, fetch, pull, push, remote, ls-remote, submodule)
+        for ($gi = 0; $gi -lt $palavras.Length; $gi++) {
+            if ((Base-Palavra $palavras[$gi]) -eq 'git') {
+                $fim = [Math]::Min($gi + 6, $palavras.Length - 1)
+                for ($gk = $gi + 1; $gk -le $fim; $gk++) { if ($GIT_SUBCOMANDOS.ContainsKey($palavras[$gk])) { $r = $true } }
+            }
+        }
+    }
+    $janela = 0
+    $ant = ''
+    $ult = 0    # posição (a partir de 1) da última ferramenta de comando (curl, wget...); no modo '1' (texto de URL) vale sempre
+    for ($i = 0; $i -lt $palavras.Length; $i++) {
+        $w = $palavras[$i]
+        if ($w -eq '') { continue }
+        if ($REDE_FERRAMENTAS.ContainsKey((Base-Palavra $w)) -and $w -ne 'http' -and $w -ne 'https') { $ult = $i + 1 }
+        # com ferramenta de rede, todas as palavras; sem ela, só as de forma usuario@host (git clone git@host:repo)
+        if (-not $r -and -not $w.Contains('@')) { continue }
+        $salta = ($ant -match $PADRAO_OPCAO_COM_ARQUIVO)
+        $prev = $ant
+        $ant = $w
+        if ($salta) { continue }
+        if ($ALVO_FERRAMENTAS.ContainsKey((Base-Palavra $w))) { $janela = 4; continue }
+        # --connect-to a:b:c:d e --resolve host:porta:endereço: campos separados por ":"
+        if ($prev -match '^(--connect-to|--resolve)$') {
+            if (Campos-Jira $w) { return $true }
+            continue
+        }
+        # valor de opção que é um host (proxy), "-xHOST" colado e cabeçalho Host:valor sem espaço
+        $forca = ($prev -match '^(-x|--proxy|--preproxy|--socks4a?|--socks5(-hostname)?|--haproxy-[a-z-]+)$')
+        if ($w -match '^-x[^-]') { $w = $w.Substring(2); $forca = $true }
+        if ($w -match '^(host|x-forwarded-host|x-original-host|forwarded-host):') { $w = $w.Substring((Indice-De $w ':') + 1); $forca = $true }
+        # socat: TCP:host:porta, SSL:host:porta...
+        if ($w -match '^(tcp|tcp4|tcp6|tcp-connect|udp|udp4|udp6|ssl|openssl|openssl-connect|socks4a?):') { $w = $w.Substring((Indice-De $w ':') + 1) }
+        if ($w -eq '') { continue }
+        if ($w.Contains('://')) { continue }
+        if ($w -match '^-' -or $w -match '^[/.~$]' -or $w.Contains('\') -or $w -match '^[a-z]:[/\\]' -or $w -match '^[0-9]+$') { continue }
+        $e = Separa-Endereco $w
+        $alvo = (($janela -gt 0) -or $forca)
+        if ($janela -gt 0) { $janela-- }
+        foreach ($h in $e.Hosts) {
+            if ($h -eq '') { continue }
+            # host sem ponto, porta nem usuario (curl jira/rest, wget jira, iwr jira): só com ferramenta de comando
+            # nas 10 palavras anteriores (git não entra: evita bloquear nome de ramo como jira-fix)
+            $perto = ($rede -eq '1') -or (($ult -gt 0) -and (($i + 1 - $ult) -le 10))
+            if ($alvo -or $h.Contains('.') -or $e.TemPorta -or $e.TemUser) {
+                if (Endereco-DeJira $h $e.Resto) { return $true }
+            } elseif ($perto -and (Rotulo-Jira-Estrito $h)) { return $true }
+        }
+    }
+    return $false
+}
+
+function Coletar-Urls($valor, $lista, [int]$profundidade) {
+    # textos dos campos url/uri/href/link, em qualquer nível (espelho do jq do adaptador bash)
+    if ($null -eq $valor -or $profundidade -gt 8) { return }
+    $valor = Desfazer-Json $valor
+    if ($valor -is [System.Management.Automation.PSCustomObject]) {
+        foreach ($p in $valor.PSObject.Properties) {
+            if (@('url', 'uri', 'href', 'link') -contains $p.Name -and $p.Value -is [string]) { [void]$lista.Add($p.Value) }
+            Coletar-Urls $p.Value $lista ($profundidade + 1)
+        }
+        return
+    }
+    if ($valor -is [string]) { return }
+    if ($valor -is [System.Collections.IEnumerable]) {
+        foreach ($item in $valor) { Coletar-Urls $item $lista ($profundidade + 1) }
+    }
+}
+
 # ---------- regras (espelham o .claude/hooks/guard.sh, mais os extras do Cline) ----------
-$PADRAO_URL_JIRA = 'https?://[^\s"'']*(jira|atlassian)'
-$PADRAO_REDE_CLASSICA = '(^|[^A-Za-z0-9_-])(curl|wget|http|https|httpie|xh|nc|ncat|telnet|ssh|ftp|openssl)(\.exe)?(\s|$)'
-# extras do Windows/PowerShell (não existem no guard.sh)
-$PADRAO_REDE_WINDOWS = '\b(invoke-webrequest|invoke-restmethod|iwr|irm|start-bitstransfer|bitsadmin|certutil|test-netconnection|tnc|resolve-dnsname|nslookup|ping|webclient|httpclient|xmlhttp|winhttp|start-process)\b'
 $PADRAO_LIGAR_FLAG = 'jiradash\s+(check|sync|serve)|JIRA_LIVE_ENABLED\s*=\s*["'']?\s*(1|true)|JIRA_LIVE_ENABLED["''\s,:=]+(-value\s+)?["'']?\s*(1|true)'
 $PADRAO_TOKEN = 'JIRA_[A-Za-z0-9_]*(TOKEN|PASS|SENHA|SECRET|PAT)'
 $PADRAO_EXIBIR = '(^|[^A-Za-z0-9_-])(echo|printf|printenv|env|set|declare|typeset|export|cat|type|write-output|write-host|write-information|out-host|out-string|get-childitem|gci|dir|ls|get-item|gi|get-content|gc)(\s|$)'
@@ -165,12 +429,10 @@ function Regra-Jira([string]$cmd) {
             return 'comando usa variáveis de conexão do Jira (JIRA_*) com JIRA_LIVE_ENABLED diferente de true.'
         }
     }
-    # 2) qualquer URL que cite Jira/Atlassian
-    if (Casa $cmd $PADRAO_URL_JIRA) { return 'comando referencia um endereço com jira/atlassian e JIRA_LIVE_ENABLED não é true.' }
-    # 3) ferramenta de rede junto da palavra Jira/Atlassian
-    if (((Casa $cmd $PADRAO_REDE_CLASSICA) -or (Casa $cmd $PADRAO_REDE_WINDOWS)) -and (Casa $cmd 'jira|atlassian')) {
-        return 'comando de rede para o Jira com JIRA_LIVE_ENABLED diferente de true.'
-    }
+    # 2) endereço de Jira no comando (host com "jira" no rótulo, jira+sidia em host+caminho, *.atlassian.net
+    #    com sidia; documentação pública atlassian.com liberada). Host sem esquema só junto de ferramenta de
+    #    rede. A palavra "jira" solta NÃO bloqueia.
+    if (Texto-Cita-Jira $cmd 'auto') { return 'comando referencia endereço de Jira e a flag do Jira não está ligada.' }
     # 4) comandos do app que conectam ao Jira real ou ligam a flag
     if (Casa $cmd $PADRAO_LIGAR_FLAG) { return 'comando liga JIRA_LIVE_ENABLED ou conecta ao Jira real. Só o usuário muda a flag.' }
     return $null
@@ -254,11 +516,11 @@ function Padrao-Seguro([string]$padrao) {
     # file_pattern de busca seguro? Aceita: nome exato não protegido, ou glob terminado numa extensão
     # segura ($PADRAO_EXT_SEGURA), com no máximo um grupo {a,b}. Negação (!), ':' e o resto: inseguros.
     $p = $padrao.Replace('\', '/').ToLowerInvariant()
-    if ($p -eq '' -or $p.StartsWith('!') -or $p.Contains(':')) { return $false }
+    if ($p -eq '' -or (Comeca-Com $p '!') -or $p.Contains(':')) { return $false }
     $alts = New-Object System.Collections.ArrayList
     if ($p -match '[{}]') {
-        $i = $p.IndexOf('{')
-        $j = $p.IndexOf('}')
+        $i = Indice-De $p '{'
+        $j = Indice-De $p '}'
         if ($i -lt 0 -or $j -lt $i) { return $false }
         $pre = $p.Substring(0, $i)
         $meio = $p.Substring($i + 1, $j - $i - 1)
@@ -268,7 +530,7 @@ function Padrao-Seguro([string]$padrao) {
         # alternativa vazia expande para o resto do glob (*{.kt,} = *.kt OU *, que casa .env): bloqueia.
         # O Split do .NET preserva vazios (o "*" cairia na checagem de extensão), mas a regra explícita
         # mantém o mesmo comportamento do PreToolUse do bash, cujo `read` descarta vazios.
-        if ($meio -eq '' -or $meio.StartsWith(',') -or $meio.EndsWith(',') -or $meio.Contains(',,')) { return $false }
+        if ($meio -eq '' -or (Comeca-Com $meio ',') -or (Termina-Com $meio ',') -or $meio.Contains(',,')) { return $false }
         foreach ($a in $meio.Split(',')) { [void]$alts.Add($pre + $a + $pos) }
     }
     else { [void]$alts.Add($p) }
@@ -373,7 +635,7 @@ function Regra-SoUsuario([string]$cmd) {
         $w = ($g -split '\s+')[0]
         $w = $w.Trim('"', "'").TrimStart('\')
         $w = ($w -split '/')[-1]
-        if ($w.EndsWith('.exe')) { $w = $w.Substring(0, $w.Length - 4) }
+        if (Termina-Com $w '.exe') { $w = $w.Substring(0, $w.Length - 4) }
         if ($w -eq '' -or $w -eq '$') { continue }
         if ($LEITORES -contains $w) { continue }
         if ($w -eq 'less') {
@@ -455,9 +717,8 @@ try {
     if ($null -eq $parametros) { $parametros = Ler-Prop $pre 'parameters' }
     $parametros = Desfazer-Json $parametros
 
-    # mesma leitura do guard.sh e do Settings.kt: espaços só nas pontas ("tr ue" não vira true)
-    $flag = ([string]$env:JIRA_LIVE_ENABLED).Trim()
-    $jiraLivre = [string]::Equals($flag, 'true', [System.StringComparison]::OrdinalIgnoreCase)
+    # a flag vem SÓ do app\.env da raiz do repositório (o ambiente do processo não vale); erro = desligada
+    $jiraLivre = [bool](Ler-Flag-Do-Arquivo)
 
     switch -Regex ($ferramenta) {
         '^(execute_command|run_commands)$' {
@@ -497,35 +758,44 @@ try {
         }
         '^(use_mcp_tool|access_mcp_resource|load_mcp_documentation)$' {
             if (-not $jiraLivre) {
-                $alvo = @((Ler-Prop $parametros 'server_name'), (Ler-Prop $parametros 'tool_name'), (Ler-Prop $parametros 'uri')) -join ' '
+                # nome do servidor/ferramenta MCP do Atlassian ou de Jira (acesso real): continua barrado
+                $alvo = @((Ler-Prop $parametros 'server_name'), (Ler-Prop $parametros 'tool_name')) -join ' '
                 if (Casa $alvo 'atlassian|jira') {
-                    Bloquear "BLOQUEADO: ferramenta MCP do Atlassian/Jira ($($alvo.Trim())) com JIRA_LIVE_ENABLED diferente de true."
+                    Bloquear "BLOQUEADO: ferramenta MCP do Atlassian/Jira ($($alvo.Trim())) com a flag do Jira desligada."
                 }
-                # argumentos com URL do Jira (ex.: servidor MCP de 'fetch')
+                # URI do recurso e campos de URL (url/uri/href/link, em qualquer nível) dos argumentos: host com ou sem esquema
+                $urls = New-Object System.Collections.ArrayList
+                $uriMcp = Ler-Prop $parametros 'uri'
+                if ($uriMcp -is [string]) { [void]$urls.Add($uriMcp) }
+                Coletar-Urls (Ler-Prop $parametros 'arguments') $urls 0
+                if ($urls.Count -gt 0 -and (Texto-Cita-Jira ($urls -join "`n") '1')) {
+                    Bloquear 'BLOQUEADO: ferramenta MCP com endereço de Jira e a flag do Jira desligada.'
+                }
+                # qualquer outro texto dos argumentos (ex.: servidor MCP de 'fetch'): só URLs com esquema
                 $textos = New-Object System.Collections.ArrayList
                 Coletar-Textos (Ler-Prop $parametros 'arguments') $textos 0
-                foreach ($t in $textos) {
-                    if (Casa $t $PADRAO_URL_JIRA) { Bloquear 'BLOQUEADO: ferramenta MCP com URL do Jira/Atlassian e JIRA_LIVE_ENABLED diferente de true.' }
+                if ($textos.Count -gt 0 -and (Texto-Cita-Jira ($textos -join "`n") '0')) {
+                    Bloquear 'BLOQUEADO: ferramenta MCP com URL de Jira e a flag do Jira desligada.'
                 }
             }
             Liberar
         }
         '^(browser_action|web_fetch)$' {
-            # decisão do usuário (25/10): com a flag diferente de true, nenhuma URL com jira/atlassian,
-            # nem a documentação pública do Jira (o usuário cola trechos ou usa web_search)
+            # decisão do usuário (28/10, substitui a de 25/10): com a flag desligada, só endereço de Jira é barrado
+            # (host com "jira", jira+sidia, *.atlassian.net com sidia); documentação pública da Atlassian é liberada
             if (-not $jiraLivre) {
+                $urls = New-Object System.Collections.ArrayList
                 foreach ($campo in @('url', 'uri', 'href', 'link')) {
-                    $u = [string](Ler-Prop $parametros $campo)
-                    if (Casa $u 'jira|atlassian') {
-                        Bloquear "BLOQUEADO: $ferramenta para URL com jira/atlassian e JIRA_LIVE_ENABLED diferente de true. Para documentação pública do Jira, peça ao usuário um trecho ou use web_search."
-                    }
+                    $u = Ler-Prop $parametros $campo
+                    if ($u -is [string]) { [void]$urls.Add($u) }
+                }
+                if ($urls.Count -gt 0 -and (Texto-Cita-Jira ($urls -join "`n") '1')) {
+                    Bloquear "BLOQUEADO: $ferramenta para endereço de Jira com a flag do Jira desligada (documentação pública em atlassian.com é liberada)."
                 }
                 $textos = New-Object System.Collections.ArrayList
                 Coletar-Textos $parametros $textos 0
-                foreach ($t in $textos) {
-                    if (Casa $t $PADRAO_URL_JIRA) {
-                        Bloquear "BLOQUEADO: $ferramenta com URL que cita jira/atlassian e JIRA_LIVE_ENABLED diferente de true."
-                    }
+                if ($textos.Count -gt 0 -and (Texto-Cita-Jira ($textos -join "`n") '0')) {
+                    Bloquear "BLOQUEADO: $ferramenta com URL de Jira e a flag do Jira desligada."
                 }
             }
             Liberar

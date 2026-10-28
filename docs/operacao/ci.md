@@ -4,13 +4,14 @@ O workflow `.github/workflows/ci.yml` roda em **todo pull request** e em todo pu
 
 ## 1. O que cada job prova
 
-Os nomes dos jobs são os nomes dos checks que a proteção da `main` exige. Não renomeie, não filtre por caminho e não crie um quinto job sem atualizar a proteção (o teste `CiWorkflowTest` barra os três casos).
+Os nomes dos jobs são os nomes dos checks que a proteção da `main` exige. Não renomeie, não filtre por caminho e não crie um sexto job sem atualizar a proteção (o teste `CiWorkflowTest` barra os três casos).
 
 | Check | O que prova |
 |---|---|
 | `backend` | `./gradlew test` completo (SQLite real em arquivo temporário, MockEngine no lugar do Jira), o que inclui a barreira `PlataformaSemDockerTest` contra o retorno de Docker, PostgreSQL e Testcontainers. |
 | `frontend` | `pnpm lint`, `pnpm vitest run` e `pnpm build` do React/TypeScript, e `node scripts/verificar-csp.mjs` (o build não pode ter script ou estilo inline, que a CSP bloquearia). |
 | `guarda` | Os testes dos hooks que protegem o acesso ao Jira: `.claude/hooks/test-guard.sh` (Claude Code) e `.clinerules/hooks/test-PreToolUse.sh` (Cline). |
+| `guarda-windows` | Roda `.clinerules\hooks\test-PreToolUse.ps1` num runner Windows, no Windows PowerShell 5.1 e no PowerShell 7 (o Cline do Windows executa o `PreToolUse.ps1` em cada ação; erro de sintaxe ali travaria a IA). Falha se o código de saída não for 0, se houver linha `FALHA ` ou se faltar `falhas: 0` (as duas buscas usam `-CaseSensitive`, pois o `Select-String` ignora maiúsculas e a linha `falhas: 0` casaria com `FALHA`); as últimas linhas da saída aparecem no log. O checkout desliga a conversão de fim de linha para preservar CRLF e BOM dos `.ps1`. Check **opcional/recomendado** na proteção da `main`: exigi-lo só depois de passar verde ao menos uma vez. |
 | `varredura` | Os testes do script de varredura e a varredura do que o PR acrescenta (linhas adicionadas e mensagens de commit): arquivo proibido, e-mail, segredo, host interno e nome proibido. |
 
 ## 2. Rodar o mesmo localmente
@@ -59,7 +60,7 @@ A IA nunca altera a configuração do repositório. Para os quatro checks serem 
 1. **Pré-requisito:** o workflow já rodou ao menos uma vez (o primeiro PR com este workflow). Sem isso o GitHub não oferece os nomes `backend`, `frontend`, `guarda` e `varredura` na busca de checks.
 2. No GitHub: repositório → *Settings* → *Rules* → *Rulesets* → *New ruleset* → *New branch ruleset*. Nome: `main protegida`. *Enforcement status*: `Active`.
 3. *Target branches* → *Add target* → *Include default branch*.
-4. Regras: marque *Restrict deletions*; *Block force pushes*; *Require a pull request before merging* (com *Required approvals* em `0`, pois quem abre e quem mescla é a mesma pessoa; suba para `1` se houver outro revisor); *Require status checks to pass* → *Add checks* → escolha `backend`, `frontend`, `guarda` e `varredura`; marque *Require branches to be up to date before merging* (o fluxo é sequencial, então custa pouco e impede mesclar um PR testado contra uma `main` antiga).
+4. Regras: marque *Restrict deletions*; *Block force pushes*; *Require a pull request before merging* (com *Required approvals* em `0`, pois quem abre e quem mescla é a mesma pessoa; suba para `1` se houver outro revisor); *Require status checks to pass* → *Add checks* → escolha `backend`, `frontend`, `guarda` e `varredura` (e, opcional/recomendado, `guarda-windows`, depois que ele passar verde uma vez; a busca de checks só o oferece após a primeira execução); marque *Require branches to be up to date before merging* (o fluxo é sequencial, então custa pouco e impede mesclar um PR testado contra uma `main` antiga).
 5. *Bypass list*: deixe vazia (o usuário também fica sujeito à regra; numa emergência, desative o ruleset por alguns minutos e reative). Salve com *Create*.
 6. O repositório é público desde 26/10 (decisão do usuário), então o plano gratuito da conta oferece os rulesets. Se mesmo assim o GitHub avisar que a regra não está disponível, a proteção automática não existe: a IA só mescla depois de conferir `gh pr checks <número>` com os quatro checks verdes (condição 5 do fluxo de entrega, por disciplina e não por trava técnica) e o fato fica registrado no `HANDOFF.md`.
 7. Conferir (somente leitura): `gh api repos/{owner}/{repo}/rules/branches/main` lista as regras ativas (mesmo comando no PowerShell e no sh; o `gh` preenche `{owner}` e `{repo}` dentro do clone). Aceite: abra um PR de teste e veja os quatro checks marcados como *Required* e o botão de mesclar bloqueado enquanto estiverem pendentes ou vermelhos.

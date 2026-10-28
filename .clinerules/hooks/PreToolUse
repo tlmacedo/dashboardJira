@@ -16,18 +16,23 @@
 #   - CLI/SDK do Cline: .tool_call.name + .tool_call.input
 # Saída (stdout): {"cancel": bool, "contextModification": "", "errorMessage": "..."}; sempre exit 0.
 #
-# Flag JIRA_LIVE_ENABLED (lida do ambiente do processo do Cline, NÃO do app/.env nem do comando):
-#   - ausente, false ou inválida  -> trava do Jira ATIVA (tudo o que o guard.sh barra continua barrado,
-#     inclusive ligar a flag dentro de um comando);
+# Flag JIRA_LIVE_ENABLED (Plano 14, Tarefa 0): lida do arquivo app/.env da raiz do repositório PELO guard.sh
+# (modo `flag`; a raiz vem do caminho do guard.sh), igual ao painel. O ambiente do processo do Cline NÃO liga
+# nem desliga a flag, e o comando também não:
+#   - arquivo ausente/ilegível, sem a linha, false ou inválida -> trava do Jira ATIVA (tudo o que o guard.sh
+#     barra continua barrado, inclusive ligar a flag dentro de um comando);
 #   - true (sem diferenciar maiúsculas, espaços só nas pontas, como o Settings.kt do app) -> o guard.sh
-#     (que lê a mesma flag do mesmo ambiente) dispensa o modo `jira`, exceto exibir token ou senha do Jira
-#     no terminal, que continua barrado (Plano 4A, Decisão 10). Este adaptador chama SEMPRE `guard.sh jira`
-#     (Tarefa 11); a expressão de token abaixo é um reforço mais estrito do Cline.
-# Extras do Cline (além do guard.sh), só com a flag diferente de true: navegador (`browser_action`) e
-#   `web_fetch` para URL com jira/atlassian (decisão do usuário em 25/10: inclui a documentação pública do
-#   Jira; `web_search` continua liberado), cmdlets de rede do PowerShell (Invoke-WebRequest, iwr, irm...)
-#   junto de jira/atlassian, ligar a flag com setx/SetEnvironmentVariable/Set-Item e MCP com URL do Jira
-#   nos argumentos.
+#     dispensa o modo `jira`, exceto exibir token ou senha do Jira no terminal, que continua barrado
+#     (Plano 4A, Decisão 10). Este adaptador chama SEMPRE `guard.sh jira`; a expressão de token abaixo é um
+#     reforço mais estrito do Cline. Este hook lê o app/.env só para si e nunca imprime o conteúdo; a IA
+#     continua proibida de ler, escrever ou versionar o arquivo (read_file e comandos abaixo).
+# Regra de endereço (decisão de 28/10/2026), com a flag diferente de true: a palavra "jira" solta NÃO bloqueia.
+#   Bloqueia URL/host de Jira (rótulo com "jira"; "jira"+"sidia" em host+caminho; *.atlassian.net com "sidia"),
+#   com ou sem esquema, em comandos de rede, `browser_action`, `web_fetch` e argumentos de ferramentas MCP.
+#   Documentação pública (atlassian.com e subdomínios) é liberada. A decisão é do guard.sh (modos `url` e
+#   `urlesq`, fonte única); `web_search` continua liberado.
+# Extras do Cline (além do guard.sh), só com a flag diferente de true: ligar a flag com
+#   setx/SetEnvironmentVariable/Set-Item e MCP com URL do Jira nos argumentos.
 # Valem SEMPRE, com qualquer valor da flag: o modo `arquivos` (segredos e configs com dados reais), LER
 # `.env` e configs reais (read_file e cat/type/Get-Content...; o conteúdo iria para o modelo) e listar
 # todo o ambiente (`env`, `printenv`, `set` sozinhos; expõe tokens).
@@ -95,17 +100,15 @@ ferramenta=$(printf '%s' "$entrada" | jq -r '((.tool_call | objects | .name) // 
   bloquear "BLOQUEADO: erro ao ler o nome da ferramenta (falha fechada)."
 [ -n "$ferramenta" ] || bloquear "BLOQUEADO: entrada sem nome de ferramenta reconhecível (falha fechada)."
 
-# mesma leitura do guard.sh e do Settings.kt: espaços só nas pontas (espaço no meio, como "tr ue", não vira true)
-flag=$(printf '%s' "${JIRA_LIVE_ENABLED:-}" | sed -E 's/^[[:space:]]+//; s/[[:space:]]+$//' | tr '[:upper:]' '[:lower:]')
+# a flag vem do app/.env, lido pelo guard.sh (fonte única; mesmo parser do ArquivoEnv.kt). Qualquer resposta que
+# não seja "ligada" (código 0), inclusive erro do guard, deixa a trava ativa (falha fechada).
 jira_livre=false
-[ "$flag" = "true" ] && jira_livre=true
+if sh "$guard" flag </dev/null >/dev/null 2>&1; then jira_livre=true; fi
 
 # extras do Cline (ver cabeçalho); grep -Ei = sem diferenciar maiúsculas
 Q="'"
-REDE_WINDOWS='(^|[^[:alnum:]_-])(invoke-webrequest|invoke-restmethod|iwr|irm|start-bitstransfer|bitsadmin|certutil|test-netconnection|tnc|resolve-dnsname|nslookup|ping|curl\.exe|wget\.exe)([^[:alnum:]_-]|$)|webclient|httpclient|xmlhttp|winhttp|start-process'
 LIGAR_FLAG_EXTRA="JIRA_LIVE_ENABLED[]\"$Q[:space:],:=]+(-value[[:space:]]+)?[\"$Q]?[[:space:]]*(1|true)"
 LISTAR_AMBIENTE='(^[[:space:]]*|[;&|(][[:space:]]*|cmd(\.exe)?[[:space:]]+/c[[:space:]]+)(env|printenv|set|export[[:space:]]+-p|declare[[:space:]]+-[px]|compgen[[:space:]]+-v)[[:space:]]*($|[;&|>)])|(get-childitem|gci|dir|ls|get-item|gi)[[:space:]]+(-path[[:space:]]+)?env:[\/]?\*?[[:space:]]*($|[;&|>)])|\[(system\.)?environment\]::getenvironmentvariables'
-URL_JIRA="https?://[^[:space:]\"$Q]*(jira|atlassian)"
 # protegidos em comandos (sem diferenciar maiúsculas): .env e .env.*, as configs reais em qualquer pasta, o
 # arquivo de filtros e os nomes curtos 8.3 deles (ENV~1, PAPEIS~1.YAM...; prefixos específicos para não
 # pegar HEAD~1). Terminadores incluem ':' (.env::$DATA) e '.' (.env. = .env no Windows).
@@ -306,13 +309,18 @@ extras_comando() {
     bloquear "BLOQUEADO: comando escreve em settings do Claude ou override do compose: só o usuário altera esse arquivo."
   fi
   if [ "$jira_livre" != true ]; then
-    if casa "$1" "$REDE_WINDOWS" && casa "$1" 'jira|atlassian'; then
-      bloquear "BLOQUEADO: comando de rede (PowerShell/Windows) para o Jira com JIRA_LIVE_ENABLED diferente de true."
-    fi
+    # (o endereço de Jira em comandos de rede é decidido pelo guard.sh jira, chamado logo depois)
     if casa "$1" "$LIGAR_FLAG_EXTRA"; then
       bloquear "BLOQUEADO: comando liga JIRA_LIVE_ENABLED. Só o usuário muda a flag."
     fi
   fi
+}
+
+# o texto cita endereço de Jira? Decisão do guard.sh (fonte única). modo: url (host com e sem esquema) ou
+# urlesq (só URLs com esquema). 0 = cita ou erro (falha fechada). Só vale com a flag desligada.
+url_jira() { # modo, texto
+  printf '%s' "$2" | sh "$guard" "$1" >/dev/null 2>&1
+  [ $? -ne 0 ]
 }
 
 # roda o guard.sh com um payload no formato do Claude; exit 2 (ou qualquer erro) = bloquear
@@ -357,29 +365,40 @@ case "$ferramenta" in
     ;;
   use_mcp_tool|access_mcp_resource|load_mcp_documentation)
     if [ "$jira_livre" != true ]; then
-      alvo=$(printf '%s' "$entrada" | jq -r "$prelude"'[$in.server_name?, $in.tool_name?, $in.uri?] | map(strings) | join(" ")' 2>/dev/null)
+      # nome do servidor/ferramenta MCP do Atlassian ou de Jira (acesso real): continua barrado
+      alvo=$(printf '%s' "$entrada" | jq -r "$prelude"'[$in.server_name?, $in.tool_name?] | map(strings) | join(" ")' 2>/dev/null) ||
+        bloquear "BLOQUEADO: erro ao ler a ferramenta MCP (falha fechada)."
       if casa "$alvo" 'atlassian|jira'; then
-        bloquear "BLOQUEADO: ferramenta MCP do Atlassian/Jira ($alvo) com JIRA_LIVE_ENABLED diferente de true."
+        bloquear "BLOQUEADO: ferramenta MCP do Atlassian/Jira ($alvo) com a flag do Jira desligada."
       fi
-      # argumentos com URL do Jira (ex.: servidor MCP de 'fetch')
-      args_txt=$(printf '%s' "$entrada" | jq -r "$prelude"'[($in.arguments? // "") | dejson | .. | strings] | join(" ")' 2>/dev/null)
-      if casa "$args_txt" "$URL_JIRA"; then
-        bloquear "BLOQUEADO: ferramenta MCP com URL do Jira/Atlassian e JIRA_LIVE_ENABLED diferente de true."
+      # URI do recurso e campos de URL (url/uri/href/link, em qualquer nível) dos argumentos: host com ou sem esquema
+      urls_txt=$(printf '%s' "$entrada" | jq -r "$prelude"'[$in.uri?, (($in.arguments? // "") | dejson | .. | objects | (.url?, .uri?, .href?, .link?)) ] | map(strings) | join("\n")') ||
+        bloquear "BLOQUEADO: erro ao ler a URL da ferramenta MCP (falha fechada)."
+      if [ -n "$urls_txt" ] && url_jira url "$urls_txt"; then
+        bloquear "BLOQUEADO: ferramenta MCP com endereço de Jira e a flag do Jira desligada."
+      fi
+      # qualquer outro texto dos argumentos (ex.: servidor MCP de 'fetch'): só URLs com esquema
+      args_txt=$(printf '%s' "$entrada" | jq -r "$prelude"'[($in.arguments? // "") | dejson | .. | strings] | join("\n")') ||
+        bloquear "BLOQUEADO: erro ao ler os argumentos da ferramenta MCP (falha fechada)."
+      if [ -n "$args_txt" ] && url_jira urlesq "$args_txt"; then
+        bloquear "BLOQUEADO: ferramenta MCP com URL de Jira e a flag do Jira desligada."
       fi
     fi
     liberar
     ;;
   browser_action|web_fetch)
-    # decisão do usuário (25/10): com a flag diferente de true, nenhuma URL com jira/atlassian, nem a
-    # documentação pública do Jira (o usuário cola trechos ou usa web_search)
+    # decisão do usuário (28/10, substitui a de 25/10): com a flag desligada, só endereço de Jira é barrado
+    # (host com "jira", jira+sidia, *.atlassian.net com sidia); documentação pública da Atlassian é liberada
     if [ "$jira_livre" != true ]; then
-      url=$(printf '%s' "$entrada" | jq -r "$prelude"'[$in.url?, $in.uri?, $in.href?, $in.link?] | map(strings) | join(" ")' 2>/dev/null)
-      if casa "$url" 'jira|atlassian'; then
-        bloquear "BLOQUEADO: $ferramenta para URL com jira/atlassian e JIRA_LIVE_ENABLED diferente de true. Para documentação pública do Jira, peça ao usuário um trecho ou use web_search."
+      url=$(printf '%s' "$entrada" | jq -r "$prelude"'[$in.url?, $in.uri?, $in.href?, $in.link?] | map(strings) | join("\n")') ||
+        bloquear "BLOQUEADO: erro ao ler a URL de $ferramenta (falha fechada)."
+      if [ -n "$url" ] && url_jira url "$url"; then
+        bloquear "BLOQUEADO: $ferramenta para endereço de Jira com a flag do Jira desligada (documentação pública em atlassian.com é liberada)."
       fi
-      todos=$(printf '%s' "$entrada" | jq -r "$prelude"'[$in | .. | strings] | join(" ")' 2>/dev/null)
-      if casa "$todos" "$URL_JIRA"; then
-        bloquear "BLOQUEADO: $ferramenta com URL que cita jira/atlassian e JIRA_LIVE_ENABLED diferente de true."
+      todos=$(printf '%s' "$entrada" | jq -r "$prelude"'[$in | .. | strings] | join("\n")') ||
+        bloquear "BLOQUEADO: erro ao ler os parâmetros de $ferramenta (falha fechada)."
+      if [ -n "$todos" ] && url_jira urlesq "$todos"; then
+        bloquear "BLOQUEADO: $ferramenta com URL de Jira e a flag do Jira desligada."
       fi
     fi
     liberar

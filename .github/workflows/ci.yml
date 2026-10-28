@@ -1,4 +1,4 @@
-# CI do Painel de Squads. Quatro checks, nomes iguais aos ids dos jobs: são os nomes que a proteção da
+# CI do Painel de Squads. Cinco checks, nomes iguais aos ids dos jobs: são os nomes que a proteção da
 # `main` exige (ver docs/operacao/ci.md). Sem filtro de caminho, para o check nunca deixar de aparecer.
 # Só JDK 21 e Node 22/pnpm: o banco dos testes é um arquivo SQLite temporário. Sem serviços nem contêineres.
 name: CI
@@ -93,6 +93,39 @@ jobs:
         run: sh .claude/hooks/test-guard.sh
       - name: Testes do hook do Cline
         run: sh .clinerules/hooks/test-PreToolUse.sh
+
+  # Prova o hook do Cline para Windows (PreToolUse.ps1) nos dois PowerShell que o usuário pode ter.
+  # Sem conversão de fim de linha no checkout: o .gitattributes fixa CRLF nos .ps1 e o BOM UTF-8 é preservado.
+  guarda-windows:
+    name: guarda-windows
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - name: Desligar a conversão de fim de linha
+        run: git config --global core.autocrlf false
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Testes do hook do Cline no Windows PowerShell 5.1
+        shell: powershell
+        run: |
+          powershell.exe -NoProfile -ExecutionPolicy Bypass -File .clinerules\hooks\test-PreToolUse.ps1 2>&1 | Tee-Object -FilePath saida-ps51.txt
+          $codigo = $LASTEXITCODE
+          Write-Output '--- ultimas linhas ---'
+          Get-Content saida-ps51.txt -Tail 8
+          if ($codigo -ne 0) { Write-Output "exit $codigo"; exit 1 }
+          if (Select-String -Path saida-ps51.txt -Pattern '^FALHA ' -CaseSensitive -Quiet) { Write-Output 'ha casos com FALHA'; exit 1 }
+          if (-not (Select-String -Path saida-ps51.txt -Pattern '^falhas: 0$' -CaseSensitive -Quiet)) { Write-Output 'faltou "falhas: 0"'; exit 1 }
+      - name: Testes do hook do Cline no PowerShell 7
+        shell: pwsh
+        run: |
+          pwsh -NoProfile -ExecutionPolicy Bypass -File .clinerules\hooks\test-PreToolUse.ps1 2>&1 | Tee-Object -FilePath saida-ps7.txt
+          $codigo = $LASTEXITCODE
+          Write-Output '--- ultimas linhas ---'
+          Get-Content saida-ps7.txt -Tail 8
+          if ($codigo -ne 0) { Write-Output "exit $codigo"; exit 1 }
+          if (Select-String -Path saida-ps7.txt -Pattern '^FALHA ' -CaseSensitive -Quiet) { Write-Output 'ha casos com FALHA'; exit 1 }
+          if (-not (Select-String -Path saida-ps7.txt -Pattern '^falhas: 0$' -CaseSensitive -Quiet)) { Write-Output 'faltou "falhas: 0"'; exit 1 }
 
   varredura:
     name: varredura
