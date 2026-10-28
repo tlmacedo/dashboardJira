@@ -104,7 +104,8 @@ class AppContext(
 
         /**
          * O mesmo caminho da subida, mas SÓ com os arquivos de configuração: não toma a trava, não abre nem cria o
-         * banco e não cria cliente do Jira. Usado pelo validador (`painel validar-config`) para provar a configuração
+         * banco. A fábrica de clientes do Jira é criada e valida as instâncias (só a configuração), mas não faz
+         * nenhuma requisição: a conexão só nasce no primeiro uso. Usado pelo validador (`painel validar-config`) para provar a configuração
          * antes de reiniciar. O contexto devolvido tem `dataSource` nulo.
          */
         fun carregarSemBanco(settings: Settings, clock: Clock = Clock.system(settings.zone)): AppContext =

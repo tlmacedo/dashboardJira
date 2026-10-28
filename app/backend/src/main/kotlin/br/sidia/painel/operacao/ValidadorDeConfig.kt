@@ -30,7 +30,7 @@ data class ResultadoDaValidacao(
 
 /**
  * Valida a configuração ANTES da subida (e no CI): o mesmo caminho de leitura de `AppContext.load`, sem tomar a trava,
- * abrir o banco, criar cliente do Jira nem subir o servidor, mais os cruzamentos entre arquivos que só o conjunto revela.
+ * abrir o banco, fazer requisição ao Jira nem subir o servidor, mais os cruzamentos entre arquivos que só o conjunto revela.
  * Cada problema sai com código, arquivo e linha, sem o valor. Para em um erro de carga por vez (o primeiro que a subida
  * acharia); os cruzamentos só rodam com a carga limpa.
  */
