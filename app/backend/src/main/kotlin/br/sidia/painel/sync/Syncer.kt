@@ -2,6 +2,7 @@ package br.sidia.painel.sync
 
 import br.sidia.painel.db.Retention
 import br.sidia.painel.jira.JiraClient
+import br.sidia.painel.jira.JiraException
 import br.sidia.painel.jql.FieldDictionary
 import br.sidia.painel.jql.JqlQuery
 import java.time.LocalDate
@@ -15,6 +16,9 @@ import kotlinx.serialization.json.intOrNull
 
 /** Nome do campo do Jira (no dicionário) com a versão do SO em que a task deve ser executada. */
 const val CAMPO_OS_VERSION = "OS Version"
+
+/** Código do aviso de issue sem `changelog` na resposta da busca. */
+const val AVISO_CHANGELOG_AUSENTE = "CHANGELOG_AUSENTE"
 
 /** Resultado de uma sincronização: issues gravadas e eventos de changelog processados (já existentes contam). */
 data class SyncSummary(val issues: Int, val events: Int, val incompletas: Int = 0, val usuariosNaoResolvidos: Int = 0)
@@ -54,6 +58,8 @@ class Syncer(
     private val chaves: RepositorioDeChaves? = null,
     private val maxItens: Int = 50_000,
 ) {
+    private val log = org.slf4j.LoggerFactory.getLogger(Syncer::class.java)
+
     private val osVersionCustomId: String? = campos?.forInstance(instance)
         ?.takeIf { it.has(CAMPO_OS_VERSION) }?.get(CAMPO_OS_VERSION)?.customId
 
@@ -71,13 +77,18 @@ class Syncer(
         var issues = 0
         var eventos = 0
         var incompletas = 0
+        var ausentes = 0
         val naoResolvidos = HashSet<String>()
         client.searchAll(query, maxItens = maxItens).collect { issue ->
             val chave = (issue["key"] as? JsonPrimitive)?.content ?: "?"
-            val historicos = if (truncado(issue)) {
-                client.fullChangelog(requireNotNull((issue["key"] as? JsonPrimitive)?.content) { "Issue sem chave" })
-            } else {
-                embutidos(issue)
+            val historicos = when {
+                // Sem a chave `changelog` (ex.: o servidor ignorou o `expand`): não é "truncado", é ausente.
+                issue["changelog"] !is JsonObject -> {
+                    ausentes++
+                    changelogAusente(issue)
+                }
+                truncado(issue) -> client.fullChangelog(chaveDe(issue))
+                else -> embutidos(issue)
             }
             // O mapa sai do JSON recebido, antes da sanitização do raw (que apaga a `key` do usuário).
             val novas = ChavesDeUsuario.coletar(issue, historicos).filter { (k, v) -> mapa[k] != v }
@@ -113,6 +124,8 @@ class Syncer(
             naoResolvidos += naoResolvidosDaIssue
             aoGravar(IssueGravada(chave, updated, registros.size, incompleta, naoResolvidosDaIssue))
         }
+        // Aviso informativo só com código e contagem (sem texto livre nem dado da issue).
+        if (ausentes > 0) log.warn("Aviso {}: {} issues sem changelog na busca", AVISO_CHANGELOG_AUSENTE, ausentes)
         return SyncSummary(issues, eventos, incompletas, naoResolvidos.size)
     }
 
@@ -129,10 +142,24 @@ class Syncer(
     private fun embutidos(issue: JsonObject): List<JsonObject> =
         ((issue["changelog"] as? JsonObject)?.get("histories") as? JsonArray)?.mapNotNull { it as? JsonObject }.orEmpty()
 
-    /** Sem changelog embutido, ou com `total` maior que os históricos recebidos. */
+    /** Truncado só quando o `total` do changelog embutido é maior que os históricos recebidos (sem `changelog`: não é truncado). */
     private fun truncado(issue: JsonObject): Boolean {
-        val cl = issue["changelog"] as? JsonObject ?: return true
+        val cl = issue["changelog"] as? JsonObject ?: return false
         val total = (cl["total"] as? JsonPrimitive)?.intOrNull ?: return false
         return total > embutidos(issue).size
+    }
+
+    private fun chaveDe(issue: JsonObject): String =
+        requireNotNull((issue["key"] as? JsonPrimitive)?.content) { "Issue sem chave" }
+
+    /**
+     * Histórico de uma issue sem `changelog` na busca, pela rota `issue/{key}?expand=changelog`. Se essa rota
+     * também não existir para a issue (400/404/405), segue sem histórico: o ciclo não cai. Falha de teto de
+     * requisições, de rede ou de acesso continua propagando.
+     */
+    private suspend fun changelogAusente(issue: JsonObject): List<JsonObject> = try {
+        client.changelogPorExpand(chaveDe(issue))
+    } catch (e: JiraException) {
+        if (e.status in setOf(400, 404, 405)) emptyList() else throw e
     }
 }
