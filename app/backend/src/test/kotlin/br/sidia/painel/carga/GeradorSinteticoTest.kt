@@ -86,6 +86,9 @@ class GeradorSinteticoTest {
         assertEquals(0L, escalar(ds, "SELECT count(*) FROM person WHERE jira_ref NOT GLOB 'dev.sint[0-9][0-9][0-9]'"))
         assertEquals(0L, escalar(ds, "SELECT count(*) FROM change_event WHERE author_ref NOT GLOB 'dev.sint[0-9][0-9][0-9]'"))
         assertEquals(0L, escalar(ds, "SELECT count(*) FROM worklog WHERE author_ref NOT GLOB 'dev.sint[0-9][0-9][0-9]'"))
+        // worklog por instância (V4): cada linha tem a instância e um id próprio, sem comentário nem texto livre
+        assertEquals(0L, escalar(ds, "SELECT count(*) FROM worklog WHERE instance IS NOT 'samsung' OR jira_id IS NULL"))
+        assertEquals(e.worklogs.toLong(), escalar(ds, "SELECT count(DISTINCT jira_id) FROM worklog"))
         assertEquals(0L, escalar(ds, "SELECT count(*) FROM issue WHERE raw IS NOT NULL"))
     }
 

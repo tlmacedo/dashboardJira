@@ -493,12 +493,12 @@ class OidcTest {
         c.ctx.limparAccessLog()
         val i = iniciar(c)
         emissor.idTokenDaTroca = emissor.assinar(emissor.claimsValidas(i.nonce, "dev.alfa1", agoraSeg))
-        val token = emissor.idTokenDaTroca!!
+        val jwt = emissor.idTokenDaTroca!!
         val sessao = assertNotNull(sessaoDe(voltar(c, i)))
         val linhas = linhasDeAcesso(c.ctx)
         assertEquals(listOf("anonymous" to "/auth/login", "dev.alfa1" to "/auth/callback"), linhas.map { it.first to it.second })
         val tudo = linhas.joinToString("|")
-        for (segredoDoTeste in listOf(token, sessao, i.state, i.nonce, i.cookie, "codigo-de-autorizacao-1")) {
+        for (segredoDoTeste in listOf(jwt, sessao, i.state, i.nonce, i.cookie, "codigo-de-autorizacao-1")) {
             assertFalse(tudo.contains(segredoDoTeste))
         }
         assertContains(linhas.last().third, "ok")

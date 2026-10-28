@@ -363,11 +363,21 @@ class SqliteIssueStore(private val ds: DataSource) : IssueStore, IssueIndex {
     override fun timelines(
         instance: String, closedFrom: Instant?, closedTo: Instant?, openOnly: Boolean, osVersion: String?,
         filtro: FiltroDeFicha?,
-    ): List<IssueTimeline> =
-        // Leitura bruta (sem recorte por pessoa): pode ser reaproveitada por poucos segundos (ver CacheDeLeituras).
-        CacheDeLeituras.obter(
-            ChaveDeLeitura(ds, "timelines", listOf(instance, closedFrom, closedTo, openOnly, osVersion, filtro)),
-        ) { lerTimelines(instance, closedFrom, closedTo, openOnly, osVersion, filtro) }
+    ): List<IssueTimeline> {
+        if (!CacheDeLeituras.ligado) return lerTimelines(instance, closedFrom, closedTo, openOnly, osVersion, filtro)
+        // Com o cache ligado, as linhas do tempo saem da MESMA leitura bruta dos snapshots (uma cópia só na memória), com
+        // o recorte do SQL refeito em memória: abertas = sem resolved OU sem resolution; janela pelo `resolved`;
+        // ordem por chave (texto binário, como o ORDER BY key).
+        val todas = br.sidia.painel.trabalho.SqliteWorkStore(ds)
+            .snapshots(br.sidia.painel.trabalho.ConsultaDeTrabalho(instance = instance, filtro = filtro, situacao = br.sidia.painel.trabalho.Situacao.TODAS, osVersion = osVersion))
+        val de = closedFrom?.toEpochMilli()
+        val ate = closedTo?.toEpochMilli()
+        return todas.filter { s ->
+            val ms = s.resolved?.toEpochMilli()
+            if (openOnly) ms == null || s.resolution == null
+            else (de == null || (ms != null && ms >= de)) && (ate == null || (ms != null && ms < ate))
+        }.sortedBy { it.key }.map { it.timeline }
+    }
 
     private fun lerTimelines(
         instance: String, closedFrom: Instant?, closedTo: Instant?, openOnly: Boolean, osVersion: String?,

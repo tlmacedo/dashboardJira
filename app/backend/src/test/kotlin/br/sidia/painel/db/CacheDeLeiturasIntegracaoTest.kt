@@ -124,11 +124,114 @@ class CacheDeLeiturasIntegracaoTest {
         CacheDeLeituras.configurar(Duration.ofHours(1))
         val store = SqliteIssueStore(ds)
         val a = store.timelines("samsung", null, null, false, null, filtro)
-        assertSame(a, store.timelines("samsung", null, null, false, null, filtro))
+        val cargas = CacheDeLeituras.totalDeCargas()
+        assertEquals(a, store.timelines("samsung", null, null, false, null, filtro))
+        assertEquals(cargas, CacheDeLeituras.totalDeCargas(), "a segunda chamada não vai ao banco")
         assertNotEquals(a.size, store.timelines("samsung", null, null, true, null, filtro).size, "aberta e todas são leituras diferentes")
         ds.connection.use { c -> c.createStatement().use { it.executeUpdate("UPDATE issue SET removida_em = 1 WHERE key = 'SINT-1'") } }
         CacheDeLeituras.invalidar()
         assertEquals(a.size - 1, store.timelines("samsung", null, null, false, null, filtro).size)
+    }
+
+    // ---------------------------------------------------------------- recorte em memória = SQL
+
+    /** Banco com sujeira de propósito: OS Version com caixa e acento diferentes, sem OS, issues sem resolução. */
+    private fun bancoComSujeira(): javax.sql.DataSource {
+        val ds = banco()
+        GeradorSintetico.popular(ds, 9L, 300, 8, 20, 120)
+        ds.connection.use { c ->
+            c.createStatement().use {
+                it.executeUpdate("UPDATE issue SET os_version = CASE id % 5 WHEN 0 THEN 'OS-1' WHEN 1 THEN 'os-1' WHEN 2 THEN NULL WHEN 3 THEN 'ÓS-2' ELSE 'Os-3' END")
+                it.executeUpdate("UPDATE issue SET resolution = NULL WHERE id % 17 = 0")
+            }
+        }
+        return ds
+    }
+
+    private fun lerSemCache(bloco: () -> Any): Any {
+        CacheDeLeituras.desligar()
+        return bloco()
+    }
+
+    @Test
+    fun recorteEmMemoriaDeSnapshotsEIgualAoSqlEmTodasAsCombinacoes() {
+        val ds = bancoComSujeira()
+        val store = SqliteWorkStore(ds)
+        val de = GeradorSintetico.AGORA.minusSeconds(200L * 86_400)
+        val ate = GeradorSintetico.AGORA.minusSeconds(100L * 86_400)
+        val filtros = listOf<FiltroDeFicha?>(null, filtro, FiltroDeFicha(setOf("checklist"), setOf("blocked")))
+        val situacoes = listOf(Situacao.TODAS, Situacao.ABERTAS, Situacao.RESOLVIDAS)
+        val janelas = listOf<Pair<java.time.Instant?, java.time.Instant?>>(null to null, de to null, null to ate, de to ate, ate to de)
+        val oss = listOf(null, "OS-1", "os-1", "Os-3", "OS-9", "ÓS-2", "ós-2")
+        var comparadas = 0
+        for (f in filtros) for (s in situacoes) for ((a, b) in janelas) for (os in oss) {
+            val q = ConsultaDeTrabalho("samsung", f, s, a, b, os)
+            CacheDeLeituras.desligar()
+            val doSql = store.snapshots(q)
+            CacheDeLeituras.configurar(Duration.ofHours(1))
+            val emMemoria = store.snapshots(q)
+            assertEquals(doSql, emMemoria, "consulta $q")
+            comparadas++
+        }
+        assertTrue(comparadas > 300)
+    }
+
+    @Test
+    fun recorteEmMemoriaDeComEventoEntreEIgualAoSql() {
+        val ds = bancoComSujeira()
+        val store = SqliteWorkStore(ds)
+        val a = GeradorSintetico.AGORA.minusSeconds(300L * 86_400)
+        val b = GeradorSintetico.AGORA.minusSeconds(150L * 86_400)
+        val c = GeradorSintetico.AGORA
+        for (f in listOf<FiltroDeFicha?>(null, filtro)) for ((de, ate) in listOf(a to b, b to c, a to c, c to a)) {
+            for (campos in listOf(setOf("status"), setOf("Assignee", "DUEDATE"), setOf("labels", "status", "nada"), setOf("nada"))) {
+                CacheDeLeituras.desligar()
+                val doSql = store.comEventoEntre("samsung", f, campos, de, ate)
+                CacheDeLeituras.configurar(Duration.ofHours(1))
+                assertEquals(doSql, store.comEventoEntre("samsung", f, campos, de, ate), "campos=$campos $de..$ate")
+            }
+        }
+    }
+
+    @Test
+    fun recorteEmMemoriaDeLinhasDoTempoEIgualAoSql() {
+        val ds = bancoComSujeira()
+        val store = SqliteIssueStore(ds)
+        val de = GeradorSintetico.AGORA.minusSeconds(200L * 86_400)
+        val ate = GeradorSintetico.AGORA.minusSeconds(100L * 86_400)
+        var comparadas = 0
+        for (f in listOf<FiltroDeFicha?>(null, filtro)) {
+            for (aberta in listOf(true, false)) for ((a, b) in listOf<Pair<java.time.Instant?, java.time.Instant?>>(null to null, de to null, null to ate, de to ate)) {
+                for (os in listOf(null, "OS-1", "os-1", "ÓS-2")) {
+                    CacheDeLeituras.desligar()
+                    val doSql = store.timelines("samsung", a, b, aberta, os, f)
+                    CacheDeLeituras.configurar(Duration.ofHours(1))
+                    assertEquals(doSql, store.timelines("samsung", a, b, aberta, os, f), "aberta=$aberta $a..$b os=$os")
+                    comparadas++
+                }
+            }
+        }
+        assertTrue(comparadas > 50)
+    }
+
+    @Test
+    fun variosRecortesDoMesmoDadoPagamUmaCargaSo() {
+        val ds = bancoComSujeira()
+        val store = SqliteWorkStore(ds)
+        CacheDeLeituras.configurar(Duration.ofHours(1))
+        val antes = CacheDeLeituras.totalDeCargas()
+        store.snapshots(consulta)
+        store.snapshots(consulta.copy(situacao = Situacao.ABERTAS))
+        store.snapshots(consulta.copy(situacao = Situacao.RESOLVIDAS))
+        store.snapshots(consulta.copy(situacao = Situacao.RESOLVIDAS, resolvidasDe = GeradorSintetico.AGORA.minusSeconds(86_400L * 90)))
+        store.snapshots(consulta.copy(osVersion = "OS-1"))
+        store.comEventoEntre("samsung", filtro, setOf("status"), GeradorSintetico.AGORA.minusSeconds(86_400L * 30), GeradorSintetico.AGORA)
+        assertEquals(1L, CacheDeLeituras.totalDeCargas() - antes, "seis recortes, uma só leitura do banco")
+        // vencimento é comparado como TEXTO no SQL, então essa leitura continua indo ao banco (e é guardada à parte)
+        val comVencimento = consulta.copy(vencimentoDe = LocalDate.of(2026, 1, 1))
+        store.snapshots(comVencimento)
+        store.snapshots(comVencimento)
+        assertEquals(2L, CacheDeLeituras.totalDeCargas() - antes)
     }
 
     @Test

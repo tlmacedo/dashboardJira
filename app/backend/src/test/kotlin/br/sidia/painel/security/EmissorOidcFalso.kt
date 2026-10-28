@@ -89,11 +89,11 @@ class EmissorOidcFalso(
                 val calculado = params["code_verifier"]?.let {
                     b64.encodeToString(MessageDigest.getInstance("SHA-256").digest(it.toByteArray(Charsets.US_ASCII)))
                 }
-                val token = idTokenDaTroca
-                if (token == null || (desafio != null && desafio != calculado)) {
+                val jwt = idTokenDaTroca
+                if (jwt == null || (desafio != null && desafio != calculado)) {
                     json("""{"error":"invalid_grant"}""", HttpStatusCode.BadRequest)
                 } else {
-                    json("""{"token_type":"Bearer","access_token":"opaco-nao-usado","id_token":"$token"}""")
+                    json("""{"token_type":"Bearer","access_token":"opaco-de-teste","id_token":"$jwt"}""")
                 }
             }
             else -> respond("", HttpStatusCode.NotFound)

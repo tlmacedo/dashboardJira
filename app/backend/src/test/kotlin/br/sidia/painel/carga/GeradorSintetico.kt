@@ -237,7 +237,8 @@ object GeradorSintetico {
             // Worklogs: cada um numa issue sorteada, dentro da vida dela e de quem era o responsável (ou qualquer pessoa).
             for (inicio in 1..worklogs step LOTE) {
                 val fim = minOf(worklogs, inicio + LOTE - 1)
-                c.prepareStatement("INSERT INTO worklog(issue_id, author_ref, started, seconds) VALUES (?, ?, ?, ?)").use { ps ->
+                // `instance` e `jira_id` vêm da V4 (worklog por instância): sem eles os cards de esforço não enxergam o worklog.
+                c.prepareStatement("INSERT INTO worklog(issue_id, author_ref, started, seconds, instance, jira_id) VALUES (?, ?, ?, ?, ?, ?)").use { ps ->
                     for (w in inicio..fim) {
                         val n = 1 + rnd.nextInt(issues)
                         val (criada, resolvida) = sorteiosPorIssue[n] ?: (AGORA.minusSeconds(86_400L) to null)
@@ -247,6 +248,8 @@ object GeradorSintetico {
                         ps.setString(2, usuario(1 + rnd.nextInt(pessoas)))
                         ps.setTimestamp(3, Timestamp.from(inicioWl))
                         ps.setLong(4, 1_800L + rnd.nextInt(8) * 1_800L)
+                        ps.setString(5, INSTANCIA)
+                        ps.setString(6, "W$w")
                         ps.addBatch()
                     }
                     ps.executeBatch()
