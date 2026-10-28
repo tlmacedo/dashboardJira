@@ -202,5 +202,8 @@ class ComandosDeOperacaoTest {
         assertTrue("@args" in textoPs1, "o ps1 deve repassar @args")
         assertTrue("bin/painel" in textoSh && "bin\\painel.bat" in textoPs1)
         for (t in listOf(textoSh, textoPs1)) assertFalse(t.contains("docker", ignoreCase = true))
+        // O Windows PowerShell 5.1 lê .ps1 sem BOM como ANSI: o script é só ASCII. E Write-Error com 'Stop' sairia com 1, não 2.
+        assertTrue(textoPs1.all { it.code < 128 }, "painel-cli.ps1 precisa ser só ASCII (ou ter BOM)")
+        assertFalse("Write-Error" in textoPs1 && "exit 2" in textoPs1 && Regex("Write-Error[^\\n]*\\n\\s*exit 2").containsMatchIn(textoPs1))
     }
 }
