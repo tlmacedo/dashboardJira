@@ -1,0 +1,13 @@
+/* Fontes do painel. Caminho alternativo ativo: a fonte Mark da Sidia ainda nao foi
+   fornecida (nem a licenca), entao nao ha nenhuma declaracao de fonte aqui e vale a
+   pilha do sistema (--fonte-texto em tokens.css). Nada e baixado de terceiros; a CSP
+   so aceita font-src 'self'.
+
+   Para ligar a Mark quando o usuario fornecer os arquivos woff2 e a licenca permitir
+   copia no repositorio (hoje publico, entao so com a licenca liberando):
+   1. copie os arquivos para app/frontend/public/fonts/;
+   2. declare aqui uma regra de fonte por peso (no maximo regular, medio e negrito),
+      familia "Mark", origem em /fonts/ do proprio dominio, formato woff2 e
+      font-display swap;
+   3. anteponha "Mark" a pilha de --fonte-texto em tokens.css.
+   O teste a11y/fonte.test.ts confere cada passo (arquivo existente, swap, pilha de reserva). */
