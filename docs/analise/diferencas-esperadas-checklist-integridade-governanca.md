@@ -97,7 +97,7 @@ O painel **só sugere**. A decisão (**DI-05** e **RB-03**: aprovar, trocar com 
 | Gatilho e limite | Acima de 110%, até 10 movimentos, só não iniciadas | **Iguais**; 110% exatos não é origem; o destino também não passa do gatilho e precisa ter as competências | Continuidade |
 | WIP na atribuição | Não sobe (a task entra em "a fazer") | **Igual**: o WIP só muda quando a task inicia | Continuidade |
 | Ordem dos movimentos | Origem mais carregada primeiro | O atendimento segue a origem mais carregada, mas a **lista exibida sai em ordem natural de chave**, nunca pela ocupação de quem cede | Seria um ranking de pessoas |
-| Quem decide | Gerente | Coordenação e gerente; o Squad Leader decide só sobre o próprio squad (403 fora dele, com tentativa registrada). As pendentes **sem dono** entram na visão do líder; as que estão com o gerente, não | Visibilidade por papel |
+| Quem decide | Gerente | Coordenação e gerente; o Squad Leader decide só sobre o próprio squad (403 fora dele, com tentativa registrada). As pendentes **sem dono** e as que estão com o gerente **não** entram na visão do líder (só coordenação e gerente as veem e distribuem); o líder decide o rebalanceamento do próprio squad | Visibilidade por papel |
 | Auditoria da decisão | Texto livre | O `access_log` guarda só `tipo` e `decisao`, **nunca o motivo**, a task, o sugerido nem o escolhido; o motivo é saneado e limitado a 500 caracteres | LGPD |
 
 ### Qualidade dos dados (QD)
