@@ -86,6 +86,32 @@ class SessaoRotacaoTest {
     }
 
     @Test
+    fun fimDistanteERejeitadoComSegredoAtualEAnterior() {
+        // quem tem o segredo (inclusive o antigo) emite cookie de 1000 h; o leitor só aceita até a duração da sessão (8 h)
+        val longoAtual = SessaoAssinada(SegredosDaSessao.de(novo, null), Duration.ofHours(1000)) { agora }.emitir("ana.silva")
+        val longoAntigo = SessaoAssinada(SegredosDaSessao.de(antigo, null), Duration.ofHours(1000)) { agora }.emitir("ana.silva")
+        val leitor = sessao(novo, antigo)
+        assertNull(leitor.ler(longoAtual))
+        assertNull(leitor.ler(longoAntigo))
+        // no limite da duração ainda vale
+        val limite = SessaoAssinada(SegredosDaSessao.de(antigo, null), Duration.ofHours(8)) { agora }.emitir("ana.silva")
+        assertEquals("ana.silva", leitor.ler(limite)?.userId)
+    }
+
+    @Test
+    fun segredoAnteriorSoValeDentroDaJanelaDeRotacao() {
+        var relogio = agora
+        val cookie = SessaoAssinada(SegredosDaSessao.de(antigo, null), Duration.ofHours(8)) { agora }.emitir("ana.silva")
+        val s = SessaoAssinada(SegredosDaSessao.de(novo, antigo), Duration.ofHours(8), janela = Duration.ofHours(1)) { relogio }
+        relogio = agora.plus(Duration.ofMinutes(30))
+        assertEquals("ana.silva", s.ler(cookie)?.userId)
+        relogio = agora.plus(Duration.ofMinutes(61))
+        assertNull(s.ler(cookie), "fora da janela o segredo anterior não vale mais")
+        // o segredo atual continua valendo normalmente fora da janela
+        assertEquals("ana.silva", s.ler(SessaoAssinada(SegredosDaSessao.de(novo, null), Duration.ofHours(8)) { relogio }.emitir("ana.silva"))?.userId)
+    }
+
+    @Test
     fun cookieNaoRevelaOSegredo() {
         val cookie = sessao(novo, antigo).emitir("ana.silva")
         assertFalse(novo in cookie || antigo in cookie)

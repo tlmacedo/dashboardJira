@@ -70,8 +70,14 @@ class LeituraDeSessao(val userId: String, val expiraEm: Instant, val usouSegredo
 class SessaoAssinada(
     private val segredos: SegredosDaSessao,
     private val duracao: Duration,
+    /** Por quanto tempo, a partir de [inicioDaRotacao], o segredo anterior ainda vale (padrão: a duração da sessão). */
+    private val janela: Duration = duracao,
+    /** Quando a rotação começou (a subida com `SESSION_SECRET_ANTERIOR`); nulo = o instante da criação desta instância. */
+    inicioDaRotacao: Instant? = null,
     private val agora: () -> Instant,
 ) {
+    private val inicioDaJanela: Instant = inicioDaRotacao ?: agora()
+
     fun emitir(userId: String): String = assinar(userId, agora().plus(duracao).epochSecond, segredos.atual)
 
     fun ler(cookie: String): LeituraDeSessao? {
@@ -86,8 +92,13 @@ class SessaoAssinada(
         val comAtual = MessageDigest.isEqual(assinatura, hmac(corpo, segredos.atual))
         val comAnterior = !comAtual && segredos.anterior != null && MessageDigest.isEqual(assinatura, hmac(corpo, segredos.anterior))
         if (!comAtual && !comAnterior) return null
+        val agoraMesmo = agora()
+        // O segredo anterior só vale na janela da rotação: depois dela, mesmo com a variável ainda no arquivo, nada o aceita.
+        if (comAnterior && !agoraMesmo.isBefore(inicioDaJanela.plus(janela))) return null
         val fim = partes[2].toLongOrNull()?.let { Instant.ofEpochSecond(it) } ?: return null
-        if (!agora().isBefore(fim)) return null
+        if (!agoraMesmo.isBefore(fim)) return null
+        // Nenhum cookie vale além da duração da sessão: quem tem o segredo não forja um cookie de longa duração.
+        if (fim.isAfter(agoraMesmo.plus(duracao))) return null
         val usuario = try {
             String(Base64.getUrlDecoder().decode(partes[1]), Charsets.UTF_8)
         } catch (e: IllegalArgumentException) {
