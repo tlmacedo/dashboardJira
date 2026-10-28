@@ -34,6 +34,8 @@ Ponto de partida (main `fa8493c`): backend 986 testes, frontend 143 (números do
 
 ## Bloco 5b (Tarefas 10 a 14), branch `feat/cards-trabalho-5b`
 
+Estado final: backend 1220 testes (`--rerun-tasks`), frontend 231, `pnpm build` ok, varredura de dados pessoais limpa; 0 falhas. Revisão: autorrevisão por tarefa (sem subagente, por regra do despacho); a revisão final independente e o PR ficam para o orquestrador.
+
 Ponto de partida (main `ad17750`, 5a mesclado): backend 1129 testes, 0 falhas.
 
 | Tarefa | Estado | Commit | Observações |
@@ -53,7 +55,7 @@ Ponto de partida (main `ad17750`, 5a mesclado): backend 1129 testes, 0 falhas.
 - M1: o card Épicos lê TODAS as issues do escopo (qualquer situação) para calcular o progresso; com base grande pode pesar. Alternativa: filtro de épico no `WorkStore`. Arquivo: `cards/epicos/CardEpicos.kt`.
 - M2: Negativas e Riscos seguem a visão pelo responsável ATUAL (`permiteAtual`): o evento atribuído a um ex-responsável só aparece para quem vê a task hoje. Alternativa: `permitePosse` nas listas de evento (ver o Ruling de Negativas).
 - M3: `FatoresDoRisco` repete a lógica de foco e Tab da `GavetaDeTasks`; extrair um hook (`useGavetaModal`) quando houver uma terceira gaveta.
-- M4: a demonstração (`DadosDeDemonstracao`) não tem épicos: `ContratoDeCartoesTest.cadaTelaDeTrabalhoTemParPositivoNaDemonstracao` cobre NE, RI e PV, mas não EP (o `EpicosRoutesTest` cobre EP-01 com fixture própria). Ampliar a demonstração com `Epic Link` é trabalho do Plano 14b/demonstração.
+- M4: a demonstração (`DadosDeDemonstracao`) não tem épicos: `ContratoDeCartoesTest.cadaTelaDeTrabalhoTemParPositivoNaDemonstracao` cobre NE, RI e PV, mas não EP (o `PrevisaoEpicosRoutesTest` cobre EP-01 com fixture própria). Ampliar a demonstração com `Epic Link` é trabalho do Plano 14b/demonstração.
 - M5: as semanas de 2, 4 e 8 do PV-05 e o mínimo de 5 ciclos do PV-06 estão no código; só os parâmetros de `previsao.yaml` são configuráveis.
 - M6: devolvidas ignoram transições em que `from` ou `to` estão fora da `ordem` (ex.: `On Hold`); só status da ordem entram.
 - M7: `TempoEmStatusRoutes` continua sem usar `FiltrosDeCard`/`escopoDe` (herdado do 5a).
