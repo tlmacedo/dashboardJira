@@ -29,7 +29,7 @@ class MascaraDeLogCorteTest {
 
     @Test
     fun credencialEmUrlMaiorQueOTetoEhMascaradaAteOFimDoTrecho() {
-        val saida = MascaraDeLog.mascarar("conectou em https://usuario:" + "s".repeat(1_500) + "@host.exemplo.invalid/x ok")
+        val saida = MascaraDeLog.mascarar("conectou em https://" + "u:" + "s".repeat(1_500) + "@exemplo.invalid/x ok")
         assertFalse("ssssssss" in saida, saida.take(80))
         assertTrue(saida.endsWith(" ok"), saida.takeLast(20))
     }
