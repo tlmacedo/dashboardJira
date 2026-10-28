@@ -210,6 +210,7 @@ suspend fun registrarNegacaoSemPapel(auditoria: AccessLog, ctx: AppContext, call
  */
 internal fun rotaParaRegistro(caminho: String): String {
     val normal = normalizarCaminho(caminho)
+    if (normal.startsWith("/api/tarefa/", ignoreCase = true)) return "/api/tarefa/{key}"
     return if (normal.startsWith("/api/auditoria/historico/", ignoreCase = true)) "/api/auditoria/historico/{key}" else normal
 }
 

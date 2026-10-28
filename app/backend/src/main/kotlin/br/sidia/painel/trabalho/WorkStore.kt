@@ -32,6 +32,9 @@ interface WorkStore {
 
     /** Quem existe na base: responsáveis atuais e os de trocas anteriores (base do escopo de visibilidade). */
     fun pessoas(instance: String): Set<String>
+
+    /** Uma issue pela chave (nula se não existir ou se foi removida logicamente); a visão de quem pergunta é de quem chama. */
+    fun porChave(instance: String, chave: String): IssueSnapshot?
 }
 
 /**
@@ -140,6 +143,9 @@ class SqliteWorkStore(private val ds: DataSource) : WorkStore {
                 ps.executeQuery().use { rs -> rs.next() && rs.getBoolean(1) }
             }
         }
+
+    override fun porChave(instance: String, chave: String): IssueSnapshot? =
+        ds.connection.use { con -> carregar(con, instance, null, " AND key = ?", listOf(chave)).firstOrNull() }
 
     override fun pessoas(instance: String): Set<String> =
         CacheDeLeituras.obter(ChaveDeLeitura(ds, "pessoas", instance)) { lerPessoas(instance) }

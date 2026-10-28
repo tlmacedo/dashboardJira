@@ -17,6 +17,7 @@ import br.sidia.painel.config.Settings
 import br.sidia.painel.db.AccessLog
 import br.sidia.painel.db.CacheDeLeituras
 import br.sidia.painel.demo.prepararDemonstracao
+import br.sidia.painel.tarefa.rotasDeTarefa
 import br.sidia.painel.http.ConfigCsrf
 import br.sidia.painel.http.cabecalhosDeSeguranca
 import br.sidia.painel.http.protecaoCsrf
@@ -231,6 +232,7 @@ fun Application.module(
             rotasDeAuditoria(context, AccessLog(ds))
             rotasDosCardsDeTrabalho(context, AccessLog(ds))
             rotasDeOpcoesDeFiltro(context, AccessLog(ds))
+            rotasDeTarefa(context, AccessLog(ds))
             rotasDeChecklistReview(context, AccessLog(ds))
             rotasDeIntegridade(context, AccessLog(ds))
             rotasSyncStatus(context, SqliteSyncStateStore(ds), AccessLog(ds))

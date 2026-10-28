@@ -51,7 +51,7 @@ fun Route.rotasDeAuditoria(ctx: AppContext, auditoria: AccessLog) {
 }
 
 /** Histórico campo a campo; chave fora do padrão é 400 e issue inexistente (ou removida) é 404. */
-private fun historico(ctx: AppContext, chave: String): HistoricoDto {
+internal fun historico(ctx: AppContext, chave: String): HistoricoDto {
     try {
         JqlValues.issueKey(chave)
     } catch (e: InvalidJqlValueException) {
