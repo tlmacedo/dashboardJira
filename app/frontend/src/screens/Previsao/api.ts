@@ -27,6 +27,10 @@ export type PrevisaoIssue = {
   restanteP50: number | null
   restanteP85: number | null
   n: number
+  /** Término previsto pela capacidade líquida do responsável (aaaa-mm-dd); nulo = não cabe no horizonte ou sem responsável. */
+  pelaCapacidade?: string | null
+  /** O término pela capacidade cai depois do vencimento? Nulo sem previsão ou sem vencimento. */
+  atrasa?: boolean | null
 }
 
 export type PrevisaoDto = {

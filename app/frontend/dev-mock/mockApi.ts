@@ -1,6 +1,7 @@
 // API simulada SÓ para desenvolvimento visual (PAINEL_MOCK=1 pnpm dev). Dados fictícios.
 // Não entra no bundle de produção: é carregada apenas pelo vite.config.ts em modo serve.
 import type { Plugin } from 'vite'
+import { cartoesDePessoasMock, mockPessoas } from './mockPessoas.ts'
 
 const STATUS = [
   { status: 'Em andamento', category: 'ACTIVE', median: 3.2, p85: 6.1, n: 212 },
@@ -447,7 +448,7 @@ function catalogo() {
     ...trabalho('previsao', 'pv', intervalo(6), 'FLUXO').map((c) => ({ ...c, grupo: 'trabalho', temDrill: c.id !== 'PV-05' })),
     ...trabalho('epicos', 'ep', [1], 'ESTOQUE').map((c) => ({ ...c, grupo: 'trabalho' })),
   ]
-  return { cartoes: [...ts, ...sy, ...au, ...tr] }
+  return { cartoes: [...ts, ...sy, ...au, ...tr, ...cartoesDePessoasMock()] }
 }
 
 export function mockApi(): Plugin {
@@ -470,6 +471,7 @@ export function mockApi(): Plugin {
         else if (url.pathname === '/api/cards/riscos') corpo = riscosMock()
         else if (url.pathname === '/api/cards/previsao') corpo = previsaoMock(url.searchParams.get('unit') === 'corrido')
         else if (url.pathname === '/api/cards/epicos') corpo = epicosMock()
+        else if (mockPessoas(url.pathname, url.searchParams) !== undefined) corpo = mockPessoas(url.pathname, url.searchParams)
         else if (url.pathname === '/api/auditoria/sinais') corpo = auditoria()
         else if (url.pathname.startsWith('/api/auditoria/historico/')) corpo = historico(decodeURIComponent(url.pathname.split('/')[4] ?? ''))
         else if (url.pathname === '/api/cards/task-review') corpo = taskReview()
