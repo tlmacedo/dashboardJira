@@ -1,0 +1,44 @@
+# Ficha da Central de atenção (Plano 10, B4). Estrita: chave desconhecida falha ao carregar.
+# A Central NÃO tem consulta própria: cada número dela é o de outro card (fontes abaixo). A consulta desta ficha é a das abertas,
+# a mesma do card Abertas, e só serve ao ensaio; a leitura real passa pelos cartões VG-nn, que chamam os cartões de destino.
+
+id: central
+titulo: Central de atenção
+instancia: samsung
+
+campos:
+  - OS Version
+  - priority
+  - timeoriginalestimate
+
+filtrosFixos:
+  project: ["TG-Basic"]
+  issuetype: ["Checklist", "Checklist TG", "Checklist Review", "Feature check", "TG Feature check", "Task"]
+
+filtrosExcluidos:
+  status: ["Cancelled", "Canceled", "Dropped"]
+
+parametros:
+  - nome: squad
+    tipo: squad
+    obrigatorio: false
+
+formula: >-
+  Junta, sem calcular de novo, os números de outros cards. Fontes (ids dos cards): abertas (Abertas), vencidas, sem atualização,
+  paradas no status, sem responsável e bloqueadas (Negligenciadas), risco alto (Riscos), acima da capacidade e com folga (Carga),
+  atrasos previstos e ausências (Capacidade), no prazo e no prazo ajustado (Metas), pares com alerta (Checklist x Review), task x
+  review divergente (Divergência), alterações sem autorização (Auditoria), sem estimativa (Qualidade dos dados), entregas por semana,
+  concluídas e ciclo dos últimos 30 dias (Fechadas), backlog (Previsão), um cartão por squad (Carga e Capacidade) e, só para o
+  gerente e com o aceite do DPO, indício alto (Integridade). O estado de cada item vem das faixas de metas.yaml e planejamento.yaml.
+
+exemplo: >-
+  Coordenador abre a Central: 9 abertas, 3 vencidas, 12 concluídas nos últimos 30 dias (+50% sobre os 30 anteriores).
+
+aceite:
+  - Só coordenador e gerente veem a Central; usuário e squad leader recebem 403.
+  - Cada número é o total da gaveta que ele abre e o mesmo número do card de destino.
+  - Status fora do mapa torna os números dependentes indisponíveis (traço), nunca zero.
+  - Sem ranking de pessoas; os squads vêm em ordem alfabética.
+  - Concluídas e ciclo usam o mesmo período de 30 dias no número e na gaveta.
+
+expandChangelog: true

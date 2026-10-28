@@ -20,6 +20,8 @@ export type EntregaPessoa = {
   cicloP50: number | null
   horasEstimadas: number | null
   horasGastas: number | null
+  /** FE-11: dias em status ativo enquanto era a responsável, nas concluídas do período. */
+  tempoAtivoDias?: number | null
 }
 
 export type LinhaFechada = {
@@ -36,6 +38,8 @@ export type LinhaFechada = {
   pontos: number | null
   horasEstimadas: number | null
   horasGastas: number | null
+  /** FE-12: horas gastas ÷ estimadas (nulo sem estimativa). */
+  realSobreEstimado?: number | null
 }
 
 export type FechadasDto = {

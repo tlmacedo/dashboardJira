@@ -8,6 +8,8 @@ import br.sidia.painel.domain.NoPrazo
 import br.sidia.painel.domain.ORDEM_NATURAL_DE_CHAVES
 import br.sidia.painel.domain.Percentiles
 import br.sidia.painel.domain.StatusMap
+import br.sidia.painel.domain.StatusCategory
+import br.sidia.painel.domain.TimelineBuilder
 import br.sidia.painel.domain.classificar
 import br.sidia.painel.domain.TimeUnitMode
 import br.sidia.painel.time.BusinessCalendar
@@ -132,6 +134,17 @@ class FechadasCalculator(
         }
         val ordenados = segmentos.mapValues { (_, l) -> l.sortedWith(Comparator { a, b -> ORDEM_NATURAL_DE_CHAVES.compare(a.key, b.key) }) }
 
+        // FE-11: o tempo em status ATIVO enquanto a pessoa era a responsável, somado nas concluídas do período.
+        val tempoAtivo = HashMap<String, Double>()
+        for (s in concluidas) {
+            for (iv in TimelineBuilder.intervals(s.timeline, agora, map)) {
+                val dono = iv.assignee ?: continue
+                if (iv.category != StatusCategory.ACTIVE || dono !in pessoas) continue
+                val dias = if (unit == TimeUnitMode.UTIL) cal.businessDays(iv.start, iv.end) else cal.calendarDays(iv.start, iv.end)
+                tempoAtivo.merge(dono, dias, Double::plus)
+            }
+        }
+
         val porPessoa = pessoas.map { p ->
             val dele = ordenados.getValue("pessoa:$p:finalizou")
             val pontosDele = dele.mapNotNull { it.storyPoints }
@@ -143,6 +156,7 @@ class FechadasCalculator(
                 cicloP50 = Percentiles.median(dele.mapNotNull { ciclos[it.key] }),
                 horasEstimadas = estimadas.takeIf { it.isNotEmpty() }?.let { it.sum() / 3600.0 },
                 horasGastas = gastas.takeIf { it.isNotEmpty() }?.let { it.sum() / 3600.0 },
+                tempoAtivoDias = tempoAtivo[p],
             )
         }
 
@@ -194,6 +208,7 @@ class FechadasCalculator(
                     resolvida = diaDaResolucao.getValue(s.key).toString(), ciclo = ciclos[s.key], lead = leads[s.key],
                     vence = s.duedate?.toString(), prazo = situacaoDoPrazo(s), pontos = s.storyPoints,
                     horasEstimadas = s.estimateS?.let { it / 3600.0 }, horasGastas = s.spentS?.let { it / 3600.0 },
+                    realSobreEstimado = s.estimateS?.takeIf { it > 0 }?.let { est -> s.spentS?.let { it.toDouble() / est } },
                 )
             },
             semResolution = semResolution.size,

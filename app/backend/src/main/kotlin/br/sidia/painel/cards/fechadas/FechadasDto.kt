@@ -66,6 +66,8 @@ data class EntregaPessoaDto(
     val cicloP50: Double?,
     val horasEstimadas: Double?,
     val horasGastas: Double?,
+    /** FE-11: dias (na unidade pedida) em status ATIVO enquanto a pessoa era a responsável, nas concluídas do período; nulo sem trecho ativo dela. */
+    val tempoAtivoDias: Double? = null,
 )
 
 /** Uma concluída na tabela (FE-12). [prazo]: `noPrazo`, `ajustado`, `atrasada` ou `semVencimento`. */
@@ -83,4 +85,6 @@ data class LinhaFechadaDto(
     val pontos: Double?,
     val horasEstimadas: Double?,
     val horasGastas: Double?,
+    /** FE-12: horas gastas ÷ horas estimadas; nulo sem estimativa (ou estimativa zero) ou sem horas gastas. */
+    val realSobreEstimado: Double? = null,
 )

@@ -1,0 +1,40 @@
+# Ficha da Auditoria de alterações (Plano 10, B4). Estrita: chave desconhecida falha ao carregar.
+# SÓ coordenação e gerente veem. A leitura no banco aplica estes tipos e NÃO exclui status (a auditoria precisa das canceladas).
+# O JQL só serve à sincronização e ao ensaio.
+
+id: auditoria
+titulo: Alterações de data, dono e label
+instancia: samsung
+
+campos:
+  - OS Version
+  - Reporter
+
+filtrosFixos:
+  project: ["TG-Basic"]
+  issuetype: ["Checklist", "Checklist TG", "Checklist Review", "Feature check", "TG Feature check", "Task"]
+
+parametros:
+  - nome: squad
+    tipo: squad
+    obrigatorio: false
+  - nome: periodo
+    tipo: periodo
+    obrigatorio: false
+
+formula: >-
+  Percorre o changelog gravado e avalia cada troca de responsável, de vencimento e de label de atraso contra a regra do Reporter
+  (só o PL que abriu a task, coordenação e gerente, ou o Squad Leader do responsável podem alterar). Cada troca vira um sinal
+  autorizado, não autorizado ou sem regra. É INDÍCIO para conferência humana, não prova; o histórico campo a campo mostra o valor
+  só dos campos que o painel guarda.
+
+exemplo: >-
+  periodo dos últimos 30 dias (máximo de 180), squad=[dev.alfa].
+
+aceite:
+  - Só coordenação e gerente veem; usuário e squad leader recebem 403, e a consulta negada também fica no access_log.
+  - Cada sinal abre a gaveta de tasks e o histórico da issue; a quantidade, nunca a chave, vai para a auditoria de acesso.
+  - O texto diz sempre que é indício, não prova.
+  - Pessoas em ordem alfabética, sem ranking.
+
+expandChangelog: true

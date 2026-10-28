@@ -53,7 +53,7 @@ export function Fechadas() {
   }
 
   function razao(l: LinhaFechada): string {
-    return l.horasEstimadas && l.horasGastas != null ? numero(l.horasGastas / l.horasEstimadas, lang) : ''
+    return l.realSobreEstimado == null ? '' : numero(l.realSobreEstimado, lang)
   }
 
   const colunas: Coluna<LinhaFechada>[] = [
@@ -74,7 +74,7 @@ export function Fechadas() {
       ),
     },
     { id: 'pontos', cabecalho: t('fechadas.col.pontos'), valor: (l) => l.pontos, render: (l) => (l.pontos == null ? traco : numero(l.pontos, lang)), numerica: true },
-    { id: 'horas', cabecalho: `${t('fechadas.col.horasGastas')} / ${t('fechadas.col.horasEstimadas')}`, valor: (l) => (l.horasEstimadas && l.horasGastas != null ? l.horasGastas / l.horasEstimadas : null), render: (l) => razao(l) || traco, numerica: true },
+    { id: 'horas', cabecalho: `${t('fechadas.col.horasGastas')} / ${t('fechadas.col.horasEstimadas')}`, valor: (l) => l.realSobreEstimado ?? null, render: (l) => razao(l) || traco, numerica: true },
   ]
 
   return (
@@ -223,6 +223,7 @@ export function Fechadas() {
                           <th scope="col" className="num">{t('fechadas.col.cicloP50')} ({unidade})</th>
                           <th scope="col" className="num">{t('fechadas.col.horasEstimadas')}</th>
                           <th scope="col" className="num">{t('fechadas.col.horasGastas')}</th>
+                          <th scope="col" className="num">{t('fechadas.col.tempoAtivo')} ({unidade})</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -246,6 +247,7 @@ export function Fechadas() {
                             <td className="num">{p.cicloP50 == null ? traco : numero(p.cicloP50, lang)}</td>
                             <td className="num">{p.horasEstimadas == null ? traco : numero(p.horasEstimadas, lang)}</td>
                             <td className="num">{p.horasGastas == null ? traco : numero(p.horasGastas, lang)}</td>
+                            <td className="num">{p.tempoAtivoDias == null ? traco : numero(p.tempoAtivoDias, lang)}</td>
                           </tr>
                         ))}
                       </tbody>
