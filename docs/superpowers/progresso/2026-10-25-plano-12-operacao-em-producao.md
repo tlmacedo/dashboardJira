@@ -50,6 +50,7 @@ Branch: `feat/operacao-em-producao` (Tarefas 1 a 12 num só bloco). Executor: Cl
 - Ruling (T9): o PowerShell do documento usa `RandomNumberGenerator.Create()`/`GetBytes` (funciona no 5.1 e no 7); o plano pedia confirmar na execução. Não foi executado (Linux); o trecho é a API padrão do .NET Framework.
 - Ruling (T10): o hook de proteção barra texto que escreve a flag do Jira com valor verdadeiro em qualquer arquivo; os runbooks dizem "valor verdadeiro"/"valor falso" em vez de escrever a atribuição, o que também é mais seguro como documento. Os testes de documento (`RunbooksDocTest`) olham só os 6 documentos deste plano (o `ci.md` é do Plano 9 e cita a barreira contra Docker por extenso). `docs/implantacao.md` ainda não existe (Planos 8/13): é citado como texto, sem link; `cadaVariavelDoEnvExampleEstaDocumentada` o aceita quando existir.
 - Ruling (T10): `configuracao.md` ganhou a tabela de TODAS as variáveis do `.env.example` (o teste de documentação exige que cada uma apareça em `docs/operacao`, `docs/implantacao.md` ou `app/README.md`).
+- Ruling (T11): `docs/lgpd/relatorio-para-o-dpo.md` (Plano 11) não existe na `main`, então a seção 10 dele não foi editada; o Plano 11 deve apontar para `docs/operacao/runbook-incidentes.md`. O runbook não fixa prazo da ANPD (o teste `prazoDaAnpdNaoFixado` barra número de horas/dias junto de "ANPD") e diz "a confirmar com o DPO". O `secao()` do teste ignora títulos dentro de blocos de código (comentários de shell também começam com `# `).
 
 ## Tarefas
 

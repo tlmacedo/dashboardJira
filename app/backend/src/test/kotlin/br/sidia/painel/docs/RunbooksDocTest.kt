@@ -20,8 +20,15 @@ class RunbooksDocTest {
 
     /** Os documentos de operação escritos neste plano (o `ci.md` é de outro plano e tem as suas próprias regras). */
     private val documentos = listOf(
-        "configuracao.md", "observabilidade.md", "backup-e-restauracao.md", "runbook-diario.md", "rotacao-de-segredos.md",
+        "configuracao.md", "observabilidade.md", "backup-e-restauracao.md", "runbook-diario.md", "runbook-incidentes.md",
+        "rotacao-de-segredos.md",
     ).map { "docs/operacao/$it" }
+
+    private val incidentes get() = ler("docs/operacao/runbook-incidentes.md")
+    private val nomesDosIncidentes = listOf(
+        "PAINEL_FORA_DO_AR", "BANCO_PERDIDO_OU_CORROMPIDO", "SUSPEITA_DE_VAZAMENTO", "ACESSO_INDEVIDO",
+        "TOKEN_DO_JIRA_EXPOSTO", "BACKUP_VAZADO_OU_PERDIDO", "NUMEROS_ERRADOS", "MODO_DEV_EM_PRODUCAO",
+    )
 
     private val diario get() = ler("docs/operacao/runbook-diario.md")
 
@@ -30,8 +37,15 @@ class RunbooksDocTest {
         val inicio = texto.indexOf(titulo)
         assertTrue(inicio >= 0, "faltou a seção '$titulo'")
         val resto = texto.substring(inicio + titulo.length)
-        val fim = Regex("(?m)^#{1,3} ").find(resto)?.range?.first ?: resto.length
-        return resto.substring(0, fim)
+        // Um título só termina a seção fora de um bloco de código (comentários de shell também começam com "# ").
+        var dentroDoBloco = false
+        var deslocamento = 0
+        for (linha in resto.lines()) {
+            if (linha.trimStart().startsWith("```")) dentroDoBloco = !dentroDoBloco
+            else if (!dentroDoBloco && Regex("^#{1,3} ").containsMatchIn(linha) && deslocamento > 0) return resto.substring(0, deslocamento)
+            deslocamento += linha.length + 1
+        }
+        return resto
     }
 
     @Test
@@ -122,6 +136,67 @@ class RunbooksDocTest {
         // os documentos citam os três
         val tudo = documentos.joinToString("\n") { ler(it) }
         for (sub in subcomandos) assertTrue(sub in tudo, "nenhum documento cita $sub")
+    }
+
+    @Test
+    fun runbookDeIncidentesTemAsSecoesFixas() {
+        for (titulo in listOf("## Severidades", "## Registro")) {
+            assertTrue(Regex("(?m)^${Regex.escape(titulo)}$").containsMatchIn(incidentes), "runbook-incidentes.md sem '$titulo'")
+        }
+        assertTrue("S1" in incidentes && "S2" in incidentes && "S3" in incidentes)
+        assertTrue("gerente" in secao(incidentes, "## Severidades") && "DPO" in secao(incidentes, "## Severidades"))
+    }
+
+    @Test
+    fun cadaIncidenteTemAsCincoEtapas() {
+        val etapas = listOf("**Conter:**", "**Investigar:**", "**Corrigir:**", "**Comunicar:**", "**Aprender:**")
+        for (nome in nomesDosIncidentes) {
+            val titulo = "### INCIDENTE $nome"
+            assertTrue(Regex("(?m)^${Regex.escape(titulo)}$").containsMatchIn(incidentes), "faltou '$titulo'")
+            val corpo = secao(incidentes, titulo)
+            var posicao = -1
+            for (etapa in etapas) {
+                val achada = corpo.indexOf(etapa)
+                assertTrue(achada > posicao, "$titulo: etapa $etapa ausente ou fora de ordem")
+                posicao = achada
+            }
+            assertTrue("```powershell" in corpo && "```sh" in corpo, "$titulo precisa dos blocos PowerShell e sh")
+        }
+    }
+
+    @Test
+    fun incidenteComDadoPessoalAvisaODpo() {
+        for (nome in listOf("SUSPEITA_DE_VAZAMENTO", "ACESSO_INDEVIDO", "BACKUP_VAZADO_OU_PERDIDO", "MODO_DEV_EM_PRODUCAO")) {
+            assertTrue("DPO" in secao(incidentes, "### INCIDENTE $nome"), "INCIDENTE $nome precisa avisar o DPO")
+        }
+    }
+
+    @Test
+    fun prazoDaAnpdNaoFixado() {
+        assertTrue("ANPD" in incidentes, "o runbook deve mencionar a comunicação à ANPD")
+        assertTrue("a confirmar com o DPO" in incidentes, "a regra e o prazo são do DPO")
+        val numeroPerto = Regex("(?i)(ANPD[^\\n.]{0,100}\\b\\d+\\s*(horas?|h|dias?|úteis)\\b)|(\\b\\d+\\s*(horas?|h|dias?)\\b[^\\n.]{0,100}ANPD)")
+        assertFalse(numeroPerto.containsMatchIn(incidentes), "nenhum prazo numérico pode ficar junto da ANPD")
+        assertFalse("em 72 horas" in incidentes || "em 3 dias" in incidentes)
+    }
+
+    @Test
+    fun restauracaoCitaWalEShm() {
+        val corpo = secao(incidentes, "### INCIDENTE BANCO_PERDIDO_OU_CORROMPIDO")
+        assertTrue("-wal" in corpo && "-shm" in corpo, "o playbook de banco perdido precisa citar o -wal e o -shm")
+        assertTrue("quarentena" in corpo && "verificar-restauracao" in corpo && "backup-agora" in corpo)
+    }
+
+    @Test
+    fun travaOrfaNuncaApagaOBanco() {
+        val corpo = secao(incidentes, "### INCIDENTE PAINEL_FORA_DO_AR")
+        assertTrue("painel.db.lock" in corpo)
+        // todo comando que apaga algo, em qualquer bloco, só pode apagar o .lock
+        val apagadores = Regex("(?i)(Remove-Item|\\brm\\b|\\bdel\\b)([^\\n]*)")
+        for (m in apagadores.findAll(corpo)) {
+            assertTrue("painel.db.lock" in m.value, "o playbook manda apagar algo além do .lock: '${m.value.trim()}'")
+        }
+        assertTrue(Regex("nunca apagu?[ae][^\\n]{0,80}painel\\.db(?!\\.lock)", RegexOption.IGNORE_CASE).containsMatchIn(corpo), "falta o aviso de nunca apagar o banco")
     }
 
     @Test
