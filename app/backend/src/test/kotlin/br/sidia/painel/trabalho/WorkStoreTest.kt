@@ -145,6 +145,36 @@ class WorkStoreTest {
     }
 
     @Test
+    fun porVencimento() {
+        Trb1.carregar(ds)
+        val removida = Trb1.issue("TG-175", "Checklist", "ana", "10-01T12", "Open", vence = "2026-10-15")
+        val store = Trb1.carregar(ds, listOf(removida))
+        val idRemovida = ds.connection.use { c ->
+            c.createStatement().executeQuery("SELECT id FROM issue WHERE key = 'TG-175'").use { rs -> rs.next(); rs.getLong(1) }
+        }
+        store.marcarRemovidas(Trb1.INSTANCIA, setOf(idRemovida), Trb1.agora)
+        fun chaves(de: String, ate: String) =
+            chaves(work.candidatasNoPrazo(Trb1.INSTANCIA, null, LocalDate.parse(de), LocalDate.parse(ate)))
+        // Inclusivo nas duas pontas, qualquer situação (abertas e resolvidas), e a removida logicamente nunca aparece.
+        assertEquals(listOf("TG-112", "TG-113", "TG-114"), chaves("2026-10-15", "2026-10-16").filter { it != "TG-175" })
+        assertEquals(listOf("TG-112"), chaves("2026-10-15", "2026-10-15"))
+        assertEquals(listOf("TG-101"), chaves("2026-10-28", "2026-10-28"))
+        assertEquals(listOf("TG-103"), chaves("2026-11-01", "2026-11-30"))
+        assertTrue(chaves("2026-12-01", "2026-12-31").isEmpty())
+        // Uma resolvida ANTES do período que vence dentro dele entra (a leitura é pelo vencimento).
+        Trb1.carregar(
+            ds,
+            listOf(
+                Trb1.issue(
+                    "TG-152", "Task", "ana", "09-20T12", "Resolved", resolution = "Done", resolvida = "09-28T12", vence = "2026-10-05",
+                    eventos = Trb1.trilha("TG-152", "Open", "09-21T12" to "In Progress", "09-28T12" to "Resolved"),
+                ),
+            ),
+        )
+        assertEquals(listOf("TG-152"), chaves("2026-10-05", "2026-10-05"))
+    }
+
+    @Test
     fun adaptadorParaAuditIssue() {
         Trb1.carregar(ds)
         val s = work.snapshots(ConsultaDeTrabalho(Trb1.INSTANCIA, null, Situacao.TODAS)).first { it.key == "TG-113" }

@@ -72,6 +72,7 @@ fun testContextComBanco(
         labelsDeAtraso = labelsDeAtrasoDeTeste(),
         regrasAuditoria = regrasDeAuditoriaDeTeste(vinculos),
         clock = clock,
+        regrasDeMetas = regrasDeMetasDeTeste(),
     )
 }
 

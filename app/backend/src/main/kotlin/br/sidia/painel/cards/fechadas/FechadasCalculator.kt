@@ -8,6 +8,7 @@ import br.sidia.painel.domain.NoPrazo
 import br.sidia.painel.domain.ORDEM_NATURAL_DE_CHAVES
 import br.sidia.painel.domain.Percentiles
 import br.sidia.painel.domain.StatusMap
+import br.sidia.painel.domain.classificar
 import br.sidia.painel.domain.TimeUnitMode
 import br.sidia.painel.time.BusinessCalendar
 import br.sidia.painel.trabalho.Fluxo
@@ -37,15 +38,20 @@ class FechadasCalculator(
     private val map: StatusMap,
     private val labels: LabelsDeAtraso,
 ) {
+    /**
+     * [resolvidas]: as resolvidas em `[de, ate]` (dia de Manaus), para os KPIs de entrega. [candidatasNoPrazo]: as issues
+     * com VENCIMENTO em `[de, ate]` (`WorkStore.candidatasNoPrazo`), para o bloco "no prazo" pela regra única.
+     * [comEventoDeStatus]: issues com mudança de status no período, para achar as concluídas sem resolução.
+     */
     fun calcular(
-        resolvidas: List<IssueSnapshot>, de: LocalDate, ate: LocalDate, agora: Instant, unit: TimeUnitMode, visiveis: Set<String>,
-        comEventoDeStatus: List<IssueSnapshot> = emptyList(),
-    ): FechadasDto = analisar(resolvidas, comEventoDeStatus, de, ate, agora, unit, visiveis).dto
+        resolvidas: List<IssueSnapshot>, candidatasNoPrazo: List<IssueSnapshot>, de: LocalDate, ate: LocalDate, agora: Instant,
+        unit: TimeUnitMode, visiveis: Set<String>, comEventoDeStatus: List<IssueSnapshot> = emptyList(),
+    ): FechadasDto = analisar(resolvidas, candidatasNoPrazo, comEventoDeStatus, de, ate, agora, unit, visiveis).dto
 
     @Suppress("LongMethod", "UNUSED_PARAMETER")
     fun analisar(
-        resolvidas: List<IssueSnapshot>, comEventoDeStatus: List<IssueSnapshot>, de: LocalDate, ate: LocalDate, agora: Instant,
-        unit: TimeUnitMode, visiveis: Set<String>,
+        resolvidas: List<IssueSnapshot>, candidatasNoPrazo: List<IssueSnapshot>, comEventoDeStatus: List<IssueSnapshot>,
+        de: LocalDate, ate: LocalDate, agora: Instant, unit: TimeUnitMode, visiveis: Set<String>,
     ): FechadasAnalise {
         val zona = cal.zone
         val concluidas = resolvidas.filter { Fluxo.concluidaPositiva(it, map) }
@@ -62,16 +68,18 @@ class FechadasCalculator(
             Fluxo.cicloDias(s, map, cal, unit)?.let { ciclos[s.key] = it }
             Fluxo.leadDias(s, cal, unit)?.let { leads[s.key] = it }
         }
-        val diaDaResolucao = concluidas.associate { it.key to cal.localDate(requireNotNull(it.resolved)) }
+        // As candidatas de "no prazo" podem ter sido resolvidas antes do período: o dia vale para elas também (gaveta).
+        val diaDaResolucao = (concluidas + candidatasNoPrazo.filter { it.resolved != null }).distinctBy { it.key }
+            .associate { it.key to cal.localDate(requireNotNull(it.resolved)) }
         val comCiclo = concluidas.filter { it.key in ciclos }
         val comLead = concluidas.filter { it.key in leads }
 
         fun faixa(valores: List<Double>): FaixaDto? =
             if (valores.isEmpty()) null else FaixaDto(requireNotNull(Percentiles.of(valores, 0.5)), requireNotNull(Percentiles.of(valores, 0.85)), valores.size)
 
-        // "No prazo": regra única (NoPrazo). As candidatas são as resolvidas no período; a Tarefa 7 passa a lê-las por vencimento.
-        val auditPorChave = concluidas.associateBy { it.key }
-        val prazo = NoPrazo.detalhar(concluidas.map { it.toAuditIssue() }, labels, map, zona, de, ate)
+        // "No prazo": regra única (NoPrazo.noUniverso + classificar), com as candidatas lidas por VENCIMENTO.
+        val auditPorChave = candidatasNoPrazo.associateBy { it.key }
+        val prazo = NoPrazo.detalhar(candidatasNoPrazo.map { it.toAuditIssue() }, labels, map, zona, de, ate)
         fun snaps(l: List<br.sidia.painel.auditoria.AuditIssue>) = l.mapNotNull { auditPorChave[it.key] }
         val comVencimento = snaps(prazo.concluidas)
         val noPrazo = snaps(prazo.noPrazo)
@@ -134,13 +142,15 @@ class FechadasCalculator(
             )
         }
 
-        val chavesNoPrazo = noPrazo.map { it.key }.toSet()
-        val chavesAjustadas = ajustadas.map { it.key }.toSet()
-        fun situacaoDoPrazo(s: IssueSnapshot): String = when {
-            s.duedate == null -> "semVencimento"
-            s.key in chavesNoPrazo -> "noPrazo"
-            s.key in chavesAjustadas -> "ajustado"
-            else -> "atrasada"
+        // A situação do prazo de cada linha vem da MESMA classificação que dá os números (nunca uma conta à parte).
+        fun situacaoDoPrazo(s: IssueSnapshot): String {
+            val venc = s.duedate ?: return "semVencimento"
+            val classe = NoPrazo.classificar(diaDaResolucao.getValue(s.key), venc, s.labels, labels)
+            return when {
+                classe.noPrazo -> "noPrazo"
+                classe.ajustado -> "ajustado"
+                else -> "atrasada"
+            }
         }
         val avisos = mutableListOf<AvisoDto>()
         avisos += Fluxo.avisosDeAmostra(faixasPorTipo)

@@ -11,6 +11,7 @@ import br.sidia.painel.sync.FiltroDeFicha
 import java.sql.Connection
 import java.sql.Timestamp
 import java.time.Instant
+import java.time.LocalDate
 import java.util.Locale
 import javax.sql.DataSource
 
@@ -31,6 +32,16 @@ interface WorkStore {
     fun pessoas(instance: String): Set<String>
 }
 
+/**
+ * A ÚNICA leitura das candidatas de "no prazo": as issues (de qualquer situação) com vencimento em `[de, ate]`.
+ * Fechadas, Metas e a regra única ([br.sidia.painel.domain.NoPrazo.noUniverso]) partem desta lista, não de "as
+ * resolvidas no período".
+ */
+fun WorkStore.candidatasNoPrazo(
+    instance: String, filtro: FiltroDeFicha?, de: LocalDate, ate: LocalDate, osVersion: String? = null,
+): List<IssueSnapshot> =
+    snapshots(ConsultaDeTrabalho(instance, filtro, Situacao.TODAS, osVersion = osVersion, vencimentoDe = de, vencimentoAte = ate))
+
 /** Implementação sobre SQLite (JDBC). Tudo parametrizado; listas entram como JSON em `json_each(?)`. */
 class SqliteWorkStore(private val ds: DataSource) : WorkStore {
 
@@ -50,6 +61,9 @@ class SqliteWorkStore(private val ds: DataSource) : WorkStore {
             filtros.append(" AND lower(os_version) = lower(?)")
             params += c.osVersion
         }
+        // O vencimento é TEXT ISO (aaaa-mm-dd): compara e ordena como texto.
+        c.vencimentoDe?.let { filtros.append(" AND duedate >= ?"); params += it.toString() }
+        c.vencimentoAte?.let { filtros.append(" AND duedate <= ?"); params += it.toString() }
         return ds.connection.use { con -> carregar(con, c.instance, c.filtro, filtros.toString(), params) }
     }
 

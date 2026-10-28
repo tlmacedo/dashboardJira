@@ -129,9 +129,13 @@ class CardQueryFactoryTest {
     @Test
     fun jqlSnapshotFechadasNaoExcluiCanceladas() {
         // As canceladas contam em "Canceladas" (FE-06): a ficha não tem filtro de exclusão de status.
-        assertEquals(filtrosDeTrabalho, jqlDaFicha("fechadas"))
+        // Fechadas e Metas leem os mesmos 6 tipos da sincronização (o "no prazo" é o mesmo da Auditoria).
+        val todosOsTipos = "project in (\"TG-Basic\") AND issuetype in (\"Checklist\", \"Checklist TG\", \"Checklist Review\", " +
+            "\"Feature check\", \"TG Feature check\", \"Task\")"
+        assertEquals(todosOsTipos, jqlDaFicha("fechadas"))
+        assertEquals(todosOsTipos, jqlDaFicha("metas"))
         assertEquals(
-            "$filtrosDeTrabalho AND resolved >= \"2026-08-01\" AND resolved < \"2026-10-31\"",
+            "$todosOsTipos AND resolved >= \"2026-08-01\" AND resolved < \"2026-10-31\"",
             jqlDaFicha("fechadas", mapOf("periodo" to mapOf("de" to "2026-08-01", "ate" to "2026-10-30"))),
         )
     }

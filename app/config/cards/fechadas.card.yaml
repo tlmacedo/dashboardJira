@@ -12,9 +12,11 @@ campos:
   - timespent
   - Story Points
 
+# Os MESMOS tipos da ficha de sincronização: o universo de "no prazo" precisa ser o da Auditoria, que lê tudo o que a
+# sincronização traz (uma regra só nas três telas).
 filtrosFixos:
   project: ["TG-Basic"]
-  issuetype: ["Checklist", "Checklist TG", "Checklist Review"]
+  issuetype: ["Checklist", "Checklist TG", "Checklist Review", "Feature check", "TG Feature check", "Task"]
 
 parametros:
   - nome: squad

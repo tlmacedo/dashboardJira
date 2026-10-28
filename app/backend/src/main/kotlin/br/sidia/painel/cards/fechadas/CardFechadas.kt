@@ -16,6 +16,7 @@ import br.sidia.painel.domain.TimeUnitMode
 import br.sidia.painel.sync.FiltroDeFicha
 import br.sidia.painel.trabalho.ConsultaDeTrabalho
 import br.sidia.painel.trabalho.Situacao
+import br.sidia.painel.trabalho.candidatasNoPrazo
 import java.util.Locale
 
 /**
@@ -39,8 +40,11 @@ object CardFechadas : CardDeLeitura<FechadasDto> {
         ).filter { e.escopo.permiteAtual(it) && e.filtros.aceita(it) }
         val comEventoDeStatus = e.store.comEventoEntre(INSTANCIA_TRABALHO, ficha, setOf("status"), inicio, fim)
             .filter { e.escopo.permiteAtual(it) && e.filtros.aceita(it) && (e.filtros.os == null || it.osVersion.equals(e.filtros.os, ignoreCase = true)) }
+        // O bloco "no prazo" lê as candidatas por VENCIMENTO no período (a mesma leitura de Metas e da Auditoria).
+        val candidatas = e.store.candidatasNoPrazo(INSTANCIA_TRABALHO, ficha, de, ate, e.filtros.os)
+            .filter { e.escopo.permiteAtual(it) && e.filtros.aceita(it) }
         val analise = FechadasCalculator(ctx.calendar, ctx.statusMap, ctx.labelsDeAtraso)
-            .analisar(resolvidas, comEventoDeStatus, de, ate, e.agora, e.filtros.unit, e.escopo.visiveis)
+            .analisar(resolvidas, candidatas, comEventoDeStatus, de, ate, e.agora, e.filtros.unit, e.escopo.visiveis)
         val unidade = if (e.filtros.unit == TimeUnitMode.UTIL) "dias úteis" else "dias corridos"
         fun numero(v: Double?) = String.format(Locale.ROOT, "%.1f", v ?: 0.0)
         return ResultadoDeCard(analise.dto) { segmento ->

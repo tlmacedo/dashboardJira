@@ -10,6 +10,7 @@ import br.sidia.painel.trabalho.IssueSnapshot
 import br.sidia.painel.trabalho.Situacao
 import br.sidia.painel.trabalho.SqliteWorkStore
 import br.sidia.painel.trabalho.Trb1
+import br.sidia.painel.trabalho.candidatasNoPrazo
 import org.junit.jupiter.api.AfterAll
 import java.time.LocalDate
 import javax.sql.DataSource
@@ -54,8 +55,11 @@ class FechadasCalculatorTest {
         return SqliteWorkStore(ds).snapshots(ConsultaDeTrabalho(Trb1.INSTANCIA, null, Situacao.RESOLVIDAS, inicio, fim))
     }
 
+    /** As candidatas de "no prazo": lidas por VENCIMENTO no período, não pelas resolvidas. */
+    private fun candidatas(): List<IssueSnapshot> = SqliteWorkStore(ds).candidatasNoPrazo(Trb1.INSTANCIA, null, de, ate)
+
     private fun dto(unit: TimeUnitMode = TimeUnitMode.UTIL, visiveis: Set<String> = todos) =
-        calc.calcular(resolvidas(), de, ate, Trb1.agora, unit, visiveis)
+        calc.calcular(resolvidas(), candidatas(), de, ate, Trb1.agora, unit, visiveis)
 
     @Test
     fun contagensDasFechadas() {
@@ -72,7 +76,7 @@ class FechadasCalculatorTest {
 
     @Test
     fun semPontosOTotalFicaNuloENaoZero() {
-        val d = calc.calcular(resolvidas().map { it }.filter { it.storyPoints == null }, de, ate, Trb1.agora, TimeUnitMode.UTIL, todos)
+        val d = calc.calcular(resolvidas().filter { it.storyPoints == null }, emptyList(), de, ate, Trb1.agora, TimeUnitMode.UTIL, todos)
         assertNull(d.pontos)
         assertEquals(0, d.comPontos)
     }
@@ -101,6 +105,35 @@ class FechadasCalculatorTest {
         assertEquals(0.75, d.taxaNoPrazo!!, 1e-9)
         assertEquals(1.0, d.taxaAjustada!!, 1e-9)
         assertEquals(listOf("noPrazo", "noPrazo", "ajustado", "noPrazo"), d.linhas.map { it.prazo })
+    }
+
+    @Test
+    fun noPrazoLeCandidatasPorVencimentoENaoPorResolucao() {
+        Trb1.carregar(
+            ds,
+            listOf(
+                // Resolvida em 28/09 (antes do período) e vencendo em 05/10: entra em "no prazo" de outubro, não em "concluídas".
+                Trb1.issue(
+                    "TG-152", "Task", "ana", "09-20T12", "Resolved", resolution = "Done", resolvida = "09-28T12", vence = "2026-10-05",
+                    eventos = Trb1.trilha("TG-152", "Open", "09-21T12" to "In Progress", "09-28T12" to "Resolved"),
+                ),
+                // Cancelada com vencimento e Epic: ficam fora do universo.
+                Trb1.issue(
+                    "TG-150", "Task", "ana", "10-01T12", "Cancelled", resolution = "Won't Do", resolvida = "10-19T12", vence = "2026-10-20",
+                    eventos = Trb1.trilha("TG-150", "Open", "10-19T12" to "Cancelled"),
+                ),
+                Trb1.issue(
+                    "TG-151", "Epic", "ana", "10-01T12", "Resolved", resolution = "Done", resolvida = "10-18T12", vence = "2026-10-20",
+                    eventos = Trb1.trilha("TG-151", "Open", "10-02T12" to "In Progress", "10-18T12" to "Resolved"),
+                ),
+            ),
+        )
+        val d = dto()
+        assertEquals(5, d.concluidas, "TG-111 a TG-114 e o Epic TG-151 (entrega do período); a TG-152 saiu antes do período")
+        assertEquals(5, d.comVencimento, "TG-111 a TG-114 mais a TG-152; a cancelada e o Epic ficam fora do universo")
+        assertEquals(4, d.noPrazo)
+        assertEquals(5, d.noPrazoAjustado)
+        assertEquals(2, d.canceladas, "a TG-150 continua contando em Canceladas")
     }
 
     @Test
@@ -158,7 +191,7 @@ class FechadasCalculatorTest {
         val d = dto(visiveis = setOf("ana"))
         assertEquals(listOf("ana"), d.porPessoa.map { it.pessoa })
         // O cálculo recebe a lista já filtrada pelo escopo; quem chama decide quais tasks entram.
-        val soDaAna = calc.calcular(resolvidas().filter { it.assignee == "ana" }, de, ate, Trb1.agora, TimeUnitMode.UTIL, setOf("ana"))
+        val soDaAna = calc.calcular(resolvidas().filter { it.assignee == "ana" }, candidatas().filter { it.assignee == "ana" }, de, ate, Trb1.agora, TimeUnitMode.UTIL, setOf("ana"))
         assertEquals(2, soDaAna.concluidas)
         assertEquals(listOf("ana"), soDaAna.porPessoa.map { it.pessoa })
     }
@@ -183,7 +216,7 @@ class FechadasCalculatorTest {
 
     @Test
     fun segmentosTemOMesmoTamanhoDasContagens() {
-        val a = calc.analisar(resolvidas(), emptyList(), de, ate, Trb1.agora, TimeUnitMode.UTIL, todos)
+        val a = calc.analisar(resolvidas(), candidatas(), emptyList(), de, ate, Trb1.agora, TimeUnitMode.UTIL, todos)
         val d = a.dto
         assertEquals(d.concluidas, a.segmentos.getValue("concluidas").size)
         assertEquals(d.canceladas, a.segmentos.getValue("canceladas").size)

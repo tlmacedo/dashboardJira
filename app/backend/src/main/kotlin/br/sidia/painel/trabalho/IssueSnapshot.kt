@@ -66,7 +66,8 @@ enum class Situacao { ABERTAS, RESOLVIDAS, TODAS }
 
 /**
  * Consulta de leitura. [filtro] é o que a ficha do card manda (tipos e status excluídos). [resolvidasDe] e
- * [resolvidasAte] valem com [Situacao.RESOLVIDAS] (`resolved >= de` e `resolved < ate`).
+ * [resolvidasAte] valem com [Situacao.RESOLVIDAS] (`resolved >= de` e `resolved < ate`). [vencimentoDe] e
+ * [vencimentoAte] limitam o `duedate` (inclusivos nas duas pontas) e combinam com qualquer situação.
  */
 data class ConsultaDeTrabalho(
     val instance: String,
@@ -75,4 +76,6 @@ data class ConsultaDeTrabalho(
     val resolvidasDe: Instant? = null,
     val resolvidasAte: Instant? = null,
     val osVersion: String? = null,
+    val vencimentoDe: LocalDate? = null,
+    val vencimentoAte: LocalDate? = null,
 )
