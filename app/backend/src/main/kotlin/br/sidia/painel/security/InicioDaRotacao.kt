@@ -30,7 +30,8 @@ object InicioDaRotacao {
             return null
         }
         val impressao = hex(MessageDigest.getInstance("SHA-256").digest(anterior))
-        lerSePertencer(arquivo, impressao)?.let { return it }
+        // Um início no futuro (arquivo adulterado ou relógio errado) estenderia a janela do segredo antigo: vale no máximo agora.
+        lerSePertencer(arquivo, impressao)?.let { return minOf(it, agora) }
         gravar(arquivo, impressao, agora)
         return agora
     }
