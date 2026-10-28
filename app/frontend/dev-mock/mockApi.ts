@@ -112,6 +112,146 @@ function historico(key: string) {
   }
 }
 
+// ---- Cards de trabalho e prazos (Plano 5): Abertas, Negligenciadas, Fechadas e Metas (dados fictícios) ----
+
+const TIPOS_MOCK = ['Checklist', 'Checklist Review']
+const STATUS_MOCK = ['Open', 'In Progress', 'Submitted', 'On Hold']
+
+function abertasMock(corrido: boolean) {
+  const f = corrido ? 1.4 : 1
+  const linhas = Array.from({ length: 24 }, (_, i) => ({
+    key: `TG-${2200 + i}`,
+    resumo: `Task fictícia ${i + 1}`,
+    tipo: TIPOS_MOCK[i % 2],
+    status: STATUS_MOCK[i % STATUS_MOCK.length],
+    prioridade: ['High', 'Medium', 'Low'][i % 3],
+    responsavel: i % 8 === 7 ? null : PESSOAS[i % PESSOAS.length],
+    idade: +((2 + i * 1.7) * f).toFixed(1),
+    vence: i % 4 === 3 ? null : `2026-11-${String(1 + (i % 20)).padStart(2, '0')}`,
+    horasRestantes: i % 3 === 0 ? 4 + i : null,
+  }))
+  return {
+    abertas: linhas.length,
+    emAndamento: 15,
+    acimaDoP85: 4,
+    historicoPorTipo: [
+      { tipo: 'Checklist', p50: +(5.5 * f).toFixed(1), p85: +(9.1 * f).toFixed(1), n: 62 },
+      { tipo: 'Checklist Review', p50: +(1.8 * f).toFixed(1), p85: +(3.4 * f).toFixed(1), n: 3 },
+    ],
+    porStatus: STATUS_MOCK.map((s, i) => ({ chave: s, n: 6 - i })),
+    porPrioridade: [{ chave: 'High', n: 8 }, { chave: 'Medium', n: 8 }, { chave: 'Low', n: 8 }],
+    porIdade: [{ chave: '0-7', n: 6 }, { chave: '8-14', n: 6 }, { chave: '15-30', n: 7 }, { chave: '>30', n: 5 }],
+    porVencimento: [{ chave: 'vencidas', n: 5 }, { chave: '7d', n: 7 }, { chave: 'depois', n: 6 }, { chave: 'sem', n: 6 }],
+    linhas,
+    unit: corrido ? 'corrido' : 'util',
+    avisos: [{ codigo: 'AMOSTRA_PEQUENA', gravidade: 'informativo', mensagem: 'amostra pequena', params: { tipo: 'Checklist Review', n: '3', minimo: '5' } }],
+  }
+}
+
+function negligenciadasMock(semReal: boolean) {
+  const linha = (i: number, dias: number, campo: string) => ({
+    key: `TG-${2300 + i}`,
+    resumo: `Task fictícia ${i + 1}`,
+    tipo: 'Checklist',
+    status: STATUS_MOCK[i % STATUS_MOCK.length],
+    responsavel: PESSOAS[i % PESSOAS.length],
+    vence: i % 2 ? '2026-10-20' : null,
+    labels: i % 3 === 0 ? ['LATE_SENT'] : [],
+    dias,
+    ultimoMovimento: { campo, dia: '2026-10-12', dias: 18 - i },
+    semMovimentoReal: 18 - i > 7,
+  })
+  const listas = {
+    semAtualizacao: [linha(0, 12, 'status'), linha(1, 9, 'assignee')],
+    semResponsavel: [{ ...linha(2, 5, 'criacao'), responsavel: null }],
+    vencidas: [linha(3, 3, 'duedate'), linha(4, 6, 'status')],
+    bloqueadas: [linha(5, 4, 'status')],
+    paradas: [linha(0, 22, 'status'), linha(5, 8, 'status')],
+    aFazer: [linha(6, 41, 'criacao')],
+  }
+  const filtrar = (l: { semMovimentoReal: boolean }[]) => (semReal ? l.filter((x) => x.semMovimentoReal) : l)
+  const f = Object.fromEntries(Object.entries(listas).map(([k, v]) => [k, filtrar(v)]))
+  return {
+    semAtualizacao: f.semAtualizacao.length,
+    semResponsavel: f.semResponsavel.length,
+    vencidas: f.vencidas.length,
+    bloqueadas: f.bloqueadas.length,
+    paradasNoStatus: f.paradas.length,
+    aFazerAntigas: f.aFazer.length,
+    listas: f,
+    diasSemAtualizacao: 7,
+    semMovimentoReal: semReal,
+    unit: 'util',
+    avisos: [] as unknown[],
+  }
+}
+
+function fechadasMock(corrido: boolean) {
+  const f = corrido ? 1.4 : 1
+  const linhas = Array.from({ length: 18 }, (_, i) => ({
+    key: `TG-${2000 + i}`,
+    resumo: `Task fictícia ${i + 1}`,
+    tipo: TIPOS_MOCK[i % 2],
+    responsavel: PESSOAS[i % PESSOAS.length],
+    resolvida: `2026-10-${String(1 + i).padStart(2, '0')}`,
+    ciclo: +((2 + (i % 7)) * f).toFixed(1),
+    lead: +((4 + (i % 9)) * f).toFixed(1),
+    vence: `2026-10-${String(2 + i).padStart(2, '0')}`,
+    prazo: i % 6 === 5 ? 'atrasada' : i % 6 === 4 ? 'ajustado' : 'noPrazo',
+    pontos: i % 3 === 0 ? 3 : null,
+    horasEstimadas: i % 4 === 0 ? 8 : null,
+    horasGastas: i % 4 === 0 ? 10 : null,
+  }))
+  return {
+    concluidas: 18,
+    pontos: 18,
+    comPontos: 6,
+    ciclo: { p50: +(4.5 * f).toFixed(1), p85: +(7.1 * f).toFixed(1), n: 18 },
+    lead: { p50: +(8 * f).toFixed(1), p85: +(11.5 * f).toFixed(1), n: 18 },
+    noPrazo: 13,
+    noPrazoAjustado: 15,
+    comVencimento: 18,
+    taxaNoPrazo: 13 / 18,
+    taxaAjustada: 15 / 18,
+    canceladas: 2,
+    porSemana: [{ semana: '2026-10-05', n: 5 }, { semana: '2026-10-12', n: 7 }, { semana: '2026-10-19', n: 4 }, { semana: '2026-10-26', n: 2 }],
+    dispersao: { p50: 4.5, p85: 7.1, p95: 8.2, pontos: linhas.map((l) => ({ key: l.key, dia: l.resolvida, ciclo: l.ciclo })) },
+    porTipo: [{ tipo: 'Checklist', p50: 5, p85: 7.5, n: 9 }, { tipo: 'Checklist Review', p50: 3, p85: 5.2, n: 9 }],
+    porProjeto: [{ chave: 'TG', n: 18 }],
+    porPessoa: PESSOAS.map((p, i) => ({
+      pessoa: p, finalizou: 4 - (i % 2), participou: 4 + (i % 2), pontos: i % 2 ? 6 : null, cicloP50: +(3 + i * 0.4).toFixed(1),
+      horasEstimadas: i % 2 ? 16 : null, horasGastas: i % 2 ? 19 : null,
+    })),
+    linhas,
+    semResolution: 1,
+    unit: corrido ? 'corrido' : 'util',
+    avisos: [{ codigo: 'DONE_SEM_RESOLUTION', gravidade: 'informativo', mensagem: 'x', params: { n: '1' } }],
+  }
+}
+
+function metasMock(granularidade: string) {
+  const periodos = granularidade === 'mes'
+    ? [{ chave: '2026-09', universo: 14, noPrazo: 12 }, { chave: '2026-10', universo: 18, noPrazo: 13 }]
+    : [{ chave: '2026-10-05', universo: 5, noPrazo: 5 }, { chave: '2026-10-12', universo: 7, noPrazo: 5 }, { chave: '2026-10-19', universo: 6, noPrazo: 3 }]
+  const linha = (chave: string, universo: number, noPrazo: number) => ({
+    chave, universo, noPrazo, noPrazoAjustado: Math.min(universo, noPrazo + 1),
+    estado: noPrazo / universo >= 0.9 ? 'ok' : noPrazo / universo >= 0.8 ? 'atencao' : 'problema',
+  })
+  return {
+    versaoRegras: 'metas v1, labels v1',
+    universo: 18, noPrazo: 13, noPrazoAjustado: 15, noPrazoOriginal: 11, antecipadas: 5, emD1D2: 3, noDia: 8, atrasadas: 5, semVencimento: 2,
+    taxaNoPrazo: 13 / 18, taxaAjustada: 15 / 18, taxaOriginal: 11 / 18, taxaAntecipadas: 5 / 18, alertaDataOriginal: true,
+    metaNoPrazo: 0.9, metaAntecipadas: 0.35, granularidade,
+    porPeriodo: periodos.map((p) => ({ ...p, noPrazoAjustado: p.noPrazo + 1, taxaNoPrazo: p.noPrazo / p.universo, antecipadas: 1, noDia: 2, atrasadas: p.universo - p.noPrazo })),
+    distribuicao: [{ chave: 'D3_OU_ANTES', n: 2 }, { chave: 'D2', n: 1 }, { chave: 'D1', n: 2 }, { chave: 'D', n: 8 }, { chave: 'ATRASO_1_3', n: 3 }, { chave: 'ATRASO_MAIS_3', n: 2 }],
+    porTipo: [linha('Checklist', 12, 8), linha('Checklist Review', 6, 5)],
+    porPrioridade: [linha('High', 6, 5), linha('Medium', 8, 6), linha('Low', 4, 2)],
+    porSquad: [linha('Alfa', 10, 8), linha('Beta', 8, 5)],
+    porPessoa: PESSOAS.map((p, i) => linha(p, 4, 4 - (i % 3))),
+    avisos: [] as unknown[],
+  }
+}
+
 const URL_BASE_FICTICIA = 'https://jira.exemplo.invalid/browse'
 
 function taskReview() {
@@ -144,11 +284,11 @@ function drill(cartaoId: string, segmento: string) {
     status: segmento.startsWith('status:') ? segmento.slice(7) : 'Em revisão',
     detalhe: `${(2 + (i % 9) * 0.7).toFixed(1)} dias úteis em revisão`,
   }))
-  const n = Number(cartaoId.slice(3))
+  const numero = cartaoId.slice(3)
   const prefixo = cartaoId.slice(0, 2).toLowerCase()
   return {
-    tituloChave: prefixo === 'ts' ? 'tempo.kpi.analisadas' : `card.${prefixo}0${n}.titulo`,
-    definicaoChave: `card.${prefixo}0${n}.oQueMostra`,
+    tituloChave: prefixo === 'ts' ? 'tempo.kpi.analisadas' : `card.${prefixo}${numero}.titulo`,
+    definicaoChave: `card.${prefixo}${numero}.oQueMostra`,
     total,
     colunas: ['chave', 'resumo', 'responsavel', 'status', 'detalhe'],
     linhas,
@@ -219,7 +359,33 @@ function catalogo() {
     exigeChangelog: true,
     exigeWorklog: false,
   }))
-  return { cartoes: [...ts, ...sy, ...au] }
+  const trabalho = (tela: string, prefixo: string, ids: number[], natureza: string) =>
+    ids.map((n) => {
+      const numero = String(n).padStart(2, '0')
+      const base = `card.${prefixo}${numero}`
+      return {
+        id: `${prefixo.toUpperCase()}-${numero}`,
+        grupo: 'resultados',
+        natureza,
+        tela,
+        tituloChave: `${base}.titulo`,
+        oQueMostraChave: `${base}.oQueMostra`,
+        comoCalculaChave: `${base}.comoCalcula`,
+        fontes: ['ISSUE', 'CHANGELOG'],
+        papeis: TODOS,
+        temDrill: true,
+        exigeChangelog: false,
+        exigeWorklog: false,
+      }
+    })
+  const intervalo = (n: number) => Array.from({ length: n }, (_, i) => i + 1)
+  const tr = [
+    ...trabalho('abertas', 'ab', [1, 2, 4, 5, 6, 7, 8, 9], 'FLUXO'),
+    ...trabalho('negligenciadas', 'ng', intervalo(6), 'QUALIDADE'),
+    ...trabalho('fechadas', 'fe', intervalo(12), 'FLUXO'),
+    ...trabalho('metas', 'mt', intervalo(14), 'PRAZO'),
+  ]
+  return { cartoes: [...ts, ...sy, ...au, ...tr] }
 }
 
 export function mockApi(): Plugin {
@@ -234,6 +400,10 @@ export function mockApi(): Plugin {
           corpo = { devMode: true, liveEnabled: false, zone: 'America/Manaus', banner: 'MODO DESENVOLVIMENTO (dados fictícios)' }
         } else if (url.pathname === '/api/me') corpo = { userId: 'dev', roles: ['GERENTE'] }
         else if (url.pathname === '/api/cards/tempo-em-status') corpo = cartao(url.searchParams.get('unit') === 'corrido')
+        else if (url.pathname === '/api/cards/abertas') corpo = abertasMock(url.searchParams.get('unit') === 'corrido')
+        else if (url.pathname === '/api/cards/negligenciadas') corpo = negligenciadasMock(url.searchParams.get('movimento') === 'semReal')
+        else if (url.pathname === '/api/cards/fechadas') corpo = fechadasMock(url.searchParams.get('unit') === 'corrido')
+        else if (url.pathname === '/api/cards/metas') corpo = metasMock(url.searchParams.get('granularidade') ?? 'semana')
         else if (url.pathname === '/api/auditoria/sinais') corpo = auditoria()
         else if (url.pathname.startsWith('/api/auditoria/historico/')) corpo = historico(decodeURIComponent(url.pathname.split('/')[4] ?? ''))
         else if (url.pathname === '/api/cards/task-review') corpo = taskReview()

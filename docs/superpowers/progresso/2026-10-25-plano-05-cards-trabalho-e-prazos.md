@@ -12,12 +12,16 @@ Ponto de partida (main `fa8493c`): backend 986 testes, frontend 143 (números do
 | 1 Campos de trabalho, ordem do fluxo e resoluções negativas | Concluída (backend 1000 testes, 0 falhas) | `d4882df` | Migração `V2__campos_de_trabalho.sql`; `CamposDeTrabalhoExtrator`; `StatusMap.ordem`/`ehResolucaoNegativa`; `upsert` ganha `idsDeTrabalho` |
 | 2 `IssueSnapshot` e `WorkStore` | Concluída | `1ef5ea6` | `trabalho/`; cenário TRB-1 em `src/test/.../trabalho/Trb1.kt` |
 | 3 `Fluxo` | Concluída | `c133360` | `AvisoDto.AMOSTRA_PEQUENA` |
-| 7 Metas e prazos (domínio e API) + regra única de "no prazo" | Concluída (backend 1117, 0 falhas) | ver `git log` | `NoPrazo.noUniverso`/`classificar`, `WorkStore.candidatasNoPrazo`, cartões `MT-01` a `MT-14`, `RegrasDeMetas` (`metas.yaml`, obrigatório em produção), `RegraUnicaNoPrazoTest` `(5, 4, 5)` nas três telas |
+| 7 Metas e prazos (domínio e API) + regra única de "no prazo" | Concluída (backend 1117, 0 falhas) | `b3e6253` | `NoPrazo.noUniverso`/`classificar`, `WorkStore.candidatasNoPrazo`, cartões `MT-01` a `MT-14`, `RegrasDeMetas` (`metas.yaml`, obrigatório em produção), `RegraUnicaNoPrazoTest` `(5, 4, 5)` nas três telas |
+| 8 Telas Abertas, Negligenciadas, Fechadas e Metas | Concluída (frontend 193, 0 falhas; build ok) | ver `git log` | Rotas no `App.tsx`; `ContagensEmBarras`, `TabelaOrdenavel`; mock do Vite com os 40 cartões |
 | 6 Fechadas (domínio e API) | Concluída (backend 1086, 0 falhas) | `7683e33` | Cartões `FE-01` a `FE-12`; ficha `fechadas.card.yaml` sem exclusão de status |
 | 5 Abertas e Negligenciadas (domínio e API) | Concluída (backend 1066, 0 falhas) | `ca51f9f` | Cartões `AB-01/02/04 a 09` e `NG-01 a 06` no `catalogoPadrao()`; coluna e filtro de "último movimento real" (I-06) |
 | 4 Filtros, escopo, rota genérica de card e kit de tela | Concluída (backend 1039, frontend 156; 0 falhas) | `c05cd6e` | `FiltrosDeCard`, `Escopo`, `CardDeLeitura`/`CartaoDeLeitura`/`rotaDeCard` (adaptação ao 17a); `shared/{CardPage,Filtros,useCard}` |
 
 ## Rulings
+
+- Ruling: o Passo 5 do plano (captura visual das telas) NÃO foi executado: o ambiente não tem navegador. Fica como pendência para a revisão visual do usuário. Custo se errado: nenhum no código; só falta a conferência visual.
+- Ruling: as "bar tables" (`ContagensEmBarras`) contam como tabelas, não como gráficos, para respeitar o limite de dois gráficos por tela. `granularidade` (Metas) e `movimento` (Negligenciadas) ficam fora do componente `Filtros` genérico e têm controle próprio na tela, indo à URL. Nenhuma tela mostra Epic. Os testes de tela foram escritos junto da implementação (vermelho-antes só verificado por mutação).
 
 - Ruling: `CardDeLeitura.calcular` devolve `ResultadoDeCard(dto, detalhar)` e NÃO tem `kinds`/`detalhar(e, kind)` separados — o drill é a rota genérica `GET /api/cartoes/{id}/tasks?segmento=` do 17a; `CartaoDeLeitura` (um `CartaoRegistrado`) chama o MESMO cálculo para `valores` e `drill`, o que garante número == total do drill. A rota `/api/drill/{id}` do plano NÃO existe. Custo se errado: criar `/api/drill/*` sobre `ResultadoDeCard.detalhar`.
 - Ruling: `FiltroInvalidoException` e `AcessoNegadoException` do plano viraram `ErroHttp(400)` e `ErroHttp(403)` (o mecanismo que `executar` já traduz em status sem corpo) — um tipo de erro só no pacote `cards`. Custo se errado: trocar o `throw` por exceções próprias.

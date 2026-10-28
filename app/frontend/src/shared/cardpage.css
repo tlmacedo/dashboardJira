@@ -72,3 +72,72 @@
   outline: 2px solid var(--focus);
   outline-offset: 2px;
 }
+.barra-celula {
+  width: 45%;
+  min-width: 80px;
+}
+.barra-cheia {
+  display: block;
+  height: 10px;
+  min-width: 2px;
+  border-radius: 3px;
+  background: var(--primary);
+}
+.cardpage .ordenar-botao {
+  font: inherit;
+  font-weight: 600;
+  background: none;
+  border: 0;
+  padding: 0;
+  color: inherit;
+  cursor: pointer;
+  text-align: inherit;
+}
+.cardpage .ordenar-botao:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+.cardpage .legenda-meta {
+  margin: 4px 0 0;
+  font-size: 12.5px;
+  color: var(--text2);
+}
+.cardpage .alerta-original {
+  margin: 8px 0;
+  padding: 6px 10px;
+  border: 1px solid var(--warn);
+  border-radius: 8px;
+  font-size: 13px;
+}
+.cardpage .alerta-original span {
+  color: var(--warn);
+}
+.cardpage .dispersao-percentis {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 4px 12px;
+  margin: 0;
+}
+.cardpage .dispersao-percentis dt {
+  font-weight: 600;
+}
+.cardpage .dispersao-percentis dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+.cardpage .resumo-task {
+  margin-left: 4px;
+  font-weight: 400;
+  color: var(--text2);
+}
+.cardpage .controle-granularidade {
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
+}
+.cardpage .controle-movimento {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  font-size: 13px;
+}
