@@ -320,7 +320,12 @@ class CacheDeLeiturasIntegracaoTest {
                     call.request.headers["X-Teste-Usuario"]?.let { principalDe(roles, it) }
             }
             val usuarios = listOf("gerente.sint", "lider.sint1", "dev.sint001", "dev.sint002")
-            val rotas = listOf("/api/cards/abertas", "/api/cards/negligenciadas", "/api/cards/tempo-em-status", "/api/cards/fechadas")
+            // fechadas e negativas usam comEventoEntre; tempo-em-status usa timelines; todo card de leitura usa pessoas (escopo);
+            // carga, capacidade e calendário passam pelo motor de pessoas com o recorte por papel depois do cache
+            val rotas = listOf(
+                "/api/cards/abertas", "/api/cards/negligenciadas", "/api/cards/tempo-em-status", "/api/cards/fechadas",
+                "/api/cards/negativas", "/api/cards/carga", "/api/cards/capacidade", "/api/cards/calendario",
+            )
             testApplication {
                 application { module(settings, ctx, autenticador) }
                 suspend fun corpo(rota: String, usuario: String): Pair<HttpStatusCode, String> =

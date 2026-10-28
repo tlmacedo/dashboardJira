@@ -36,6 +36,19 @@ class InicioDaRotacaoTest {
     }
 
     @Test
+    fun arquivoComDataNoFuturoNaoEstendeAJanela() {
+        InicioDaRotacao.resolver(arquivo, anterior, t0)
+        // alguém (ou um relógio errado) deixou o início no futuro: valeria para sempre; vale no máximo "agora"
+        val impressao = Files.readAllLines(arquivo)[0]
+        Files.writeString(arquivo, impressao + "\n" + t0.plusSeconds(365L * 86_400).epochSecond + "\n")
+        val agora = t0.plusSeconds(3600)
+        assertEquals(agora, InicioDaRotacao.resolver(arquivo, anterior, agora))
+        // e uma data legítima do passado segue valendo
+        Files.writeString(arquivo, impressao + "\n" + t0.epochSecond + "\n")
+        assertEquals(t0, InicioDaRotacao.resolver(arquivo, anterior, agora))
+    }
+
+    @Test
     fun oArquivoNaoGuardaOSegredoAnterior() {
         InicioDaRotacao.resolver(arquivo, anterior, t0)
         val texto = Files.readString(arquivo)

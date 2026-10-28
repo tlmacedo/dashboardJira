@@ -43,7 +43,6 @@ import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
 import java.util.Base64
-import java.util.concurrent.ConcurrentHashMap
 import javax.crypto.Mac
 import javax.crypto.spec.SecretKeySpec
 
@@ -76,6 +75,8 @@ internal class ProvedorOidc(
     private val trava = Mutex()
     private var descoberta: Descoberta? = null
     private var descobertaEm: Instant = Instant.MIN
+    private var falha: String? = null
+    private var falhaEm: Instant = Instant.MIN
     private var jwks: ChavesPublicas? = null
     private var jwksEm: Instant = Instant.MIN
 
@@ -107,25 +108,36 @@ internal class ProvedorOidc(
     private fun JsonObject.url(nome: String, codigo: String): String {
         val valor = (this[nome] as? JsonPrimitive)?.takeIf { it.isString }?.content
         if (valor == null || !valor.startsWith("https://")) throw FalhaNoProvedor(codigo)
+        // O valor nunca vai para a mensagem: só o código.
+        if (!OidcSettings.endpointPermitido(valor, cfg.hostsPermitidos)) throw FalhaNoProvedor("DESCOBERTA_ENDPOINT_NAO_PERMITIDO")
         return valor
     }
 
     suspend fun descoberta(): Descoberta = trava.withLock {
         val agora = relogio.instant()
         descoberta?.takeIf { agora.isBefore(descobertaEm.plus(validadeDaDescoberta)) }?.let { return it }
-        val corpo = lerJson(cfg.issuer.trimEnd('/') + "/.well-known/openid-configuration", "DESCOBERTA_FALHOU")
-        // O emissor declarado tem de ser o configurado: protege contra um documento de descoberta de outro emissor.
-        if ((corpo["issuer"] as? JsonPrimitive)?.takeIf { it.isString }?.content != cfg.issuer) {
-            throw FalhaNoProvedor("DESCOBERTA_EMISSOR_DIFERENTE")
+        // Cache negativo: provedor fora do ar não é consultado a cada /auth/login (cada tentativa espera o tempo-limite).
+        falha?.takeIf { agora.isBefore(falhaEm.plus(VALIDADE_DA_FALHA)) }?.let { throw FalhaNoProvedor(it) }
+        try {
+            val corpo = lerJson(cfg.issuer.trimEnd('/') + "/.well-known/openid-configuration", "DESCOBERTA_FALHOU")
+            // O emissor declarado tem de ser o configurado: protege contra um documento de descoberta de outro emissor.
+            if ((corpo["issuer"] as? JsonPrimitive)?.takeIf { it.isString }?.content != cfg.issuer) {
+                throw FalhaNoProvedor("DESCOBERTA_EMISSOR_DIFERENTE")
+            }
+            val nova = Descoberta(
+                corpo.url("authorization_endpoint", "DESCOBERTA_INVALIDA"),
+                corpo.url("token_endpoint", "DESCOBERTA_INVALIDA"),
+                corpo.url("jwks_uri", "DESCOBERTA_INVALIDA"),
+            )
+            descoberta = nova
+            descobertaEm = agora
+            falha = null
+            nova
+        } catch (e: FalhaNoProvedor) {
+            falha = e.codigo
+            falhaEm = agora
+            throw e
         }
-        val nova = Descoberta(
-            corpo.url("authorization_endpoint", "DESCOBERTA_INVALIDA"),
-            corpo.url("token_endpoint", "DESCOBERTA_INVALIDA"),
-            corpo.url("jwks_uri", "DESCOBERTA_INVALIDA"),
-        )
-        descoberta = nova
-        descobertaEm = agora
-        nova
     }
 
     /** As chaves para validar um token cujo cabeçalho traz [kid]; refaz a busca se a chave não está no que se guardou. */
@@ -192,6 +204,7 @@ internal class ProvedorOidc(
 
     private companion object {
         const val LIMITE_DO_CORPO = 256 * 1024L
+        val VALIDADE_DA_FALHA: Duration = Duration.ofSeconds(30)
     }
 }
 
@@ -232,15 +245,34 @@ internal class CookieDeLogin(private val segredo: ByteArray, private val relogio
 
 /** Cada `state` só vale uma vez neste processo: repetir o `callback` (o mesmo `nonce`) é recusado. */
 internal class ConsumoUnico(private val relogio: Clock, private val limite: Int = 10_000) {
-    private val consumidos = ConcurrentHashMap<String, Instant>()
+    // Em ordem de inserção: o primeiro é o mais antigo.
+    private val consumidos = LinkedHashMap<String, Instant>()
 
-    /** `true` na primeira vez; `false` se já foi consumido ou se há registros demais para aceitar mais (falha fechada). */
+    /**
+     * `true` na primeira vez; `false` se o `state` já foi consumido. Com o registro cheio, descarta primeiro os vencidos e,
+     * se ainda estiver cheio, o MAIS ANTIGO: recusar quem chega deixaria um atacante que enche o registro com logins
+     * anônimos bloquear os logins legítimos por 10 minutos. Com o registro cheio, a recusa de replay de um `state` já
+     * descartado passa a depender do uso único do `code` no provedor e do PKCE. O custo (um `state` muito antigo e ainda vigente poder ser
+     * reapresentado) exige antes um cookie de login assinado, o `code` do provedor e o `nonce` do token.
+     */
+    @Synchronized
     fun consumir(chave: String, validoAte: Instant): Boolean {
-        val agora = relogio.instant()
-        if (consumidos.size >= limite) consumidos.entries.removeIf { !agora.isBefore(it.value) }
-        if (consumidos.size >= limite) return false
-        return consumidos.putIfAbsent(chave, validoAte) == null
+        if (consumidos.containsKey(chave)) return false
+        if (consumidos.size >= limite) {
+            val agora = relogio.instant()
+            consumidos.entries.removeIf { !agora.isBefore(it.value) }
+        }
+        while (consumidos.size >= limite) {
+            val mais = consumidos.entries.iterator()
+            mais.next()
+            mais.remove()
+        }
+        consumidos[chave] = validoAte
+        return true
     }
+
+    @Synchronized
+    internal fun tamanho(): Int = consumidos.size
 }
 
 /** Resultado de concluir um login. */
