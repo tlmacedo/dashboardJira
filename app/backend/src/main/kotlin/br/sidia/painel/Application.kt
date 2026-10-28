@@ -8,6 +8,7 @@ import br.sidia.painel.cards.contrato.catalogoPadrao
 import br.sidia.painel.cards.contrato.rotasDeDrillGenerico
 import br.sidia.painel.cards.contrato.rotasDoCatalogo
 import br.sidia.painel.cards.registrarNegacaoSemPapel
+import br.sidia.painel.cards.rotasDeOpcoesDeFiltro
 import br.sidia.painel.cards.rotasDosCardsDeTrabalho
 import br.sidia.painel.cards.rotasTempoEmStatus
 import br.sidia.painel.config.ArquivoEnv
@@ -229,6 +230,7 @@ fun Application.module(
             rotasDeDrillGenerico(context, catalogo, SqliteIssueStore(ds), AccessLog(ds))
             rotasDeAuditoria(context, AccessLog(ds))
             rotasDosCardsDeTrabalho(context, AccessLog(ds))
+            rotasDeOpcoesDeFiltro(context, AccessLog(ds))
             rotasDeChecklistReview(context, AccessLog(ds))
             rotasDeIntegridade(context, AccessLog(ds))
             rotasSyncStatus(context, SqliteSyncStateStore(ds), AccessLog(ds))

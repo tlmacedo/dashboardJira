@@ -40,6 +40,9 @@ object CamposDoDicionario {
         return saida
     }
 
+    /** Os valores de um campo repetível (lista unida por "; "); um valor simples devolve ele mesmo. */
+    fun partesDe(valor: String): List<String> = valor.split("; ").map { it.trim() }.filter { it.isNotEmpty() }
+
     /** Texto da coluna `issue.campos_dicionario` (objeto JSON nome -> valor). */
     fun paraJson(valores: Map<String, String>): String =
         JsonObject(valores.mapValues { JsonPrimitive(it.value) }).toString()
