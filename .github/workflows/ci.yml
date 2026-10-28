@@ -40,6 +40,11 @@ jobs:
       - name: Testes do backend (SQLite em arquivo temporário)
         working-directory: app/backend
         run: ./gradlew --no-daemon test
+      - name: Validar as configurações de exemplo (modo dev, sem banco nem Jira)
+        working-directory: app
+        env:
+          DASHBOARD_DEV_MODE: "true"
+        run: sh scripts/painel-cli.sh validar-config --dir config
       - name: Relatório de testes (só em falha)
         if: failure()
         uses: actions/upload-artifact@v4

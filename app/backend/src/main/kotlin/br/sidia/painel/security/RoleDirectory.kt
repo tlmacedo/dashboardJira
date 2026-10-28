@@ -28,6 +28,9 @@ class RoleDirectory(pessoas: List<Pessoa>) {
     private fun ativos(userId: String, date: LocalDate): List<AtribuicaoPapel> =
         pessoas[userId]?.papeis.orEmpty().filter { it.vigencia.contem(date) }
 
+    /** A pessoa consta no diretório (em qualquer data); usado pelo validador de configuração. */
+    fun conhece(userId: String): Boolean = userId in pessoas
+
     /** Papéis da pessoa na data (vazio se desconhecida). */
     fun rolesOf(userId: String, date: LocalDate): Set<Role> = ativos(userId, date).map { it.papel }.toSet()
 
@@ -66,7 +69,7 @@ class RoleDirectory(pessoas: List<Pessoa>) {
          * Ids que nunca podem ser de pessoa: `dev` é o principal do modo desenvolvimento e os demais
          * são contas de sistema comuns. Reservá-los evita que um YAML dê papel a eles por engano.
          */
-        private val IDS_RESERVADOS = setOf("dev", "system", "admin", "root", "anonymous")
+        internal val IDS_RESERVADOS = setOf("dev", "system", "admin", "root", "anonymous")
         private val PAPEIS_COM_SQUAD = setOf(Role.USUARIO, Role.SQUAD_LEADER)
 
         /** Lê `pessoas: [{id, nome, papeis: [{papel, de?, ate?, squad?}]}]` de um YAML. */

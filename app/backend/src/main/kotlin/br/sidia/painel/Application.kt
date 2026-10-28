@@ -18,6 +18,8 @@ import br.sidia.painel.http.cabecalhosDeSeguranca
 import br.sidia.painel.http.protecaoCsrf
 import br.sidia.painel.http.registrarNegacaoCsrf
 import br.sidia.painel.operacao.ConfiguradorDeLog
+import br.sidia.painel.operacao.comandoDeOperacao
+import kotlin.system.exitProcess
 import br.sidia.painel.operacao.MascaraDeLog
 import br.sidia.painel.operacao.Prontidao
 import br.sidia.painel.operacao.prontidaoPadrao
@@ -60,7 +62,7 @@ data class MetaResposta(val devMode: Boolean, val liveEnabled: Boolean, val zone
 
 private val log = LoggerFactory.getLogger("br.sidia.painel")
 
-fun main() {
+fun main(args: Array<String>) {
     // Lê o arquivo de variáveis local (PAINEL_ENV_FILE ou ./.env) por baixo do ambiente do processo.
     val arquivoEnv = System.getenv("PAINEL_ENV_FILE")?.takeIf { it.isNotBlank() }?.let { java.nio.file.Path.of(it) }
         ?: java.nio.file.Path.of(".env")
@@ -70,6 +72,8 @@ fun main() {
         System.getProperty(PerfilDeExecucao.PROPRIEDADE),
         ArquivoEnv.combinarComFlagSoDoArquivo(ArquivoEnv.ler(arquivoEnv), System.getenv()),
     )
+    // Subcomandos de operação (validar-config etc.) rodam e saem ANTES de abrir banco, trava ou servidor.
+    comandoDeOperacao(args.toList(), env)?.let { exitProcess(it) }
     val settings = Settings.fromEnv(env)
     // O Logback iniciou antes da leitura do arquivo de variáveis: reaplica formato e pasta de log e registra os segredos
     // na máscara (nenhum token sai em log, nem escapado).

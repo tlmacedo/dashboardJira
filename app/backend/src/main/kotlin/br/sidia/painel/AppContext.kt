@@ -17,6 +17,8 @@ import br.sidia.painel.security.Role
 import br.sidia.painel.security.RoleDirectory
 import br.sidia.painel.sync.VinculosConfig
 import br.sidia.painel.time.BusinessCalendar
+import com.charleskorn.kaml.UnknownPropertyException
+import com.charleskorn.kaml.YamlException
 import org.slf4j.LoggerFactory
 import java.nio.file.Files
 import java.nio.file.Path
@@ -97,7 +99,18 @@ class AppContext(
          * Carrega arquivos de configuração, abre o banco SQLite (um painel por arquivo) e migra o schema.
          * Falhas de configuração e de banco viram [IllegalStateException] sem segredos.
          */
-        fun load(settings: Settings, clock: Clock = Clock.system(settings.zone)): AppContext {
+        fun load(settings: Settings, clock: Clock = Clock.system(settings.zone)): AppContext =
+            carregar(settings, clock, comBanco = true)
+
+        /**
+         * O mesmo caminho da subida, mas SÓ com os arquivos de configuração: não toma a trava, não abre nem cria o
+         * banco e não cria cliente do Jira. Usado pelo validador (`painel validar-config`) para provar a configuração
+         * antes de reiniciar. O contexto devolvido tem `dataSource` nulo.
+         */
+        fun carregarSemBanco(settings: Settings, clock: Clock = Clock.system(settings.zone)): AppContext =
+            carregar(settings, clock, comBanco = false)
+
+        private fun carregar(settings: Settings, clock: Clock, comBanco: Boolean): AppContext {
             val arquivoCalendario = resolver(settings, "calendario")
             val arquivoPapeis = resolver(settings, "papeis")
             val calendario = lerYaml(arquivoCalendario) { BusinessCalendar.fromYaml(arquivoCalendario, settings.zone) }
@@ -133,17 +146,17 @@ class AppContext(
             val jira = JiraClientFactory(settings)
             jira.validarInstancias()
 
-            val trava = try {
+            val trava = if (!comBanco) null else try {
                 TravaDeProcesso.adquirir(settings.databasePath)
             } catch (e: IllegalStateException) {
                 throw e
             } catch (e: Exception) {
                 throw IllegalStateException("Falha ao abrir o banco em ${settings.databasePath} (${e.javaClass.simpleName})")
             }
-            val ds = try {
+            val ds = if (!comBanco) null else try {
                 abrirBanco(settings)
             } catch (e: Throwable) {
-                trava.close()
+                trava?.close()
                 throw e
             }
             return AppContext(
@@ -161,14 +174,24 @@ class AppContext(
             try {
                 leitura()
             } catch (e: Exception) {
-                throw IllegalStateException("arquivo $arquivo inválido: ${e.javaClass.simpleName}")
+                // Só o tipo e (se o parser a der) a linha viram dados estruturados; o valor errado nunca é guardado.
+                val chaveDesconhecida = e is UnknownPropertyException || e.cause is UnknownPropertyException
+                val linha = (e as? YamlException ?: e.cause as? YamlException)?.line
+                throw ErroDeConfiguracao(
+                    if (chaveDesconhecida) "CHAVE_DESCONHECIDA" else "YAML_INVALIDO", nomeParaRelatorio(arquivo), linha,
+                    "arquivo $arquivo inválido: ${e.javaClass.simpleName}",
+                )
             }
+
+        /** Nome que o relatório do validador mostra: `pasta/arquivo` dentro de `cards`, senão só o nome do arquivo. */
+        private fun nomeParaRelatorio(arquivo: Path): String =
+            if (arquivo.parent?.fileName?.toString() == "cards") "cards/${arquivo.fileName}" else arquivo.fileName.toString()
 
         /** Sem nenhum GERENTE vigente hoje ninguém acessaria a Integridade: falha em produção, só avisa em dev. */
         private fun exigirGerenteVigente(settings: Settings, papeis: RoleDirectory, arquivo: Path, hoje: LocalDate) {
             if (papeis.hasRoleOn(Role.GERENTE, hoje)) return
             if (!settings.dashboardDevMode) {
-                throw IllegalStateException("Nenhum GERENTE vigente em $arquivo")
+                throw ErroDeConfiguracao("PAPEIS_SEM_GERENTE_VIGENTE", nomeParaRelatorio(arquivo), null, "Nenhum GERENTE vigente em $arquivo")
             }
             log.warn("Nenhum GERENTE vigente em $arquivo (aceito apenas em modo desenvolvimento).")
         }
@@ -180,12 +203,16 @@ class AppContext(
         private fun resolver(settings: Settings, nome: String): Path {
             val real = settings.configDir.resolve("$nome.yaml")
             if (Files.isRegularFile(real)) return real
-            if (!settings.dashboardDevMode) {
-                throw IllegalStateException("Arquivo de configuração obrigatório em produção não encontrado: $real")
-            }
             val exemplo = settings.configDir.resolve("$nome.exemplo.yaml")
+            if (!settings.dashboardDevMode) {
+                // O modelo no lugar do arquivo real em produção ganha código próprio (a pasta foi copiada sem editar).
+                throw ErroDeConfiguracao(
+                    if (Files.isRegularFile(exemplo)) "EXEMPLO_EM_PRODUCAO" else "ARQUIVO_AUSENTE", "$nome.yaml", null,
+                    "Arquivo de configuração obrigatório em produção não encontrado: $real",
+                )
+            }
             if (!Files.isRegularFile(exemplo)) {
-                throw IllegalStateException("Nem $real nem o modelo $exemplo foram encontrados")
+                throw ErroDeConfiguracao("ARQUIVO_AUSENTE", "$nome.yaml", null, "Nem $real nem o modelo $exemplo foram encontrados")
             }
             log.warn("$nome.yaml não encontrado em ${settings.configDir}: usando o modelo $nome.exemplo.yaml (dados fictícios, só em desenvolvimento).")
             return exemplo
@@ -202,12 +229,15 @@ class AppContext(
         private fun resolverDicionario(settings: Settings): Path {
             val real = settings.configDir.resolve("jira_campos.yaml")
             if (Files.isRegularFile(real)) return real
-            if (exigeArquivosReaisDoJira(settings)) {
-                throw IllegalStateException("Arquivo de configuração obrigatório com o Jira ligado em produção não encontrado: $real")
-            }
             val exemplo = settings.configDir.resolve("jira_campos.exemplo.yaml")
+            if (exigeArquivosReaisDoJira(settings)) {
+                throw ErroDeConfiguracao(
+                    if (Files.isRegularFile(exemplo)) "EXEMPLO_EM_PRODUCAO" else "ARQUIVO_AUSENTE", "jira_campos.yaml", null,
+                    "Arquivo de configuração obrigatório com o Jira ligado em produção não encontrado: $real",
+                )
+            }
             if (!Files.isRegularFile(exemplo)) {
-                throw IllegalStateException("Nem $real nem o modelo $exemplo foram encontrados")
+                throw ErroDeConfiguracao("ARQUIVO_AUSENTE", "jira_campos.yaml", null, "Nem $real nem o modelo $exemplo foram encontrados")
             }
             log.warn("jira_campos.yaml não encontrado em ${settings.configDir}: usando o modelo jira_campos.exemplo.yaml (vocabulário de exemplo, sem consulta ao Jira).")
             return exemplo
@@ -242,7 +272,12 @@ class AppContext(
             try {
                 leitura()
             } catch (e: Exception) {
-                throw IllegalStateException("ficha $arquivo inválida: ${e.javaClass.simpleName}")
+                val chaveDesconhecida = e is UnknownPropertyException || e.cause is UnknownPropertyException
+                throw ErroDeConfiguracao(
+                    if (chaveDesconhecida) "CHAVE_DESCONHECIDA" else "YAML_INVALIDO", nomeParaRelatorio(arquivo),
+                    (e as? YamlException ?: e.cause as? YamlException)?.line,
+                    "ficha $arquivo inválida: ${e.javaClass.simpleName}",
+                )
             }
 
         /** Abre o arquivo SQLite e migra; a falha cita só o tipo da exceção. */
