@@ -97,8 +97,11 @@ class Syncer(
                 truncado(issue) -> client.fullChangelog(chaveDe(issue))
                 else -> embutidos(issue)
             }
-            // O mapa sai do JSON recebido, antes da sanitização do raw (que apaga a `key` do usuário).
-            val novas = ChavesDeUsuario.coletar(issue, historicos).filter { (k, v) -> mapa[k] != v }
+            // Worklog: `null` = a busca não trouxe o campo (os gravados não mudam). Truncado (total > recebido) busca o completo.
+            val worklogsBrutos = worklogsDe(issue)
+            // O mapa sai do JSON recebido, antes da sanitização do raw (que apaga a `key` do usuário). O autor do worklog
+            // (`author`) tem a mesma forma do autor de um histórico, então entra na coleta como ele.
+            val novas = ChavesDeUsuario.coletar(issue, historicos + worklogsBrutos.orEmpty()).filter { (k, v) -> mapa[k] != v }
             if (novas.isNotEmpty()) {
                 mapa.putAll(novas)
                 chaves?.let { r -> withContext(Dispatchers.IO) { r.gravarChavesDeUsuario(instance, novas, clock.instant()) } }
@@ -109,11 +112,15 @@ class Syncer(
             } catch (e: IllegalArgumentException) {
                 throw dadoMalformado(chave)
             }
+            // Como os eventos, o worklog anterior ao corte de retenção não volta (o Retention o apagaria de novo).
+            val registrosDeWorklog = worklogsBrutos?.let { WorklogParser.toRecords(it, mapa).filter { r -> r.started >= corte } }
             val updated = try {
                 withContext(Dispatchers.IO) {
                     // Os vínculos saem do JSON recebido (nulo = sem o campo: não mexe nos gravados), na mesma transação da issue.
+                    // O mesmo vale para o worklog, que SUBSTITUI os registros gravados da issue.
                     store.upsert(
                         issue, registros, instance, osVersionCustomId, IssueLinks.ler(chave, issue), clock.instant(), idsDeTrabalho,
+                        registrosDeWorklog,
                     )
                     CamposDaIssue.de(issue).updated
                 }
@@ -156,6 +163,24 @@ class Syncer(
         val cl = issue["changelog"] as? JsonObject ?: return false
         val total = (cl["total"] as? JsonPrimitive)?.intOrNull ?: return false
         return total > embutidos(issue).size
+    }
+
+    /**
+     * Os registros de horas da issue: os embutidos em `fields.worklog` quando completos; se o `total` for maior que o recebido
+     * (o Jira devolve só os primeiros), busca o completo por `issue/{key}/worklog`. `null` quando a busca não trouxe o campo.
+     * O comentário do worklog nunca é lido (ver [WorklogParser]).
+     */
+    private suspend fun worklogsDe(issue: JsonObject): List<JsonObject>? {
+        val campo = (issue["fields"] as? JsonObject)?.get("worklog") as? JsonObject ?: return null
+        val recebidos = (campo["worklogs"] as? JsonArray)?.mapNotNull { it as? JsonObject }.orEmpty()
+        val total = (campo["total"] as? JsonPrimitive)?.intOrNull
+        if (total == null || total <= recebidos.size) return recebidos
+        return try {
+            client.worklogs(chaveDe(issue))
+        } catch (e: JiraException) {
+            // Endpoint inexistente neste servidor: a lista parcial NÃO pode substituir a gravada (apagaria o que falta); segue sem mexer.
+            if (e.status in setOf(400, 404, 405)) null else throw e
+        }
     }
 
     private fun chaveDe(issue: JsonObject): String =

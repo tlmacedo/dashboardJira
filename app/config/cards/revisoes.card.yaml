@@ -1,0 +1,39 @@
+# Ficha do card "Revisões pendentes por revisor" (Plano 6). Estrita: chave desconhecida falha ao carregar.
+# A leitura no banco aplica estes tipos e a exclusão de status (FiltroDeFicha); o JQL só serve à sincronização e ao ensaio.
+
+id: revisoes
+titulo: Revisões pendentes por revisor
+instancia: samsung
+
+campos:
+  - OS Version
+  - priority
+
+filtrosFixos:
+  project: ["TG-Basic"]
+  issuetype: ["Checklist", "Checklist TG", "Checklist Review"]
+
+filtrosExcluidos:
+  status: ["Cancelled", "Canceled", "Dropped"]
+
+parametros:
+  - nome: squad
+    tipo: squad
+    obrigatorio: false
+
+formula: >-
+  As tasks abertas dos tipos de review (vinculos.yaml) agrupadas pelo responsável, só os revisores da sua visão e em ordem
+  alfabética. Vencida = vencimento antes de hoje. Fora do prazo = idade em dias úteis desde a criação maior que slaRevisaoDias do
+  planejamento. Idade P50 = mediana das idades. As reviews sem responsável só aparecem para coordenação e gerente, e sem filtro de
+  squad ou pessoa.
+
+exemplo: >-
+  squad=[dev.alfa].
+
+aceite:
+  - Revisores em ordem alfabética, sem ranking.
+  - O usuário comum só vê as próprias reviews.
+  - Reviews sem revisor só para coordenação e gerente.
+  - Cada contagem abre as mesmas tasks que a formam.
+
+expandChangelog: false

@@ -14,6 +14,7 @@ import br.sidia.painel.cards.linhaDe
 import br.sidia.painel.cards.metaDeTrabalho
 import br.sidia.painel.pessoas.MotorDePessoas
 import br.sidia.painel.sync.FiltroDeFicha
+import br.sidia.painel.sync.SqliteWorklogStore
 import br.sidia.painel.trabalho.ConsultaDeTrabalho
 import br.sidia.painel.trabalho.Fluxo
 import br.sidia.painel.trabalho.Situacao
@@ -30,6 +31,7 @@ object CardCarga : CardDeLeitura<CargaDto> {
     override val periodoPadraoDias: Int? = null
 
     private const val SEMANAS_DE_HISTORICO = 16L
+    private const val DIAS_DE_HORAS_REGISTRADAS = 30L
 
     override fun calcular(e: EntradaDeCard): ResultadoDeCard<CargaDto> {
         val ctx = e.ctx
@@ -44,8 +46,13 @@ object CardCarga : CardDeLeitura<CargaDto> {
         Fluxo.exigirStatusMapeados(ctx.statusMap, abertas, historico)
 
         val pessoas = motor.pessoas().filter { it in e.escopo.visiveis }
+        // Horas registradas nos últimos 30 dias (worklog sincronizado, sem comentário); só a linha das pessoas da visão as mostra.
+        val horasRegistradas = ctx.dataSource?.let {
+            SqliteWorklogStore(it).horasPorAutor(INSTANCIA_TRABALHO, e.agora.minus(Duration.ofDays(DIAS_DE_HORAS_REGISTRADAS)), e.agora)
+        }
         val analise = CargaCalculator(motor, ctx.regrasDeRisco).calcular(
             pessoas, abertas, historico, e.hoje, e.agora, e.store.temCamposDeTrabalho(INSTANCIA_TRABALHO), "planejamento v${motor.regras.versao}",
+            horasRegistradas,
         )
         return ResultadoDeCard(analise.dto) { segmento ->
             analise.segmentos[segmento]?.map { s ->

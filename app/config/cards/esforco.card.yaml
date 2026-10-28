@@ -1,0 +1,41 @@
+# Ficha do card "Esforço por task fechada" (Plano 6). Estrita: chave desconhecida falha ao carregar.
+# A leitura no banco aplica estes tipos e a exclusão de status (FiltroDeFicha); o JQL só serve à sincronização e ao ensaio.
+
+id: esforco
+titulo: Esforço por task fechada
+instancia: samsung
+
+campos:
+  - OS Version
+  - priority
+  - timespent
+  - worklog
+
+filtrosFixos:
+  project: ["TG-Basic"]
+  issuetype: ["Checklist", "Checklist TG", "Checklist Review"]
+
+filtrosExcluidos:
+  status: ["Cancelled", "Canceled", "Dropped"]
+
+parametros:
+  - nome: squad
+    tipo: squad
+    obrigatorio: false
+
+formula: >-
+  Para cada task concluída com resolução positiva no período (padrão: 30 dias, pela data de resolução): peso do tipo (esforco.yaml),
+  testes (labels distintas que começam com TEST-) e horas (soma do worklog; sem worklog, o tempo gasto do Jira, com aviso). Índice
+  = peso do tipo + testes × peso do teste + horas × fator da hora (proposta inicial, a calibrar com dados reais). Por pessoa, cada
+  componente × a fração de posse da task (não o autor do worklog). Sem ranking: pessoas em ordem alfabética.
+
+exemplo: >-
+  de=2026-10-01, ate=2026-10-30, granularidade=semana.
+
+aceite:
+  - Os três componentes e o índice aparecem lado a lado, com a versão das regras.
+  - O esforço por pessoa segue a posse, não o autor do worklog.
+  - Sem worklog, as horas vêm do tempo gasto do Jira e a resposta traz o aviso.
+  - O usuário só vê o próprio esforço.
+
+expandChangelog: true

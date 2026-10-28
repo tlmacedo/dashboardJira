@@ -39,6 +39,29 @@ class DiferencasPessoasDocTest {
     }
 
     @Test
+    fun documentoCitaOsCardsNovos() {
+        val texto = documento()
+        val esperados = listOf(
+            "Posse", "Esforço", "Cobertura", "Simulador", "Competências", "Revisões pendentes", "Carga por tipo",
+            "PS-01", "PS-02", "EF-01", "EF-02", "CB-01", "SI-01", "CM-01", "CM-02", "CM-03", "RV-01", "RV-02", "CG-01", "CG-02",
+        )
+        val faltando = esperados.filterNot { it in texto }
+        assertTrue(faltando.isEmpty(), "cartões do 6b sem menção no documento: $faltando")
+    }
+
+    @Test
+    fun documentoTrazAsDecisoesDoBloco6b() {
+        val texto = documento().lowercase()
+        for (tema in listOf(
+            "posse proporcional", "índice proposto", "calibração", "aprovação de ausências", "simulador",
+            "ordem alfabética", "worklog", "sem comentário", "somente leitura",
+        )) {
+            assertTrue(tema in texto, "tema ausente: $tema")
+        }
+        assertTrue("acrescenta a sua seção" !in texto, "a nota de 'seção por vir' do 6b deve ter saído")
+    }
+
+    @Test
     fun documentoNaoTemDadoPessoalReal() {
         // O repositório é público: nenhum username nem chave de issue de exemplo real.
         val texto = documento()

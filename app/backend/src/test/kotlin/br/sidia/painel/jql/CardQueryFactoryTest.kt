@@ -191,6 +191,7 @@ class CardQueryFactoryTest {
                 FieldDef("timeoriginalestimate", FieldType.NUMBER, "samsung", "x"),
                 FieldDef("timeestimate", FieldType.NUMBER, "samsung", "x"),
                 FieldDef("timespent", FieldType.NUMBER, "samsung", "x"),
+                FieldDef("worklog", FieldType.TEXT, "samsung", "x"),
                 FieldDef("components", FieldType.SELECT, "samsung", "x"),
                 FieldDef("Story Points", FieldType.NUMBER, "samsung", "x"),
                 FieldDef("Epic Link", FieldType.TEXT, "samsung", "x"),

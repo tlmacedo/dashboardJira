@@ -23,11 +23,14 @@ interface IssueStore {
      * zera o valor existente, por desenho (o valor segue o dicionário atual). O mesmo vale para os campos de trabalho
      * (prioridade, estimativa restante, pontos, épico, flag e componentes); [idsDeTrabalho] leva o customId de
      * `Story Points`, `Epic Link` e `Flagged` (nome do dicionário -> id), e os demais saem de campos nativos.
+     * [worklogs]: os registros de horas da issue, SUBSTITUÍDOS na mesma transação (o que sumiu no Jira sai); nulo = a busca
+     * não trouxe o campo e os gravados não mudam. O `raw` nunca guarda o worklog.
      */
     fun upsert(
         issue: JsonObject, events: List<ChangeEventRecord>, instance: String, osVersionCustomId: String? = null,
         vinculos: List<VinculoRecord>? = null, vinculosEm: Instant = Instant.now(),
         idsDeTrabalho: Map<String, String?> = emptyMap(),
+        worklogs: List<WorklogRecord>? = null,
     )
 
     /**
@@ -121,6 +124,12 @@ fun normalizarOsVersion(valor: String): String = valor.trim().replace(ESPACOS_OS
 /** Implementação sobre SQLite (JDBC). Todas as consultas são parametrizadas; listas entram como JSON em `json_each(?)`. */
 class SqliteIssueStore(private val ds: DataSource) : IssueStore, IssueIndex {
     private val links = SqliteIssueLinkStore(ds)
+    private val worklogStore = SqliteWorklogStore(ds)
+
+    private companion object {
+        /** Campos de `fields` que vivem em tabela própria e nunca entram no `raw`. */
+        val CAMPOS_FORA_DO_RAW = setOf("issuelinks", "worklog")
+    }
 
     override fun indice(instance: String, atualizadasDesde: Instant): List<IndiceIssue> =
         ds.connection.use { con ->
@@ -200,7 +209,7 @@ class SqliteIssueStore(private val ds: DataSource) : IssueStore, IssueIndex {
     fun upsertNaTransacao(
         con: Connection, issue: JsonObject, events: List<ChangeEventRecord>, instance: String, osVersionCustomId: String?,
         vinculos: List<VinculoRecord>? = null, vinculosEm: Instant = Instant.now(),
-        idsDeTrabalho: Map<String, String?> = emptyMap(),
+        idsDeTrabalho: Map<String, String?> = emptyMap(), worklogs: List<WorklogRecord>? = null,
     ) {
         val c = CamposDaIssue.de(issue)
         val osVersion = OsVersionExtrator.extrair(issue, osVersionCustomId)
@@ -211,24 +220,26 @@ class SqliteIssueStore(private val ds: DataSource) : IssueStore, IssueIndex {
         val issueId = gravarIssue(con, c, instance, raw, osVersion, trabalho)
         gravarEventos(con, issueId, events)
         if (vinculos != null) links.substituir(con, instance, c.key, vinculos, vinculosEm)
+        if (worklogs != null) worklogStore.substituir(con, instance, issueId, worklogs)
     }
 
+    /** O `raw` não guarda o changelog (linhas de `change_event`), os vínculos (`issue_link`) nem o worklog (tabela `worklog`, sem comentário). */
     private fun semChangelogNemVinculos(issue: JsonObject): JsonObject {
         val campos = issue["fields"] as? JsonObject
         val base = issue.filterKeys { it != "changelog" }
-        if (campos == null || "issuelinks" !in campos) return JsonObject(base)
-        return JsonObject(base + ("fields" to JsonObject(campos.filterKeys { it != "issuelinks" })))
+        if (campos == null || CAMPOS_FORA_DO_RAW.none { it in campos }) return JsonObject(base)
+        return JsonObject(base + ("fields" to JsonObject(campos.filterKeys { it !in CAMPOS_FORA_DO_RAW })))
     }
 
     override fun upsert(
         issue: JsonObject, events: List<ChangeEventRecord>, instance: String, osVersionCustomId: String?,
-        vinculos: List<VinculoRecord>?, vinculosEm: Instant, idsDeTrabalho: Map<String, String?>,
+        vinculos: List<VinculoRecord>?, vinculosEm: Instant, idsDeTrabalho: Map<String, String?>, worklogs: List<WorklogRecord>?,
     ) {
         ds.connection.use { con ->
             val autoCommit = con.autoCommit
             con.autoCommit = false
             try {
-                upsertNaTransacao(con, issue, events, instance, osVersionCustomId, vinculos, vinculosEm, idsDeTrabalho)
+                upsertNaTransacao(con, issue, events, instance, osVersionCustomId, vinculos, vinculosEm, idsDeTrabalho, worklogs)
                 con.commit()
             } catch (e: Throwable) {
                 con.rollback()

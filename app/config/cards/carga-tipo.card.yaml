@@ -1,0 +1,41 @@
+# Ficha do card "Carga por tipo e OS" (Plano 6). Estrita: chave desconhecida falha ao carregar.
+# A leitura no banco aplica estes tipos e a exclusão de status (FiltroDeFicha); o JQL só serve à sincronização e ao ensaio.
+
+id: carga-tipo
+titulo: Carga por tipo e OS
+instancia: samsung
+
+campos:
+  - OS Version
+  - priority
+  - timeoriginalestimate
+  - timeestimate
+  - timespent
+  - worklog
+
+filtrosFixos:
+  project: ["TG-Basic"]
+  issuetype: ["Checklist", "Checklist TG", "Checklist Review"]
+
+filtrosExcluidos:
+  status: ["Cancelled", "Canceled", "Dropped"]
+
+parametros:
+  - nome: squad
+    tipo: squad
+    obrigatorio: false
+
+formula: >-
+  As tasks abertas da sua visão (contagem e horas de fila pelas regras de planejamento) e as concluídas com resolução positiva do
+  período (padrão: 30 dias, pela data de resolução; contagem e soma do índice de esforço de esforco.yaml), agrupadas por tipo de
+  task × OS Version. Task sem OS é uma coluna própria. Tipos e versões em ordem alfabética.
+
+exemplo: >-
+  de=2026-10-01, ate=2026-10-30.
+
+aceite:
+  - Sem OS aparece como coluna própria.
+  - O usuário comum só vê as próprias tasks.
+  - Cada célula abre as mesmas tasks que a formam.
+
+expandChangelog: true

@@ -1,0 +1,126 @@
+{
+  "expand": "schema,names",
+  "startAt": 0,
+  "maxResults": 100,
+  "total": 4,
+  "issues": [
+    {
+      "id": "10301",
+      "key": "TG-301",
+      "fields": {
+        "summary": "Worklog truncado na busca (total 3, veio 1)",
+        "project": {"key": "TG"},
+        "issuetype": {"name": "Task"},
+        "status": {"name": "In Progress"},
+        "assignee": {"name": "Ana.Silva", "key": "JIRAUSER10500", "displayName": "Ana Silva Ficticia"},
+        "reporter": {"name": "carla.souza"},
+        "created": "2026-10-01T09:00:00.000-0400",
+        "updated": "2026-10-06T10:00:00.000-0400",
+        "timespent": 21600,
+        "labels": [],
+        "worklog": {
+          "startAt": 0,
+          "maxResults": 20,
+          "total": 3,
+          "worklogs": [
+            {
+              "self": "https://jira.exemplo.invalid/rest/api/2/issue/10301/worklog/70001",
+              "id": "70001",
+              "issueId": "10301",
+              "author": {"name": "Ana.Silva", "key": "JIRAUSER10500", "displayName": "Ana Silva Ficticia"},
+              "updateAuthor": {"name": "Ana.Silva", "key": "JIRAUSER10500", "displayName": "Ana Silva Ficticia"},
+              "comment": "COMENTARIO-SECRETO-DO-WORKLOG-1",
+              "created": "2026-10-02T18:00:00.000-0400",
+              "updated": "2026-10-02T18:00:00.000-0400",
+              "started": "2026-10-02T09:00:00.000-0400",
+              "timeSpent": "2h",
+              "timeSpentSeconds": 7200
+            }
+          ]
+        }
+      },
+      "changelog": {"startAt": 0, "maxResults": 100, "total": 0, "histories": []}
+    },
+    {
+      "id": "10302",
+      "key": "TG-302",
+      "fields": {
+        "summary": "Worklog completo com autor por chave interna",
+        "project": {"key": "TG"},
+        "issuetype": {"name": "Task"},
+        "status": {"name": "In Progress"},
+        "assignee": {"name": "Ana.Silva", "key": "JIRAUSER10500"},
+        "reporter": {"name": "carla.souza"},
+        "created": "2026-10-01T09:30:00.000-0400",
+        "updated": "2026-10-06T11:00:00.000-0400",
+        "timespent": 10800,
+        "labels": [],
+        "worklog": {
+          "startAt": 0,
+          "maxResults": 20,
+          "total": 2,
+          "worklogs": [
+            {
+              "self": "https://jira.exemplo.invalid/rest/api/2/issue/10302/worklog/70010",
+              "id": "70010",
+              "issueId": "10302",
+              "author": {"name": "JIRAUSER10500", "key": "JIRAUSER10500", "displayName": "Ana Silva Ficticia"},
+              "updateAuthor": {"name": "JIRAUSER10500", "key": "JIRAUSER10500"},
+              "comment": "COMENTARIO-SECRETO-DO-WORKLOG-2",
+              "created": "2026-10-05T18:00:00.000-0400",
+              "started": "2026-10-05T09:00:00.000-0400",
+              "timeSpent": "1h",
+              "timeSpentSeconds": 3600
+            },
+            {
+              "self": "https://jira.exemplo.invalid/rest/api/2/issue/10302/worklog/70011",
+              "id": "70011",
+              "issueId": "10302",
+              "author": {"name": "Bruno.Costa", "key": "JIRAUSER10501"},
+              "updateAuthor": {"name": "Bruno.Costa"},
+              "comment": "COMENTARIO-SECRETO-DO-WORKLOG-3",
+              "created": "2026-10-06T18:00:00.000-0400",
+              "started": "2026-10-06T09:00:00.000-0400",
+              "timeSpent": "2h",
+              "timeSpentSeconds": 7200
+            }
+          ]
+        }
+      },
+      "changelog": {"startAt": 0, "maxResults": 100, "total": 0, "histories": []}
+    },
+    {
+      "id": "10303",
+      "key": "TG-303",
+      "fields": {
+        "summary": "Busca sem o campo worklog",
+        "project": {"key": "TG"},
+        "issuetype": {"name": "Task"},
+        "status": {"name": "To Do"},
+        "assignee": {"name": "bruno.costa"},
+        "reporter": {"name": "carla.souza"},
+        "created": "2026-10-02T09:00:00.000-0400",
+        "updated": "2026-10-06T12:00:00.000-0400",
+        "labels": []
+      },
+      "changelog": {"startAt": 0, "maxResults": 100, "total": 0, "histories": []}
+    },
+    {
+      "id": "10304",
+      "key": "TG-304",
+      "fields": {
+        "summary": "Worklog vazio",
+        "project": {"key": "TG"},
+        "issuetype": {"name": "Task"},
+        "status": {"name": "To Do"},
+        "assignee": {"name": "bruno.costa"},
+        "reporter": {"name": "carla.souza"},
+        "created": "2026-10-02T09:30:00.000-0400",
+        "updated": "2026-10-06T12:30:00.000-0400",
+        "labels": [],
+        "worklog": {"startAt": 0, "maxResults": 20, "total": 0, "worklogs": []}
+      },
+      "changelog": {"startAt": 0, "maxResults": 100, "total": 0, "histories": []}
+    }
+  ]
+}

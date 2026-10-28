@@ -27,7 +27,7 @@ import io.ktor.server.routing.Route
  */
 internal fun cartoesDePessoas(): List<CartaoRegistrado> =
     cartoesDeCarga() + cartoesDeCapacidade() + cartoesDeCalendario() + cartoesDePlano() + cartoesDeVencimentos() +
-        cartoesDeGargalos() + cartoesDeTendencia()
+        cartoesDeGargalos() + cartoesDeTendencia() + cartoesDePessoas6b()
 
 /** `GET /api/cards/{id}` dos cards de pessoas e planejamento (o drill é a rota genérica dos cartões). */
 internal fun Route.rotasDosCardsDePessoas(ctx: AppContext, store: WorkStore, auditoria: AccessLog) {
@@ -38,4 +38,5 @@ internal fun Route.rotasDosCardsDePessoas(ctx: AppContext, store: WorkStore, aud
     rotaDeCard(ctx, store, auditoria, CardVencimentos)
     rotaDeCard(ctx, store, auditoria, CardGargalos, SO_LIDERANCA)
     rotaDeCard(ctx, store, auditoria, CardTendencia, SO_LIDERANCA)
+    rotasDosCardsDePessoas6b(ctx, store, auditoria)
 }

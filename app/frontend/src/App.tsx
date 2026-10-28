@@ -18,6 +18,13 @@ import { Carga } from './screens/Carga/Carga'
 import { Gargalos } from './screens/Gargalos/Gargalos'
 import { Plano } from './screens/Plano/Plano'
 import { Tendencia } from './screens/Tendencia/Tendencia'
+import { CargaTipo } from './screens/CargaTipo/CargaTipo'
+import { Cobertura } from './screens/Cobertura/Cobertura'
+import { Competencias } from './screens/Competencias/Competencias'
+import { Esforco } from './screens/Esforco/Esforco'
+import { Posse } from './screens/Posse/Posse'
+import { Revisoes } from './screens/Revisoes/Revisoes'
+import { Simulador } from './screens/Simulador/Simulador'
 import { Vencimentos } from './screens/Vencimentos/Vencimentos'
 import { Riscos } from './screens/Riscos/Riscos'
 import { Metas } from './screens/Metas/Metas'
@@ -60,6 +67,13 @@ export default function App() {
                 <Route path="vencimentos" element={<Vencimentos />} />
                 <Route path="gargalos" element={<Gargalos />} />
                 <Route path="tendencia" element={<Tendencia />} />
+                <Route path="posse" element={<Posse />} />
+                <Route path="esforco" element={<Esforco />} />
+                <Route path="cobertura" element={<Cobertura />} />
+                <Route path="simulador" element={<Simulador />} />
+                <Route path="competencias" element={<Competencias />} />
+                <Route path="revisoes" element={<Revisoes />} />
+                <Route path="cargaTipo" element={<CargaTipo />} />
                 <Route path="epicos" element={<Epicos />} />
                 <Route path="fluxoDaSemana" element={<FluxoDaSemana />} />
                 <Route path="agingWip" element={<AgingWip />} />

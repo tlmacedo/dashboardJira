@@ -1,6 +1,8 @@
 // Dados fictícios dos cards de pessoas e planejamento (Fase 6) SÓ para o desenvolvimento visual (PAINEL_MOCK=1 pnpm dev).
 // Não entra no bundle de produção. Nenhum dado real; nomes inventados.
 
+import { cartoesDePessoas6bMock, mockPessoas6b } from './mockPessoas6b.ts'
+
 const PESSOAS = ['ana', 'bruno', 'carla', 'diego', 'elisa']
 const SEMANAS = ['2026-10-26', '2026-11-02', '2026-11-09', '2026-11-16', '2026-11-23', '2026-11-30', '2026-12-07', '2026-12-14']
 const ok = (f: number) => ({ fracao: f, semCapacidade: false, estado: f > 1.1 ? 'problema' : f >= 0.85 ? 'atencao' : 'ok' })
@@ -149,7 +151,7 @@ export function mockPessoas(pathname: string, params: URLSearchParams): unknown 
     case '/api/cards/tendencia':
       return tendencia()
     default:
-      return undefined
+      return mockPessoas6b(pathname, params)
   }
 }
 
@@ -170,11 +172,12 @@ export function cartoesDePessoasMock() {
   const venc: [string, string, string, string[], boolean][] = [
     ['VE-01', 'vencimentos', 'PRAZO', TODOS, true], ['VE-02', 'vencimentos', 'PRAZO', TODOS, true],
   ]
-  return [...def, ...venc].map(([id, tela, natureza, papeis, temDrill]) => {
+  const bloco6a = [...def, ...venc].map(([id, tela, natureza, papeis, temDrill]) => {
     const base = `card.${id.replace('-', '').toLowerCase()}`
     return {
       id, grupo: id.startsWith('VE') ? 'prazos' : 'pessoas', natureza, tela, tituloChave: `${base}.titulo`, oQueMostraChave: `${base}.oQueMostra`,
       comoCalculaChave: `${base}.comoCalcula`, fontes: ['ISSUE', 'CONFIGURACAO'], papeis, temDrill, exigeChangelog: false, exigeWorklog: false,
     }
   })
+  return [...bloco6a, ...cartoesDePessoas6bMock()]
 }
