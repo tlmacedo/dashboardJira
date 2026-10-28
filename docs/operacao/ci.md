@@ -8,7 +8,7 @@ Os nomes dos jobs são os nomes dos checks que a proteção da `main` exige. Nã
 
 | Check | O que prova |
 |---|---|
-| `backend` | `./gradlew test` completo (SQLite real em arquivo temporário, MockEngine no lugar do Jira). |
+| `backend` | `./gradlew test` completo (SQLite real em arquivo temporário, MockEngine no lugar do Jira), o que inclui a barreira `PlataformaSemDockerTest` contra o retorno de Docker, PostgreSQL e Testcontainers. |
 | `frontend` | `pnpm lint`, `pnpm vitest run` e `pnpm build` do React/TypeScript, e `node scripts/verificar-csp.mjs` (o build não pode ter script ou estilo inline, que a CSP bloquearia). |
 | `guarda` | Os testes dos hooks que protegem o acesso ao Jira: `.claude/hooks/test-guard.sh` (Claude Code) e `.clinerules/hooks/test-PreToolUse.sh` (Cline). |
 | `varredura` | Os testes do script de varredura e a varredura do que o PR acrescenta (linhas adicionadas e mensagens de commit): arquivo proibido, e-mail, segredo, host interno e nome proibido. |

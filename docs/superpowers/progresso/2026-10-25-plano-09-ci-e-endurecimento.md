@@ -33,10 +33,33 @@ Branch: `feat/ci-e-endurecimento` (lote 9a = tarefas 1 a 3; os lotes seguintes c
 
 ## Minor adiados
 
-(nenhum até aqui)
+Estado dos Minor do `HANDOFF.md` ao fim do Plano 9 (o orquestrador atualiza o `HANDOFF.md`; esta é a tabela para ele):
+
+| Minor | Estado |
+|---|---|
+| parâmetro `settingsIgnorado` de `module` | resolvido no Plano 9, Tarefa 8 |
+| limites da varredura da fábrica (`::JiraClient`, alias, `typealias`, `copy` aninhado) | resolvido no Plano 9, Tarefa 10 |
+| inverter a regra de `exigeAutenticacao` | resolvido no Plano 9, Tarefa 8 |
+| teste do `delay` do retry com cancelamento | já resolvido antes (`delayDoRetryRespeitaCancelamento`) |
+| máscara do token escapado em JSON/URL | já resolvido antes (`padraoEscapado`, com teste) |
+| teste unitário de `resolverDentro` com symlink | resolvido no Plano 9, Tarefa 8 (`StaticSpaResolverTest`) |
+| CSP e X-Frame-Options | resolvido no Plano 9, Tarefa 3 |
+| imagens Docker por digest; imagem com modo dev por padrão | descartados com a saída do Docker (equivalente: Tarefas 6 e 7) |
+| acessibilidade da casca: contraste de `--line` | adiado para o Plano 8, Tarefa 4 |
+| piscada do tema; `#1329A0` × `#0023A4` | adiados para o Plano 15 |
+| `RetentionTest` intermitente | descartado (era do Ryuk/Testcontainers); conferência na Tarefa 12: 10 execuções, 0 falhas |
+| `SearchRequest(jql: String)` sem tipo | resolvido no Plano 9, Tarefa 9 |
+
+Itens novos adiados por este plano: nenhum Minor novo. Observações para a revisão final: (1) `JiraClient.kt` passou a ser arquivo permitido para `JiraClient(`/`HttpClient(` na varredura da fábrica (o plano manda); (2) a prova real do workflow só existe quando o primeiro PR rodar no GitHub.
 
 ## Tarefas
 
+- Tarefa 12 (lote 9d), fechamento local. Conferências sem o GitHub:
+  - Backend `./gradlew test --rerun-tasks`: 852 testes, 0 falhas, 0 ignorados. Frontend `pnpm install --frozen-lockfile`, `pnpm lint` (0 erros, só avisos), `pnpm vitest run`: 74 testes (7 arquivos), 0 falhas; `pnpm build` ok; `verificar-csp.mjs` ok.
+  - `test-varredura.sh`, `test-guard.sh` e `test-PreToolUse.sh`: 0 falhas. `varrer-dados-pessoais.sh --arvore`: `VARREDURA OK`.
+  - `RetentionTest` 10 vezes seguidas (`cleanTest`): 0 falhas.
+  - README (seção "CI") e `docs/operacao/ci.md` atualizados; índice dos planos: Fase 9 como "Executado na branch `feat/ci-e-endurecimento` (PR pendente)".
+- **Passos pendentes (dependem do orquestrador e do usuário):** (a) abrir o PR e conferir que `backend`, `frontend`, `guarda` e `varredura` rodam e ficam verdes no GitHub (`gh pr checks`); se um falhar só lá, corrigir na branch, nunca desligar o job; (b) **o usuário** cria a regra de proteção da `main` com os 4 checks obrigatórios, pelo passo a passo da seção 5 de `docs/operacao/ci.md` (só depois do primeiro CI, senão o GitHub não oferece os nomes); (c) opcional: criar o segredo `VARREDURA_NOMES` (um nome por linha); (d) fixar as actions por SHA se quiser (hoje por tag maior, Ruling acima); (e) o orquestrador atualiza `HANDOFF.md` e `CLAUDE.md`.
 - Tarefa 11 (lote 9d): `PlataformaSemDockerTest` (7: os 5 do plano + 2 de poder dos detectores). Como o repositório já estava conforme, os 5 passaram de primeira; o poder foi provado por mutação: `app/Dockerfile`, um `.kt` temporário com a URL JDBC do PostgreSQL e um YAML temporário em `.github/` com `services:`/`image:` derrubaram `semArquivosDeContainer`, `codigoSemDriverNemContainerDeBanco` e `workflowSemDockerNemServicos`; arquivos removidos depois (`git status` limpo). Os dois testes extras exercitam `ehArquivoDeContainer` e `executaDocker` com texto sintético. Escopo respeitado: sem `docs/`, `.clinerules/`, `CLAUDE.md` nem `legacy/` (que ainda tem Dockerfile e compose de referência).
 - Ruling (T11): além de `app/`, `.github/` e a raiz (só arquivos diretos), `semArquivosDeContainer` também varre `scripts/`; `buildSemDependenciaDeServidorDeBanco` inclui `settings.gradle.kts`. A ausência de comando Docker nos scripts de subida só considera linhas que não são comentário.
 

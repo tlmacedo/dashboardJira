@@ -89,3 +89,7 @@ cd frontend && pnpm install && pnpm test && pnpm dev   # frontend em http://loca
 ```
 
 Em desenvolvimento, rode o backend (`cd backend && ./gradlew run`, que já usa `app/` como pasta de trabalho) e o `pnpm dev` em outro terminal.
+
+## CI
+
+Todo pull request e todo push na `main` roda o workflow `.github/workflows/ci.yml` com quatro checks: `backend` (suíte do Gradle, SQLite em arquivo temporário), `frontend` (lint, testes, build e verificação da CSP), `guarda` (testes dos hooks) e `varredura` (dados pessoais e segredos no que o PR acrescenta). Só usa JDK 21 e Node 22/pnpm: sem Docker, sem serviços e sem acesso ao Jira. Para rodar o mesmo na máquina e para a proteção da `main` (ação do usuário no GitHub), veja [docs/operacao/ci.md](../docs/operacao/ci.md).
