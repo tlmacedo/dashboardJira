@@ -74,6 +74,7 @@ fun testContextComBanco(
         clock = clock,
         regrasDeMetas = regrasDeMetasDeTeste(),
         regrasDeRisco = regrasDeRiscoDeTeste(),
+        regrasDePrevisao = regrasDePrevisaoDeTeste(),
     )
 }
 

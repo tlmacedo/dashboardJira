@@ -147,6 +147,16 @@ class CardQueryFactoryTest {
     }
 
     @Test
+    fun jqlSnapshotPrevisaoEEpicos() {
+        // Previsão lê os 3 tipos Checklist (o backlog de Abertas) SEM excluir status: as canceladas formam a série à parte.
+        assertEquals(filtrosDeTrabalho, jqlDaFicha("previsao"))
+        // Épicos lê os 6 tipos da sincronização, de qualquer situação, e pede os campos de épico e de pontos.
+        val todosOsTipos = "project in (\"TG-Basic\") AND issuetype in (\"Checklist\", \"Checklist TG\", \"Checklist Review\", " +
+            "\"Feature check\", \"TG Feature check\", \"Task\")"
+        assertEquals(todosOsTipos, jqlDaFicha("epicos"))
+    }
+
+    @Test
     fun jqlSnapshotNegativas() {
         // Como Fechadas: os 6 tipos da sincronização e nenhuma exclusão de status (as canceladas contam em NE-03).
         val todosOsTipos = "project in (\"TG-Basic\") AND issuetype in (\"Checklist\", \"Checklist TG\", \"Checklist Review\", " +

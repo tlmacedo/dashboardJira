@@ -1,0 +1,39 @@
+# Ficha do card "Épicos" (Plano 5b). Estrita: chave desconhecida falha ao carregar.
+# Lê tasks de qualquer situação (o progresso do épico precisa das concluídas de qualquer data). O campo do épico
+# (Epic Link) é "a confirmar" na primeira conexão: sem ele o card avisa em vez de mostrar zero.
+
+id: epicos
+titulo: Épicos
+instancia: samsung
+
+campos:
+  - OS Version
+  - Epic Link
+  - Story Points
+
+filtrosFixos:
+  project: ["TG-Basic"]
+  issuetype: ["Checklist", "Checklist TG", "Checklist Review", "Feature check", "TG Feature check", "Task"]
+
+parametros:
+  - nome: squad
+    tipo: squad
+    obrigatorio: false
+  - nome: os
+    tipo: os
+    obrigatorio: false
+
+formula: >-
+  Por épico: itens (tasks com o épico, sem os tipos de review e sem as canceladas), concluídos, progresso (concluídos ÷
+  itens), a task aberta mais antiga, vencidos e pontos. A previsão em semanas (P85) usa só a vazão do próprio épico, nas
+  últimas 16 semanas fechadas, e só aparece com pelo menos 5 entregas dele no histórico; sem amostra própria é traço.
+
+exemplo: >-
+  squad=[dev.alfa], os não informado (tipo e prioridade são ignorados, como no app anterior).
+
+aceite:
+  - Sem o campo de épico sincronizado, o card avisa e não mostra zero.
+  - A previsão do épico nunca usa a vazão do time.
+  - Cada contagem abre as tasks que a formam; a chave do épico não vai para o registro de acesso.
+
+expandChangelog: false

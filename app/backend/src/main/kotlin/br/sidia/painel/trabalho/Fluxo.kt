@@ -121,14 +121,9 @@ object Fluxo {
     fun semanaDe(at: Instant, zone: ZoneId): LocalDate =
         at.atZone(zone).toLocalDate().with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
 
-    private fun serie(instantes: List<Instant>, ultimaSemana: LocalDate, semanas: Int, zone: ZoneId): List<Pair<LocalDate, Int>> {
-        require(semanas > 0) { "semanas deve ser positivo" }
-        val porSemana = instantes.groupingBy { semanaDe(it, zone) }.eachCount()
-        return (semanas - 1 downTo 0).map { k ->
-            val semana = ultimaSemana.minusWeeks(k.toLong())
-            semana to (porSemana[semana] ?: 0)
-        }
-    }
+    /** A contagem semanal mora em [SerieSemanal] (função única da Previsão e do "Fluxo da semana"). */
+    private fun serie(instantes: List<Instant>, ultimaSemana: LocalDate, semanas: Int, zone: ZoneId): List<Pair<LocalDate, Int>> =
+        SerieSemanal.contar(instantes, ultimaSemana, semanas, zone)
 
     /** Concluídas por semana (pela `resolved`), da mais antiga à [ultimaSemana] inclusive; semanas vazias com 0. */
     fun throughputSemanal(concluidas: List<IssueSnapshot>, ultimaSemana: LocalDate, semanas: Int, zone: ZoneId): List<Pair<LocalDate, Int>> =

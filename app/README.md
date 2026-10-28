@@ -74,7 +74,7 @@ Na subida o painel carrega o calendário e o diretório de papéis, abre o pool 
 - `calendario.yaml` ausente (idem: em dev usa `calendario.exemplo.yaml`).
 - `status_map.yaml` ausente (idem: em dev usa `status_map.exemplo.yaml`; em produção é obrigatório, sem padrão inventado). Crie-o a partir de `config/status_map.exemplo.yaml`, com os nomes de status reais; sem ele o painel não sobe e, com nomes que não casam, o card Tempo em status mostra "status sem mapeamento".
 - `vinculos.yaml` ausente (em dev usa `vinculos.exemplo.yaml` com aviso; em produção é obrigatório). Crie-o a partir de `config/vinculos.exemplo.yaml` (tipo do link que liga a Review à task e tipos de issue; sem dado pessoal).
-- `labels_atraso.yaml`, `auditoria.yaml`, `metas.yaml` ou `risco.yaml` ausentes (em dev usam o `.exemplo` com aviso; em produção são obrigatórios). Crie-os a partir de `config/*.exemplo.yaml` (labels que justificam atraso, limites da auditoria, metas do card Metas e prazos, pesos do card Riscos; sem dado pessoal).
+- `labels_atraso.yaml`, `auditoria.yaml`, `metas.yaml`, `risco.yaml` ou `previsao.yaml` ausentes (em dev usam o `.exemplo` com aviso; em produção são obrigatórios). Crie-os a partir de `config/*.exemplo.yaml` (labels que justificam atraso, limites da auditoria, metas do card Metas e prazos, pesos do card Riscos, parâmetros da Previsão e dos Épicos; sem dado pessoal).
 - YAML inválido: a mensagem cita só o caminho e o tipo do erro.
 - Nenhum **GERENTE** com papel vigente hoje no `papeis.yaml`.
 - Arquivo de banco inacessível, já em uso por outro painel ou migração que falha.
