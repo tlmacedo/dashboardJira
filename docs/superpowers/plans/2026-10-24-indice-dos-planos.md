@@ -34,7 +34,7 @@ A 14a (bloco de sincronização) começa logo depois do 9, quando o usuário lig
 | 3B | — (adendo) | `../specs/2026-10-27-spec-fase-3b-saida-do-docker-sqlite.md` | Executado (PRs #18 e #19): SQLite, sem Docker |
 | 4A (12 tarefas) | `2026-10-25-plano-04a-sincronizacao.md` | `../specs/2026-10-25-spec-fase-04a-sincronizacao.md` | Executado (PR #14) |
 | 4 | `2026-10-25-plano-04-auditoria.md` | `../specs/2026-10-25-spec-fase-04-auditoria.md` | Tarefas 1 a 3 na `main` (PR #15); Tarefas 4 a 9 executadas na branch `feat/auditoria-tarefas-4-a-9` (PR pendente) |
-| 5 | `2026-10-25-plano-05-cards-trabalho-e-prazos.md` | `../specs/2026-10-25-spec-fase-05-cards-trabalho-e-prazos.md` | Bloco 5a (Tarefas 1 a 9) executado na branch `feat/cards-trabalho-5a` (PR pendente); bloco 5b aguardando execução |
+| 5 | `2026-10-25-plano-05-cards-trabalho-e-prazos.md` | `../specs/2026-10-25-spec-fase-05-cards-trabalho-e-prazos.md` | Bloco 5a (Tarefas 1 a 9) executado (PR #33, mesclado); bloco 5b (Tarefas 10 a 14) executado na branch `feat/cards-trabalho-5b` (PR pendente) |
 | 6 | `2026-10-25-plano-06-pessoas-planejamento-ausencias.md` | `../specs/2026-10-25-spec-fase-06-pessoas-planejamento-ausencias.md` | Escrito, aguardando execução |
 | 7 | `2026-10-25-plano-07-checklist-integridade-distribuicao-governanca.md` | `../specs/2026-10-25-spec-fase-07-checklist-integridade-distribuicao-governanca.md` | Escrito, aguardando execução |
 | 8 | `2026-10-25-plano-08-preparacao-final-e-remocao-do-legacy.md` | `../specs/2026-10-25-spec-fase-08-preparacao-final-e-remocao-do-legacy.md` | Escrito, aguardando execução |

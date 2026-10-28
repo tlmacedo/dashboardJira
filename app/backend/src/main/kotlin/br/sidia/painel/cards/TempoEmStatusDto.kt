@@ -55,6 +55,10 @@ data class AvisoDto(
         const val DONE_SEM_RESOLUTION = "DONE_SEM_RESOLUTION"
         /** `status_map.ordem` não configurada: a "devolvida" não pode ser calculada. */
         const val ORDEM_DO_FLUXO_AUSENTE = "ORDEM_DO_FLUXO_AUSENTE"
+        /** Nenhuma entrega na janela de semanas da Previsão: sem vazão não há como estimar (informativo; sem datas). */
+        const val SEM_VAZAO_HISTORICA = "SEM_VAZAO_HISTORICA"
+        /** Nenhum issue da base tem o campo de épico (`Epic Link`): a tabela de épicos fica vazia (informativo). */
+        const val EPICO_INDISPONIVEL = "EPICO_INDISPONIVEL"
         const val BLOQUEANTE = "bloqueante"
         const val INFORMATIVO = "informativo"
 

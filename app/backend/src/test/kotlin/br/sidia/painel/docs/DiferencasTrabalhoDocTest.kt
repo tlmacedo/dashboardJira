@@ -5,7 +5,7 @@ import java.nio.file.Path
 import kotlin.test.Test
 import kotlin.test.assertTrue
 
-/** O documento de diferenças esperadas do bloco 5a cita todos os cartões de trabalho e prazos. */
+/** O documento de diferenças esperadas dos blocos 5a e 5b cita todos os cartões de trabalho e prazos. */
 class DiferencasTrabalhoDocTest {
     private fun documento(): String {
         var dir: Path? = Path.of("").toAbsolutePath()
@@ -21,9 +21,19 @@ class DiferencasTrabalhoDocTest {
     fun documentoCitaOsIds() {
         val texto = documento()
         val esperados = (1..9).map { "AB-%02d".format(it) } + (1..6).map { "NG-%02d".format(it) } +
-            (1..12).map { "FE-%02d".format(it) } + (1..14).map { "MT-%02d".format(it) }
+            (1..12).map { "FE-%02d".format(it) } + (1..14).map { "MT-%02d".format(it) } +
+            (1..10).map { "NE-%02d".format(it) } + (1..3).map { "RI-%02d".format(it) } +
+            (1..6).map { "PV-%02d".format(it) } + listOf("EP-01")
         val faltando = esperados.filterNot { it in texto }
         assertTrue(faltando.isEmpty(), "IDs sem menção no documento: $faltando")
+    }
+
+    @Test
+    fun documentoTrazOsTemasDoBloco5b() {
+        val texto = documento().lowercase()
+        for (tema in listOf("changelog", "TG-133", "taxa de chegada", "amostra própria", "nivel:baixo", "proporção", "pela capacidade", "Fase 6")) {
+            assertTrue(tema.lowercase() in texto, "tema ausente: $tema")
+        }
     }
 
     @Test
