@@ -82,11 +82,15 @@ class SyncerTest {
     private fun jira(
         busca: String = fixture("search-tg-basic-changelog.json"),
         changelogs: Map<String, String> = emptyMap(),
+        /** Corpos do GET `issue/{key}` (rota de `expand=changelog`), por chave. */
+        porExpand: Map<String, String> = emptyMap(),
     ): MockEngine = MockEngine { req ->
         val caminho = req.url.encodedPath
         val extra = changelogs.entries.firstOrNull { caminho.endsWith("/rest/api/2/issue/${it.key}/changelog") }
+        val expand = porExpand.entries.firstOrNull { caminho.endsWith("/rest/api/2/issue/${it.key}") }
         when {
             extra != null -> respond(extra.value, HttpStatusCode.OK, json)
+            expand != null -> respond(expand.value, HttpStatusCode.OK, json)
             caminho.endsWith("/rest/api/2/search") -> respond(busca, HttpStatusCode.OK, json)
             caminho.endsWith("/rest/api/2/issue/TG-4/changelog") -> respond(fixture("changelog-tg-4-completo.json"), HttpStatusCode.OK, json)
             else -> respond("""{"errorMessages":["nao esperado"]}""", HttpStatusCode.NotFound, json)
@@ -366,7 +370,7 @@ class SyncerTest {
     }
 
     @Test
-    fun reporterNormalizadoEChangelogAusenteBuscaOCompleto() = runBlocking {
+    fun reporterNormalizadoEChangelogAusenteBuscaPorExpand() = runBlocking {
         val original = fixture("search-tg-basic-changelog.json")
         val historicosTg1 = obj(original).getValue("issues").jsonArray.map { it.jsonObject }
             .first { it.getValue("key").jsonPrimitive.content == "TG-1" }
@@ -374,10 +378,11 @@ class SyncerTest {
         val busca = alterarIssue(original, "TG-1") {
             JsonObject(it.comFields("reporter" to obj("""{"name":"  Carla.SOUZA "}""")).filterKeys { k -> k != "changelog" })
         }
-        val completo = """{"startAt":0,"maxResults":100,"total":2,"values":$historicosTg1}"""
-        val engine = jira(busca = busca, changelogs = mapOf("TG-1" to completo))
+        val completo = """{"key":"TG-1","changelog":{"startAt":0,"maxResults":100,"total":2,"histories":$historicosTg1}}"""
+        val engine = jira(busca = busca, porExpand = mapOf("TG-1" to completo))
         Syncer(cliente(engine), store, "samsung").run(consulta)
-        assertEquals(1, engine.requestHistory.count { it.url.encodedPath.endsWith("/issue/TG-1/changelog") })
+        assertEquals(1, engine.requestHistory.count { it.url.encodedPath.endsWith("/issue/TG-1") })
+        assertEquals(0, engine.requestHistory.count { it.url.encodedPath.endsWith("/issue/TG-1/changelog") })
         assertEquals("carla.souza", texto("SELECT reporter_ref FROM issue WHERE key = 'TG-1'").single())
         assertEquals(3, texto("SELECT changelog_id FROM change_event WHERE changelog_id LIKE 'TG-1:%'").size)
     }
