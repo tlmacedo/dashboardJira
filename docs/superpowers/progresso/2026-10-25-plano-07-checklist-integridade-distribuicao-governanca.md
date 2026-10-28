@@ -204,3 +204,10 @@ Ruling: migração — migrações existentes V1 a V4 na `main` e em todas as br
 - Pendência: passo 5 (captura de verificação a 1440 e 390 px nos três temas) NÃO feito: o ambiente não tem navegador. A rodada das telas do bloco 7b (Distribuição, Rebalanceamento, Decisões, Qualidade, Registro de acesso, Configuração, Central, Meu squad e Meu painel) fica para quem tiver um navegador, antes do merge.
 - Prova de que os testes pegam defeito (T17): a pergunta "o item de integridade some para o coordenador" é provada no backend (T15, mutação do papel); na tela o teste `centralCoordenadorSemItemIntegridade` cobre os dois lados do DTO. Pendência de TDD: as telas foram escritas antes dos testes.
 
+### Tarefa 18 (diferenças esperadas, compatibilidade com o legado e HANDOFF)
+
+- Ruling: T18 — a seção 7b de `docs/analise/diferencas-esperadas-checklist-integridade-governanca.md` cobre VG-01..13, MP-01..05, DI-01..05 (o DI-05 e o RB-03 são a AÇÃO de decidir, não cartões), RB-01..03, QD-01..05, AU-01 (que no painel é `DC-01`, porque o id AU-01 já é da Auditoria), AU-02 (`RA-01`), SI-01, SI-02 e a Configuração (`CF-01`). `DiferencasChecklistIntegridadeDocTest` passou a exigir esses ids e os temas do bloco.
+- Ruling: T18 — `CompatLegadoDistribuicaoTest` confere no código Python (`engine.py`) as constantes do legado (pesos 1,0/0,5/1,0/0,6/0,15, faixa 0,85–1,15, gatilho 1,1, histerese 0,2, 10 movimentos, capacidade > 0,5) e prova o que muda de propósito: (1) o painel não soma as horas do item ao candidato (a diferença é exatamente horas ÷ capacidade), (2) a produtividade tem sentido invertido (gasto ÷ estimado multiplica a carga; no legado o throughput divide), (3) a histerese mede a origem DEPOIS do movimento, mais conservadora. Iguais ao legado: gatilho estrito, WIP que não sobe na atribuição, elegibilidade, desempate por quem recebeu há mais tempo. O trecho que lê `legacy/` se pula sozinho quando o Plano 8 remover a pasta.
+- `HANDOFF.md` atualizado (bloco 7b, migração V5 e o próximo passo).
+- Fechamento do bloco 7b: ver a lista de commits, as contagens das suítes e os Minor adiados no relatório final.
+
