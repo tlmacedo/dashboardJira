@@ -32,7 +32,7 @@ data class ResultadoAuditoria(
  */
 class AuditCalculator(
     private val ctx: ContextoDeteccao,
-    private val detectores: List<Detector> = DetectoresDeVencimento.todos + DetectoresDeResponsavel.todos + DetectoresDeLabels.todos + DetectoresDeEstimativa.todos,
+    private val detectores: List<Detector> = DetectoresDeVencimento.todos + DetectoresDeResponsavel.todos + DetectoresDeLabels.todos + DetectoresDeEstimativa.todos + DetectoresDeWorklog.todos,
 ) {
     private val ordem = Comparator<Sinal> { a, b ->
         b.at.compareTo(a.at).takeIf { it != 0 }
@@ -126,6 +126,13 @@ class AuditCalculator(
             informativo(
                 AvisoDto.HISTORICO_DE_ESTIMATIVA_INCOMPLETO, "$semValorDeEstimativa evento(s) de estimativa sem valor: a nova carga os preenche",
                 mapOf("n" to semValorDeEstimativa.toString()),
+            )
+        }
+        val semCriacao = timelines.sumOf { DetectoresDeWorklog.semCriacao(it) }
+        if (semCriacao > 0 && ctx.regras.sinais[CodigoSinal.WORKLOG_RETROATIVO]?.ativo == true) {
+            informativo(
+                AvisoDto.HISTORICO_DE_WORKLOG_INCOMPLETO, "$semCriacao registro(s) de horas sem data de criação: a nova carga os preenche",
+                mapOf("n" to semCriacao.toString()),
             )
         }
         for ((status, chaves) in ignoradas) {

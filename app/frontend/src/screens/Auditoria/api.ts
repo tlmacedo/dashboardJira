@@ -17,6 +17,7 @@ export const CODIGOS_DE_SINAL = [
   'LABEL_APOS_VENCIMENTO',
   'CANCELAMENTO_SUSPEITO',
   'ESTIMATIVA_REDUZIDA',
+  'WORKLOG_RETROATIVO',
 ] as const
 
 export type Resultado = 'auditoria' | 'alerta'

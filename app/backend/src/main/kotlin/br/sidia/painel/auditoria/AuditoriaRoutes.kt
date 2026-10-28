@@ -112,5 +112,21 @@ private fun historico(ctx: AppContext, chave: String): HistoricoDto {
             add(AvisoDto(AvisoDto.VENCIMENTO_ILEGIVEL, AvisoDto.INFORMATIVO, "vencimento ilegível no histórico", mapOf("n" to t.vencimentosIlegiveis.toString())))
         }
     }
-    return HistoricoDto(AVISO_INDICIO_NAO_PROVA, issue.key, issue.summary, issue.reporter, linhas, avisos)
+    return HistoricoDto(AVISO_INDICIO_NAO_PROVA, issue.key, issue.summary, issue.reporter, (linhas + linhasDeWorklog(issue, ctx)).sortedBy { it.at }, avisos)
 }
+
+/**
+ * Os registros de horas da issue como linhas do histórico (`campo = "worklog"`): `de` é o dia do início declarado, `para` o dia
+ * da criação (fuso de Manaus) com a duração em horas, e `at` o instante da criação (o início, se a criação não foi guardada).
+ * Sem comentário: o painel nunca o guarda. O autor do worklog aparece como nos demais eventos.
+ */
+private fun linhasDeWorklog(issue: AuditIssue, ctx: AppContext): List<LinhaHistoricoDto> =
+    issue.worklogs.sortedWith(compareBy({ it.started }, { it.jiraId })).map { w ->
+        val horas = String.format(Locale.ROOT, "%.1f h", w.seconds / 3600.0)
+        LinhaHistoricoDto(
+            at = (w.criado ?: w.started).toString(), campo = "worklog",
+            de = ctx.calendar.localDate(w.started).toString(),
+            para = (w.criado?.let { ctx.calendar.localDate(it).toString() } ?: "?") + " ($horas)",
+            autor = w.autor, autorizado = null, motivo = null, valorGuardado = true,
+        )
+    }

@@ -528,6 +528,36 @@ class AuditoriaRoutesTest {
     }
 
     @Test
+    fun historicoListaWorklogsSemComentarioEEstimativaEmHoras() = rodar { get ->
+        val j = issue("TG-30")
+        val w = br.sidia.painel.sync.WorklogRecord("77", "ana", i("2026-10-15T13:00:00Z"), 5400, i("2026-10-19T15:00:00Z"))
+        SqliteIssueStore(requireNotNull(ctx.dataSource)).upsert(
+            j,
+            listOf(
+                ev("TG-30", "status", "Open", "In Progress", "2026-10-05T12:00:00Z", "ana"),
+                ev("TG-30", "timeoriginalestimate", "36000", "21600", "2026-10-08T12:00:00Z", "ana"),
+            ),
+            "samsung", null, IssueLinks.ler("TG-30", j), i("2026-10-30T12:00:00Z"), worklogs = listOf(w),
+        )
+        val r = get("gerente.exemplo", "/api/auditoria/historico/TG-30")
+        assertEquals(HttpStatusCode.OK, r.status, r.corpo)
+        val h = json.decodeFromString<HistoricoDto>(r.corpo)
+        assertEquals(listOf("status", "timeoriginalestimate", "worklog"), h.linhas.map { it.campo })
+        val estimativa = h.linhas[1]
+        assertEquals("10.0" to "6.0", estimativa.de to estimativa.para)
+        val horas = h.linhas.last()
+        assertEquals("2026-10-15", horas.de)
+        assertEquals("2026-10-19 (1.5 h)", horas.para)
+        assertEquals("ana", horas.autor)
+        assertEquals("2026-10-19T15:00:00Z", horas.at)
+        assertFalse("comment" in r.corpo.lowercase() || "comentário" in r.corpo.lowercase(), "o histórico nunca leva comentário de worklog")
+        // E os dois sinais novos aparecem na tela da Auditoria no período.
+        val s = json.decodeFromString<AuditoriaDto>(get("coord.um", "$sinais?de=2026-10-01&ate=2026-10-30").corpo)
+        assertEquals(setOf("ESTIMATIVA_REDUZIDA", "WORKLOG_RETROATIVO"), s.sinais.map { it.codigo }.toSet())
+        assertEquals("worklog", s.sinais.first { it.codigo == "WORKLOG_RETROATIVO" }.campo)
+    }
+
+    @Test
     fun historicoCampoACampoSemTextoLivre() = rodar { get ->
         semearBase()
         val r = get("gerente.exemplo", "/api/auditoria/historico/TG-1")

@@ -8,6 +8,7 @@ import br.sidia.painel.sync.ChangeEventRecord
 import br.sidia.painel.sync.ParesTaskReview
 import br.sidia.painel.sync.SqliteIssueLinkStore
 import br.sidia.painel.sync.VinculosConfig
+import br.sidia.painel.sync.WorklogRecord
 import java.sql.Connection
 import java.sql.PreparedStatement
 import java.sql.Timestamp
@@ -42,9 +43,11 @@ class SqliteAuditStore(private val ds: DataSource) : AuditStore {
         ds.connection.use { con ->
             carregar(
                 con, instance,
-                "EXISTS (SELECT 1 FROM change_event e WHERE e.issue_id = issue.id AND e.at >= ? AND e.at < ? " +
-                    "AND lower(e.field) IN (SELECT value FROM json_each(?)))",
-                listOf(Timestamp.from(de), Timestamp.from(ate), CAMPOS_AUDITADOS.emJson()),
+                "(EXISTS (SELECT 1 FROM change_event e WHERE e.issue_id = issue.id AND e.at >= ? AND e.at < ? " +
+                    "AND lower(e.field) IN (SELECT value FROM json_each(?))) " +
+                    // Worklog CRIADO no período também põe a issue na conta (o sinal de worklog retroativo tem `at = criado`).
+                    "OR EXISTS (SELECT 1 FROM worklog w WHERE w.issue_id = issue.id AND w.criado_em >= ? AND w.criado_em < ?))",
+                listOf(Timestamp.from(de), Timestamp.from(ate), CAMPOS_AUDITADOS.emJson(), Timestamp.from(de), Timestamp.from(ate)),
                 comEventos = true,
             )
         }
@@ -119,10 +122,11 @@ class SqliteAuditStore(private val ds: DataSource) : AuditStore {
         }
         if (linhas.isEmpty()) return emptyList()
         val eventos = if (comEventos) eventosDe(con, linhas) else emptyMap()
+        val worklogs = if (comEventos) worklogsDe(con, linhas) else emptyMap()
         return linhas.sortedWith(compareBy(ORDEM_NATURAL_DE_CHAVES) { it.key }).map { l ->
             AuditIssue(
                 instance, l.key, l.summary, l.tipo, l.pai, l.reporter, l.assignee, Vencimentos.ler(l.duedate), l.created,
-                l.resolved, l.resolution, l.status, l.labels, eventos[l.id].orEmpty(),
+                l.resolved, l.resolution, l.status, l.labels, eventos[l.id].orEmpty(), worklogs[l.id].orEmpty(),
             )
         }
     }
@@ -132,6 +136,23 @@ class SqliteAuditStore(private val ds: DataSource) : AuditStore {
             is Timestamp -> ps.setTimestamp(posicao, valor)
             is String -> ps.setString(posicao, valor)
             else -> error("tipo de parâmetro não suportado")
+        }
+    }
+
+    /** Os registros de horas das issues (sem comentário), em lote, por início. */
+    private fun worklogsDe(con: Connection, linhas: List<Linha>): Map<Long, List<WorklogRecord>> {
+        val sql = "SELECT issue_id, COALESCE(jira_id, CAST(id AS TEXT)), author_ref, started, seconds, criado_em FROM worklog " +
+            "WHERE issue_id IN (SELECT value FROM json_each(?)) ORDER BY started, jira_id"
+        con.prepareStatement(sql).use { ps ->
+            ps.setString(1, linhas.associate { it.id to it.key }.keys.idsEmJson())
+            ps.executeQuery().use { rs ->
+                val saida = HashMap<Long, MutableList<WorklogRecord>>()
+                while (rs.next()) {
+                    saida.getOrPut(rs.getLong(1)) { mutableListOf() } +=
+                        WorklogRecord(rs.getString(2), rs.getString(3), rs.getTimestamp(4).toInstant(), rs.getLong(5), rs.getTimestamp(6)?.toInstant())
+                }
+                return saida
+            }
         }
     }
 

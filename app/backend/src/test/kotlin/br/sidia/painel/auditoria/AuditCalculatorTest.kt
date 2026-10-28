@@ -246,6 +246,10 @@ class AuditCalculatorTest {
             m.issue("TG-110", eventos = listOf(m.ev("TG-110", "labels", null, "ONHOLDBY-PL", "2026-10-17T15:00:00Z", "pl.alfa"))),
             // 11. cancelamento depois do vencimento
             m.issue("TG-111", status = "Cancelled", eventos = listOf(m.ev("TG-111", "status", "Open", "Cancelled", "2026-10-16T15:00:00Z", "coord.um"))),
+            // 13. horas registradas dois dias úteis depois do início declarado
+            m.issue("TG-113").copy(
+                worklogs = listOf(br.sidia.painel.sync.WorklogRecord("9", "ana", java.time.Instant.parse("2026-10-15T13:00:00Z"), 3600, java.time.Instant.parse("2026-10-19T15:00:00Z"))),
+            ),
             // 12. estimativa reduzida depois de iniciar, pelo próprio responsável
             m.issue(
                 "TG-112", status = "In Progress",

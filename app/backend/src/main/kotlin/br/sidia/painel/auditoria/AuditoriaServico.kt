@@ -183,6 +183,7 @@ private val DESCRICAO_PT = mapOf(
     CodigoSinal.LABEL_APOS_VENCIMENTO to "Label de atraso depois do vencimento",
     CodigoSinal.CANCELAMENTO_SUSPEITO to "Cancelamento suspeito",
     CodigoSinal.ESTIMATIVA_REDUZIDA to "Estimativa reduzida depois do início do trabalho",
+    CodigoSinal.WORKLOG_RETROATIVO to "Horas registradas com atraso ou depois da resolução",
 )
 
 /** Linha da gaveta de tasks para um sinal: um sinal, uma linha (a mesma issue pode aparecer mais de uma vez). */

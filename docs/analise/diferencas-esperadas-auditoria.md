@@ -24,6 +24,7 @@ Limites em `app/config/auditoria.exemplo.yaml` (copie para `auditoria.yaml`); gr
 | `LABEL_APOS_VENCIMENTO` | label que justifica atraso adicionada depois do dia do vencimento, por qualquer autor | gravidade (3) | novo |
 | `CANCELAMENTO_SUSPEITO` | transição para status de cancelamento depois do vencimento, ou por quem não podia | `statusCancelamento` (Cancelled, Canceled, Dropped), gravidade (2) | novo |
 | `ESTIMATIVA_REDUZIDA` | `timeoriginalestimate` caiu pelo menos `estimativaReducaoMinima` do valor anterior DEPOIS da primeira entrada em andamento (antes é replanejamento); autor autorizado vira alerta, os demais auditoria; usa os segundos guardados no `change_event` (de/para em horas) | `estimativaReducaoMinima` (0.2), gravidade (2) | novo (o app atual tem só "estimativa aumentada", na Integridade) |
+| `WORKLOG_RETROATIVO` | horas registradas com `criado` pelo menos N dias úteis de Manaus depois do dia de `started` (o dia do início não conta, o do registro conta; fim de semana e feriado não contam), OU registradas depois da resolução com início antes dela; sempre auditoria, um sinal por registro; usa a data de criação guardada no worklog | `worklogRetroativoDiasUteis` (2), gravidade (2) | novo |
 
 Quem **podia** alterar (spec 7.1): o Reporter da task (o PL), coordenadores e gerente, ou o Squad Leader do squad do responsável, **com os papéis vigentes na data civil de Manaus da alteração**. O próprio responsável não conta como autorizado por ser Squad Leader do próprio squad (decisão do usuário). Papel encerrado na véspera não autoriza; autor ausente, de automação ou chave `JIRAUSER*` não resolvida nunca vira "autorizado" e aparece na lista como autor desconhecido ou não autorizado, sem derrubar a tela.
 
@@ -48,7 +49,7 @@ Quando a **mesma pessoa** mexe no **mesmo campo**, no **mesmo minuto**, em `emLo
 
 ## O que fica de fora
 
-- **Worklog retroativo** (spec 7.2): entra no Plano 11 (tarefa 5). **Estimativa reduzida** entrou com o `change_event` guardando os segundos da estimativa (Plano 11, tarefa 3).
+- Nada da spec 7.2 fica de fora: **estimativa reduzida** e **worklog retroativo** entraram no Plano 11 (o `change_event` passou a guardar os segundos das estimativas e o worklog, a data de criação). Os registros anteriores à nova carga não geram sinal e saem como aviso (`HISTORICO_DE_ESTIMATIVA_INCOMPLETO`, `HISTORICO_DE_WORKLOG_INCOMPLETO`).
 - Os 12 sinais de **Integridade** (Fase 7, só gerente).
 - Histórico de reporter, e conteúdo de descrição e título (o changelog só guarda o nome desses campos; o histórico mostra "valor não guardado (privacidade)").
 - Corrigir a divergência pelo painel: a Divergência mostra e leva ao Jira por link (só com a flag ligada); escrita no Jira é o Plano 16, futuro.

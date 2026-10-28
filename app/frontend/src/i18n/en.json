@@ -604,6 +604,7 @@
   "auditoria.sinal.LABEL_APOS_VENCIMENTO": "Delay label after the due date",
   "auditoria.sinal.CANCELAMENTO_SUSPEITO": "Suspicious cancellation",
   "auditoria.sinal.ESTIMATIVA_REDUZIDA": "Estimate reduced after work started",
+  "auditoria.sinal.WORKLOG_RETROATIVO": "Time logged late",
   "auditoria.motivo.REPORTER": "Task reporter",
   "auditoria.motivo.COORDENACAO": "Coordination or manager",
   "auditoria.motivo.LIDER_DO_SQUAD": "Assignee's Squad Leader",

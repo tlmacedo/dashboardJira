@@ -604,6 +604,7 @@
   "auditoria.sinal.LABEL_APOS_VENCIMENTO": "Label de atraso depois do vencimento",
   "auditoria.sinal.CANCELAMENTO_SUSPEITO": "Cancelamento suspeito",
   "auditoria.sinal.ESTIMATIVA_REDUZIDA": "Estimativa reduzida depois do início",
+  "auditoria.sinal.WORKLOG_RETROATIVO": "Horas registradas com atraso",
   "auditoria.motivo.REPORTER": "Reporter da task",
   "auditoria.motivo.COORDENACAO": "Coordenação ou gerente",
   "auditoria.motivo.LIDER_DO_SQUAD": "Squad Leader do responsável",

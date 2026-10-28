@@ -63,6 +63,18 @@ class RegrasDeAuditoriaTest {
     }
 
     @Test
+    fun limiteDoWorklogRetroativoNoYaml() {
+        assertEquals(2, carregar(modelo).worklogRetroativoDiasUteis)
+        assertEquals(2, carregar(modelo).sinais.getValue(CodigoSinal.WORKLOG_RETROATIVO).gravidade)
+        for (ruim in listOf("0", "31", "-1")) {
+            val e = assertFailsWith<IllegalArgumentException> { carregar(comAlteracao("worklogRetroativoDiasUteis: 2", "worklogRetroativoDiasUteis: $ruim")) }
+            assertTrue("worklogRetroativoDiasUteis" in e.message.orEmpty(), e.message)
+        }
+        assertEquals(1, carregar(comAlteracao("worklogRetroativoDiasUteis: 2", "worklogRetroativoDiasUteis: 1")).worklogRetroativoDiasUteis)
+        assertEquals(30, carregar(comAlteracao("worklogRetroativoDiasUteis: 2", "worklogRetroativoDiasUteis: 30")).worklogRetroativoDiasUteis)
+    }
+
+    @Test
     fun unidadeUtilEhAceita() {
         assertEquals(UnidadeDias.UTIL, carregar(comAlteracao("unidade: corrido", "unidade: util")).unidade)
     }

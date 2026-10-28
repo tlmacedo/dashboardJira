@@ -27,6 +27,8 @@ enum class CodigoSinal {
     CANCELAMENTO_SUSPEITO,
     /** Estimativa original reduzida de forma relevante depois de o trabalho começar (spec 7.2; Plano 11). */
     ESTIMATIVA_REDUZIDA,
+    /** Horas registradas com atraso (dias úteis de Manaus) em relação ao início declarado, ou depois da resolução (Plano 11). */
+    WORKLOG_RETROATIVO,
 }
 
 private const val MAX_CORRIDOS = 1_000_000L
