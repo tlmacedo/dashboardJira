@@ -31,6 +31,8 @@ class EntradaDeCard(
     val hoje: LocalDate,
     val ctx: AppContext,
     val store: WorkStore,
+    /** Os parâmetros brutos da URL, para o card ler os seus próprios (ex.: `granularidade`); sempre validar (400). */
+    val parametros: Parameters = Parameters.Empty,
 )
 
 /**
@@ -85,7 +87,7 @@ internal fun montarEntrada(
     val hoje = hoje(ctx)
     val filtros = FiltrosDeCard.ler(params, hoje, periodoPadraoDias)
     val escopo = escopoDe(principal, ctx, hoje, filtros, store.pessoas(INSTANCIA_TRABALHO))
-    return EntradaDeCard(principal, filtros, escopo, ctx.clock.instant(), hoje, ctx, store)
+    return EntradaDeCard(principal, filtros, escopo, ctx.clock.instant(), hoje, ctx, store, params)
 }
 
 /**
@@ -114,6 +116,8 @@ internal inline fun <reified D : Any> Route.rotaDeCard(
 internal class CartaoDeLeitura<D : Any>(
     override val meta: CartaoMeta,
     private val card: CardDeLeitura<D>,
+    /** O segmento é deste cartão? (cada cartão só abre os seus números; outro segmento é 400). */
+    private val aceita: (String) -> Boolean = { true },
     private val numeros: (D) -> Map<String, Int>,
 ) : CartaoRegistrado {
     override val instancia: String = INSTANCIA_TRABALHO
@@ -125,6 +129,8 @@ internal class CartaoDeLeitura<D : Any>(
 
     override suspend fun valores(e: EntradaDeCartao): Map<String, Int> = numeros(calcular(e).dto)
 
-    override suspend fun drill(e: EntradaDeCartao, segmento: String): List<LinhaDeDrill> =
-        calcular(e).detalhar(segmento) ?: throw ErroHttp(HttpStatusCode.BadRequest, CODIGO_SEGMENTO_INVALIDO)
+    override suspend fun drill(e: EntradaDeCartao, segmento: String): List<LinhaDeDrill> {
+        if (!aceita(segmento)) throw ErroHttp(HttpStatusCode.BadRequest, CODIGO_SEGMENTO_INVALIDO)
+        return calcular(e).detalhar(segmento) ?: throw ErroHttp(HttpStatusCode.BadRequest, CODIGO_SEGMENTO_INVALIDO)
+    }
 }

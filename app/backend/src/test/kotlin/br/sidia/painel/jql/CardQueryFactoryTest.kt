@@ -110,6 +110,22 @@ class CardQueryFactoryTest {
         assertTrue("not in" !in q.jql)
     }
 
+    private fun jqlDaFicha(id: String, params: Map<String, Any> = emptyMap()) =
+        fabrica.build(CardSpecs.fromYaml(TestPaths.configDir.resolve("cards/$id.card.yaml"), dict), params).jql
+
+    private val filtrosDeTrabalho = "project in (\"TG-Basic\") AND issuetype in (\"Checklist\", \"Checklist TG\", \"Checklist Review\")"
+
+    @Test
+    fun jqlSnapshotAbertas() {
+        assertEquals(
+            "$filtrosDeTrabalho AND status not in (\"Cancelled\", \"Canceled\", \"Dropped\")",
+            jqlDaFicha("abertas"),
+        )
+        assertEquals(jqlDaFicha("abertas"), jqlDaFicha("negligenciadas"))
+        // Os filtros opcionais entram quando informados.
+        assertTrue("assignee in (\"dev.alfa\")" in jqlDaFicha("abertas", mapOf("squad" to listOf("dev.alfa"))))
+    }
+
     @Test
     fun fichaDeSincronizacaoPedeCamposNovos() {
         val fields = fabrica.build(fichaSync, mapOf("desde" to desde)).fields

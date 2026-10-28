@@ -16,6 +16,9 @@ import java.util.TreeMap
 /** P50 e P85 de uma amostra de [n] itens. */
 data class Faixa(val p50: Double, val p85: Double, val n: Int)
 
+/** O último movimento REAL de uma issue: o campo que mudou (`criacao` se nunca mudou nada) e quando. */
+data class MovimentoReal(val campo: String, val em: Instant)
+
 /**
  * Métricas transversais dos cards de trabalho e prazos: uma regra só para "concluída", "ciclo", "idade" e "semana"
  * em todas as telas. Funções puras (relógio e calendário entram por parâmetro). Status fora do mapa propaga
@@ -85,6 +88,18 @@ object Fluxo {
     fun diasNoStatusAtual(s: IssueSnapshot, cal: BusinessCalendar, unit: TimeUnitMode, agora: Instant): Double {
         val desde = s.timeline.transitions.filter { it.to == s.status }.maxOfOrNull { it.at } ?: s.created
         return dias(desde, agora, cal, unit)
+    }
+
+    /** Campos cuja mudança é movimento real da task (ao contrário de `updated`, que um comentário também move). */
+    val CAMPOS_DE_MOVIMENTO = setOf("status", "assignee", "duedate", "labels", "resolution")
+
+    /**
+     * Último movimento real (ideia I-06): a mudança mais recente de status, responsável, vencimento, labels ou
+     * resolução no changelog; sem nenhuma, a criação. NÃO é o `updated` do Jira.
+     */
+    fun ultimoMovimentoReal(s: IssueSnapshot): MovimentoReal {
+        val e = s.events.filter { it.field.lowercase(java.util.Locale.ROOT) in CAMPOS_DE_MOVIMENTO }.maxByOrNull { it.at }
+        return if (e == null) MovimentoReal("criacao", s.created) else MovimentoReal(e.field.lowercase(java.util.Locale.ROOT), e.at)
     }
 
     /** Segunda-feira da semana de [at] no fuso do painel (semana = segunda a domingo). */
