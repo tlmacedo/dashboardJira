@@ -49,8 +49,9 @@ data class QuantosDto(val semanas: Int, val p50: Int, val p85: Int, val p95: Int
 
 /**
  * Previsão condicional de uma task em andamento: dos ciclos históricos do MESMO tipo maiores que a idade dela, o que
- * faltou (P50 e P85, na unidade do card). Nulos quando há menos de 5 ciclos mais longos ([n] diz quantos). As colunas
- * "pela capacidade" e "Atrasa?" chegam na Fase 6.
+ * faltou (P50 e P85, na unidade do card). Nulos quando há menos de 5 ciclos mais longos ([n] diz quantos).
+ * [pelaCapacidade] é o término previsto pela capacidade líquida do responsável (aaaa-mm-dd; nulo se não cabe no horizonte
+ * ou a task não tem responsável) e [atrasa] diz se ele cai depois do vencimento (nulo sem previsão ou sem vencimento).
  */
 @Serializable
 data class PrevisaoIssueDto(
@@ -63,4 +64,6 @@ data class PrevisaoIssueDto(
     val restanteP50: Double?,
     val restanteP85: Double?,
     val n: Int,
+    val pelaCapacidade: String?,
+    val atrasa: Boolean?,
 )

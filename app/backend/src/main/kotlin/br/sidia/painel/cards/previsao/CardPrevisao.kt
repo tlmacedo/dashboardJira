@@ -13,6 +13,7 @@ import br.sidia.painel.cards.contrato.Natureza
 import br.sidia.painel.cards.linhaDe
 import br.sidia.painel.cards.metaDeTrabalho
 import br.sidia.painel.domain.TimeUnitMode
+import br.sidia.painel.pessoas.MotorDePessoas
 import br.sidia.painel.sync.FiltroDeFicha
 import br.sidia.painel.trabalho.ConsultaDeTrabalho
 import br.sidia.painel.trabalho.Fluxo
@@ -47,8 +48,12 @@ object CardPrevisao : CardDeLeitura<PrevisaoDto> {
         ).filter { e.escopo.permiteAtual(it) && e.filtros.aceita(it) }
         Fluxo.exigirStatusMapeados(ctx.statusMap, abertas, historico)
 
+        // "Pela capacidade" e "Atrasa?" (PV-06): a fila de cada pessoa usa TODAS as abertas dela dentro da visão, sem os
+        // filtros de tipo, prioridade e OS (senão a fila ficaria menor do que é e o término sairia adiantado).
+        val filaDaVisao = e.store.snapshots(ConsultaDeTrabalho(INSTANCIA_TRABALHO, ficha, Situacao.ABERTAS)).filter { e.escopo.permiteAtual(it) }
+        val agendamentos = MotorDePessoas(ctx).agenda.agendarTodas(filaDaVisao, e.hoje)
         val analise = PrevisaoCalculator(ctx.calendar, ctx.statusMap, regras)
-            .analisar(abertas, historico, e.agora, semente(e.hoje, e.filtros), e.filtros.unit)
+            .analisar(abertas, historico, e.agora, semente(e.hoje, e.filtros), e.filtros.unit, agendamentos)
         val unidade = if (e.filtros.unit == TimeUnitMode.UTIL) "dias úteis" else "dias corridos"
         val porIssue = analise.dto.porIssue.associateBy { it.key }
         fun n(v: Double) = String.format(Locale.ROOT, "%.1f", v)

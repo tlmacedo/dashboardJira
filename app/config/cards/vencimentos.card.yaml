@@ -1,0 +1,41 @@
+# Ficha do card "Vencimentos da semana" (Plano 6). Estrita: chave desconhecida falha ao carregar.
+# A leitura no banco aplica estes tipos e a exclusão de status (FiltroDeFicha); o JQL só serve à sincronização e ao ensaio.
+
+id: vencimentos
+titulo: Vencimentos da semana
+instancia: samsung
+
+campos:
+  - OS Version
+  - priority
+  - timeoriginalestimate
+  - timeestimate
+  - timespent
+
+filtrosFixos:
+  project: ["TG-Basic"]
+  issuetype: ["Checklist", "Checklist TG", "Checklist Review"]
+
+filtrosExcluidos:
+  status: ["Cancelled", "Canceled", "Dropped"]
+
+parametros:
+  - nome: squad
+    tipo: squad
+    obrigatorio: false
+
+formula: >-
+  Tasks abertas que vencem nos próximos 7 (ou 14) dias, com a folga real: os dias úteis entre o término previsto pela
+  capacidade do responsável (fila com ausências e feriados) e o vencimento. Folga negativa, ou sem término previsto,
+  é "risco de atrasar". Tasks já vencidas ficam de fora (estão em vencidas da Carga). Não calcula "no prazo": isso é
+  da tela Metas e prazos.
+
+exemplo: >-
+  dias=14, squad=[dev.alfa].
+
+aceite:
+  - Dias diferentes de 7 e 14 respondem 400.
+  - Risco de atrasar abre as mesmas tasks que o formam.
+  - O usuário vê só as próprias tasks.
+
+expandChangelog: false

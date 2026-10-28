@@ -28,7 +28,7 @@ class RoleDirectory(pessoas: List<Pessoa>) {
     private fun ativos(userId: String, date: LocalDate): List<AtribuicaoPapel> =
         pessoas[userId]?.papeis.orEmpty().filter { it.vigencia.contem(date) }
 
-    /** A pessoa consta no diretório (em qualquer data); usado pelo validador de configuração. */
+    /** A pessoa consta no diretório (em qualquer data)? Usado por `equipes.yaml`, `ausencias.yaml` e pelo validador de configuração. */
     fun conhece(userId: String): Boolean = userId in pessoas
 
     /** Papéis da pessoa na data (vazio se desconhecida). */

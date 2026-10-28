@@ -1,0 +1,44 @@
+# Ficha do card "Carga por pessoa" (Plano 6). Estrita: chave desconhecida falha ao carregar.
+# A leitura no banco aplica estes tipos e a exclusão de status (FiltroDeFicha); o JQL só serve à sincronização e ao ensaio.
+
+id: carga
+titulo: Carga por pessoa
+instancia: samsung
+
+campos:
+  - OS Version
+  - priority
+  - timeoriginalestimate
+  - timeestimate
+  - timespent
+
+filtrosFixos:
+  project: ["TG-Basic"]
+  issuetype: ["Checklist", "Checklist TG", "Checklist Review"]
+
+filtrosExcluidos:
+  status: ["Cancelled", "Canceled", "Dropped"]
+
+parametros:
+  - nome: squad
+    tipo: squad
+    obrigatorio: false
+
+formula: >-
+  Para cada pessoa da equipe (equipes.yaml) na sua visão: tasks abertas, em andamento, fila em horas (restante do Jira;
+  sem ele, estimativa menos registrado; sem estimativa, horas padrão por tipo, assumidas), capacidade das próximas 4
+  semanas (horas por semana ÷ 5 × foco × alocação, sem fim de semana, feriado nem ausência) e ocupação = demanda ÷
+  capacidade. Capacidade zero aparece como "sem capacidade", nunca como porcentagem. Task vencida sai das semanas e vira
+  atraso acumulado (h). Sem ranking: pessoas em ordem alfabética; no lugar de maior e menor ocupação, duas contagens
+  (acima da capacidade e com folga).
+
+exemplo: >-
+  squad=[dev.alfa, dev.beta].
+
+aceite:
+  - Pessoas em ordem alfabética, sem coluna de posição.
+  - Capacidade zero mostra "sem capacidade", nunca 990%.
+  - O usuário recebe só a própria linha e nenhum índice do conjunto.
+  - Cada contagem abre as mesmas tasks que a formam.
+
+expandChangelog: true

@@ -6,11 +6,7 @@ import br.sidia.painel.config.Settings
 import br.sidia.painel.domain.UnmappedStatusException
 import br.sidia.painel.jql.CardSpecs
 import br.sidia.painel.security.RoleDirectory
-import com.charleskorn.kaml.Yaml
-import com.charleskorn.kaml.YamlList
-import com.charleskorn.kaml.YamlMap
-import com.charleskorn.kaml.YamlNode
-import com.charleskorn.kaml.YamlScalar
+import br.sidia.painel.pessoas.linhaDoItem
 import java.nio.file.Files
 import java.nio.file.Path
 import java.time.Clock
@@ -160,33 +156,19 @@ object ValidadorDeConfig {
         }
     }
 
-    /** Pessoa de `equipes.yaml`/`ausencias.yaml` que não consta em `papeis.yaml`, squad sem líder e período invertido. */
+    /**
+     * Squad sem líder entre os membros de `equipes.yaml`. A leitura (formato, pessoa desconhecida, período invertido,
+     * motivo, sobreposição) é a ESTRITA da subida, feita em `AppContext.carregarSemBanco`; aqui só o cruzamento com os papéis.
+     */
     private fun conferirPessoas(ctx: AppContext, dir: Path, hoje: LocalDate, dev: Boolean): List<ProblemaDeConfig> {
+        val arquivo = efetivo(dir, "equipes", dev) ?: return emptyList()
+        val nome = arquivo.fileName.toString()
         val problemas = mutableListOf<ProblemaDeConfig>()
-        efetivo(dir, "equipes", dev)?.let { arquivo ->
-            val nome = arquivo.fileName.toString()
-            val squadsJaAvisados = mutableSetOf<String>()
-            for (entrada in entradasCom(arquivo, "id")) {
-                val id = entrada.valor.trim().lowercase()
-                if (!ctx.roles.conhece(id)) {
-                    problemas += ProblemaDeConfig("PESSOA_DESCONHECIDA", nome, entrada.linha)
-                    continue
-                }
-                val squad = ctx.roles.squadOf(id, hoje) ?: continue
-                val temLider = ctx.roles.membersOf(squad, hoje).any { squad in ctx.roles.squadsLedBy(it, hoje) }
-                if (!temLider && squadsJaAvisados.add(squad)) problemas += ProblemaDeConfig("SQUAD_SEM_LIDER", nome, entrada.linha)
-            }
-        }
-        efetivo(dir, "ausencias", dev)?.let { arquivo ->
-            val nome = arquivo.fileName.toString()
-            for (entrada in entradasCom(arquivo, "pessoa")) {
-                if (!ctx.roles.conhece(entrada.valor.trim().lowercase())) {
-                    problemas += ProblemaDeConfig("PESSOA_DESCONHECIDA", nome, entrada.linha)
-                }
-                val de = data(entrada.mapa, "de")
-                val ate = data(entrada.mapa, "ate")
-                if (de != null && ate != null && ate < de) problemas += ProblemaDeConfig("PERIODO_INVERTIDO", nome, entrada.linha)
-            }
+        val squadsJaAvisados = mutableSetOf<String>()
+        ctx.equipes.todos.forEachIndexed { i, membro ->
+            val squad = ctx.roles.squadOf(membro.id, hoje) ?: return@forEachIndexed
+            val temLider = ctx.roles.membersOf(squad, hoje).any { squad in ctx.roles.squadsLedBy(it, hoje) }
+            if (!temLider && squadsJaAvisados.add(squad)) problemas += ProblemaDeConfig("SQUAD_SEM_LIDER", nome, linhaDoItem(arquivo, "membros", i + 1))
         }
         return problemas
     }
@@ -239,41 +221,4 @@ object ValidadorDeConfig {
         }
         return real.resolve(existente.relativize(absoluto)).normalize()
     }
-
-    // ---- leitura tolerante de equipes/ausências ----
-    // Os formatos finais são do Plano 6; aqui basta achar, em qualquer nível, mapas com a chave que identifica a pessoa
-    // (`id` em equipes.yaml, `pessoa` em ausencias.yaml). Arquivo sem essas chaves não gera problema.
-
-    private class Entrada(val valor: String, val linha: Int, val mapa: YamlMap)
-
-    private fun entradasCom(arquivo: Path, chave: String): List<Entrada> {
-        val raiz = try {
-            Yaml.default.parseToYamlNode(Files.readString(arquivo))
-        } catch (e: Exception) {
-            return emptyList()
-        }
-        val achadas = mutableListOf<Entrada>()
-        fun visitar(no: YamlNode) {
-            when (no) {
-                is YamlMap -> {
-                    val alvo = no.entries.entries.firstOrNull { it.key.content == chave }?.value as? YamlScalar
-                    if (alvo != null) achadas += Entrada(alvo.content, alvo.location.line, no)
-                    no.entries.values.forEach(::visitar)
-                }
-                is YamlList -> no.items.forEach(::visitar)
-                else -> Unit
-            }
-        }
-        visitar(raiz)
-        return achadas
-    }
-
-    private fun data(mapa: YamlMap, chave: String): LocalDate? =
-        (mapa.entries.entries.firstOrNull { it.key.content == chave }?.value as? YamlScalar)?.content?.let {
-            try {
-                LocalDate.parse(it)
-            } catch (e: Exception) {
-                null
-            }
-        }
 }

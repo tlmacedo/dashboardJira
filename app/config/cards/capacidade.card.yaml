@@ -1,0 +1,43 @@
+# Ficha do card "Capacidade e ausências" (Plano 6). Estrita: chave desconhecida falha ao carregar.
+# A leitura no banco aplica estes tipos e a exclusão de status (FiltroDeFicha); o JQL só serve à sincronização e ao ensaio.
+
+id: capacidade
+titulo: Capacidade e ausências
+instancia: samsung
+
+campos:
+  - OS Version
+  - priority
+  - timeoriginalestimate
+  - timeestimate
+  - timespent
+
+filtrosFixos:
+  project: ["TG-Basic"]
+  issuetype: ["Checklist", "Checklist TG", "Checklist Review"]
+
+filtrosExcluidos:
+  status: ["Cancelled", "Canceled", "Dropped"]
+
+parametros:
+  - nome: squad
+    tipo: squad
+    obrigatorio: false
+
+formula: >-
+  Mapa de 8 semanas com a ocupação de cada pessoa (demanda ÷ capacidade líquida; "aus." quando a ausência tira toda a
+  capacidade da semana). Alertas: carga acima do limite alto, e semana com 2 ou mais dias de ausência e trabalho agendado
+  (horas a replanejar). Atrasos previstos: a previsão de término pela capacidade cai depois do vencimento; a causa é
+  ausência quando o atraso some no cenário sem ausência. Ausências e feriados vêm de arquivos YAML somente leitura; a
+  ausência não tem motivo. Só liderança.
+
+exemplo: >-
+  squad=[dev.alfa, dev.beta].
+
+aceite:
+  - Semana inteira de ausência com trabalho agendado mostra "aus." e horas a replanejar, nunca porcentagem.
+  - A resposta não tem motivo de ausência.
+  - Cada contagem de atrasos abre as mesmas tasks que a formam.
+  - O usuário comum recebe 403.
+
+expandChangelog: false

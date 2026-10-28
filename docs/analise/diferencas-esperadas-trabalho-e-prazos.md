@@ -130,7 +130,7 @@ Compara os cartões `NE`, `RI`, `PV` e `EP` do app Python com as telas novas. Ex
 | PV-03 | diferença esperada | Confiança pelas **semanas com dado** (baixa abaixo de 8, média até 16, alta com 16), e não só pelo tamanho da amostra; vem com símbolo e texto. O cartão abre as entregas da janela. |
 | PV-04 | diferença esperada | Vazão e chegada por semana fechada (segunda a domingo de Manaus); cada semana abre as suas tasks. A semana em curso não entra. |
 | PV-05 | igual | Quantos itens em 2, 4 e 8 semanas, com percentis conservadores (P85 = 15º percentil, P95 = 5º). Projeção sem tasks por trás: sem gaveta. |
-| PV-06 | pendente da Fase 6 | Previsão por task: o que falta pelo histórico de ciclos do mesmo tipo maiores que a idade (mínimo de 5, como o legado), só para tasks em andamento. As colunas **pela capacidade** e **Atrasa?** chegam na Fase 6 (Agenda, `PrevisaoDeTermino`). |
+| PV-06 | diferença esperada | Previsão por task: o que falta pelo histórico de ciclos do mesmo tipo maiores que a idade (mínimo de 5, como o legado), só para tasks em andamento. As colunas **pela capacidade** e **Atrasa?** foram entregues na Fase 6, bloco 6a (a `Agenda` alimenta o `PrevisaoDeTermino` do Riscos e o PV-06; ver `docs/analise/diferencas-esperadas-pessoas-e-planejamento.md`). |
 
 ## Épicos (EP)
 

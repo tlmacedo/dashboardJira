@@ -56,6 +56,10 @@ fun testContextComBanco(
     calendar: BusinessCalendar? = null,
     /** Banco já pronto (ex.: uma cópia restaurada) em vez de um arquivo novo; as migrações são conferidas, não refeitas. */
     arquivoExistente: java.nio.file.Path? = null,
+    /** Equipe, ausências e regras de planejamento do cenário (padrão: os modelos `.exemplo`). */
+    equipes: br.sidia.painel.pessoas.Equipes = equipesDeTeste(),
+    ausencias: br.sidia.painel.pessoas.Ausencias = ausenciasDeTeste(),
+    regrasPlanejamento: br.sidia.painel.pessoas.RegrasDePlanejamento = regrasDePlanejamentoDeTeste(),
 ): AppContext {
     val campos = camposDeTeste()
     val vinculos = vinculosDeTeste()
@@ -77,6 +81,9 @@ fun testContextComBanco(
         regrasDeMetas = regrasDeMetasDeTeste(),
         regrasDeRisco = regrasDeRiscoDeTeste(),
         regrasDePrevisao = regrasDePrevisaoDeTeste(),
+        equipes = equipes,
+        ausencias = ausencias,
+        regrasPlanejamento = regrasPlanejamento,
     )
 }
 

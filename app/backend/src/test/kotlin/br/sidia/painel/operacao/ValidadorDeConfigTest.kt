@@ -115,9 +115,30 @@ class ValidadorDeConfigTest {
     @Test
     fun pessoaDesconhecidaNaEquipe() {
         val pasta = pastaDeConfig()
-        escrever(pasta, "equipes.yaml", "equipes:\n  - id: alguem.que.nao.existe\n    horasSemanais: 40\n")
+        escrever(pasta, "equipes.yaml", "membros:\n  - id: alguem.que.nao.existe\n    horasSemanais: 40\n    alocacao: 1.0\n")
         val r = ValidadorDeConfig.validar(dev, pasta, hoje)
         assertEquals(listOf(ProblemaDeConfig("PESSOA_DESCONHECIDA", "equipes.yaml", 2)), r.problemas)
+    }
+
+    @Test
+    fun motivoNaAusenciaECodigoPropioSemCitarValor() {
+        val pasta = pastaDeConfig()
+        escrever(
+            pasta, "ausencias.yaml",
+            "ausencias:\n  - pessoa: dev.alfa1\n    de: 2026-11-02\n    ate: 2026-11-06\n    fracao: 1.0\n    motivo: consulta-ficticia-xyz\n",
+        )
+        val r = ValidadorDeConfig.validar(dev, pasta, hoje)
+        assertEquals(listOf(ProblemaDeConfig("MOTIVO_PROIBIDO", "ausencias.yaml", 2)), r.problemas)
+        assertFalse(r.toString().contains("consulta-ficticia-xyz"))
+    }
+
+    @Test
+    fun chaveDesconhecidaNaEquipeNaoCitaOValor() {
+        val pasta = pastaDeConfig()
+        escrever(pasta, "equipes.yaml", "membros:\n  - id: dev.alfa1\n    horasSemanais: 40\n    alocacao: 1.0\n    salario: valor-ficticio-777\n")
+        val r = ValidadorDeConfig.validar(dev, pasta, hoje)
+        assertEquals(listOf(ProblemaDeConfig("YAML_INVALIDO", "equipes.yaml", 5)), r.problemas)
+        assertFalse(r.toString().contains("valor-ficticio-777") || r.toString().contains("salario"))
     }
 
     @Test
@@ -128,7 +149,8 @@ class ValidadorDeConfigTest {
             "pessoas:\n  - id: gerente.exemplo\n    nome: G\n    papeis:\n      - papel: GERENTE\n" +
                 "  - id: dev.gama1\n    nome: D\n    papeis:\n      - papel: USUARIO\n        squad: Gama\n",
         )
-        escrever(pasta, "equipes.yaml", "equipes:\n  - id: dev.gama1\n    horasSemanais: 40\n")
+        escrever(pasta, "ausencias.yaml", "ausencias: []\n")
+        escrever(pasta, "equipes.yaml", "membros:\n  - id: dev.gama1\n    horasSemanais: 40\n    alocacao: 1.0\n")
         val r = ValidadorDeConfig.validar(dev, pasta, hoje)
         assertEquals(listOf(ProblemaDeConfig("SQUAD_SEM_LIDER", "equipes.yaml", 2)), r.problemas)
     }

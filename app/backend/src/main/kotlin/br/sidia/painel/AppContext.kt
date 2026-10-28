@@ -1,6 +1,10 @@
 package br.sidia.painel
 
 import br.sidia.painel.cards.metas.RegrasDeMetas
+import br.sidia.painel.pessoas.Ausencias
+import br.sidia.painel.pessoas.Equipes
+import br.sidia.painel.pessoas.linhaDoItem
+import br.sidia.painel.pessoas.RegrasDePlanejamento
 import br.sidia.painel.previsao.RegrasDePrevisao
 import br.sidia.painel.riscos.RegrasDeRisco
 import br.sidia.painel.config.Settings
@@ -56,6 +60,12 @@ class AppContext(
     val regrasDeRisco: RegrasDeRisco = RegrasDeRisco.PADRAO,
     /** Parâmetros da Previsão (Monte Carlo) e dos Épicos; lido de `previsao.yaml` (o modelo só vale em desenvolvimento). */
     val regrasDePrevisao: RegrasDePrevisao = RegrasDePrevisao.PADRAO,
+    /** Horas, foco, alocação e competências de cada pessoa; lido de `equipes.yaml` (dados pessoais: o modelo só vale em desenvolvimento). */
+    val equipes: Equipes = Equipes(emptyList()),
+    /** Ausências (sem motivo), somente leitura; lido de `ausencias.yaml` (dados pessoais: o modelo só vale em desenvolvimento). */
+    val ausencias: Ausencias = Ausencias(emptyList()),
+    /** Heurísticas de capacidade e planejamento; lido de `planejamento.yaml` (o modelo só vale em desenvolvimento). */
+    val regrasPlanejamento: RegrasDePlanejamento = RegrasDePlanejamento.PADRAO,
 ) : AutoCloseable {
     private val aoFechar = java.util.concurrent.CopyOnWriteArrayList<() -> Unit>()
 
@@ -142,6 +152,13 @@ class AppContext(
             // Parâmetros da Previsão e dos Épicos: config versionada sem dado pessoal; o modelo só cai em dev.
             val arquivoPrevisao = resolver(settings, "previsao")
             val regrasDePrevisao = lerYaml(arquivoPrevisao) { RegrasDePrevisao.fromYaml(arquivoPrevisao) }
+            // Equipes, ausências e planejamento (Fase 6): somente leitura; o modelo só cai em dev e os ids vêm do papeis.yaml.
+            val arquivoEquipes = resolver(settings, "equipes")
+            val equipes = lerYamlCitandoItem(arquivoEquipes, "membros") { Equipes.fromYaml(arquivoEquipes, papeis) }
+            val arquivoAusencias = resolver(settings, "ausencias")
+            val ausencias = lerYamlCitandoItem(arquivoAusencias, "ausencias") { Ausencias.fromYaml(arquivoAusencias, papeis) }
+            val arquivoPlanejamento = resolver(settings, "planejamento")
+            val regrasPlanejamento = lerYaml(arquivoPlanejamento) { RegrasDePlanejamento.fromYaml(arquivoPlanejamento) }
 
             // Valida na subida todas as instâncias do Jira configuradas (sem enviar nada); só id e regra na falha.
             val jira = JiraClientFactory(settings)
@@ -163,7 +180,7 @@ class AppContext(
             return AppContext(
                 settings, calendario, papeis, ds, jira, mapaDeStatus, campos, fichas, vinculos, labelsDeAtraso, regrasAuditoria, clock,
                 travaDeProcesso = trava, regrasDeMetas = regrasDeMetas, regrasDeRisco = regrasDeRisco,
-                regrasDePrevisao = regrasDePrevisao,
+                regrasDePrevisao = regrasDePrevisao, equipes = equipes, ausencias = ausencias, regrasPlanejamento = regrasPlanejamento,
             )
         }
 
@@ -187,6 +204,35 @@ class AppContext(
         /** Nome que o relatório do validador mostra: `pasta/arquivo` dentro de `cards`, senão só o nome do arquivo. */
         private fun nomeParaRelatorio(arquivo: Path): String =
             if (arquivo.parent?.fileName?.toString() == "cards") "cards/${arquivo.fileName}" else arquivo.fileName.toString()
+
+        /**
+         * Como [lerYaml], mas devolve a mensagem de [IllegalArgumentException] dos leitores de `equipes.yaml` e
+         * `ausencias.yaml`: ela cita o arquivo e o id ou o item (#N) com problema, e nunca o valor lido.
+         */
+        private fun <T> lerYamlCitandoItem(arquivo: Path, listaDoArquivo: String, leitura: () -> T): T =
+            try {
+                leitura()
+            } catch (e: IllegalArgumentException) {
+                // A mensagem é do painel (arquivo, item #N, regra violada) e nunca leva o valor lido: dela saem o código
+                // estável e a linha do item, para o validador mostrar "ERRO <código> <arquivo>:<linha>".
+                val texto = e.message.orEmpty()
+                val item = Regex("#(\\d+)").find(texto)?.groupValues?.get(1)?.toIntOrNull()
+                val linha = item?.let { linhaDoItem(arquivo, listaDoArquivo, it) }
+                    ?: Regex("na linha (\\d+)").find(texto)?.groupValues?.get(1)?.toIntOrNull()
+                val codigo = when {
+                    "não existe no papeis.yaml" in texto -> "PESSOA_DESCONHECIDA"
+                    "datas invertidas" in texto -> "PERIODO_INVERTIDO"
+                    "se sobrepõem" in texto -> "AUSENCIAS_SOBREPOSTAS"
+                    "não guardam motivo" in texto -> "MOTIVO_PROIBIDO"
+                    "chave desconhecida" in texto -> "CHAVE_DESCONHECIDA"
+                    "repetido" in texto -> "ID_REPETIDO"
+                    "formato inválido" in texto -> "YAML_INVALIDO"
+                    else -> "CONFIG_INVALIDA"
+                }
+                throw ErroDeConfiguracao(codigo, nomeParaRelatorio(arquivo), linha, "arquivo $arquivo inválido: $texto")
+            } catch (e: Exception) {
+                throw ErroDeConfiguracao("CONFIG_INVALIDA", nomeParaRelatorio(arquivo), null, "arquivo $arquivo inválido: ${e.javaClass.simpleName}")
+            }
 
         /** Sem nenhum GERENTE vigente hoje ninguém acessaria a Integridade: falha em produção, só avisa em dev. */
         private fun exigirGerenteVigente(settings: Settings, papeis: RoleDirectory, arquivo: Path, hoje: LocalDate) {

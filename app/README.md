@@ -103,6 +103,7 @@ Na subida o painel carrega o calendário e o diretório de papéis, abre o pool 
 - `vinculos.yaml` ausente (em dev usa `vinculos.exemplo.yaml` com aviso; em produção é obrigatório). Crie-o a partir de `config/vinculos.exemplo.yaml` (tipo do link que liga a Review à task e tipos de issue; sem dado pessoal).
 - `labels_atraso.yaml`, `auditoria.yaml`, `metas.yaml`, `risco.yaml` ou `previsao.yaml` ausentes (em dev usam o `.exemplo` com aviso; em produção são obrigatórios). Crie-os a partir de `config/*.exemplo.yaml` (labels que justificam atraso, limites da auditoria, metas do card Metas e prazos, pesos do card Riscos, parâmetros da Previsão e dos Épicos; sem dado pessoal).
 - YAML inválido: a mensagem cita só o caminho e o tipo do erro.
+- `equipes.yaml`, `ausencias.yaml` ou `planejamento.yaml` ausentes (em dev usam o `.exemplo` com aviso; em produção são obrigatórios). Copie de `config/equipes.exemplo.yaml`, `config/ausencias.exemplo.yaml` e `config/planejamento.exemplo.yaml`. **`equipes.yaml` e `ausencias.yaml` têm dados pessoais: ficam fora do git**, só leitura (nenhuma tela grava), e os `id` precisam existir no `papeis.yaml`. A ausência não tem motivo (a chave `motivo` é recusada).
 - Nenhum **GERENTE** com papel vigente hoje no `papeis.yaml`.
 - Arquivo de banco inacessível, já em uso por outro painel ou migração que falha.
 - Com a flag `JIRA_LIVE_ENABLED` ligada, instância do Jira mal configurada (a mensagem cita só o id e a regra).

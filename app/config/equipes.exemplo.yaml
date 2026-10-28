@@ -1,0 +1,60 @@
+# =====================================================================================
+# MODELO DE EQUIPES (horas, foco, alocação e competências)  (100% FICTÍCIO, versionado)
+# =====================================================================================
+#
+# PARA QUE SERVE
+#   Diz ao painel QUANTO cada pessoa pode produzir: horas por semana, quanto do tempo é
+#   foco em tasks, quanto está alocada ao time e quais competências ela tem. Com isso o
+#   painel calcula a capacidade (cards Carga, Capacidade, Plano, Calendário, Vencimentos).
+#   O painel só LÊ este arquivo; nenhuma tela o edita.
+#
+# COMO USAR
+#   1. Copie este modelo para o arquivo real (o git ignora e nunca o commita):
+#        cp app/config/equipes.exemplo.yaml app/config/equipes.yaml
+#   2. Troque os ids inventados pelos reais, os MESMOS ids do papeis.yaml (username do Jira).
+#   3. NUNCA coloque dados reais neste arquivo de exemplo.
+#   Em produção o arquivo real é OBRIGATÓRIO; só o modo desenvolvimento cai neste modelo.
+#
+# CAMPOS (todos por pessoa; o leitor é ESTRITO: chave desconhecida recusa o arquivo)
+#   id             obrigatório; precisa existir no papeis.yaml.
+#   horasSemanais  obrigatório; de 0 a 60. Capacidade do dia = horasSemanais ÷ 5.
+#   foco           opcional; fração de 0 (exclusivo) a 1: quanto do dia vai para tasks.
+#                  Sem ele vale o focoPadrao do planejamento.yaml.
+#   alocacao       obrigatório; de 0 a 1: fração da pessoa alocada ao time (0,5 = meio período).
+#   competencias   opcional; lista de rótulos em minúsculas [a-z0-9-] (ex.: android, rede).
+#
+# CAPACIDADE POR DIA ÚTIL = horasSemanais ÷ 5 × foco × alocacao × (1 − fração de ausência).
+membros:
+  - id: lider.alfa
+    horasSemanais: 40
+    foco: 0.5
+    alocacao: 1.0
+    competencias: [android, rede]
+
+  - id: lider.beta
+    horasSemanais: 40
+    foco: 0.5
+    alocacao: 1.0
+    competencias: [rede, ui]
+
+  - id: dev.alfa1
+    horasSemanais: 40
+    foco: 0.7
+    alocacao: 1.0
+    competencias: [android, rede]
+
+  - id: dev.alfa2
+    horasSemanais: 40
+    alocacao: 0.5
+    competencias: [android]
+
+  - id: dev.beta1
+    horasSemanais: 40
+    foco: 0.7
+    alocacao: 1.0
+    competencias: [rede, ui]
+
+  - id: dev.mudou
+    horasSemanais: 30
+    alocacao: 1.0
+    competencias: [ui]
