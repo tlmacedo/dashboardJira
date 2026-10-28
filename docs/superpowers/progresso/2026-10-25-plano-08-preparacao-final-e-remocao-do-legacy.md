@@ -1,6 +1,6 @@
 # Progresso — plano: docs/superpowers/plans/2026-10-25-plano-08-preparacao-final-e-remocao-do-legacy.md
 
-Branch: `feat/preparacao-oidc-desempenho-pacote`. Bloco parcial do Plano 8: **Tarefas 2, 6, 7 e 8** (SSO/OIDC, desempenho, pacote de produção e documentos da 1ª conexão). Executor: Claude Code, sem o usuário presente; pontos de parada resolvidos pela opção Recomendada e reversível. Roda em paralelo com o bloco 6b (worklog, posse, competências): `pt.json`/`en.json` receberam só duas chaves (`shell.sair`, `shell.sairErro`); `CartoesDeTrabalho.kt`, `HANDOFF.md` e o índice não foram tocados; nenhuma migração foi criada (a V4 é do 6b).
+Branch: `feat/preparacao-oidc-desempenho-pacote`. Bloco parcial do Plano 8: **Tarefas 2, 6, 7 e 8** (SSO/OIDC, desempenho, pacote de produção e documentos da 1ª conexão). Executor: Claude Code, sem o usuário presente; pontos de parada resolvidos pela opção Recomendada e reversível. Roda em paralelo com o bloco 6b (worklog, posse, competências): `pt.json`/`en.json` receberam só duas chaves (`shell.sair`, `shell.sairErro`); `CartoesDeTrabalho.kt`, `HANDOFF.md` e o índice não foram tocados; nenhuma migração foi criada (a V4 é do 6b e nenhuma tarefa deste bloco precisou de V5).
 
 **Fora deste bloco (não feitas aqui):** Tarefa 1 (inventário de rotas), 3 (equivalência com o `legacy/`), 4 (WCAG), 5 (revisão visual), 9 (remoção do `legacy/`: só com o "sim" do usuário) e 10 (guia e fechamento). O ponto de extensão do inventário de rotas ficou pronto: `ROTAS_PUBLICAS` (em `security/AccessControl.kt`) lista `/api/health`, `/api/health/pronto`, `/api/meta`, `/auth/login`, `/auth/callback` e `/auth/logout`.
 
@@ -9,6 +9,8 @@ Branch: `feat/preparacao-oidc-desempenho-pacote`. Bloco parcial do Plano 8: **Ta
 - `main` em `ae3c393` (Plano 12 mesclado). Migrações: `V1`, `V2`, `V3`. `Authenticator.kt` tinha o stub `OidcAuthenticator()`; `SessaoAssinada`/`SegredosDaSessao` existiam sem ligação ao login; `/api/health/pronto` já era pública (Plano 12); não existiam `GeradorSintetico`, `InventarioDeRotasTest` nem `docs/implantacao.md`.
 
 ## Rulings
+
+### Tarefa 2 (SSO/OIDC)
 
 - Ruling (T2): **sem dependência nova** (`ktor-server-auth`, `-auth-jwt` e `-sessions` NÃO foram acrescentados). A validação do `id_token` (RS256, JWKS, `iss`, `aud`, `exp`, `nbf`, `iat`, `nonce`) usa `java.security.Signature` e o `kotlinx.serialization.json` que já estão no projeto; o cookie de sessão é o `SessaoAssinada` do Plano 12 e o de login é um HMAC próprio. Motivo: controle total do que é aceito (só `RS256`; `none`, HMAC e `crit` barrados antes da assinatura), menos superfície de ataque e nenhuma versão nova para a empresa espelhar — custo se errado: trocar `ValidadorDeIdToken` por `ktor-server-auth-jwt` depois, atrás da mesma interface.
 - Ruling (T2): erros de configuração são `IllegalArgumentException` (como todas as demais variáveis de `Settings.fromEnv`, e é o que `validar-config` e as telas de prontidão já tratam), e não `IllegalStateException` como diz o plano. A mensagem cita só o nome (`OIDC_ISSUER é obrigatório em produção ...`) e continua casando com a frase que o teste do pacote instalado procura ("obrigatório em produção").
@@ -25,12 +27,80 @@ Branch: `feat/preparacao-oidc-desempenho-pacote`. Bloco parcial do Plano 8: **Ta
 - Ruling (T2): o botão "Sair" (`Menu`/`Shell`) só aparece fora do modo desenvolvimento, envia `POST /auth/logout` com o cabeçalho anti-CSRF e só então vai para `/`; se o logout falhar, mostra o aviso e fica (não finge que saiu). Duas chaves novas em `pt.json`/`en.json`.
 - Ruling (T2): o teste do validador de `id_token` e o do fluxo foram escritos junto da implementação (o código do validador nasceu antes do teste); a prova de que os testes pegam defeito foi por mutação real: tirar a conferência de `iss` e o uso único do `state` derrubou `issuerErrado401`, `emissorErradoEhRecusado` e `nonceRepetidoRepetirOCallbackEhRecusado`; as mutações foram desfeitas.
 
+### Tarefa 6 (desempenho na escala da spec, sobre SQLite em arquivo)
+
+- Ruling (T6): o cenário é uma classe abstrata (`CenarioDeCarga`) com dois usos: `CargaTest` (`@Tag("carga")`, escala da spec, só pela tarefa `testCarga`; `-PescalaDeCarga=moderada|minima` e `-PcacheDeCarga=0` mudam o tamanho e o cache) e `CargaMinimaTest` (400 issues, na suíte padrão, para provar a lógica de concorrência a cada execução). A suíte padrão exclui a tag `carga` (`excludeTags`), e a tarefa `testCarga` repete as variáveis e propriedades que a `test` não herda. Os números saem em `app/backend/build/reports/carga/<classe>.txt`.
+- Ruling (T6): **não houve migração de índices.** A hipótese do plano (índice resolve) não se confirmou: o perfil de uma leitura bruta (30.000 issues + 300.000 eventos) mostrou ~55% do tempo na materialização das colunas de texto pelo JDBC (`getString`), ~25% no `step` do SQLite e <3% em ordenação e montagem de linha do tempo; o SQLite lê 300.000 eventos em ~200 ms e o resto é objeto Kotlin. Filtro por instância/tipo/status varre 30.000 linhas em poucos ms com ou sem índice.
+- Ruling (T6): `/api/central` ainda não existe na `main`; `centralDentroDoOrcamento` usa `assumeTrue` e passa a medir sozinho (orçamento de 3 s) quando a rota chegar. Aparece como 1 teste ignorado.
+- Ruling (T6): `leituraSegueDuranteTransacaoDeEscritaAberta`: toda rota de dados grava uma linha em `access_log` (a auditoria é obrigatória, e sem registro não há resposta), então uma transação de escrita que fica aberta 2 s atrasa a RESPOSTA em até esses 2 s; o orçamento do plano ("< 2 s cada") não vale para a requisição que chega durante a trava. O teste afirma o que o SQLite garante e o que importa: (1) leituras diretas continuam na hora (1 ms) com o gravador segurando a trava, e (2) as rotas respondem 200 em no máximo (tempo da escrita aberta + 2 s). A sincronização real grava uma issue por transação (milissegundos), então o atraso real é desprezível. Custo se errado: virar a gravação do `access_log` assíncrona (mudaria a regra "falha de registro = 503 sem dados").
+- Ruling (T6): **cache de leitura bruta (decisão D3 do plano, com `Ruling:` exigido).** Sem ele, na escala da spec (medido): cards sozinhos levavam de 0,7 a 2,7 s (4 acima do orçamento de 2 s: Carga, Épicos, Previsão e Riscos) e 8 clientes simultâneos terminaram com p95 de 25,6 s e 2 respostas 500 por `OutOfMemoryError` com 512 MB (cada requisição relê as 30.000 issues e os 300.000 eventos). Depois dos índices (inúteis, acima) a ordem do plano chega ao cache, com estas travas, todas testadas (`CacheDeLeiturasTest`, `CacheDeLeiturasIntegracaoTest`):
+  1. **Só dado bruto, nunca número de papel.** Guarda o resultado de `SqliteWorkStore.snapshots/comEventoEntre/pessoas` e `SqliteIssueStore.timelines`, que não recebem o principal; o recorte por papel e por pessoas visíveis acontece depois, em cada requisição. A chave nunca leva o principal (`cadaPapelRecebeSeuProprioNumeroComOCacheLigado` compara, para 4 papéis e 4 cards, a resposta com cache ligado e desligado).
+  2. Desligado por padrão no código e nos testes; o `main` o liga com `PAINEL_CACHE_SEG` (padrão 60 s, 0 desliga).
+  3. `CacheDeLeituras.invalidar()` no fim de TODA execução da sincronização (`SyncService.fechar`), na retenção e na carga de demonstração: o dado novo aparece na hora, sem período de graça (`fimDeSincronizacaoInvalidaOCache`, com mutação real).
+  4. Vencido há menos de uma validade, a leitura antiga ainda é entregue enquanto UMA renovação roda numa thread de fundo; mais velho que isso, quem pede espera. Invalidação nunca recebe graça.
+  5. Uma carga por chave por vez e no máximo 2 cargas ao mesmo tempo (a memória não soma); valores em `SoftReference` (a JVM solta antes de faltar memória) e no máximo 40 entradas.
+  Custo se errado: `PAINEL_CACHE_SEG=0` volta ao comportamento anterior sem mudar código. Risco residual: um escritor futuro que grave `issue`/`change_event` fora da sincronização e da retenção só será visto depois de até `2 × PAINEL_CACHE_SEG` (o 6b grava worklog dentro da sincronização, que invalida).
+- Ruling (T6): `BusinessCalendar.businessDays` ganhou um caminho rápido (dias úteis inteiros no meio do intervalo valem exatamente 1,0 e não convertem fuso); `BusinessCalendarEquivalenciaTest` prova igualdade BIT A BIT com a versão anterior em 15.000 intervalos sorteados, em 5 fusos (com e sem horário de verão), com feriados fixos e móveis e nas fronteiras de dia. O `businessDays` aparecia em todos os cards de prazo no perfil.
+- Ruling (T6): `GeradorSintetico` grava direto nas tabelas (inclusive as colunas da `V2`) em lotes de 2.000 issues, uma transação por lote; a chave do épico é `SINT-9xxxx` porque o leitor do campo só aceita o formato `AAA-123`. Os arquivos de papéis, equipes e ausências do cenário (6 squads, 60 pessoas) são gerados no formato dos modelos e carregados pelos carregadores reais.
+- Ruling (T6): `orcamento-bundle.mjs` mede o bundle principal (o `<script type="module">` do `index.html`) em gzip nível 9; limite padrão 300 KB, `--limite-kb` muda; saída 1 se passar, 2 se faltar build. `orcamento-bundle.test.ts` prova os dois lados.
+
+### Tarefa 7 (pacote de produção)
+
+- Ruling (T7): ponto de parada do endereço de escuta: opção 1 (Recomendada) — `PAINEL_HOST`, padrão `127.0.0.1`, passado ao `embeddedServer`; `validar-config` avisa `ESCUTA_FORA_DO_LOOPBACK` quando a escuta sai do loopback. Reversível: `PAINEL_HOST=0.0.0.0` volta ao comportamento antigo. O endereço pelo qual o navegador chega (`DASHBOARD_ORIGEM_PUBLICA`) não muda.
+- Ruling (T7): o `verificar-pacote` também recusa chave/certificado (`*.pem`, `*.key`, `*.p12`, `*.pfx`, `*.jks`), `*.rotacao`, artefato de contêiner e QUALQUER arquivo de `config/` que não seja `*.exemplo.yaml`, `*.demo.yaml` ou ficha `cards/*.card.yaml` (a lista de nomes do plano deixaria passar `metas.yaml`, `risco.yaml`, `planejamento.yaml`...). A fumaça roda com `env -i` (ambiente limpo: nenhuma variável `JIRA_*` nem `PAINEL_*` herdada) e passa segredos FICTÍCIOS só para provar que a recusa não os mostra.
+- Ruling (T7): a montagem aceita `PAINEL_PNPM_ARGS` e `PAINEL_GRADLE_ARGS` (por exemplo `--offline`) para máquinas atrás de proxy ou espelho; o texto de `LEIA-ME.txt` vem de `app/scripts/LEIA-ME-pacote.txt`, para que os scripts de montagem não citem arquivo de banco nem de variáveis real (o teste `montagemCopiaSoModelos` confere).
+- Ruling (T7): os `.ps1` são só ASCII (o PowerShell 5.1 lê arquivo sem BOM como ANSI; o teste `scriptsPowerShellSaoSoAscii` confere) e NÃO puderam ser executados aqui (Linux, sem `pwsh`): foram revisados linha a linha e cobertos só pelos testes estáticos. A execução no Windows 11 fica para a Fase 0/13 (veja "Depois da flag / com o usuário").
+
+### Tarefa 8 (documentos da 1ª conexão)
+
+- Ruling (T8): o checklist ganhou 4 passos extras (vocabulário de prioridade e criticidade, ordem do fluxo e resoluções negativas, formato do worklog, Reporter como PL), cada um com "O que conferir", "Quando parar" e a frase de confirmação da flag (`todoPassoExtraTambemConfirmaAFlag`); os cinco passos originais seguem 5 (o teste do Plano 4A, `cadaPassoDoChecklistConfirmaAFlag`, passa sem mudança). A matriz ganhou as linhas de `field`, `myself`, `status`, `worklog`, `priority`, `resolution`, `user` e do Reporter. `labelsCriticidade` e `prioridadePadrao` ainda não existem na configuração da `main` (são do Plano 7): o checklist as cita como "quando o Plano 7 trouxer a chave".
+- Ruling (T8): `documentosDeJiraNaoTemHostRealTokenNemEmail` foi renomeado `semHostRealNemToken` (nome do plano). `documentosDeJiraSemRegraAntiga` e `documentosDeJiraSemContainerNemPostgres` varrem também `docs/jira/referencia/`.
+
 ## Tarefas
 
-- Tarefa 2: ver o commit `feat(seguranca): SSO/OIDC genérico atrás da interface, testado com emissor falso` no topo do histórico da branch.
+- Tarefa 2: commit `feat(seguranca): SSO/OIDC genérico atrás da interface, testado com emissor falso`.
+- Tarefa 6: commit `perf: orçamento de tempo dos cards e do bundle na escala da spec, sobre SQLite`.
+- Tarefa 7: commit `build(pacote): pacote de produção verificável e guia de implantação sem contêiner`.
+- Tarefa 8: commit `docs(jira): checklist da 1ª conexão e matriz de compatibilidade finais`.
+
+## Números medidos (T6)
+
+Máquina de referência (a do agente, NÃO a do PC da empresa): Intel Xeon 2,1 GHz, 4 vCPU, 16 GB de RAM, disco virtual (`/dev/vda`), Linux, JDK 21, `testCarga` com `-Xmx512m`. Escala da spec: 30.000 issues, 300.000 eventos (10 por issue), 60 pessoas, 50.000 worklogs; banco de 44 MB; população do banco em ~3 s.
+
+| Alvo | Orçamento | Sem o cache (1ª medição) | Com o cache (final) |
+|---|---|---|---|
+| cada `/api/cards/*` (um cliente, p95 de 5 execuções depois de 1 de aquecimento, gerente) | < 2 s | 0,7 a 2,7 s (Previsão 2,7; Riscos 2,7; Carga 2,2; Épicos 2,2 estouravam) | 0,03 a 0,87 s (Carga 0,87; Tendência 0,77; Auditoria 0,74; Previsão 0,62; Riscos 0,61) |
+| `/api/me`, catálogo, status da sincronização, task-review | < 2 s | 3 a 6 ms | 2 a 4 ms |
+| `/api/cartoes/{id}/tasks` (5 cartões amostrados, total conferido contra o cartão) | < 2 s | 0,27 a 1,2 s | 0,24 a 0,34 s |
+| `/api/central` | < 3 s | rota inexistente | rota inexistente (teste ignorado) |
+| leitura concorrente: 8 clientes por 20 s, mistura de cards | p95 < 4 s, 0 respostas 5xx | **p95 25,6 s; 2 respostas 500 (`OutOfMemoryError`)** | **p95 3,3 s; 160 respostas, 0 respostas 5xx** (outras execuções: 3,3 a 4,8 s; a margem é pequena nesta máquina) |
+| escrita durante leitura: 4 leitores + 2.000 issues gravadas por `SqliteIssueStore.upsert` | leituras p95 < 4 s; gravação < 60 s | gravação 4,9 s; leituras p95 4,7 s | gravação 1,6 s; leituras p95 3,0 s |
+| primeira leitura depois do fim da sincronização (cache invalidado) | — | — | 1,2 a 1,4 s (paga a recarga uma vez para todos) |
+| aquecimento do cache (uma passada por todas as rotas, a frio) | — | — | 13 a 16 s (25 rotas, ~17 leituras brutas) |
+| dois gravadores simultâneos, 500 issues cada | sem `SQLITE_BUSY` | 0,39/0,49 s | 0,42/0,22 s |
+| transação de escrita aberta por 2 s | leituras < 2 s | leitura direta 1 ms; HTTP 2,1 s (ver Ruling) | idem |
+| `-wal` depois de `wal_checkpoint(TRUNCATE)` | < 1 MB | 0 bytes | 0 bytes |
+| heap do processo de teste | < 512 MB, sem `OutOfMemoryError` | OOM na leitura concorrente | 160 a 240 MB em uso no fim |
+| bundle principal do frontend (gzip) | < 300 KB | — | 177,2 KB (CSS 6,2 KB) |
+
+Observações: o cache é o que muda a leitura concorrente; sem ele o gargalo é CPU e memória da releitura (cada requisição relê tudo). Mesmo com ele, o p95 da leitura concorrente fica perto do orçamento nesta máquina (a CPU dos cards mais pesados, como Carga e Tendência, ainda é de 0,6 a 0,9 s por requisição): no PC da empresa, **rodar `./gradlew testCarga` e registrar os números** antes de contar com o orçamento (veja "Depois da flag / com o usuário").
+
+## Depois da flag / com o usuário
+
+Efeito fora do repositório: o código está pronto e nada abaixo foi decidido nem executado pela IA.
+
+- **Provedor OIDC real e os valores de `OIDC_*`:** o painel só valida contra emissor falso; o `OIDC_ISSUER`, o `client_id`, o segredo (se exigido), a URI de retorno cadastrada, a claim com o username do Jira (`OIDC_CLAIM_USERNAME`) e a regra de autenticação do endpoint do token (hoje `client_secret_post`) dependem da infraestrutura da empresa (Plano 13). Se a saída até o provedor passar por proxy, falta configurar o cliente HTTP do login (`ClienteHttpOidc.kt`) e o certificado raiz no JDK.
+- **`SESSION_SECRET` de produção** (gerar com 32 bytes ou mais e guardar no cofre/arquivo de variáveis), e a escolha do tempo da sessão (hoje 8 h fixas).
+- **Executar no Windows 11** `montar-pacote.ps1` e `verificar-pacote.ps1` (só revisados, não executados; o `.sh` foi executado de ponta a ponta no Linux).
+- **Rodar `testCarga` no PC da empresa** e registrar os números (a escala e os orçamentos valem para ele, não para a máquina de referência acima); decidir `PAINEL_CACHE_SEG`, `DATABASE_POOL_SIZE` e a memória do serviço com esses números.
+- **Proxy, TLS, firewall e conta de serviço** (Plano 13): `PAINEL_HOST` só sai do loopback se o proxy ficar em outra máquina.
+- **Validar com o DPO** a base legal, a retenção e o texto de comunicação antes de usar dados reais (já no `docs/implantacao.md`).
+- **Conferências do checklist da 1ª conexão** (agora com 4 passos extras): quem as faz e liga a flag é só o usuário.
 
 ## Minor adiados
 
 - Minor 1/2 do Plano 12 (`Unhandled:` do Ktor para exceção em fase anterior ao interceptor; `CancellationException` logada pelo Ktor): NÃO tratados. Exigem trocar o ponto de captura (fase `Setup`/`Monitoring` do pipeline ou um filtro no Logback para o logger do Ktor) e a mudança toca o `LogDeRequisicao.kt`, que o bloco 6b também pode editar; o risco é só de vazar o caminho cru em log de erro raro. Fica para a revisão pós-implantação.
 - Minor 7 e 8 do Plano 12 (`.sha256` órfão se o `move` falhar; `runCatching` engolindo `CancellationException` em `AlertasRoutes.kt`; loopback literal; `painel-cli.ps1` sem escape de metacaracteres do cmd): sem mudança neste bloco.
 - O login ainda não tem tela própria: o redirecionamento acontece pelo navegador (`/auth/login?volta=...`, já usado pelo diálogo "sessão expirada"); o link "Entrar de novo" cobre o caso.
+- Cards com `IssueSnapshot.hashCode` quente (Cruzamentos usa o snapshot inteiro como chave de mapa/conjunto) e `StatusMap.category` chamado por evento (Tendência): otimizações possíveis (chave por `key`, categoria pré-calculada) que não foram necessárias para o orçamento nesta máquina.
+- `app/backend/build/reports/carga/` fica em `build/` (ignorado pelo git); os números que valem estão copiados acima.

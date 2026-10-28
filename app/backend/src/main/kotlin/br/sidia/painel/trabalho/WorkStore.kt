@@ -1,6 +1,8 @@
 package br.sidia.painel.trabalho
 
 import br.sidia.painel.auditoria.Vencimentos
+import br.sidia.painel.db.CacheDeLeituras
+import br.sidia.painel.db.ChaveDeLeitura
 import br.sidia.painel.db.emJson
 import br.sidia.painel.db.idsEmJson
 import br.sidia.painel.db.jsonParaTextos
@@ -45,7 +47,12 @@ fun WorkStore.candidatasNoPrazo(
 /** Implementação sobre SQLite (JDBC). Tudo parametrizado; listas entram como JSON em `json_each(?)`. */
 class SqliteWorkStore(private val ds: DataSource) : WorkStore {
 
-    override fun snapshots(c: ConsultaDeTrabalho): List<IssueSnapshot> {
+    // As três leituras abaixo são brutas (sem recorte por pessoa), então podem ser reaproveitadas por poucos segundos:
+    // ver CacheDeLeituras. O papel e as pessoas visíveis só entram DEPOIS, no código de cada card.
+    override fun snapshots(c: ConsultaDeTrabalho): List<IssueSnapshot> =
+        CacheDeLeituras.obter(ChaveDeLeitura(ds, "snapshots", c)) { lerSnapshots(c) }
+
+    private fun lerSnapshots(c: ConsultaDeTrabalho): List<IssueSnapshot> {
         val filtros = StringBuilder()
         val params = mutableListOf<Any>()
         when (c.situacao) {
@@ -71,6 +78,14 @@ class SqliteWorkStore(private val ds: DataSource) : WorkStore {
         instance: String, filtro: FiltroDeFicha?, campos: Set<String>, de: Instant, ate: Instant,
     ): List<IssueSnapshot> {
         if (campos.isEmpty()) return emptyList()
+        return CacheDeLeituras.obter(ChaveDeLeitura(ds, "comEventoEntre", listOf(instance, filtro, campos, de, ate))) {
+            lerComEventoEntre(instance, filtro, campos, de, ate)
+        }
+    }
+
+    private fun lerComEventoEntre(
+        instance: String, filtro: FiltroDeFicha?, campos: Set<String>, de: Instant, ate: Instant,
+    ): List<IssueSnapshot> {
         val filtros = " AND EXISTS (SELECT 1 FROM change_event e WHERE e.issue_id = issue.id AND e.at >= ? AND e.at < ? " +
             "AND lower(e.field) IN (SELECT value FROM json_each(?)))"
         val params = listOf<Any>(Timestamp.from(de), Timestamp.from(ate), campos.map { it.lowercase(Locale.ROOT) }.emJson())
@@ -88,6 +103,9 @@ class SqliteWorkStore(private val ds: DataSource) : WorkStore {
         }
 
     override fun pessoas(instance: String): Set<String> =
+        CacheDeLeituras.obter(ChaveDeLeitura(ds, "pessoas", instance)) { lerPessoas(instance) }
+
+    private fun lerPessoas(instance: String): Set<String> =
         ds.connection.use { con ->
             val sql = """
                 SELECT assignee_ref FROM issue WHERE instance = ? AND removida_em IS NULL AND assignee_ref IS NOT NULL

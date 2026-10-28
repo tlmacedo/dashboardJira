@@ -45,6 +45,13 @@ data class Settings(
     val configDir: Path = Path.of("config"),
     /** `DATABASE_PATH`: arquivo SQLite do painel (criado na primeira subida). Sem servidor, sem usuário, sem senha. */
     val databasePath: Path = Path.of("data/painel.db"),
+    /**
+     * `PAINEL_CACHE_SEG`: por quantos segundos as telas reaproveitam a leitura bruta do banco (issues e histórico) em vez de
+     * relê-la a cada requisição. Vale só quando o painel sobe pelo `main`; os testes não ligam. `0` desliga. Fim de sincronização
+     * e de retenção invalidam na hora, então isto só limita o quanto um dado pode envelhecer sem elas (vencida, a leitura
+     * ainda serve por mais esse tempo enquanto é renovada em segundo plano).
+     */
+    val cacheDeLeituraSeg: Int = 60,
     /** Diretório do build do frontend (`dist`) servido em `/`. */
     val staticDir: Path = Path.of("frontend/dist"),
     /** Tamanho máximo do pool de conexões (`DATABASE_POOL_SIZE`, de 1 a 100). No SQLite só um grava por vez. */
@@ -76,7 +83,7 @@ data class Settings(
         "Settings(jiraLiveEnabled=$jiraLiveEnabled, dashboardDevMode=$dashboardDevMode, " +
             "dashboardDemoData=$dashboardDemoData, " +
             "retentionMonths=$retentionMonths, accessLogRetentionMonths=$accessLogRetentionMonths, zone=$zone, configDir=$configDir, " +
-            "databasePath=$databasePath, staticDir=$staticDir, " +
+            "databasePath=$databasePath, cacheDeLeituraSeg=$cacheDeLeituraSeg, staticDir=$staticDir, " +
             "databasePoolSize=$databasePoolSize, jiraInstances=$jiraInstances, origemPublica=$origemPublica, " +
             "oidc=${if (oidc != null) "configurado" else "ausente"})"
 
@@ -113,6 +120,10 @@ data class Settings(
                 } ?: padrao.zone,
                 configDir = caminho(env, "PAINEL_CONFIG_DIR") ?: padrao.configDir,
                 databasePath = caminho(env, "DATABASE_PATH") ?: padrao.databasePath,
+                cacheDeLeituraSeg = texto(env, "PAINEL_CACHE_SEG")?.let {
+                    it.toIntOrNull()?.takeIf { n -> n in 0..600 }
+                        ?: throw IllegalArgumentException("PAINEL_CACHE_SEG inválido (esperado inteiro de 0 a 600)")
+                } ?: padrao.cacheDeLeituraSeg,
                 staticDir = caminho(env, "PAINEL_STATIC_DIR") ?: padrao.staticDir,
                 databasePoolSize = texto(env, "DATABASE_POOL_SIZE")?.let {
                     it.toIntOrNull()?.takeIf { n -> n in 1..100 }

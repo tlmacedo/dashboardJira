@@ -1,6 +1,7 @@
 package br.sidia.painel.sync
 
 import br.sidia.painel.AppContext
+import br.sidia.painel.db.CacheDeLeituras
 import br.sidia.painel.db.Retention
 import br.sidia.painel.jira.JiraException
 import br.sidia.painel.jira.OrcamentoDeRequisicoes
@@ -305,6 +306,8 @@ class SyncService(
         codigo: String?,
         http: Int?,
     ): ResultadoExecucao {
+        // O que a execução gravou (inclusive a que falhou no meio) já pode ser lido: os cards recarregam na próxima requisição.
+        CacheDeLeituras.invalidar()
         val gravada = io { estado.concluir(runId, status, resumo, codigo, http, clock.instant()) }
         if (!gravada) {
             log.warn("Execução {} da sincronização já estava fechada; desfecho descartado", runId)

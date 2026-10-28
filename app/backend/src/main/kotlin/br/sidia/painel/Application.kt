@@ -12,6 +12,7 @@ import br.sidia.painel.config.ArquivoEnv
 import br.sidia.painel.config.PerfilDeExecucao
 import br.sidia.painel.config.Settings
 import br.sidia.painel.db.AccessLog
+import br.sidia.painel.db.CacheDeLeituras
 import br.sidia.painel.demo.prepararDemonstracao
 import br.sidia.painel.http.ConfigCsrf
 import br.sidia.painel.http.cabecalhosDeSeguranca
@@ -105,6 +106,9 @@ fun main(args: Array<String>) {
     val metricas = prepararMetricas(context)
     val agendador = montarAgendador(context, metricas = metricas)
     agendador?.let { context.aoFechar { runBlocking { it.parar() } } }
+    // Leitura bruta do banco reaproveitada por poucos segundos (desligada nos testes; ver CacheDeLeituras). Depois da carga
+    // de demonstração e antes de aceitar a primeira requisição.
+    CacheDeLeituras.configurar(java.time.Duration.ofSeconds(settings.cacheDeLeituraSeg.toLong()))
     embeddedServer(Netty, port = 8080) {
         module(context.settings, context, agendador = agendador, metricas = metricas)
         monitor.subscribe(ApplicationStopped) { context.close() }

@@ -9,6 +9,8 @@ import java.sql.Timestamp
 import java.time.Instant
 import java.time.LocalDate
 import javax.sql.DataSource
+import br.sidia.painel.db.CacheDeLeituras
+import br.sidia.painel.db.ChaveDeLeitura
 import br.sidia.painel.db.emJson
 import br.sidia.painel.db.idsEmJson
 import br.sidia.painel.db.jsonParaTextos
@@ -348,6 +350,15 @@ class SqliteIssueStore(private val ds: DataSource) : IssueStore, IssueIndex {
         }
 
     override fun timelines(
+        instance: String, closedFrom: Instant?, closedTo: Instant?, openOnly: Boolean, osVersion: String?,
+        filtro: FiltroDeFicha?,
+    ): List<IssueTimeline> =
+        // Leitura bruta (sem recorte por pessoa): pode ser reaproveitada por poucos segundos (ver CacheDeLeituras).
+        CacheDeLeituras.obter(
+            ChaveDeLeitura(ds, "timelines", listOf(instance, closedFrom, closedTo, openOnly, osVersion, filtro)),
+        ) { lerTimelines(instance, closedFrom, closedTo, openOnly, osVersion, filtro) }
+
+    private fun lerTimelines(
         instance: String, closedFrom: Instant?, closedTo: Instant?, openOnly: Boolean, osVersion: String?,
         filtro: FiltroDeFicha?,
     ): List<IssueTimeline> {
