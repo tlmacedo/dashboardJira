@@ -35,7 +35,8 @@ class AgingWipCalculator(private val cal: BusinessCalendar, private val map: Sta
 
     /** [abertas]: as abertas do escopo. [historico]: as resolvidas das últimas semanas, no escopo (a faixa sai das concluídas positivas). */
     fun analisar(abertas: List<IssueSnapshot>, historico: List<IssueSnapshot>, agora: Instant, unit: TimeUnitMode): AgingWipAnalise {
-        val andamento = abertas.filter { Fluxo.emAndamento(it, map) }
+        // "A fazer" nunca é etapa: task impedida (flag) em A fazer fica fora, mesmo que Fluxo.emAndamento a conte.
+        val andamento = abertas.filter { Fluxo.emAndamento(it, map) && map.category(it.status) in emCurso }
         val positivas = historico.filter { Fluxo.concluidaPositiva(it, map) }
         val tempo = TimeInStatusCalculator(cal, map).compute(positivas.map { it.timeline }, emptyList(), agora, unit)
         val estatisticas = tempo.perStatus.associateBy { it.status }

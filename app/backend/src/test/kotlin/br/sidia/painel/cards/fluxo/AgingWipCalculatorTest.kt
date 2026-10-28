@@ -100,6 +100,16 @@ class AgingWipCalculatorTest {
     }
 
     @Test
+    fun taskComImpedimentoEmAFazerNaoViraEtapaAFazer() {
+        val impedida = Trb1.issue("TG-717", "Checklist", "ana", "10-20T12", "Open", flagged = true)
+        Trb1.carregar(ds, emAndamento() + impedida)
+        val a = analisar()
+        assertTrue(a.dto.etapas.none { it.status == "Open" }, "A fazer nunca é etapa: ${a.dto.etapas.map { it.status }}")
+        assertEquals(5, a.dto.emAndamento)
+        assertTrue("TG-717" !in chaves(a, "emAndamento"))
+    }
+
+    @Test
     fun reentradaReiniciaAIdade() {
         Trb1.carregar(ds, emAndamento())
         val ponto = etapa(analisar(), "In Progress").pontos.single { it.key == "TG-713" }
