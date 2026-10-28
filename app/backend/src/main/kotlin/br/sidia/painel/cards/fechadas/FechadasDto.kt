@@ -36,6 +36,8 @@ data class FechadasDto(
     val semResolution: Int,
     val unit: String,
     val avisos: List<AvisoDto>,
+    /** Concluídas por campo do dicionário com `filtro: true` (segmento `campo:<slug>:<valor>`; `-` = sem valor). */
+    val porCampo: List<br.sidia.painel.cards.AgrupamentoDto> = emptyList(),
 )
 
 @Serializable

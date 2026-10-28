@@ -52,6 +52,7 @@ class FechadasCalculator(
     fun analisar(
         resolvidas: List<IssueSnapshot>, candidatasNoPrazo: List<IssueSnapshot>, comEventoDeStatus: List<IssueSnapshot>,
         de: LocalDate, ate: LocalDate, agora: Instant, unit: TimeUnitMode, visiveis: Set<String>,
+        camposDeFiltro: List<br.sidia.painel.sync.CampoDeFiltro> = emptyList(),
     ): FechadasAnalise {
         val zona = cal.zone
         Fluxo.exigirStatusMapeados(map, candidatasNoPrazo, resolvidas)
@@ -123,6 +124,8 @@ class FechadasCalculator(
         for ((semana, _) in serie) segmentos["semana:$semana"] = porSemanaMap[semana].orEmpty()
         for ((tipo, l) in porTipoCiclos) segmentos["tipo:$tipo"] = l
         for ((projeto, l) in porProjeto) segmentos["projeto:$projeto"] = l
+        val porCampo = br.sidia.painel.cards.agruparPorCampos(concluidas, camposDeFiltro)
+        segmentos.putAll(porCampo.segmentos)
         for (p in pessoas) {
             segmentos["pessoa:$p:finalizou"] = finalizou[p].orEmpty()
             segmentos["pessoa:$p:participou"] = concluidas.filter { p in participantes.getValue(it) }
@@ -196,6 +199,7 @@ class FechadasCalculator(
             semResolution = semResolution.size,
             unit = if (unit == TimeUnitMode.UTIL) "util" else "corrido",
             avisos = avisos,
+            porCampo = porCampo.dtos,
         )
         return FechadasAnalise(dto, ordenados, ciclos, leads, diaDaResolucao)
     }

@@ -85,4 +85,37 @@ class FiltrosDeCardTest {
         ler("de" to "2025-10-30", "ate" to "2026-10-30", maxDias = 366) // 366 dias: passa
         assert400("de" to "2025-10-29", "ate" to "2026-10-30", padrao = null)
     }
+
+    private val campos = listOf(
+        br.sidia.painel.sync.CampoDeFiltro("SKU Type", "sku-type", null),
+        br.sidia.painel.sync.CampoDeFiltro("Checklist Type", "checklist-type", null),
+    )
+
+    private fun lerCampos(vararg p: Pair<String, String>): FiltrosDeCard =
+        FiltrosDeCard.ler(Parameters.build { p.forEach { append(it.first, it.second) } }, hoje, null, 366, campos)
+
+    @Test
+    fun lerFiltroDeCampoRepetivel() {
+        val f = lerCampos("campo.sku-type" to "MR", "campo.sku-type" to "1st Carrier (Global)", "campo.checklist-type" to "Full")
+        assertEquals(setOf("MR", "1st Carrier (Global)"), f.campos.getValue("SKU Type"))
+        assertEquals(setOf("Full"), f.campos.getValue("Checklist Type"))
+        assertEquals(emptyMap(), lerCampos().campos)
+    }
+
+    @Test
+    fun slugDesconhecido400ComCodigo() {
+        val e = assertFailsWith<ErroHttp> { lerCampos("campo.nao-existe" to "1") }
+        assertEquals(HttpStatusCode.BadRequest, e.status)
+        assertEquals("FILTRO_INVALIDO", e.codigo)
+        assertEquals(mapOf("campo" to "nao-existe"), e.params)
+        // Sem a lista de campos conhecidos (card sem dicionário), todo slug é desconhecido.
+        assertFailsWith<ErroHttp> { ler("campo.sku-type" to "MR") }
+    }
+
+    @Test
+    fun valorComControle400() {
+        assertFailsWith<ErroHttp> { lerCampos("campo.sku-type" to "a\u0007b") }
+        assertFailsWith<ErroHttp> { lerCampos("campo.sku-type" to "x".repeat(121)) }
+        lerCampos("campo.sku-type" to "x".repeat(120)) // no limite: passa
+    }
 }

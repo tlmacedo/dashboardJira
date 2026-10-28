@@ -90,7 +90,7 @@ internal val EXTRAS_DE_AUDITORIA = AttributeKey<Map<String, String>>("painel.aud
  * Resposta de erro de requisição: só o status, nunca corpo (nada de eco de valores nem de detalhes). Com [codigo],
  * o corpo é o `ErroDto` com esse código estável (a tela monta o texto por ele); nunca leva o valor recebido.
  */
-internal class ErroHttp(val status: HttpStatusCode, val codigo: String? = null) :
+internal class ErroHttp(val status: HttpStatusCode, val codigo: String? = null, val params: Map<String, String> = emptyMap()) :
     RuntimeException(status.toString(), null, false, false)
 
 internal class Filtros(
@@ -316,11 +316,13 @@ internal suspend inline fun <reified T : Any> ApplicationCall.executar(
     var status = HttpStatusCode.OK
     var corpo: T? = null
     var codigoDoErro: String? = null
+    var paramsDoErro: Map<String, String> = emptyMap()
     try {
         corpo = withContext(Dispatchers.IO) { bloco() }
     } catch (e: ErroHttp) {
         status = e.status
         codigoDoErro = e.codigo
+        paramsDoErro = e.params
     } catch (e: BloqueadoPeloDpoException) {
         // Módulo sensível fechado pela trava do DPO: 403 com o código estável, sem dado; a consulta fica no `access_log`.
         status = HttpStatusCode.Forbidden
@@ -350,7 +352,7 @@ internal suspend inline fun <reified T : Any> ApplicationCall.executar(
     }
     when {
         corpo != null -> respond(corpo)
-        codigoDoErro != null -> respond(status, ErroDto(codigoDoErro))
+        codigoDoErro != null -> respond(status, ErroDto(codigoDoErro, paramsDoErro))
         else -> respond(status)
     }
 }
