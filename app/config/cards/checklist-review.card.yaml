@@ -1,0 +1,45 @@
+# Ficha do card "Checklist × Review" (Plano 7a). Estrita: chave desconhecida falha ao carregar.
+# A leitura no banco aplica estes tipos (FiltroDeFicha); o JQL só serve à sincronização e ao ensaio. NÃO exclui status
+# de cancelamento: o par existe enquanto o vínculo existir. Os tipos de pai (checklist) e de review do PAR vêm de
+# checklist_review.yaml e de vinculos.yaml; o par é o link "Blocks / is blocked by" (issue_link), nunca o campo parent.
+
+id: checklist-review
+titulo: Checklist × Review
+instancia: samsung
+
+campos:
+  - OS Version
+  - priority
+
+filtrosFixos:
+  project: ["TG-Basic"]
+  issuetype: ["Checklist", "Checklist TG", "Checklist Review"]
+
+parametros:
+  - nome: squad
+    tipo: squad
+    obrigatorio: false
+  - nome: periodo
+    tipo: periodo
+    obrigatorio: false
+  - nome: os
+    tipo: os
+    obrigatorio: false
+
+formula: >-
+  Pares formados pelo vínculo de bloqueio entre um checklist (o pai) e a sua Checklist Review. Por par: a review vence
+  depois do pai, o pai foi fechado antes da review, a mesma pessoa nos dois, review curta (poucas horas ativas) com pai
+  reaberto, review vencida e review atrasada. Resumo: ciclo da review, sua razão com o ciclo do pai, atraso de criação,
+  duração ativa × reabertura do pai, lift de reabertura por label e atrasos em cadeia. Aprendizados e lift só com a
+  amostra mínima do checklist_review.yaml; abaixo dela o número aparece marcado como "n baixo".
+
+exemplo: >-
+  squad=[dev.alfa], periodo dos últimos 90 dias.
+
+aceite:
+  - O par vem do vínculo Blocks (nas duas direções), nunca do campo parent; os tipos de review vêm só da auditoria.
+  - Os filtros valem para o checklist (o pai); quem consulta vê o par do qual participa (pai ou review).
+  - Nenhum campo, tabela ou frase compara colegas; as pessoas aparecem só nas linhas das tasks, pela visão do papel.
+  - Cada número abre as mesmas tasks que o formam.
+
+expandChangelog: true
