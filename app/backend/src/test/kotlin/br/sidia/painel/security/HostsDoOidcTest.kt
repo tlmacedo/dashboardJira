@@ -45,7 +45,8 @@ class HostsDoOidcTest {
         // Os endereços são montados (esquema + host) para a varredura de hosts internos do repositório não os confundir com dado real.
         val hosts = listOf(
             "127.0.0.1", "[::1]", "localhost", "169.254.169.254", "10.1.2.3", "192.168.0.7", "172.16.0.1", "172.31.255.255",
-            "[fe80::1]", "[fd00::1]", "0.0.0.0", "8.8.8.8", "painel.local", "2130706433", "0x7f.1", "usuario:senha@sso.exemplo.invalid",
+            "[fe80::1]", "[fd00::1]", "0.0.0.0", "8.8.8.8", "painel.local", "2130706433", "0x7f.1",
+            "localhost.", "foo.localhost.", "painel.local.", "127.0.0.1.", "LOCALHOST.", "usuario:senha@sso.exemplo.invalid",
         )
         for (u in hosts.map { "https://$it/token" }) {
             emissor.tokenDaDescoberta = u
@@ -54,6 +55,16 @@ class HostsDoOidcTest {
             assertEquals("DESCOBERTA_ENDPOINT_NAO_PERMITIDO", e.codigo, u)
             assertFalse(u.substringAfter("//").substringBefore("/") in (e.message ?: ""), u)
         }
+    }
+
+    @Test
+    fun comListaOHostComPontoFinalContinuaRecusado() {
+        // Ruling: com a lista, a comparação é pelo nome exato; "permitido." NÃO vale como "permitido".
+        val ponto = "https://sso.exemplo.invalid./token"
+        assertFalse(OidcSettings.endpointPermitido(ponto, setOf("sso.exemplo.invalid")))
+        assertTrue(OidcSettings.endpointPermitido("https://sso.exemplo.invalid/token", setOf("sso.exemplo.invalid")))
+        // sem a lista, o ponto final de um nome público comum é normalizado e o nome passa
+        assertTrue(OidcSettings.endpointPermitido(ponto, emptySet()))
     }
 
     @Test

@@ -93,12 +93,15 @@ class OidcSettings(
             } catch (e: URISyntaxException) {
                 return false
             }
-            val host = uri.host?.lowercase() ?: return false
+            val bruto = uri.host?.lowercase() ?: return false
             if (uri.rawUserInfo != null) return false
-            if (hosts.isNotEmpty()) return hosts.any { it.equals(host, ignoreCase = true) }
-            if (host.contains(':') || host.startsWith("[")) return false
+            // Com a lista, o nome tem de ser IGUAL ao da lista (sem normalizar): "permitido." não vale como "permitido".
+            if (hosts.isNotEmpty()) return hosts.any { it.equals(bruto, ignoreCase = true) }
+            // Sem a lista, o ponto final de um nome absoluto ("localhost.") é tirado ANTES de todas as comparações.
+            val host = bruto.trimEnd('.')
+            if (host.isEmpty() || host.contains(':') || host.startsWith("[")) return false
             if (host == "localhost" || host.endsWith(".localhost") || host.endsWith(".local")) return false
-            val ultimo = host.trimEnd('.').substringAfterLast('.')
+            val ultimo = host.substringAfterLast('.')
             // Nenhum domínio de topo é numérico: 127.0.0.1, 2130706433 e 0x7f.1 caem aqui.
             return !(ultimo.all { it.isDigit() } || ultimo.startsWith("0x"))
         }
