@@ -6,6 +6,7 @@ import br.sidia.painel.domain.ORDEM_NATURAL_DE_CHAVES
 import br.sidia.painel.domain.StatusCategory
 import br.sidia.painel.domain.StatusMap
 import br.sidia.painel.domain.TimeUnitMode
+import br.sidia.painel.pessoas.Agendamento
 import br.sidia.painel.previsao.RegrasDePrevisao
 import br.sidia.painel.time.BusinessCalendar
 import br.sidia.painel.trabalho.Fluxo
@@ -38,9 +39,11 @@ class PrevisaoCalculator(
     /**
      * [abertas]: as tasks sem data de resolução no escopo (as de categoria concluído não entram no backlog).
      * [historico]: as resolvidas dentro da janela de semanas. [semente]: `sementeDoDia(dia de agora, filtros)`.
+     * [agendamentos]: o término pela capacidade de cada task (por chave), da `Agenda` da Fase 6; vazio = sem as colunas.
      */
     fun analisar(
         abertas: List<IssueSnapshot>, historico: List<IssueSnapshot>, agora: Instant, semente: Long, unit: TimeUnitMode,
+        agendamentos: Map<String, Agendamento> = emptyMap(),
     ): PrevisaoAnalise {
         val hoje = cal.localDate(agora)
         val avisos = mutableListOf<AvisoDto>()
@@ -75,7 +78,12 @@ class PrevisaoCalculator(
             val idade = Fluxo.idadeDias(s, map, cal, unit, agora)
             val ciclos = ciclosPorTipo[s.issueType].orEmpty()
             val restante = mc.restanteDadaIdade(ciclos, idade)
-            PrevisaoIssueDto(s.key, s.summary, s.issueType, s.status, s.assignee, idade, restante?.first, restante?.second, ciclos.count { it > idade })
+            // "Pela capacidade" e "Atrasa?": o término previsto pela agenda do responsável (Fase 6), quando houver.
+            val ag = agendamentos[s.key]
+            PrevisaoIssueDto(
+                s.key, s.summary, s.issueType, s.status, s.assignee, idade, restante?.first, restante?.second, ciclos.count { it > idade },
+                pelaCapacidade = ag?.termino?.toString(), atrasa = ag?.takeIf { it.termino != null && it.vencimento != null }?.atrasa,
+            )
         }
 
         val segmentos = LinkedHashMap<String, List<IssueSnapshot>>()
