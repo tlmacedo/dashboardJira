@@ -12,7 +12,8 @@ Ponto de partida (main `fa8493c`): backend 986 testes, frontend 143 (números do
 | 1 Campos de trabalho, ordem do fluxo e resoluções negativas | Concluída (backend 1000 testes, 0 falhas) | `d4882df` | Migração `V2__campos_de_trabalho.sql`; `CamposDeTrabalhoExtrator`; `StatusMap.ordem`/`ehResolucaoNegativa`; `upsert` ganha `idsDeTrabalho` |
 | 2 `IssueSnapshot` e `WorkStore` | Concluída | `1ef5ea6` | `trabalho/`; cenário TRB-1 em `src/test/.../trabalho/Trb1.kt` |
 | 3 `Fluxo` | Concluída | `c133360` | `AvisoDto.AMOSTRA_PEQUENA` |
-| 5 Abertas e Negligenciadas (domínio e API) | Concluída (backend 1066, 0 falhas) | ver `git log` | Cartões `AB-01/02/04 a 09` e `NG-01 a 06` no `catalogoPadrao()`; coluna e filtro de "último movimento real" (I-06) |
+| 6 Fechadas (domínio e API) | Concluída (backend 1086, 0 falhas) | ver `git log` | Cartões `FE-01` a `FE-12`; ficha `fechadas.card.yaml` sem exclusão de status |
+| 5 Abertas e Negligenciadas (domínio e API) | Concluída (backend 1066, 0 falhas) | `ca51f9f` | Cartões `AB-01/02/04 a 09` e `NG-01 a 06` no `catalogoPadrao()`; coluna e filtro de "último movimento real" (I-06) |
 | 4 Filtros, escopo, rota genérica de card e kit de tela | Concluída (backend 1039, frontend 156; 0 falhas) | `c05cd6e` | `FiltrosDeCard`, `Escopo`, `CardDeLeitura`/`CartaoDeLeitura`/`rotaDeCard` (adaptação ao 17a); `shared/{CardPage,Filtros,useCard}` |
 
 ## Rulings
@@ -29,6 +30,9 @@ Ponto de partida (main `fa8493c`): backend 986 testes, frontend 143 (números do
 - Ruling: NG-04 "bloqueadas" inclui a flag de impedimento (`flagged`) além da categoria BLOCKED (o plano diz "categoria BLOCKED"); sem a flag sincronizada (campo "a confirmar") o resultado é o do plano. Custo se errado: tirar `|| it.flagged`.
 - Ruling: Negligenciadas leva as linhas das seis listas na resposta (até 100 cada; a contagem e a gaveta trazem todas), com `ultimoMovimento` (campo, dia de Manaus, dias corridos) e `semMovimentoReal`. O filtro "sem movimento real" é o parâmetro `movimento=semReal` (outro valor é 400); vale para as seis listas, para as contagens e para o drill (cartões `NG-01 a 06`). O último movimento real é a última mudança de status, responsável, vencimento, labels ou resolução no changelog (criação se nunca mudou), não o `updated`. NG-01 continua pelo `updated`.
 - Ruling: o DTO de Negligenciadas ganhou `listas`, `diasSemAtualizacao`, `semMovimentoReal` e `unit` além dos seis contadores do plano (a tela precisa das linhas e do limiar).
+- Ruling: `porSemana` de Fechadas vai da semana do `de` à do `ate`, cortando a primeira só se ela for PARCIAL (começa antes do `de`) e vazia; assim o TRB-1 dá `[10-05, 10-12, 10-19, 10-26]` como o plano e uma entrega nos primeiros dias do período (antes da primeira segunda-feira) nunca some da série. Custo se errado: remover o `drop(1)`.
+- Ruling: Fechadas ganhou `comPontos` (tasks por trás de "Pontos entregues"), `linhas` (tabela FE-12, até 500) e o cartão FE-06 junta `canceladas` e `semResolution` (as duas são "fechada sem ser entrega"); o plano não tinha onde abrir `semResolution`. `semResolution` vem de `comEventoEntre(status)` no período, valendo com `resolved` nulo ou não.
+- Ruling: no T6 as candidatas de "no prazo" são as resolvidas no período; a regra única por vencimento (candidatas lidas por `duedate`) entra na Tarefa 7 como o plano manda.
 - Ruling: `EntradaDeCard` ganhou `parametros` (URL bruta) para o card ler parâmetros próprios (`movimento`, depois `granularidade`) e validar com 400.
 - Ruling: `testContextComBanco` aceita `statusMap` e `calendar` próprios (para o TRB-1, que tem mapa e feriados próprios); o padrão continua nos `.exemplo`.
 

@@ -102,6 +102,12 @@ object Fluxo {
         return if (e == null) MovimentoReal("criacao", s.created) else MovimentoReal(e.field.lowercase(java.util.Locale.ROOT), e.at)
     }
 
+    /** Quem era o responsável em [at]: a última troca até o instante, ou o responsável inicial (nulo = sem responsável). */
+    fun responsavelEm(s: IssueSnapshot, at: Instant): String? {
+        val ultima = s.timeline.assigneeChanges.sortedBy { it.at }.lastOrNull { !it.at.isAfter(at) }
+        return if (ultima == null) s.timeline.initialAssignee else ultima.to
+    }
+
     /** Segunda-feira da semana de [at] no fuso do painel (semana = segunda a domingo). */
     fun semanaDe(at: Instant, zone: ZoneId): LocalDate =
         at.atZone(zone).toLocalDate().with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))

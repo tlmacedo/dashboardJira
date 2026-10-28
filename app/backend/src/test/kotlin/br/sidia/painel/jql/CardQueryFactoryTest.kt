@@ -127,6 +127,16 @@ class CardQueryFactoryTest {
     }
 
     @Test
+    fun jqlSnapshotFechadasNaoExcluiCanceladas() {
+        // As canceladas contam em "Canceladas" (FE-06): a ficha não tem filtro de exclusão de status.
+        assertEquals(filtrosDeTrabalho, jqlDaFicha("fechadas"))
+        assertEquals(
+            "$filtrosDeTrabalho AND resolved >= \"2026-08-01\" AND resolved < \"2026-10-31\"",
+            jqlDaFicha("fechadas", mapOf("periodo" to mapOf("de" to "2026-08-01", "ate" to "2026-10-30"))),
+        )
+    }
+
+    @Test
     fun fichaDeSincronizacaoPedeCamposNovos() {
         val fields = fabrica.build(fichaSync, mapOf("desde" to desde)).fields
         for (campo in listOf("priority", "timeestimate", "timespent", "timeoriginalestimate", "components")) {

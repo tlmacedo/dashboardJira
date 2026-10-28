@@ -8,6 +8,8 @@ import br.sidia.painel.cards.contrato.CartaoRegistrado
 import br.sidia.painel.cards.contrato.FonteDoDado
 import br.sidia.painel.cards.contrato.GrupoDeCartao
 import br.sidia.painel.cards.contrato.Natureza
+import br.sidia.painel.cards.fechadas.CardFechadas
+import br.sidia.painel.cards.fechadas.cartoesDeFechadas
 import br.sidia.painel.cards.negligenciadas.CardNegligenciadas
 import br.sidia.painel.cards.negligenciadas.cartoesDeNegligenciadas
 import br.sidia.painel.db.AccessLog
@@ -34,11 +36,12 @@ internal fun metaDeTrabalho(
 }
 
 /** Todos os cartões dos cards de trabalho e prazos, para o `catalogoPadrao()`. */
-internal fun cartoesDeTrabalho(): List<CartaoRegistrado> = cartoesDeAbertas() + cartoesDeNegligenciadas()
+internal fun cartoesDeTrabalho(): List<CartaoRegistrado> = cartoesDeAbertas() + cartoesDeNegligenciadas() + cartoesDeFechadas()
 
 /** `GET /api/cards/{id}` de cada card de trabalho e prazos (o drill é a rota genérica dos cartões). */
 fun Route.rotasDosCardsDeTrabalho(ctx: AppContext, auditoria: AccessLog) {
     val store = SqliteWorkStore(requireNotNull(ctx.dataSource))
     rotaDeCard(ctx, store, auditoria, CardAbertas)
     rotaDeCard(ctx, store, auditoria, CardNegligenciadas)
+    rotaDeCard(ctx, store, auditoria, CardFechadas)
 }
