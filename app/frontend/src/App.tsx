@@ -6,8 +6,10 @@ import { Abertas } from './screens/Abertas/Abertas'
 import { AgingWip } from './screens/AgingWip/AgingWip'
 import { Auditoria } from './screens/Auditoria/Auditoria'
 import { Bloqueios } from './screens/Bloqueios/Bloqueios'
+import { ChecklistReview } from './screens/ChecklistReview/ChecklistReview'
 import { Cruzamentos } from './screens/Cruzamentos/Cruzamentos'
 import { Epicos } from './screens/Epicos/Epicos'
+import { Integridade } from './screens/Integridade/Integridade'
 import { Fechadas } from './screens/Fechadas/Fechadas'
 import { FluxoDaSemana } from './screens/FluxoDaSemana/FluxoDaSemana'
 import { Negativas } from './screens/Negativas/Negativas'
@@ -79,6 +81,8 @@ export default function App() {
                 <Route path="agingWip" element={<AgingWip />} />
                 <Route path="bloqueios" element={<Bloqueios />} />
                 <Route path="cruzamentos" element={<Cruzamentos />} />
+                <Route path="checklistReview" element={<ChecklistReview />} />
+                <Route path="integridade" element={<Integridade />} />
                 <Route path="tempo" element={<TempoEmStatus />} />
                 <Route path="auditoria" element={<Auditoria />} />
                 <Route path="divergencia" element={<Divergencia />} />

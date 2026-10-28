@@ -168,11 +168,12 @@ abstract class CenarioDeCarga(
         erros.list.filter { it.level.isGreaterOrEqual(Level.ERROR) }.map { it.loggerName + ": " + it.formattedMessage }
 
     /**
-     * Uma rota por tela do catálogo. As telas Auditoria e Sincronização não têm `/api/cards/<tela>`: usam as rotas
-     * próprias (`/api/auditoria/sinais` e `/api/sync/status`), que entram abaixo junto de `task-review`.
+     * Uma rota por tela do catálogo. As telas Auditoria, Integridade e Sincronização não têm `/api/cards/<tela>`: usam as rotas
+     * próprias (`/api/auditoria/sinais` e `/api/sync/status`), que entram abaixo junto de `task-review`. A Integridade fica fora da
+     * medição de propósito: o banco de carga tem sincronização registrada e a porta do DPO a mantém fechada (403 para todos).
      */
     private fun rotasDeCards(): List<String> =
-        (catalogoPadrao().cartoes.map { it.meta.tela }.filter { it != "auditoria" && it != "sincronizacao" }.map { "/api/cards/$it" } +
+        (catalogoPadrao().cartoes.map { it.meta.tela }.filter { it != "auditoria" && it != "sincronizacao" && it != "integridade" }.map { "/api/cards/$it" } +
             "/api/cards/task-review" + "/api/auditoria/sinais" + "/api/sync/status" + "/api/cartoes/catalogo" + "/api/me")
             .distinct().sorted()
 

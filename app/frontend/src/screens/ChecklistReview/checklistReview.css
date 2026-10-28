@@ -1,0 +1,9 @@
+/* Tela Checklist × Review: densa (tela de trabalho). Só tokens dos temas; símbolo + texto, nunca só cor. */
+.cardpage .lista-simples {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.cardpage .lista-simples li {
+  white-space: normal;
+}

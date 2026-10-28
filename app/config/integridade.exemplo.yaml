@@ -1,0 +1,72 @@
+# Modelo das regras da Integridade (copie para integridade.yaml e ajuste). Não leva dado pessoal.
+# Estrito: chave desconhecida, sinal sem gravidade ou gravidade fora de 1..3 falham ao carregar. São heurísticas do app
+# anterior, ainda SEM calibração com dados reais: o painel só devolve indícios para revisão humana, nunca prova.
+versao: 1
+
+# Gravidade de cada sinal (1 a 3). Todo sinal precisa de uma gravidade.
+gravidades:
+  RESGATE_POR_PRORROGACAO: 3
+  TROCA_ANTES_DE_FECHAR: 3
+  CRIADA_E_FECHADA_RAPIDO: 3
+  REABRE_E_FECHA_RAPIDO: 3
+  FECHAMENTO_EM_LOTE: 3
+  VENCIMENTO_PRORROGADO: 2
+  VENCIMENTO_TARDIO: 2
+  PULOU_O_FLUXO: 2
+  ESTIMATIVA_AUMENTADA: 2
+  LABEL_CRITICIDADE_REMOVIDA: 2
+  FECHADA_POR_OUTRO: 1
+  FECHADA_NO_LIMITE: 1
+
+# Sinais ligados. ESTIMATIVA_AUMENTADA fica desligado: o painel ainda não guarda o valor da estimativa no changelog (só o
+# nome do campo); ligue-o quando uma decisão futura ampliar os campos com valor (aparece o aviso SINAL_SEM_DADO).
+ativos:
+  - RESGATE_POR_PRORROGACAO
+  - TROCA_ANTES_DE_FECHAR
+  - CRIADA_E_FECHADA_RAPIDO
+  - REABRE_E_FECHA_RAPIDO
+  - FECHAMENTO_EM_LOTE
+  - VENCIMENTO_PRORROGADO
+  - VENCIMENTO_TARDIO
+  - PULOU_O_FLUXO
+  - LABEL_CRITICIDADE_REMOVIDA
+  - FECHADA_POR_OUTRO
+  - FECHADA_NO_LIMITE
+
+# Troca de responsável até tantas horas antes de a task ser fechada pelo novo responsável.
+trocaAntesDeFecharHoras: 2
+
+# Task criada e fechada em menos de tantos minutos.
+criadaEFechadaMinutos: 15
+
+# Task fechada, reaberta e fechada de novo, cada passo em menos de tantas horas.
+reabreEFechaHoras: 2
+
+# Fechamento em lote: tantas tasks ou mais fechadas pela mesma pessoa em até tantos minutos.
+loteQuantidade: 6
+loteMinutos: 10
+
+# Vencimento definido pela primeira vez depois desta fração da vida da task (criação até a resolução).
+fracaoVidaTardia: 0.7
+
+# Aumento da estimativa original a partir do qual há sinal (0,3 = +30%).
+estimativaAumento: 0.3
+
+# Labels de criticidade (sem diferenciar maiúsculas); o vocabulário real se confirma na primeira conexão.
+labelsCriticidade: ["CRITICAL", "BLOCKER"]
+
+# Label de criticidade removida até tantos dias antes do fechamento.
+labelRemovidaDias: 2
+
+# Fechada no dia do vencimento a partir desta hora de Manaus (0 a 23).
+limiteInicioHora: 22
+
+# Nível por pessoa. Taxa = pontos ÷ max(concluídas, concluidasMinimas); múltiplo = taxa ÷ mediana das taxas (piso pisoMediana).
+# Alto: pontos, múltiplo e sinais graves (gravidade 3) todos no mínimo. Médio: pontos e múltiplo no mínimo.
+pontosAlto: 12
+multiploAlto: 3.0
+gravesAlto: 3
+pontosMedio: 6
+multiploMedio: 2.0
+concluidasMinimas: 8
+pisoMediana: 0.05

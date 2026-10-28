@@ -71,8 +71,8 @@ object Trb1 {
     /** customId de `OS Version` usado nas issues do cenário. */
     const val CUSTOM_OS_VERSION = "customfield_12416"
 
-    /** `"10-05T12"` -> `2026-10-05T12:00:00Z`. */
-    fun t(mmddhh: String): Instant = Instant.parse("2026-$mmddhh:00:00Z")
+    /** `"10-05T12"` -> `2026-10-05T12:00:00Z`; com minutos, `"10-05T12:15"` -> `2026-10-05T12:15:00Z`. */
+    fun t(mmddhh: String): Instant = Instant.parse(if (mmddhh.length > 8) "2026-$mmddhh:00Z" else "2026-$mmddhh:00:00Z")
 
     private val formatoJira: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSxx").withZone(ZoneOffset.UTC)
 
