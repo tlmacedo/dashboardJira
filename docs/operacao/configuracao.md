@@ -83,6 +83,32 @@ Entrada e saída de pessoas: **encerre a vigência** (`ate`) em vez de apagar a 
 
 Volte a versão anterior do arquivo (o commit anterior do repositório de configuração, ou a cópia datada), rode `validar-config`, copie para o servidor e reinicie. Como a configuração não é recarregada a quente, nada muda até o reinício.
 
+## 6. Variáveis do arquivo de variáveis
+
+O modelo é `app/.env.example` (copie para `app/.env`, que o git ignora, ou aponte `PAINEL_ENV_FILE` para outro arquivo). Vazio ou ausente = padrão. Nenhuma variável abaixo liga o Jira por si só: quem liga é só `JIRA_LIVE_ENABLED`, e só o usuário a muda.
+
+| Variável | Padrão | Para quê |
+|---|---|---|
+| `JIRA_LIVE_ENABLED` | falso | A **única** chave do acesso ao Jira (só o usuário muda, à mão, só neste arquivo) |
+| `DASHBOARD_DEV_MODE` | verdadeiro em `iniciar.*`; falso no pacote | Modo desenvolvimento: sem login, com faixa vermelha. Nunca em produção |
+| `DASHBOARD_DEMO_DATA` | falso | Dados fictícios de demonstração (só em desenvolvimento, Jira desligado) |
+| `DASHBOARD_ORIGEM_PUBLICA` | vazio | Origem pela qual o navegador acessa o painel (proteção CSRF); `https` em produção |
+| `DATABASE_PATH` | `data/painel.db` | Arquivo SQLite do painel |
+| `DATABASE_POOL_SIZE` | 4 | Conexões do pool (1 a 100) |
+| `PAINEL_CONFIG_DIR` | `config` | Pasta dos YAML de configuração |
+| `PAINEL_STATIC_DIR` | `frontend/dist` | Build do frontend servido em `/` |
+| `JIRA_SAMSUNG_URL`, `JIRA_SAMSUNG_TOKEN` | vazio | Instância `samsung` (Bearer); só ativa com as duas preenchidas |
+| `JIRA_SIDIA_URL`, `JIRA_SIDIA_USER`, `JIRA_SIDIA_TOKEN` | vazio | Instância `sidia` (Basic); só ativa com as três preenchidas |
+| `SYNC_INSTANCIAS`, `SYNC_INTERVALO_MIN`, `SYNC_HORA_RECONCILIACAO`, `SYNC_HORA_RETENCAO`, `SYNC_MAX_ITENS`, `SYNC_MAX_REQUISICOES`, `SYNC_SOBREPOSICAO_MIN`, `SYNC_FUSO_SERVIDOR`, `SYNC_TEMPO_MAX_MIN` | ver `app/README.md` | Intervalos e limites da sincronização (não ligam nada) |
+| `RETENTION_MONTHS`, `ACCESS_LOG_RETENTION_MONTHS` | 24 | Meses de dados locais e de registro de acesso |
+| `PAINEL_LOG_FORMATO`, `PAINEL_LOG_DIR` | `JSON`, vazio | Formato e pasta dos logs ([observabilidade](observabilidade.md)) |
+| `PAINEL_DISCO_MIN_MB` | 500 | Espaço livre mínimo para o painel estar pronto |
+| `PAINEL_METRICAS_PORTA`, `PAINEL_METRICAS_HOST` | 9464, `127.0.0.1` | Porta interna das métricas; `0` desliga |
+| `PAINEL_ALERTAS_ARQUIVO` | vazio | Arquivo de texto dos alertas |
+| `SYNC_PAT_VALIDADE_SAMSUNG`, `SYNC_PAT_VALIDADE_SIDIA` | vazio | Validade do token, `aaaa-mm-dd`, informada por você |
+| `SESSION_SECRET`, `SESSION_SECRET_ANTERIOR` | vazio | Assinatura do cookie de sessão ([rotação de segredos](rotacao-de-segredos.md)) |
+| `BACKUP_DIR`, `BACKUP_HORA`, `BACKUP_RETENCAO_COPIAS` | vazio, `02:00`, 14 | Backup do banco ([backup e restauração](backup-e-restauracao.md)) |
+
 ## Depois da flag / com o usuário
 
 - Criar o repositório privado de configuração (acesso restrito) e definir quem revisa. O painel não depende dele para funcionar.
