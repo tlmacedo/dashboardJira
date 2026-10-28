@@ -18,11 +18,17 @@ Branch: `feat/ci-e-endurecimento` (lote 9a = tarefas 1 a 3; os lotes seguintes c
 - Ruling: `padroes-permitidos.txt` recebeu só hosts públicos (documentação de fornecedores, registros de pacotes) e marcadores de lugar (`h`, `u`, `j`, `host`, `jira`, `x`, `0.0.0.0`, `10.0.0.1`, `127.0.0.2`, `exemplo.com`, `suaempresa.*`) já presentes no repositório. Nenhum host da empresa nem dado pessoal foi achado na árvore (ponto de parada 4 não disparou).
 - Ruling: arquivos de banco (`*.db`, `-wal`, `-shm`, `.lock`) entram em `ARQUIVO_PROIBIDO`; o achado de arquivo proibido sai com linha `0` (`arquivo:0`).
 
+- Ruling (lote 9b, T4): a proteção CSRF é um plugin de aplicação que registra um interceptador na fase `Plugins` (com `finish()`), instalado depois do controle de acesso; assim a auditoria já vê o principal e o handler nunca roda. Consequência aceita: `POST` sem cabeçalho em rota de API inexistente responde 403 `CSRF_AUSENTE` (e não 404); `SpaTest.apiInexistenteDevolve404SemHtml` passou a testar os dois casos (com `comCsrf()` dá 404; sem, 403 JSON, nunca HTML). Chamada mutante sem login (401) também vem antes do CSRF: o controle de acesso responde primeiro.
+- Ruling (T4): origem esperada sem `DASHBOARD_ORIGEM_PUBLICA` = `<esquema local>://<cabeçalho Host>` (fallback para o host/porta locais se o `Host` faltar, que é o caso do motor de teste); `:80`/`:443` padrão são removidos na comparação; o painel não confia em `X-Forwarded-*`. Atrás de proxy a variável é obrigatória (documentado no `.env.example`).
+- Ruling (T4): `todoMetodoMutanteExigeCsrf` percorre `RoutingRoot` como `RoutingNode` (a interface `Route` não expõe `selector` nem `children` no Ktor 3.3.1) e usa `RoutingNode.parent.toString()` como caminho acumulado.
+
 ## Minor adiados
 
 (nenhum até aqui)
 
 ## Tarefas
+
+- Tarefa 4 (lote 9b): CSRF e `ErroDto`. `ProtecaoCsrfTest` (16) e 4 casos novos de `Settings` (origem pública); `client.test.ts` (6). Falharam antes pela asserção (rascunho do plugin sem proteger: 12 de 16 falharam; frontend: `ErroDaApi` inexistente). `TestHttp.comCsrf()` criado. Números ao fim da tarefa: backend 792 testes, 0 falhas; frontend 63 testes, 0 falhas, lint 0, build ok.
 
 - Fim do lote 9a (tarefas 1 a 3): backend `--rerun-tasks` 772 testes, 0 falhas; frontend `--frozen-lockfile` 57 testes, 0 falhas, build ok; `test-varredura.sh` 41 casos ok; `test-guard.sh` e `test-PreToolUse.sh` com 0 falhas. Revisão independente em contexto limpo e revisão final ficam para o fechamento do plano.
 - Tarefa 3 (commit 583ba0d): CSP e cabeçalhos de segurança. `CabecalhosDeSegurancaTest` (8), `CiWorkflowTest.frontendVerificaCsp` (1), `verificar-csp.test.ts` (9). Falharam antes pelo motivo certo (cabeçalhos ausentes; `SpaTest` passou a esperar `no-store` na API). Mutação: tirar a condição de caminho do `no-store` sobreviveu ao teste original (o servidor estático sempre define o próprio `Cache-Control`), então foi acrescentada a asserção do 404 de arquivo sem cabeçalho; depois a mutação falhou como devia. Plugin por `onCallRespond` (cobre 401, 403, 404 e estáticos); `nosniff` saiu do `StaticSpa.kt`. Números ao fim da tarefa: backend 772 testes, 0 falhas; frontend 57 testes, 0 falhas, lint 0, build ok, `verificar-csp.mjs` ok. **Conferência manual no navegador e `curl` dos cabeçalhos não feitas** (o hook de proteção barrou o comando que subia o painel e chamava `curl`; não contornei). A cobertura vem de `testApplication`.

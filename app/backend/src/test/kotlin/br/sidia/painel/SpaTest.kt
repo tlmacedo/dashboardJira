@@ -69,7 +69,9 @@ class SpaTest {
         assertFalse(resposta.bodyAsText().contains("painel-teste"))
         assertEquals(HttpStatusCode.NotFound, client.get("/api/inexistente/aninhada").status)
         assertEquals(HttpStatusCode.NotFound, client.get("/api").status)
-        assertEquals(HttpStatusCode.NotFound, client.post("/api/inexistente").status)
+        // Método mutante: com o cabeçalho anti-CSRF chega ao roteador (404); sem ele a proteção nega antes (403 JSON, nunca HTML).
+        assertEquals(HttpStatusCode.NotFound, client.post("/api/inexistente") { comCsrf() }.status)
+        assertEquals(HttpStatusCode.Forbidden, client.post("/api/inexistente").status)
         // Variantes camufladas da API também nunca recebem o HTML.
         // ("//api/x" não é testável pelo cliente de teste, que o lê como host; coberto em AccessControlTest.)
         listOf("/API/inexistente", "/%61pi/inexistente", "/api//inexistente").forEach {

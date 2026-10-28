@@ -74,6 +74,9 @@ val ApplicationCall.principal: Principal
     get() = attributes.getOrNull(chavePrincipal)
         ?: throw IllegalStateException("Chamada sem principal autenticado")
 
+/** Principal da chamada se já foi resolvido; `null` em rota pública ou antes da autenticação. Nunca lança. */
+internal fun ApplicationCall.principalOuNulo(): Principal? = attributes.getOrNull(chavePrincipal)
+
 /**
  * Resolve o principal uma vez por chamada para toda rota sob `/api/` (exceto health e meta).
  * Sem principal, responde 401 e interrompe o processamento.

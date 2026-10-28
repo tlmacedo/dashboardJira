@@ -6,7 +6,10 @@ import br.sidia.painel.config.ArquivoEnv
 import br.sidia.painel.config.Settings
 import br.sidia.painel.db.AccessLog
 import br.sidia.painel.demo.prepararDemonstracao
+import br.sidia.painel.http.ConfigCsrf
 import br.sidia.painel.http.cabecalhosDeSeguranca
+import br.sidia.painel.http.protecaoCsrf
+import br.sidia.painel.http.registrarNegacaoCsrf
 import br.sidia.painel.security.Authenticator
 import br.sidia.painel.security.DevAuthenticator
 import br.sidia.painel.security.OidcAuthenticator
@@ -109,6 +112,10 @@ fun Application.module(
     val auditoria = context.dataSource?.let { AccessLog(it) }
     installAccessControl(settings, authenticator, aoNegarSemPapel = { call, principal ->
         auditoria?.let { registrarNegacaoSemPapel(it, context, call, principal) }
+    })
+    // CSRF em todo método mutante (depois do controle de acesso, para a auditoria já ver o principal).
+    install(protecaoCsrf(ConfigCsrf(settings.origemPublica)) { call, codigo ->
+        auditoria?.let { registrarNegacaoCsrf(it, context, call, codigo) }
     })
     if (settings.dashboardDevMode && settings.jiraLiveEnabled) {
         log.warn("ATENÇÃO: modo de desenvolvimento (sem login) com Jira real ligado: dados reais ficam expostos sem autenticação.")

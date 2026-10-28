@@ -1,6 +1,8 @@
 // Contrato do card "Tempo em status" (espelha TempoEmStatusDto/DrillRow do backend).
 // Só fala com o backend do próprio painel; nunca com o Jira.
 
+import { ErroDaApi } from '../../api/client'
+
 export type Categoria = 'TODO' | 'ACTIVE' | 'WAIT' | 'BLOCKED' | 'DONE'
 
 export type StatusStat = { status: string; category: Categoria; median: number; p85: number; n: number }
@@ -68,11 +70,9 @@ export const FILTROS_VAZIOS: Filtros = {
 }
 
 /** Erro de HTTP sem corpo: o backend responde só o status (400/403/5xx). */
-export class ApiError extends Error {
-  readonly status: number
+export class ApiError extends ErroDaApi {
   constructor(status: number) {
-    super(`HTTP ${status}`)
-    this.status = status
+    super(status)
   }
 }
 
