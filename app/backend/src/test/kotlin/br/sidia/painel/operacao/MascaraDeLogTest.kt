@@ -94,6 +94,25 @@ class MascaraDeLogTest {
     }
 
     @Test
+    fun segredoDoOidcVemDeValoresSecretos() {
+        val settings = Settings.fromEnv(mapOf("OIDC_CLIENT_SECRET" to "oidc-ficticio-Zx98765"))
+        val valores = settings.valoresSecretos()
+        assertTrue("oidc-ficticio-Zx98765" in valores)
+        MascaraDeLog.registrarSegredos(valores)
+        assertEquals("erro *** fim", MascaraDeLog.mascarar("erro oidc-ficticio-Zx98765 fim"))
+        assertFalse("oidc-ficticio-Zx98765" in settings.toString())
+    }
+
+    @Test
+    fun valorComEspacoOuAspasNaChaveValorEMascaradoPorInteiro() {
+        // entre aspas, o valor vai até a aspa de fechamento (com espaços); sem aspas, até o espaço
+        assertEquals("""password="***" fim""", MascaraDeLog.mascarar("""password="valor secreto 1" fim"""))
+        assertEquals("""{"client_secret":"***"}""", MascaraDeLog.mascarar("""{"client_secret":"valor secreto 1"}"""))
+        assertEquals("OIDC_CLIENT_SECRET='***' fim", MascaraDeLog.mascarar("OIDC_CLIENT_SECRET='valor secreto 1' fim"))
+        assertEquals("""senha: "***"""", MascaraDeLog.mascarar("""senha: "a b\"c d""""))
+    }
+
+    @Test
     fun settingsSemSegredosNaoDevolveNada() {
         assertTrue(Settings().valoresSecretos().isEmpty())
     }

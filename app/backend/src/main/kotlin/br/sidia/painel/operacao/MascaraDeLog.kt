@@ -61,8 +61,13 @@ object MascaraDeLog {
         Regex("(?i)((?:set-)?cookie\\s*:\\s*)[^\\r\\n]+") to { m -> m.groupValues[1] + "***" },
         Regex("(?i)(painel_sessao=)[^;\\s\"]+") to { m -> m.groupValues[1] + "***" },
         // `password=x`, `senha: x`, `SESSION_SECRET=x`, `"token":"x"`
+        // Valor entre aspas (simples ou duplas): vai até a aspa de fechamento, com espaços e aspas escapadas dentro.
         Regex(
-            "(?i)((?:[A-Za-z0-9_.-]*(?:password|senha|secret|token|apikey|api_key)|\\bpat)\"?\\s*[=:]\\s*\"?)[^\\s\"&,;]+",
+            "(?i)((?:[A-Za-z0-9_.-]*(?:password|senha|secret|token|apikey|api_key)|\\bpat)[\"']?\\s*[=:]\\s*)([\"'])(?:\\\\.|(?!\\2)[^\\\\])*\\2",
+        ) to { m -> m.groupValues[1] + m.groupValues[2] + "***" + m.groupValues[2] },
+        // Sem aspas: até o próximo espaço ou separador.
+        Regex(
+            "(?i)((?:[A-Za-z0-9_.-]*(?:password|senha|secret|token|apikey|api_key)|\\bpat)[\"']?\\s*[=:]\\s*[\"']?)[^\\s\"'&,;]+",
         ) to { m -> m.groupValues[1] + "***" },
         // `//usuario:senha@host` (tudo até o último `@` do trecho vira credencial: seguro por excesso)
         Regex("(?<=://)[^\\s]*@") to { _ -> "***@" },
