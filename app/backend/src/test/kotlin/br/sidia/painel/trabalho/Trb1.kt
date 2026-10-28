@@ -64,7 +64,9 @@ object Trb1 {
     )
 
     /** customId de `Story Points` e `Epic Link` usados nas issues do cenário. */
-    val ids: Map<String, String?> = mapOf("Story Points" to "customfield_10002", "Epic Link" to "customfield_10003")
+    val ids: Map<String, String?> = mapOf(
+        "Story Points" to "customfield_10002", "Epic Link" to "customfield_10003", "Flagged" to "customfield_10004",
+    )
 
     /** customId de `OS Version` usado nas issues do cenário. */
     const val CUSTOM_OS_VERSION = "customfield_12416"
@@ -107,6 +109,7 @@ object Trb1 {
         atualizada: String? = null,
         epico: String? = null,
         osVersion: String? = null,
+        flagged: Boolean = false,
     ): IssueDeTeste {
         val json = buildJsonObject {
             put("key", key)
@@ -129,6 +132,7 @@ object Trb1 {
                 pontos?.let { put("customfield_10002", it) }
                 epico?.let { put("customfield_10003", it) }
                 osVersion?.let { o -> putJsonObject(CUSTOM_OS_VERSION) { put("value", o) } }
+                if (flagged) putJsonArray("customfield_10004") { add(buildJsonObject { put("value", "Impediment") }) }
             }
         }
         return IssueDeTeste(json, eventos)

@@ -45,6 +45,8 @@ data class AvisoDto(
         const val CALCULO_INDISPONIVEL = "CALCULO_INDISPONIVEL"
         const val DATAS_INCONSISTENTES = "DATAS_INCONSISTENTES"
         const val OS_INDISPONIVEL = "OS_INDISPONIVEL"
+        /** Faixa histórica (P50/P85) com menos itens que o mínimo: o número aparece, o aviso diz que é instável (`tipo`, `n`, `minimo`). */
+        const val AMOSTRA_PEQUENA = "AMOSTRA_PEQUENA"
         const val BLOQUEANTE = "bloqueante"
         const val INFORMATIVO = "informativo"
 
