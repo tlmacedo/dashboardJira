@@ -6,6 +6,18 @@ Ponto de partida (main `b8d203b`): backend 1224 testes, 0 falhas.
 
 **Estado final do 6a:** backend 1387 testes (`--rerun-tasks`), frontend 271, `pnpm build` ok, `varrer-dados-pessoais.sh` e `test-guard.sh` ok; 0 falhas. Revisão: autorrevisão por tarefa com mutação dos testes principais (sem subagente, por regra do despacho); a revisão final independente e o PR ficam para o orquestrador.
 
+**Revisão final do 6a (PR #35): 2 Important corrigidos em commits novos.**
+- I1 corrigido: as mensagens de erro de carga de `equipes.yaml`, `ausencias.yaml` e `planejamento.yaml` citam só o arquivo e o item `#N`; nenhum id, data ou número lido (teste `ErrosSemValorLidoTest`). Isto SUBSTITUI o Ruling de T1 que dizia citar o id: o id não aparece mais.
+- I2 corrigido: `dataOuNulo` delega à `data()` comum (anos 1970 a 2200): `inicio=+999999999-12-31` e datas malformadas dão 400 sem eco do valor, auditado (`DatasExtremasPessoasTest`, todos os cards de pessoas). O 400 segue o padrão dos filtros comuns (sem corpo e sem código; o mesmo de `data()`).
+- M1 (a11y) corrigido: Gargalos ganhou "Ver tabela" com a série por status e dia (60 linhas) e a série entra no CSV. M7 (indentação do `companion` em `Ausencias.kt`) corrigido. M8: não havia `id` de elemento duplicado (o `Cartao` usa `useId`), mas os dois ⓘ do CP-02 tinham o mesmo nome acessível; agora levam o título (`ajudaComTitulo`), com teste.
+
+**Minor ADIADOS adicionais da revisão final:**
+- R-M2: cartões CP, CA, CL, PL, VE, GA e TD fora do teste de par positivo da demonstração (já em M7 abaixo).
+- R-M3: no sábado e no domingo a semana atual não tem capacidade e todos aparecem "▲ sem capacidade" (falso alarme pela regra D3 da spec); considerar empurrar a demanda para a semana seguinte.
+- R-M4: "7 dias" de Vencimentos inclui hoje+7; responsável fora de `equipes.yaml` infla o VE-02 (sem término previsto vira risco).
+- R-M5: `capacidadeSquad` do Calendário vem preenchida para o USUARIO (é só a capacidade dele).
+- R-M6: o limite de WIP do time é comparado ao WIP da visão do líder (squad), que é menor.
+
 **Minor ADIADOS do 6a (sem correção neste PR):**
 - M1: a lista de ordem de prioridade (`Highest` a `Lowest`) existe em 3 lugares (`AbertasCalculator`, `MetasCalculator`, `Agenda`); extrair uma constante única.
 - M2: a captura visual das sete telas (1440 e 390 px, três temas) não foi feita (sem navegador).

@@ -83,13 +83,13 @@ export function Carga() {
                 legenda={dto.jain === null ? t('carga.kpi.jain.indisponivel') : t('carga.kpi.jain.nota')}
               />
               <Cartao
-                id="CP-02" titulo={t('carga.kpi.acima')} valor={bloqueado ? traco : inteiro(dto.acimaDaCapacidade, lang)}
+                id="CP-02" ajudaComTitulo titulo={t('carga.kpi.acima')} valor={bloqueado ? traco : inteiro(dto.acimaDaCapacidade, lang)}
                 simboloDoValor={!bloqueado && dto.acimaDaCapacidade > 0 ? '▲' : undefined}
                 legenda={t('carga.kpi.tasksNaFila').replace('{n}', inteiro(dto.tasksAcimaDaCapacidade, lang))}
                 aoAbrir={comAbrir(dto.tasksAcimaDaCapacidade, 'CP-02', 'acimaDaCapacidade', t('carga.kpi.acima'))}
               />
               <Cartao
-                id="CP-02" titulo={t('carga.kpi.folga')} valor={bloqueado ? traco : inteiro(dto.comFolga, lang)}
+                id="CP-02" ajudaComTitulo titulo={t('carga.kpi.folga')} valor={bloqueado ? traco : inteiro(dto.comFolga, lang)}
                 legenda={t('carga.kpi.tasksNaFila').replace('{n}', inteiro(dto.tasksComFolga, lang))}
                 aoAbrir={comAbrir(dto.tasksComFolga, 'CP-02', 'comFolga', t('carga.kpi.folga'))}
               />

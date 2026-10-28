@@ -50,6 +50,32 @@ describe('tela Gargalos e fluxo', () => {
     expect(screen.getByText('hoje 3 (0 em 15 dias)')).toBeInTheDocument()
   })
 
+  it('fluxoTemTabelaEquivalenteAcessivel', async () => {
+    simular({ [CARD]: { status: 200, corpo: DTO } })
+    renderizarTela(<Gargalos />, '/gargalos')
+    // A tabela com a série por status e dia fica recolhida até "Ver tabela".
+    await screen.findByText('hoje 13 (+8 em 15 dias)')
+    expect(screen.queryByRole('table', { name: 'Fluxo cumulativo de 60 dias: tasks por status e dia' })).toBeNull()
+    await userEvent.click(screen.getByRole('button', { name: 'Ver tabela' }))
+    const tabela = await screen.findByRole('table', { name: 'Fluxo cumulativo de 60 dias: tasks por status e dia' })
+    expect(within(tabela).getAllByRole('rowheader')).toHaveLength(60)
+    expect(within(tabela).getAllByRole('columnheader').map((c) => c.textContent)).toEqual(['Dia', 'Open', 'In Progress'])
+    const ultima = within(tabela).getAllByRole('row').at(-1) as HTMLElement
+    expect(ultima).toHaveTextContent('13')
+  })
+
+  it('csvInclui60DiasPorStatus', async () => {
+    const csv = await import('../../shared/csv')
+    const baixar = vi.spyOn(csv, 'baixarCsv').mockImplementation(() => undefined)
+    simular({ [CARD]: { status: 200, corpo: DTO } })
+    renderizarTela(<Gargalos />, '/gargalos')
+    await userEvent.click(await screen.findByRole('button', { name: 'Exportar CSV' }))
+    const linhas = baixar.mock.calls[0][1] as string[][]
+    const cab = linhas.findIndex((l) => l[0] === 'Dia')
+    expect(linhas[cab]).toEqual(['Dia', 'Open', 'In Progress'])
+    expect(linhas.slice(cab + 1)).toHaveLength(60)
+  })
+
   it('etapaAbreAsTasksDoStatus', async () => {
     const mock = simular({ [CARD]: { status: 200, corpo: DTO }, '/api/cartoes/GA-02/tasks': { status: 200, corpo: gaveta(13, 'card.ga02.titulo') } })
     renderizarTela(<Gargalos />, '/gargalos')

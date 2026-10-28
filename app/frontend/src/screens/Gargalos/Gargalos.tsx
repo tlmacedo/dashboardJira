@@ -39,6 +39,7 @@ export function Gargalos() {
   const consulta = useCard<GargalosDto>('gargalos', sp)
   const dto = consulta.data
   const [gaveta, setGaveta] = useState<Gaveta | null>(null)
+  const [tabela, setTabela] = useState(false)
   const bloqueado = temBloqueio(dto?.avisos)
   const traco = '—'
   const resumo = resumoDosFiltros(sp, t, (iso) => dataCurta(iso, lang))
@@ -54,6 +55,10 @@ export function Gargalos() {
       [],
       [t('gargalos.col.etapa'), t('gargalos.col.categoria'), t('gargalos.col.wip'), t('gargalos.col.limite'), t('gargalos.col.crescimento'), t('gargalos.col.situacao')],
       ...dto.etapas.map((e) => [e.status, e.categoria, String(e.wip), e.limite === null ? '' : String(e.limite), String(e.crescimento15d), e.motivo ? t(`gargalos.motivo.${e.motivo}`) : '']),
+      [],
+      // O fluxo cumulativo inteiro: uma linha por dia, uma coluna por status.
+      [t('gargalos.tabela.dia'), ...dto.faixas.map((f) => f.status)],
+      ...dto.dias.map((d, i) => [d, ...dto.faixas.map((f) => String(f.contagens[i] ?? ''))]),
     ])
   }
 
@@ -105,6 +110,37 @@ export function Gargalos() {
                     )
                   })}
                 </div>
+              )}
+              {dto.faixas.length > 0 && !bloqueado && (
+                <>
+                  <button type="button" className="btn" aria-expanded={tabela} onClick={() => setTabela(!tabela)}>
+                    {t(tabela ? 'gargalos.tabela.ocultar' : 'gargalos.tabela.ver')}
+                  </button>
+                  {tabela && (
+                    <div className="tabela-rolagem" tabIndex={0} role="region" aria-label={t('gargalos.tabela.titulo')}>
+                      <table className="tabela" aria-label={t('gargalos.tabela.titulo')}>
+                        <thead>
+                          <tr>
+                            <th scope="col">{t('gargalos.tabela.dia')}</th>
+                            {dto.faixas.map((f) => (
+                              <th scope="col" className="num" key={f.status}>{f.status}</th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {dto.dias.map((d, i) => (
+                            <tr key={d + i}>
+                              <th scope="row">{dataCurta(d, lang)}</th>
+                              {dto.faixas.map((f) => (
+                                <td className="num" key={f.status}>{inteiro(f.contagens[i] ?? 0, lang)}</td>
+                              ))}
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </>
               )}
             </Cartao>
 

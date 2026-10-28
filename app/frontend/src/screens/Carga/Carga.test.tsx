@@ -107,6 +107,23 @@ describe('tela Carga por pessoa', () => {
     expect(String(mock.mock.calls.find((c) => String(c[0]).startsWith('/api/cartoes/CP-02/tasks'))?.[0])).toContain('segmento=acimaDaCapacidade')
   })
 
+  it('doisCartoesCP02TemAjudaComNomesUnicos', async () => {
+    const cartao = {
+      id: 'CP-02', grupo: 'pessoas', natureza: 'PESSOAS', tela: 'carga', tituloChave: 'card.cp02.titulo', oQueMostraChave: 'card.cp02.oQueMostra',
+      comoCalculaChave: 'card.cp02.comoCalcula', fontes: ['ISSUE'], papeis: ['GERENTE'], temDrill: true, exigeChangelog: false, exigeWorklog: false,
+    }
+    simular({ [CARD]: { status: 200, corpo: DTO }, '/api/cartoes/catalogo': { status: 200, corpo: { cartoes: [cartao] } } })
+    renderizarTela(<Carga />, '/carga')
+    const botoes = await screen.findAllByRole('button', { name: /^Sobre este cartão/ })
+    const nomes = botoes.map((b) => b.getAttribute('aria-label'))
+    expect(new Set(nomes).size).toBe(nomes.length)
+    expect(nomes).toContain('Sobre este cartão: Pessoas acima da capacidade')
+    expect(nomes).toContain('Sobre este cartão: Pessoas com folga')
+    // Nenhum id de elemento repetido na tela.
+    const ids = [...document.querySelectorAll('[id]')].map((e) => e.id)
+    expect(new Set(ids).size).toBe(ids.length)
+  })
+
   it('semPermissaoMostraMensagem', async () => {
     simular({ [CARD]: { status: 403 } })
     renderizarTela(<Carga />, '/carga')
