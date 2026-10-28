@@ -9,8 +9,12 @@ Ponto de partida (main `b8d203b`): backend 1224 testes, 0 falhas.
 | Tarefa | Estado | Commit | Observações |
 |---|---|---|---|
 | 1 Equipes, ausências e regras de planejamento em YAML | Concluída (backend 1244, 0 falhas) | ver `git log` | `pessoas/{Equipes,Ausencias,RegrasDePlanejamento,LeituraEstrita}.kt`; modelos `equipes/ausencias/planejamento.exemplo.yaml`; `AppContext` ganhou `equipes`, `ausencias`, `regrasPlanejamento` (obrigatórios em produção) |
+| 2 Horas por issue e capacidade líquida | Concluída (18 testes novos, 0 falhas; vermelho visto com stubs) | ver `git log` | `pessoas/{HorasDaIssue,Capacidade}.kt`; cenário CAP-1 em `src/test/.../pessoas/Cap1.kt` |
 
 ## Rulings
+
+- Ruling: T2 — restante do Jira igual a ZERO não vale como informação (cai para estimativa − registrado ou horas por tipo). O plano diz só "`remainingS` primeiro"; o Jira zera o restante ao estourar a estimativa e a task segue aberta, e contar 0 h tiraria a task da demanda. Custo se errado: trocar `takeIf { it > 0 }` por `!= null` em `HorasDaIssue.de`.
+- Ruling: T2 — o tipo da issue casa com `horasPorTipo` sem diferenciar maiúsculas e sem espaços nas pontas. Custo: nenhum.
 
 - Ruling: nomes herdados conferidos na `main` (Plano 5b): `IssueSnapshot`, `WorkStore`, `ConsultaDeTrabalho`, `Situacao`, `toAuditIssue`, `Fluxo`, `FiltrosDeCard`, `Escopo`, `escopoDe`, `RiscoCalculator`, `PrevisaoDeTermino`, `PrevisaoCalculator`, `SerieSemanal`, `StatusMap.ordem`, `TimelineBuilder.intervals`, `AuditTimeline.responsavelEm/vencimentoEm`, `BusinessCalendar`, `RoleDirectory` existem. Já NÃO existem como o plano diz: `CardDeLeitura`/`rotaDeCard`/`KpiCard`/`DrillDrawer` (o 17a trocou por `CartaoDeLeitura`, `Cartao`, `GavetaDeTasks` e o drill genérico `/api/cartoes/{id}/tasks`; ver Ruling do Plano 5) — cada cartão novo daqui se registra no `catalogoPadrao()`.
 - Ruling: T1 — o YAML de equipes usa a chave raiz `membros:` e o de ausências `ausencias:` (o plano não fixa o formato); `fracao` de ausência é opcional (padrão 1.0). Custo se errado: renomear a chave raiz nos dois leitores e nos modelos.
