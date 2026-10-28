@@ -54,6 +54,7 @@ class FechadasCalculator(
         de: LocalDate, ate: LocalDate, agora: Instant, unit: TimeUnitMode, visiveis: Set<String>,
     ): FechadasAnalise {
         val zona = cal.zone
+        Fluxo.exigirStatusMapeados(map, candidatasNoPrazo, resolvidas)
         val concluidas = resolvidas.filter { Fluxo.concluidaPositiva(it, map) }
         val canceladas = resolvidas.filter { Fluxo.cancelada(it, map) }
         val inicio = de.atStartOfDay(zona).toInstant()

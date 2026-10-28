@@ -65,7 +65,7 @@ class MetasCalculator(
         val zona = cal.zone
         // `NoPrazo.noUniverso` ignora em silêncio o status fora do mapa (a Auditoria o relata à parte); aqui ele vira o
         // aviso bloqueante do card (STATUS_SEM_MAPEAMENTO), como em Fechadas, em vez de números que não somam.
-        (candidatasNoPrazo + resolvidasNoPeriodo).forEach { map.category(it.status) }
+        Fluxo.exigirStatusMapeados(map, candidatasNoPrazo, resolvidasNoPeriodo)
         val porChave = candidatasNoPrazo.associateBy { it.key }
         val prazo = NoPrazo.detalhar(candidatasNoPrazo.map { it.toAuditIssue() }, labels, map, zona, de, ate)
         fun snaps(l: List<br.sidia.painel.auditoria.AuditIssue>) = l.mapNotNull { porChave[it.key] }

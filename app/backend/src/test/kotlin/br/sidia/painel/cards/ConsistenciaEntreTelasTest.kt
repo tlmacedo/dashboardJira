@@ -100,6 +100,16 @@ class ConsistenciaEntreTelasTest {
     fun mesmoNoPrazoComCanceladaEEpicNoReforco() = rodar(reforco()) { get -> noPrazoNasTresTelas(get) }
 
     @Test
+    fun statusForaDoMapaEmCandidataPorVencimentoDaOMesmoAvisoEmFechadasEMetas() = rodar(
+        listOf(Trb1.issue("TG-198", "Checklist", "ana", "09-20T12", "Revisao Exotica", resolvida = "09-28T12", vence = "2026-10-05")),
+    ) { get ->
+        val f = Json.decodeFromString<FechadasDto>(get("gerente.exemplo", "/api/cards/fechadas?$PERIODO").corpo)
+        val m = Json.decodeFromString<MetasDto>(get("gerente.exemplo", "/api/cards/metas?$PERIODO").corpo)
+        assertEquals(m.avisos.map { it.codigo }, f.avisos.map { it.codigo })
+        assertEquals(AvisoDto.STATUS_SEM_MAPEAMENTO, f.avisos.single().codigo)
+    }
+
+    @Test
     fun mesmaSemanaEmFechadasETempoEmStatus() = rodar(emptyList()) { get ->
         val semana = "de=2026-10-12&ate=2026-10-18"
         // Fechadas: a TG-112 (fechada em 15/10) está na semana de 12/10.

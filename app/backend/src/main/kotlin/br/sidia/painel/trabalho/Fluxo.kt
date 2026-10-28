@@ -28,6 +28,15 @@ object Fluxo {
     /** Menos itens que isto numa faixa histórica gera o aviso informativo `AMOSTRA_PEQUENA`. */
     const val AMOSTRA_MINIMA = 5
 
+    /**
+     * Exige que o status de TODAS as issues dadas esteja no mapa (senão propaga `UnmappedStatusException`). Fechadas e
+     * Metas a chamam com as resolvidas e as candidatas de "no prazo", porque `NoPrazo.noUniverso` engole o status
+     * desconhecido: sem esta checagem comum as duas telas divergiriam em silêncio.
+     */
+    fun exigirStatusMapeados(map: StatusMap, vararg listas: List<IssueSnapshot>) {
+        listas.forEach { l -> l.forEach { map.category(it.status) } }
+    }
+
     private val EM_CURSO = setOf(StatusCategory.ACTIVE, StatusCategory.WAIT, StatusCategory.BLOCKED)
 
     private fun ehDone(s: IssueSnapshot, map: StatusMap) = map.category(s.status) == StatusCategory.DONE

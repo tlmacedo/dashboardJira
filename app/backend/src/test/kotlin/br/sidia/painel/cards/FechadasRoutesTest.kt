@@ -148,7 +148,17 @@ class FechadasRoutesTest {
     }
 
     @Test
-    fun filtrosInvalidosEPapelSemPermissao() = rodar { get ->
+    fun statusNaoMapeadoEmCandidataPorVencimentoViraAvisoBloqueante() = rodar(
+        Trb1.issues() + Trb1.issue("TG-198", "Checklist", "ana", "09-20T12", "Revisao Exotica", resolvida = "09-28T12", vence = "2026-10-05"),
+    ) { get ->
+        val r = get("gerente.exemplo", "/api/cards/fechadas?$PERIODO")
+        assertEquals(HttpStatusCode.OK, r.status)
+        assertEquals(AvisoDto.STATUS_SEM_MAPEAMENTO, fechadas(r).avisos.single().codigo)
+        assertEquals(AvisoDto.BLOQUEANTE, fechadas(r).avisos.single().gravidade)
+    }
+
+    @Test
+    fun filtrosInvalidosEPapelSemPermissao()= rodar { get ->
         assertEquals(HttpStatusCode.BadRequest, get("gerente.exemplo", "/api/cards/fechadas?unit=hora").status)
         assertEquals(HttpStatusCode.BadRequest, get("gerente.exemplo", "/api/cards/fechadas?squad=Nenhum").status)
         assertEquals(HttpStatusCode.Forbidden, get("ana", "/api/cards/fechadas?pessoa=bruno").status)
