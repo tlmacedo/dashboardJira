@@ -39,6 +39,8 @@ data class IssueSnapshot(
     val components: List<String>,
     val timeline: IssueTimeline,
     val events: List<ChangeEventRecord>,
+    /** Campos do dicionário com `filtro: true` (nome -> valor; Plano 10); vazio quando a issue não tem nenhum. */
+    val camposDicionario: Map<String, String> = emptyMap(),
 )
 
 /** Adaptador para `NoPrazo` e `TaskReview` (Plano 4): mesmos campos, mesmos eventos. */

@@ -173,6 +173,14 @@ class CardQueryFactoryTest {
     }
 
     @Test
+    fun fichaDeSincronizacaoPedeOsSeisCampos() {
+        val fields = fabrica.build(fichaSync, mapOf("desde" to desde)).fields
+        for (nome in listOf("Checklist Type", "SKU Type", "Model Name", "Model Category", "TG Request Type", "Carrier Code")) {
+            assertEquals(1, fields.count { it == nome }, "$nome ausente ou repetido em $fields")
+        }
+    }
+
+    @Test
     fun fichaSincronizacaoPedeCustomfieldQuandoHaId() {
         val d = FieldDictionary(
             listOf(
@@ -186,6 +194,10 @@ class CardQueryFactoryTest {
                 FieldDef("OS Version", FieldType.SELECT, "samsung", "x", customId = "cf[12416]"),
                 FieldDef("SKU Type", FieldType.SELECT, "samsung", "x"),
                 FieldDef("Checklist Type", FieldType.SELECT, "samsung", "x"),
+                FieldDef("Model Name", FieldType.TEXT, "samsung", "x"),
+                FieldDef("Model Category", FieldType.SELECT, "samsung", "x"),
+                FieldDef("TG Request Type", FieldType.SELECT, "samsung", "x"),
+                FieldDef("Carrier Code", FieldType.TEXT, "samsung", "x"),
                 // Campos de trabalho que a ficha de sincronização também pede.
                 FieldDef("priority", FieldType.SELECT, "samsung", "x"),
                 FieldDef("timeoriginalestimate", FieldType.NUMBER, "samsung", "x"),

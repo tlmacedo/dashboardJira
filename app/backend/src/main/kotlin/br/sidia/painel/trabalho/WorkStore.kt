@@ -167,7 +167,7 @@ class SqliteWorkStore(private val ds: DataSource) : WorkStore {
         val resolution: String?, val created: Instant, val updated: Instant?, val resolved: Instant?, val duedate: String?,
         val assignee: String?, val reporter: String?, val labels: List<String>, val pai: String?, val epico: String?,
         val pontos: Double?, val estimativa: Long?, val restante: Long?, val gasto: Long?, val os: String?,
-        val flagged: Boolean, val componentes: List<String>,
+        val flagged: Boolean, val componentes: List<String>, val dicionario: Map<String, String>,
     )
 
     private fun carregar(con: Connection, instance: String, filtro: FiltroDeFicha?, extra: String, extraParams: List<Any>): List<IssueSnapshot> {
@@ -185,7 +185,7 @@ class SqliteWorkStore(private val ds: DataSource) : WorkStore {
         params.addAll(extraParams)
         val sql = "SELECT id, key, json_extract(raw, '$.fields.summary'), issue_type, priority, status, resolution, created, " +
             "updated, resolved, duedate, assignee_ref, reporter_ref, labels, parent_key, epic_key, story_points, estimate_s, " +
-            "remaining_s, spent_s, os_version, flagged, components FROM issue WHERE $where"
+            "remaining_s, spent_s, os_version, flagged, components, campos_dicionario FROM issue WHERE $where"
         val linhas = con.prepareStatement(sql).use { ps ->
             params.forEachIndexed { i, p ->
                 when (p) {
@@ -208,6 +208,7 @@ class SqliteWorkStore(private val ds: DataSource) : WorkStore {
                                 pontos = rs.getDouble(17).takeUnless { rs.wasNull() }, estimativa = longo(18), restante = longo(19),
                                 gasto = longo(20), os = rs.getString(21), flagged = rs.getInt(22) == 1,
                                 componentes = jsonParaTextos(rs.getString(23)),
+                                dicionario = br.sidia.painel.sync.CamposDoDicionario.deJson(rs.getString(24)),
                             ),
                         )
                     }
@@ -229,6 +230,7 @@ class SqliteWorkStore(private val ds: DataSource) : WorkStore {
                     assignee = l.assignee, resolved = l.resolved, resolution = l.resolution, labels = l.labels, events = evs,
                 ),
                 events = evs,
+                camposDicionario = l.dicionario,
             )
         }
     }
