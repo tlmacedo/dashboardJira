@@ -35,6 +35,9 @@ object ObservadorDeAccessLog {
     }
 }
 
+/** Uma linha do registro como está gravada: quem, qual rota (o padrão, sem chave de issue), os filtros em JSON e quando. */
+data class LinhaAcesso(val userId: String, val route: String, val filters: String?, val at: Instant)
+
 /**
  * Registro de consultas (auditoria, spec 7.3): uma linha por consulta em `access_log`.
  * Nunca grava token, senha nem corpo de requisição, e nunca consulta o Jira.
@@ -74,6 +77,39 @@ class AccessLog(private val ds: DataSource) {
         }
     }
 
+    /**
+     * Lê o registro, do mais recente ao mais antigo (por `id`), SEM nunca ir além do que [record] guarda. [de] é inclusivo e [ate]
+     * exclusivo. [usuario] é igualdade exata (já normalizado por quem chama); [rotaPrefixo] casa o começo da rota gravada (sem
+     * diferenciar caixa; `%`, `_` e `\` do texto não viram curinga). [depoisDe] é o cursor: só linhas com `id` menor que ele.
+     * Devolve até [limite] linhas com o `id` de cada uma (para o cursor da próxima página). Não grava nada.
+     */
+    fun listar(de: Instant, ate: Instant, usuario: String?, rotaPrefixo: String?, limite: Int, depoisDe: Long?): List<Pair<Long, LinhaAcesso>> {
+        require(limite in 1..MAX_LIMITE_LISTAR) { "limite fora de 1..$MAX_LIMITE_LISTAR" }
+        val sql = buildString {
+            append("SELECT id, user_id, route, filters, at FROM access_log WHERE at >= ? AND at < ?")
+            if (usuario != null) append(" AND user_id = ?")
+            if (rotaPrefixo != null) append(" AND route LIKE ? ESCAPE '\\'")
+            if (depoisDe != null) append(" AND id < ?")
+            append(" ORDER BY id DESC LIMIT ?")
+        }
+        return ds.connection.use { c ->
+            c.prepareStatement(sql).use { ps ->
+                var i = 1
+                ps.setTimestamp(i++, Timestamp.from(de))
+                ps.setTimestamp(i++, Timestamp.from(ate))
+                if (usuario != null) ps.setString(i++, usuario)
+                if (rotaPrefixo != null) ps.setString(i++, rotaPrefixo.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%")
+                if (depoisDe != null) ps.setLong(i++, depoisDe)
+                ps.setInt(i, limite)
+                ps.executeQuery().use { rs ->
+                    buildList {
+                        while (rs.next()) add(rs.getLong(1) to LinhaAcesso(rs.getString(2), rs.getString(3), rs.getString(4), rs.getTimestamp(5).toInstant()))
+                    }
+                }
+            }
+        }
+    }
+
     /** Controle vira `?` e o id é limitado a [MAX_USUARIO] caracteres (o username real tem no máximo 64). */
     private fun sanearUsuario(id: String): String =
         id.map { if (it.isISOControl()) '?' else it }.joinToString("").take(MAX_USUARIO)
@@ -87,6 +123,7 @@ class AccessLog(private val ds: DataSource) {
     }
 
     private companion object {
+        const val MAX_LIMITE_LISTAR = 1_000
         const val MAX_VALOR = 200
         const val MAX_FILTROS = 50
         const val MAX_USUARIO = 64

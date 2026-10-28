@@ -36,7 +36,8 @@ fun Route.rotasDeDrillGenerico(ctx: AppContext, catalogo: CatalogoDeCartoes, sto
             if (papeis.isEmpty()) throw ErroHttp(HttpStatusCode.Forbidden)
             val cartao = catalogo.porId(call.parameters["id"].orEmpty()) ?: throw ErroHttp(HttpStatusCode.NotFound)
             // Cartão resolvido de módulo sensível: o registro mascara o achado, qualquer que seja a forma do caminho.
-            if (cartao.moduloSensivel != null) call.attributes.put(ROTA_SENSIVEL, true)
+            val sensivel = cartao.moduloSensivel != null || call.request.queryParameters["segmento"]?.let { cartao.segmentoSensivel(it) } == true
+            if (sensivel) call.attributes.put(ROTA_SENSIVEL, true)
             if (cartao.meta.papeis.none { it in papeis }) throw ErroHttp(HttpStatusCode.Forbidden)
             if (!cartao.meta.temDrill) throw ErroHttp(HttpStatusCode.NotFound)
             // Cartão de módulo sensível: só com a trava do DPO aberta (depois do papel, para quem não vê o cartão não saber do módulo).
@@ -45,7 +46,7 @@ fun Route.rotasDeDrillGenerico(ctx: AppContext, catalogo: CatalogoDeCartoes, sto
             val linhas = cartao.drill(EntradaDeCartao(ctx, store, principal, call.request.queryParameters), segmento)
             // A auditoria guarda a quantidade, nunca as chaves das tasks.
             // Cartão de módulo sensível: nem a quantidade vai para a auditoria (seria o próprio achado). Fica só "quem consultou o módulo".
-            if (cartao.moduloSensivel == null) call.attributes.put(EXTRAS_DE_AUDITORIA, mapOf("total" to linhas.size.toString()))
+            if (!sensivel) call.attributes.put(EXTRAS_DE_AUDITORIA, mapOf("total" to linhas.size.toString()))
             DrillGenericoDto(
                 tituloChave = cartao.meta.tituloChave,
                 definicaoChave = cartao.meta.oQueMostraChave,

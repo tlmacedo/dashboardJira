@@ -40,7 +40,6 @@ import org.junit.jupiter.api.MethodOrderer
 import org.junit.jupiter.api.Order
 import org.junit.jupiter.api.TestInstance
 import org.junit.jupiter.api.TestMethodOrder
-import org.junit.jupiter.api.Assumptions.assumeTrue
 import org.slf4j.LoggerFactory
 import java.nio.file.Files
 import java.nio.file.Path
@@ -82,6 +81,16 @@ abstract class CenarioDeCarga(
         const val ORCAMENTO_CENTRAL_MS = 3_000L
         const val ORCAMENTO_CONCORRENTE_MS = 4_000L
         const val MARGEM_DE_RUIDO = 1.25
+
+        /**
+         * Telas do catálogo que não têm `/api/cards/<tela>` (Fase 7, bloco 7b) e as rotas próprias delas, medidas no lugar. O líder
+         * de squad recebe 403 onde a rota é da coordenação (aceito pelo teste).
+         */
+        val TELAS_COM_ROTA_PROPRIA = setOf("distribuicao", "rebalanceamento", "decisoes", "registroAcesso", "configuracao", "central", "meu")
+        val ROTAS_PROPRIAS = listOf(
+            "/api/distribuicao", "/api/rebalanceamento", "/api/governanca/decisoes", "/api/governanca/acessos", "/api/governanca/configuracao",
+            "/api/squad", "/api/meu-painel",
+        )
     }
 
     private val banco = BancoEmArquivo()
@@ -173,8 +182,8 @@ abstract class CenarioDeCarga(
      * medição de propósito: o banco de carga tem sincronização registrada e a porta do DPO a mantém fechada (403 para todos).
      */
     private fun rotasDeCards(): List<String> =
-        (catalogoPadrao().cartoes.map { it.meta.tela }.filter { it != "auditoria" && it != "sincronizacao" && it != "integridade" }.map { "/api/cards/$it" } +
-            "/api/cards/task-review" + "/api/auditoria/sinais" + "/api/sync/status" + "/api/cartoes/catalogo" + "/api/me")
+        (catalogoPadrao().cartoes.map { it.meta.tela }.filter { it != "auditoria" && it != "sincronizacao" && it != "integridade" && it !in TELAS_COM_ROTA_PROPRIA }.map { "/api/cards/$it" } +
+            "/api/cards/task-review" + "/api/auditoria/sinais" + "/api/sync/status" + "/api/cartoes/catalogo" + "/api/me" + ROTAS_PROPRIAS)
             .distinct().sorted()
 
     // ---------------------------------------------------------------- leitura de um cliente
@@ -204,9 +213,8 @@ abstract class CenarioDeCarga(
     @Test
     @Order(2)
     fun centralDentroDoOrcamento() = runBlocking {
-        val primeira = chamar("/api/central")
-        // A Central (um painel com muitos cards numa chamada só) ainda não existe na `main`: o teste mede assim que a rota chegar.
-        assumeTrue(primeira.status != HttpStatusCode.NotFound, "rota /api/central ainda não existe")
+        // A Central junta ~15 cards numa chamada só: a primeira chamada aquece e as cinco seguintes são medidas (orçamento de 3 s).
+        chamar("/api/central")
         val medidas = (1..5).map { chamar("/api/central") }
         val p = p95(medidas.map { it.ms })
         registrar("central p95_ms=$p")

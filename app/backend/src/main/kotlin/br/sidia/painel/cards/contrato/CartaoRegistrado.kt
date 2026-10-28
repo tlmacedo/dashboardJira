@@ -19,6 +19,12 @@ class EntradaDeCartao(
     val store: IssueStore,
     val principal: Principal,
     val parametros: Parameters,
+    /**
+     * Cálculos já feitos NESTA requisição, por id de card: a Central chama vários cartões do mesmo card (o Negligenciadas
+     * serve cinco) e com isto o card é calculado uma vez. Só vale com os mesmos [parametros] e o mesmo [principal], que é o
+     * caso de uma requisição só; nulo = sem memória (o drill e a rota de cartões comuns).
+     */
+    val memo: MutableMap<String, Any>? = null,
 )
 
 /**
@@ -41,6 +47,9 @@ interface CartaoRegistrado {
      * aberta ([br.sidia.painel.lgpd.TravaDpo]). Nulo = cartão comum.
      */
     val moduloSensivel: br.sidia.painel.lgpd.ModuloSensivel? get() = null
+
+    /** Este segmento é sensível mesmo num cartão comum (por exemplo, o que aponta para um módulo sensível): o registro mascara o achado. */
+    fun segmentoSensivel(segmento: String): Boolean = false
 
     suspend fun valores(e: EntradaDeCartao): Map<String, Int>
 

@@ -260,7 +260,7 @@ private fun filtrosAuditados(call: ApplicationCall): Map<String, String> {
  * rota/cartão resolvido. A Auditoria (`ModuloSensivel.AUDITORIA`) NÃO está aqui nem passa pela `TravaDpo` ainda: é do Plano 11;
  * um módulo novo que passe pela trava acrescenta o seu prefixo aqui.
  */
-private val PREFIXOS_SENSIVEIS = listOf("/api/integridade", "/api/cartoes/in-")
+private val PREFIXOS_SENSIVEIS = listOf("/api/integridade", "/api/cartoes/in-", "/api/governanca/acessos")
 
 internal fun rotaSensivel(caminho: String): Boolean {
     val normal = normalizarCaminho(caminho).lowercase(java.util.Locale.ROOT)
@@ -285,6 +285,8 @@ private fun valorAuditado(parametro: String, valor: String, sensivel: Boolean): 
         sensivel -> segmentoSensivelParaRegistro(valor)
         // Segmento de gaveta que cita uma chave de issue (pedido malformado ou plantado; qualquer caixa): a chave nunca vai para a auditoria.
         CHAVE_DE_ISSUE_NO_TEXTO.containsMatchIn(valor) -> VALOR_INVALIDO
+        // Label é texto livre do Jira (pode nomear alguém): a auditoria guarda que a consulta foi por label, não qual.
+        valor.startsWith("label:", ignoreCase = true) -> "label:*"
         else -> valor
     }
     else -> valor

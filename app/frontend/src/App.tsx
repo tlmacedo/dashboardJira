@@ -3,6 +3,9 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { LangProvider } from './i18n/LangProvider'
 import { inicioDoPapel } from './nav/nav'
 import { Abertas } from './screens/Abertas/Abertas'
+import { Central } from './screens/Central/Central'
+import { MeuPainel } from './screens/MeuPainel/MeuPainel'
+import { Squad } from './screens/Squad/Squad'
 import { AgingWip } from './screens/AgingWip/AgingWip'
 import { Auditoria } from './screens/Auditoria/Auditoria'
 import { Bloqueios } from './screens/Bloqueios/Bloqueios'
@@ -31,7 +34,13 @@ import { Vencimentos } from './screens/Vencimentos/Vencimentos'
 import { Riscos } from './screens/Riscos/Riscos'
 import { Metas } from './screens/Metas/Metas'
 import { Negligenciadas } from './screens/Negligenciadas/Negligenciadas'
+import { Decisoes } from './screens/Decisoes/Decisoes'
+import { Distribuicao } from './screens/Distribuicao/Distribuicao'
+import { Rebalanceamento } from './screens/Rebalanceamento/Rebalanceamento'
 import { Divergencia } from './screens/Divergencia/Divergencia'
+import { Qualidade } from './screens/Qualidade/Qualidade'
+import { RegistroDeAcesso } from './screens/RegistroDeAcesso/RegistroDeAcesso'
+import { Configuracao } from './screens/Configuracao/Configuracao'
 import { MapaDeCartoes } from './screens/MapaDeCartoes/MapaDeCartoes'
 import { Sincronizacao } from './screens/Sincronizacao/Sincronizacao'
 import { TempoEmStatus } from './screens/TempoEmStatus/TempoEmStatus'
@@ -55,6 +64,9 @@ export default function App() {
             <Routes>
               <Route element={<Shell />}>
                 <Route index element={<Inicio />} />
+                <Route path="central" element={<Central />} />
+                <Route path="squad" element={<Squad />} />
+                <Route path="meu" element={<MeuPainel />} />
                 <Route path="abertas" element={<Abertas />} />
                 <Route path="negligenciadas" element={<Negligenciadas />} />
                 <Route path="fechadas" element={<Fechadas />} />
@@ -83,6 +95,12 @@ export default function App() {
                 <Route path="cruzamentos" element={<Cruzamentos />} />
                 <Route path="checklistReview" element={<ChecklistReview />} />
                 <Route path="integridade" element={<Integridade />} />
+                <Route path="distribuicao" element={<Distribuicao />} />
+                <Route path="rebalanceamento" element={<Rebalanceamento />} />
+                <Route path="decisoes" element={<Decisoes />} />
+                <Route path="qualidade" element={<Qualidade />} />
+                <Route path="registroAcesso" element={<RegistroDeAcesso />} />
+                <Route path="configuracao" element={<Configuracao />} />
                 <Route path="tempo" element={<TempoEmStatus />} />
                 <Route path="auditoria" element={<Auditoria />} />
                 <Route path="divergencia" element={<Divergencia />} />

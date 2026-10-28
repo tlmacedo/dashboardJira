@@ -38,6 +38,29 @@ class DiferencasChecklistIntegridadeDocTest {
     }
 
     @Test
+    fun documentoCitaOsIdsDoBloco7b() {
+        val texto = documento()
+        val esperados = (1..12).map { "VG-%02d".format(it) } + (1..5).map { "MP-%02d".format(it) } + (1..5).map { "DI-%02d".format(it) } +
+            (1..3).map { "RB-%02d".format(it) } + (1..5).map { "QD-%02d".format(it) } +
+            listOf("QD", "AU-01", "AU-02", "SI-01", "SI-02", "VG-13", "DC-01", "RA-01", "CF-01")
+        val faltando = esperados.filterNot { it in texto }
+        assertTrue(faltando.isEmpty(), "IDs do bloco 7b sem menção no documento: $faltando")
+    }
+
+    @Test
+    fun documentoTrazAsDecisoesDoBloco7b() {
+        val texto = documento().lowercase()
+        for (tema in listOf(
+            "modo sombra", "decisao_distribuicao", "nada é escrito no jira", "ordem alfabética", "sem ranking",
+            "não soma as horas do item", "multiplicam", "depois", "paradas_no_status", "sem_atualizacao", "dois itens separados",
+            "done_sem_resolution", "resolution_sem_done", "indisponíve", "somente o gerente", "sem motivo", "access_log",
+            "mostra segredo, token","pessoa", "trava do dpo", "captura visual",
+        )) {
+            assertTrue(tema in texto, "tema ausente: $tema")
+        }
+    }
+
+    @Test
     fun documentoNaoTemDadoPessoalReal() {
         val texto = documento()
         for (proibido in listOf("ana.silva", "TG-107")) assertTrue(proibido !in texto, proibido)

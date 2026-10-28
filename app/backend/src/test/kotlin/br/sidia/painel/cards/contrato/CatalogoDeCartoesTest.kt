@@ -168,9 +168,9 @@ class CatalogoDeCartoesTest {
     @Test
     fun todaNaturezaETodoGrupoValidos() {
         assertEquals(setOf("ESTOQUE", "FLUXO", "PRAZO", "PESSOAS", "QUALIDADE"), Natureza.entries.map { it.name }.toSet())
-        // Os 7 grupos do menu que têm cartões; cada um com tradução própria nos dois idiomas.
+        // Os 8 grupos do menu que têm cartões (o Início tem os da Central, do Squad e do Meu painel); cada um com tradução própria nos dois idiomas.
         assertEquals(
-            setOf("trabalho", "resultados", "prazos", "pessoas", "acao", "auditoria", "governanca"),
+            setOf("inicio", "trabalho", "resultados", "prazos", "pessoas", "acao", "auditoria", "governanca"),
             GrupoDeCartao.entries.map { it.id }.toSet(),
         )
         for (idioma in listOf("pt", "en")) {

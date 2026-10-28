@@ -42,12 +42,15 @@ class CompetenciasCalculator(private val motor: MotorDePessoas) {
         return CompetenciasAnalise(dto, porCompetencia, tasksSemNinguem)
     }
 
-    /** As competências que a task pede: labels `skill:<x>` (minúsculas, sem repetição); `skill:` sem nada depois não vale. */
-    private fun pedidas(s: IssueSnapshot): Set<String> =
-        s.labels.map { it.trim().lowercase(Locale.ROOT) }.filter { it.startsWith(PREFIXO) && it.length > PREFIXO.length }
-            .map { it.removePrefix(PREFIXO) }.toSet()
-
-    private companion object {
-        const val PREFIXO = "skill:"
-    }
+    private fun pedidas(s: IssueSnapshot): Set<String> = competenciasPedidas(s)
 }
+
+private const val PREFIXO_DE_COMPETENCIA = "skill:"
+
+/**
+ * As competências que a task pede: labels `skill:<x>` (minúsculas, sem repetição); `skill:` sem nada depois não vale. É a regra
+ * única do painel: a Matriz de competências e a Distribuição (modo sombra) usam esta mesma função.
+ */
+fun competenciasPedidas(s: IssueSnapshot): Set<String> =
+    s.labels.map { it.trim().lowercase(Locale.ROOT) }.filter { it.startsWith(PREFIXO_DE_COMPETENCIA) && it.length > PREFIXO_DE_COMPETENCIA.length }
+        .map { it.removePrefix(PREFIXO_DE_COMPETENCIA) }.toSet()

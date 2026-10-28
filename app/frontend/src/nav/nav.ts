@@ -89,7 +89,12 @@ export const NAV_ITEMS: NavItem[] = [
 
   // Gerado do catálogo de cartões do backend; só coordenação e gerência.
   item('mapaCartoes', 'governanca', ALTA),
-  item('qualidade', 'governanca', ['GERENTE']),
+  // Qualidade dos dados: coordenação e gerência (o item "sem estimativa" da Central leva até ela).
+  item('qualidade', 'governanca', ALTA),
+  // Decisões de distribuição (o que foi aprovado, trocado ou rejeitado): coordenação e gerência.
+  item('decisoes', 'governanca', ALTA),
+  // Registro de acesso (quem consultou o quê): só o gerente.
+  item('registroAcesso', 'governanca', ['GERENTE']),
   item('sincronizacao', 'governanca', ['GERENTE']),
   item('configuracao', 'governanca', ['GERENTE']),
 ]

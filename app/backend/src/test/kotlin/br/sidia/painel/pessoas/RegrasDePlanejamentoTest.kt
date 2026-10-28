@@ -37,6 +37,21 @@ class RegrasDePlanejamentoTest {
     }
 
     @Test
+    fun prioridadePadraoVemDoYamlEArquivoAntigoContinuaValendo() {
+        assertEquals("Medium", RegrasDePlanejamento.fromYaml(TestPaths.configDir.resolve("planejamento.exemplo.yaml")).prioridadePadrao)
+        assertTrue("prioridadePadrao" in modelo, "o modelo precisa documentar a chave")
+        // Arquivo real de antes desta chave: segue carregando, com o padrão "Medium" (vocabulário a confirmar na 1ª conexão).
+        val antigo = modelo.lines().filterNot { it.startsWith("prioridadePadrao") }.joinToString("\n")
+        assertEquals("Medium", RegrasDePlanejamento.fromYaml(arquivo(antigo)).prioridadePadrao)
+        assertEquals("High", RegrasDePlanejamento.fromYaml(arquivo(modelo.replace("prioridadePadrao: \"Medium\"", "prioridadePadrao: \"High\""))).prioridadePadrao)
+        for (ruim in listOf("\"\"", "\"   \"", "\"" + "x".repeat(51) + "\"")) {
+            assertFailsWith<IllegalArgumentException>(ruim) {
+                RegrasDePlanejamento.fromYaml(arquivo(modelo.replace("prioridadePadrao: \"Medium\"", "prioridadePadrao: $ruim")))
+            }
+        }
+    }
+
+    @Test
     fun regrasEstritasELimites() {
         fun troca(de: String, para: String) = modelo.replace(de, para).also { assertTrue(it != modelo, "o modelo não tem '$de'") }
         val ruins = listOf(

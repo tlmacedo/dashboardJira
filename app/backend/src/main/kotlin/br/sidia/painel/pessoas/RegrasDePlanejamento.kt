@@ -28,8 +28,11 @@ data class RegrasDePlanejamento(
     val slaRevisaoDias: Int,
     val diaCriticoCapacidade: Double,
     val horizonteCoberturaDias: Int,
+    /** Prioridade que o Jira dá a quem ninguém triou; a Qualidade dos dados conta quantas abertas ainda a têm (vocabulário a confirmar). */
+    val prioridadePadrao: String = "Medium",
 ) {
     init {
+        require(prioridadePadrao.isNotBlank() && prioridadePadrao.length <= MAX_PRIORIDADE) { "prioridadePadrao vazia ou maior que $MAX_PRIORIDADE caracteres" }
         require(versao == 1) { "versao não suportada (esperado: 1)" }
         require(focoPadrao > 0.0 && focoPadrao <= 1.0) { "focoPadrao fora de (0, 1]" }
         require(horasMinimas > 0.0) { "horasMinimas deve ser maior que 0" }
@@ -50,6 +53,8 @@ data class RegrasDePlanejamento(
     }
 
     companion object {
+        private const val MAX_PRIORIDADE = 50
+
         /** Valores do modelo `planejamento.exemplo.yaml`, para os testes que não leem o arquivo. */
         val PADRAO = RegrasDePlanejamento(
             versao = 1, focoPadrao = 0.7, horasMinimas = 0.5,
@@ -67,6 +72,7 @@ data class RegrasDePlanejamento(
                 b.versao, b.focoPadrao, b.horasMinimas, b.horasPorTipo, b.horasPadrao, b.semanasMinimasDemanda,
                 b.semanasSemVencimentoIniciada, b.semanasSemVencimentoNaoIniciada, b.ocupacaoAtencao, b.ocupacaoAlta, b.folga,
                 b.tetoJain, b.wipPorStatus, b.wipPorPessoa, b.slaRevisaoDias, b.diaCriticoCapacidade, b.horizonteCoberturaDias,
+                b.prioridadePadrao,
             )
         }
     }
@@ -91,4 +97,5 @@ private data class RegrasDePlanejamentoYaml(
     val slaRevisaoDias: Int,
     val diaCriticoCapacidade: Double,
     val horizonteCoberturaDias: Int,
+    val prioridadePadrao: String = "Medium",
 )
