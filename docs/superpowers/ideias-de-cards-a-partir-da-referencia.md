@@ -466,3 +466,15 @@ Ficam logo atrás: I-24 (carga em duas passadas), I-02 (gráfico de controle), I
 | Descobrir a validade do PAT consultando o Jira | `03` seção 1 | Já é não objetivo do Plano 12, e a referência não traz o endpoint de listagem. |
 | Exportação CSV/Excel do Jira como fonte de dados do painel | `02` seção 3; `04` seção 7 | Útil só para gerar fixtures sem acesso ao vivo; não é card nem ação do painel. |
 | Colunas Min/Max e "Hide completed" do quadro como regra | `02` seção 4 | Apenas sinalizam no Jira; o limite de WIP já é YAML (GA-02, Plano 6a). |
+
+## 12. Executado (Plano 17b, 28/10/2026)
+
+I-01 (Fluxo da semana), I-05 (Envelhecimento por etapa), I-08 (Bloqueios entre tasks), I-02 e I-03 (Controle do ciclo e tendência) e I-10 (Cruzamentos) foram implementados no Plano 17b, antes do 14b por ordem do usuário. Diferenças contra as fichas (detalhe nos `Ruling:` do progresso):
+
+- **I-01:** a janela inclui a semana em curso (marcada), e o sinal "backlog crescendo" olha só as semanas fechadas; o aviso de amostra tem código próprio (`AMOSTRA_PEQUENA_NA_JANELA`); a linha tracejada do saldo acumulado ficou na tabela.
+- **I-05:** a faixa vem do tempo total por status das concluídas (`TimeInStatusCalculator`); o clique no ponto (abrir a task) espera a gaveta do Plano 10.
+- **I-08:** bloqueadora de pessoa fora da visão entra nos números mas sem chave nem nome; ponta fora da base vira "verificar no Jira" e não conta como bloqueio; `BLOQUEADA_SEM_CAUSA` é o cartão BQ-04 e o ponto de extensão do Plano 7b; tipo e direção do vínculo seguem a configuração e continuam pendentes de confirmação na 1ª conexão.
+- **I-02 e I-03:** média móvel centrada e cortada nas pontas; os outliers (mais de 30 dias corridos) saem por parâmetro, não por YAML; sem `de`, a série cobre 12 meses inteiros.
+- **I-10:** sem os eixos de campos do dicionário (Plano 10); universo = abertas; segmentos do drill posicionais.
+
+Aceite do gestor card a card: pendente.

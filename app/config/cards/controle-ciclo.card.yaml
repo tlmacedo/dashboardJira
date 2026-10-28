@@ -1,0 +1,43 @@
+# Ficha do card "Controle do ciclo" (Plano 17b). Estrita: chave desconhecida falha ao carregar.
+# Os MESMOS tipos de Fechadas (o ciclo é o de FE-08); não exclui status de cancelamento porque a conclusão positiva
+# já separa as canceladas.
+
+id: controle-ciclo
+titulo: Controle do ciclo
+instancia: samsung
+
+campos:
+  - OS Version
+  - priority
+
+filtrosFixos:
+  project: ["TG-Basic"]
+  issuetype: ["Checklist", "Checklist TG", "Checklist Review", "Feature check", "TG Feature check", "Task"]
+
+parametros:
+  - nome: squad
+    tipo: squad
+    obrigatorio: false
+  - nome: periodo
+    tipo: periodo
+    obrigatorio: false
+  - nome: os
+    tipo: os
+    obrigatorio: false
+
+formula: >-
+  Cada task concluída (categoria concluído, resolução que não é cancelamento) vira um ponto: dia de conclusão em Manaus
+  x dias de ciclo (primeira entrada ativa até a resolução, em dias úteis, opção corridos), POR TIPO (Checklist e Review
+  não se misturam). A média móvel usa 20% dos pontos, em número ímpar e no mínimo 5; as faixas são o P50 e o P85 do tipo.
+  Abaixo, a série mensal de P50 e P85 por tipo, com o n de cada mês. Período padrão: 12 meses (365 dias).
+
+exemplo: >-
+  squad=[dev.alfa], semOutliers=true.
+
+aceite:
+  - O dia de conclusão é o de Manaus; o ciclo é por tipo, sem misturar Checklist e Review.
+  - Mês com menos de 5 tasks mostra o número com aviso de amostra pequena.
+  - Com semOutliers=true, ciclos acima de 30 dias corridos ficam de fora (regra do Tempo em status).
+  - O ponto não traz pessoa; cada ponto e cada mês abrem as mesmas tasks que os formam.
+
+expandChangelog: true

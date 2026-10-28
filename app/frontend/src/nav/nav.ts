@@ -51,9 +51,13 @@ export const NAV_ITEMS: NavItem[] = [
   item('negligenciadas', 'trabalho', 'all'),
   item('riscos', 'trabalho', 'all'),
   item('previsao', 'trabalho', 'all'),
+  item('fluxoDaSemana', 'trabalho', 'all'),
+  item('agingWip', 'trabalho', 'all'),
+  item('bloqueios', 'trabalho', 'all'),
 
   item('fechadas', 'resultados', 'all'),
   item('negativas', 'resultados', 'all'),
+  item('cruzamentos', 'resultados', 'all'),
   item('tempo', 'resultados', 'all'),
   item('esforco', 'resultados', 'all'),
 

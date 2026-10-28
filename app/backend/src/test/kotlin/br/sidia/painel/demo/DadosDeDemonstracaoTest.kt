@@ -137,15 +137,18 @@ class DadosDeDemonstracaoTest {
             carregador(ctx).carregar()
             val ds = requireNotNull(ctx.dataSource)
             val ativos = SqliteIssueLinkStore(ds).ativos("samsung", "Blocks")
-            // Dois pares, um em cada direção (visto pelas duas pontas, uma linha por link).
+            // Dois pares Task x Review, um em cada direção, mais dois bloqueios entre tasks abertas (Plano 17b: DEMO-15 bloqueia
+            // DEMO-13 com vencimento depois dela; DEMO-26 bloqueia DEMO-18). Visto pelas duas pontas, uma linha por link.
             assertEquals(
                 setOf(
                     VinculoRecord("DEMO-7", "DEMO-35", "Blocks", DirecaoVinculo.OUTWARD),
                     VinculoRecord("DEMO-36", "DEMO-12", "Blocks", DirecaoVinculo.OUTWARD),
+                    VinculoRecord("DEMO-15", "DEMO-13", "Blocks", DirecaoVinculo.OUTWARD),
+                    VinculoRecord("DEMO-26", "DEMO-18", "Blocks", DirecaoVinculo.OUTWARD),
                 ),
                 ativos.toSet(),
             )
-            assertEquals(2, ativos.size)
+            assertEquals(4, ativos.size)
             assertEquals(0, contar(ctx, "SELECT count(*) FROM issue_link WHERE instance <> 'samsung'"))
             val tipoDe = ds.connection.use { c ->
                 c.createStatement().executeQuery("SELECT key, issue_type FROM issue WHERE instance = 'samsung' AND removida_em IS NULL").use { rs ->

@@ -1,0 +1,44 @@
+# Ficha do card "Bloqueios entre tasks" (Plano 17b). Estrita: chave desconhecida falha ao carregar.
+# As tasks bloqueadas são as abertas de Abertas (mesmos tipos e exclusão); o vínculo vem de issue_link, não do JQL.
+
+id: bloqueios
+titulo: Bloqueios entre tasks
+instancia: samsung
+
+campos:
+  - OS Version
+  - priority
+
+filtrosFixos:
+  project: ["TG-Basic"]
+  issuetype: ["Checklist", "Checklist TG", "Checklist Review"]
+
+filtrosExcluidos:
+  status: ["Cancelled", "Canceled", "Dropped"]
+
+parametros:
+  - nome: squad
+    tipo: squad
+    obrigatorio: false
+  - nome: os
+    tipo: os
+    obrigatorio: false
+
+formula: >-
+  Tasks abertas bloqueadas por OUTRA task ainda aberta, pelo vínculo do tipo configurado em vinculos.yaml (a ponta que
+  "bloqueia" é a bloqueadora). Exclui os pares Task x Review (tratados em Divergência). Mostra a bloqueadora, o
+  vencimento dela e um sinal quando ela vence DEPOIS da bloqueada. Bloqueadora fora da visão aparece como "task de
+  outro squad", sem chave nem nome; ponta fora da base vira "verificar no Jira". Lista à parte: bloqueadas sem causa
+  registrada (status bloqueado ou flag, sem nenhum vínculo aberto).
+
+exemplo: >-
+  squad=[dev.alfa].
+
+aceite:
+  - Só vínculos não removidos; bloqueadora concluída não bloqueia.
+  - Par Task x Review fica de fora.
+  - Bloqueadora de pessoa fora da visão não mostra chave nem nome.
+  - Sem ranking de bloqueadoras; a lista é ordenada pelo vencimento da bloqueada.
+  - Cada número abre as mesmas tasks que o formam.
+
+expandChangelog: false
