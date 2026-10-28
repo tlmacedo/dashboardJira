@@ -10,6 +10,13 @@ Ponto de partida (main `6c83d61`): backend `./gradlew test --rerun-tasks` 1856 t
 |---|---|---|---|
 | 1 Pares Checklist × Review e alertas por par | Concluída | ver `git log` | `checklist/{RegrasChecklistReview,ParesChecklistReview}.kt`, `checklist_review.exemplo.yaml`, `AppContext.regrasChecklistReview` |
 | 2 Estatísticas, aprendizados e labels do Checklist × Review | Concluída | ver `git log` | `checklist/EstatisticasChecklistReview.kt` (resumo, lift, faixas, diferenças de labels, atrasos em cadeia, aprendizados) |
+| 3 a 6 Tela Checklist × Review; sinais e níveis da Integridade | Concluídas | ver `git log` | Rulings abaixo |
+| 7 API restrita ao gerente, auditada, e tela da Integridade | Concluída | ver `git log` | `lgpd/TravaDpo.kt`, `integridade/*`, `screens/Integridade` |
+| 8 Diferenças esperadas | Concluída | ver `git log` | `docs/analise/diferencas-esperadas-checklist-integridade-governanca.md`, `CompatLegadoChecklistTest`, `DiferencasChecklistIntegridadeDocTest` |
+
+Estado final do 7a: backend `./gradlew test --rerun-tasks` 1964 testes, 0 falhas, 1 ignorado; frontend 441 testes, `pnpm build` verde; varredura de dados pessoais limpa. Pendências: captura visual (sem navegador); `TravaDpo` ligada só à Integridade (Auditoria no Plano 11); demonstração sem pares Checklist × Review; sinais "estimativa reduzida" e "worklog retroativo" sem dono; labels de criticidade a confirmar na 1ª conexão. Minor adiados: `paresTaskReview` carrega eventos de mais; leitura `TODAS` dos três tipos; conflito provável no fim de `pt.json`/`en.json` e em `AppContextTest` ao mesclar com o Plano 8.
+
+Ruling: T8 — as seis regras de alerta do par e os limiares de nível foram conferidos em `legacy/backend/jiradash/reports.py` (`pair_row` e `integrity_view`), e não em `analytics.py` como diz o plano, onde essa lógica não existe. `CompatLegadoChecklistTest` confere o texto do legado e o comportamento do painel, e é pulado se `legacy/` sair. CR-09 (tabela de pares, lado a lado) é a tabela e a comparação da tela, sem cartão numerado próprio; os 13 cartões registrados são CR-01 a CR-08 e CR-10 a CR-14.
 
 ## Estado herdado (conferido no código)
 
