@@ -10,6 +10,8 @@ Spec mestra: `docs/superpowers/specs/2026-10-24-painel-squads-kotlin-react-desig
 3. **Precedência em caso de conflito:** `CLAUDE.md` > `docs/guia-execucao-outra-ia.md` > spec da fase > plano > spec mestra de 24/10 (que ainda traz a regra antiga de acesso ao Jira, substituída em 25/10).
 4. **Acesso ao Jira:** a única trava é a flag `JIRA_LIVE_ENABLED` (`false` = proibido para todos; `true` = liberado). Só o usuário muda a flag. Testes automáticos nunca acessam o Jira real.
 
+> **Desde 28/10/2026 a divisão entre o que vem ANTES e DEPOIS da mudança da flag do Jira está em `2026-10-28-roteiro-antes-e-depois-da-flag.md`**: o Claude Code implementa tudo que não precisa do Jira real (inclusive o 17b, antes do 14b, por ordem do usuário) e o ClineSR executa o 14a/14b e o que depende de decisões e efeitos fora do repositório. Ele vence a ordem abaixo onde houver diferença.
+
 **Ordem de execução** (cada item é um PR a partir da `main` atualizada; a IA mescla ao fim de cada plano/bloco pelo `docs/superpowers/fluxo-de-entrega.md` (7 condições; o Plano 16 só com ordem expressa do usuário); o próximo só começa depois que o anterior estiver na `main`):
 
 **Fase 0 PC da empresa** → 9 CI e endurecimento → **17a Contrato do cartão (antes de qualquer card novo)** → 14a Primeira conexão (quando o usuário ligar a flag em `app/.env`) → 4 Auditoria (Tarefas 4 a 9) → 5a Cards de trabalho → 5b Negativas, Riscos, Previsão e Épicos → 6a Capacidade e planejamento → 6b Worklog, posse, esforço e cobertura → 7a Checklist × Review e Integridade → 7b Distribuição, Governança e início → 10 Complementos de telas e filtros → 11 Auditoria completa e LGPD → 14b Validação e calibração dos cards (depois do 7) → **17b Cards de fluxo e gestão (PP5)** → 8 Preparação final (a remoção do `legacy/` só depois do "sim" do usuário ao documento de equivalência; sem ele, vira PR próprio depois) → 12 Operação em produção → 13 Implantação real → 15 Identidade final, inglês e entrega. O **Plano 16** (escrita no Jira pelo painel) é futuro: só com decisão do usuário.
@@ -36,12 +38,12 @@ A 14a (bloco de sincronização) começa logo depois do 9, quando o usuário lig
 | 6 | `2026-10-25-plano-06-pessoas-planejamento-ausencias.md` | `../specs/2026-10-25-spec-fase-06-pessoas-planejamento-ausencias.md` | Escrito, aguardando execução |
 | 7 | `2026-10-25-plano-07-checklist-integridade-distribuicao-governanca.md` | `../specs/2026-10-25-spec-fase-07-checklist-integridade-distribuicao-governanca.md` | Escrito, aguardando execução |
 | 8 | `2026-10-25-plano-08-preparacao-final-e-remocao-do-legacy.md` | `../specs/2026-10-25-spec-fase-08-preparacao-final-e-remocao-do-legacy.md` | Escrito, aguardando execução |
-| 9 (12 tarefas) | `2026-10-25-plano-09-ci-e-endurecimento.md` | `../specs/2026-10-25-spec-fase-09-ci-e-endurecimento.md` | Executado na branch `feat/ci-e-endurecimento` (PR pendente) |
+| 9 (12 tarefas) | `2026-10-25-plano-09-ci-e-endurecimento.md` | `../specs/2026-10-25-spec-fase-09-ci-e-endurecimento.md` | Executado (PR #25; CI ativo no GitHub) |
 | 10 (12 tarefas) | `2026-10-25-plano-10-complementos-de-telas-e-filtros.md` | `../specs/2026-10-25-spec-fase-10-complementos-de-telas-e-filtros.md` | Escrito, aguardando execução |
 | 11 (12 tarefas) | `2026-10-25-plano-11-auditoria-completa-e-lgpd.md` | `../specs/2026-10-25-spec-fase-11-auditoria-completa-e-lgpd.md` | Escrito, aguardando execução |
 | 12 (12 tarefas) | `2026-10-25-plano-12-operacao-em-producao.md` | `../specs/2026-10-25-spec-fase-12-operacao-em-producao.md` | Escrito, aguardando execução |
 | 13 (13 tarefas) | `2026-10-25-plano-13-implantacao-real.md` | `../specs/2026-10-25-spec-fase-13-implantacao-real.md` | Escrito, aguardando execução |
-| 14 (15 tarefas: Tarefa 0 dos hooks, 14a e 14b) | `2026-10-25-plano-14-primeira-conexao-validacao-e-calibracao.md` | `../specs/2026-10-25-spec-fase-14-primeira-conexao-validacao-e-calibracao.md` | Escrito, aguardando execução |
+| 14 (15 tarefas: Tarefa 0 dos hooks, 14a e 14b) | `2026-10-25-plano-14-primeira-conexao-validacao-e-calibracao.md` | `../specs/2026-10-25-spec-fase-14-primeira-conexao-validacao-e-calibracao.md` | Tarefa 0 executada (PR #26); 14a e 14b aguardando execução |
 | 17 (13 tarefas: 17a antes do 5a, 17b depois do 14b) | `2026-10-28-plano-17-cards-de-fluxo-e-gestao.md` | `../specs/2026-10-28-spec-fase-17-cards-de-fluxo-e-gestao.md` | Escrito, aguardando execução (17b depende do ponto de parada PP5) |
 | 15 (11 tarefas) | `2026-10-25-plano-15-identidade-final-ingles-e-entrega.md` | `../specs/2026-10-25-spec-fase-15-identidade-final-ingles-e-entrega.md` | Escrito, aguardando execução |
 
@@ -102,3 +104,6 @@ Sem migração: 0, 9, 4 (Tarefas 4 a 9), 13, 14 e 15. Blocos em branches paralel
 
 ## Fase 17 — Contrato do cartão e cards de fluxo e gestão (17a antes do 5a; 17b depois do 14b)
 Detalhada em `2026-10-28-plano-17-cards-de-fluxo-e-gestao.md` (13 tarefas, dois PRs). **17a (7 tarefas):** registro de cartões (identidade, grupo, natureza, textos "o que mostra" e "como calcula"), drill genérico e teste de contrato (número do cartão = total do drill), componente `Cartao`, gaveta de tasks compartilhada com "Abrir no Jira" (somente leitura), migração de Tempo em status e Sincronização e tela Mapa de cartões. **17b (6 tarefas):** Fluxo da semana, Envelhecimento por etapa, Bloqueios entre tasks, Controle do ciclo e tendência, aba Cruzamentos. A spec (seção 6) acrescenta regras aos Planos 4, 5a, 5 a 7, 7b e 10 sem reescrevê-los. Visual: `docs/design/cartoes-gramatica-e-wireframes.md`.
+
+## Candidatas (não numeradas): ideias a partir da referência do Jira Data Center
+`docs/superpowers/ideias-de-cards-a-partir-da-referencia.md` reúne 27 ideias de novos cards, abas e ações (somente leitura), priorizadas, com fonte na referência local `docs/jira/referencia/`. Quatro delas pedem decisão do usuário antes de virar plano (pontos de parada PP1 a PP4 do documento). A correção preventiva do changelog (I-19) já foi feita (PR #28).

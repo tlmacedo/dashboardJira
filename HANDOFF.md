@@ -1,10 +1,10 @@
-# Retomada: Painel de Squads (atualizado em 27/10/2026)
+# Retomada: Painel de Squads (atualizado em 28/10/2026)
 
 ## COMECE AQUI (ClineSR, PC da empresa, clone do GitHub)
 
-1. **Clone numa pasta SEM "jira" no nome** (o hook de proteção bloqueia a palavra em comandos enquanto a flag do Jira não estiver ligada) e use o Windows 11 com PowerShell. Instale/valide JDK 21, Node 22 e pnpm; **não há Docker nem banco a instalar** (a empresa os bloqueia; o banco é um arquivo SQLite).
+1. Clone o projeto (qualquer nome de pasta: desde 28/10 o hook **não bloqueia mais a palavra "jira"**, só URLs/hosts de Jira) e use o Windows 11 com PowerShell. Instale/valide JDK 21, Node 22 e pnpm; **não há Docker nem banco a instalar** (a empresa os bloqueia; o banco é um arquivo SQLite).
 2. Leia, nesta ordem: `.clinerules/00-regras-do-projeto.md` → `docs/guia-execucao-outra-ia.md` → `docs/superpowers/fluxo-de-entrega.md` (**o procedimento de revisão, validação, commit, push, PR, merge e volta à `main`**) → `docs/superpowers/plans/2026-10-27-adendo-plataforma-sqlite-sem-docker.md` → `docs/ferramentas-claude-para-o-cline/README.md` e `processo-completo.md` → `CLAUDE.md` → este arquivo → o índice `docs/superpowers/plans/2026-10-24-indice-dos-planos.md`.
-3. **Execute a Fase 0** (`docs/superpowers/plans/2026-10-27-plano-00-pc-da-empresa.md`): proxy, certificado da empresa, espelhos, testes, subida e teste do hook. Só depois o Plano 9, e assim por diante na ordem do índice.
+3. **Execute a Fase 0** (`docs/superpowers/plans/2026-10-27-plano-00-pc-da-empresa.md`): proxy, certificado da empresa, espelhos, testes, subida e teste do hook. O Plano 9 (CI) já está na `main`; depois da Fase 0 siga a ordem do índice (Plano 14a quando o usuário ligar a flag).
 4. **Jira:** a flag `JIRA_LIVE_ENABLED` é a única trava e **vale somente dentro de `app/.env`** (variável de terminal ou do sistema é ignorada; linha ausente = desligado). `false` = proibido para todos; `true` = liberado. **Só o usuário muda a flag, à mão**, e avisa o ClineSR. O primeiro uso real segue `docs/jira/checklist-primeira-conexao.md`, o runbook `docs/jira/runbook-sincronizacao.md` e o Plano 14a. Para diagnosticar conexão e rede (o usuário roda): `docs/jira/diagnostico-conexao.ps1`.
 5. **Dúvida ou falta de direção = pergunta ao usuário** com opções (recomendada primeiro, cada opção com porquê e consequência). Workflows do Cline em `.clinerules/workflows/`.
 6. Configs reais (`app/.env`, `papeis.yaml`, `status_map.yaml`, `jira_campos.yaml`, `calendario.yaml`, `vinculos.yaml`) **não** estão no GitHub: o usuário as cria a partir dos `.exemplo` (Fase 0, Tarefa 7); a IA nunca as lê, edita nem commita.
@@ -16,13 +16,20 @@
 
 Quase sempre é o clone ou a tarefa antigos mandando usar contêiner/banco de servidor/WSL (bloqueados pela TI). Siga a seção "Se aparecer aborted" de `docs/superpowers/plans/2026-10-27-adendo-plataforma-sqlite-sem-docker.md`: `git pull --ff-only origin main`, tarefa nova no Cline, conferir as regras globais do Cline, terminal em PowerShell (nunca `bash`/`sh`/`wsl` no Windows).
 
-## Onde paramos (27/10/2026)
+## Onde paramos (28/10/2026)
 
-- **Na `main`:** Planos 1, 2, 3A, 3, **3B (banco SQLite embutido, PRs #18 e #19)**, **4A** (sincronização periódica, PR #14) e as **Tarefas 1 a 3 do Plano 4** (Auditoria, PR #15). Backend: 745+ testes, 0 falhas, com SQLite real. Frontend: 48 testes.
+- **Na `main`:** Planos 1, 2, 3A, 3, **3B (banco SQLite embutido, PRs #18 e #19)**, **4A** (sincronização periódica, PR #14), as **Tarefas 1 a 3 do Plano 4** (Auditoria, PR #15), o **Plano 9 completo (CI, cabeçalhos de segurança, CSRF, sessão expirada, pacote em modo produção; PR #25)**, a **Tarefa 0 do Plano 14 e a nova regra dos hooks (PR #26)**, a **correção preventiva do changelog do Data Center (PR #28)** e a **referência local do Jira Data Center + ideias de cards (PR #27)**. Backend: 850+ testes, 0 falhas; frontend: 74. **CI no GitHub ativo** (jobs `backend`, `frontend`, `guarda`, `varredura`, `guarda-windows`).
 - **Nenhum acesso ao Jira foi feito** em todo o projeto. O primeiro ciclo real é do usuário (Plano 14a).
 - **Plano 4 (Auditoria)** continua pela **Tarefa 4**: estado e passo a passo em `docs/superpowers/progresso/2026-10-25-plano-04-auditoria.md`. Os planos 5 a 16 e suas specs estão escritos e ajustados à nova plataforma (SQLite, sem Docker); os Planos 8, 9, 12 e 13 foram reescritos.
 - O repositório `tlmacedo/dashboardJira` é **PÚBLICO desde 26/10** (decisão do usuário). O histórico antigo tem 3 usernames reais (aceito e documentado); nada novo com dado real pode entrar, então a varredura antes do push é ainda mais importante.
 - Alerta do GitGuardian em `SettingsTest.kt` (3 "Generic Password"): falso positivo (valores fictícios de teste de mascaramento). O usuário pode marcá-lo como tal no painel do GitGuardian.
+
+## Ações do usuário pendentes (28/10)
+
+1. **Proteção da `main`** no GitHub exigindo os checks `backend`, `frontend`, `guarda` e `varredura` (passo a passo em `docs/operacao/ci.md`, seção 5). `guarda-windows` entra como recomendado (leva ~18 min).
+2. Criar o segredo `VARREDURA_NOMES` (usernames reais do time para a varredura de CI) e conferir "Require approval for all outside collaborators" (`docs/operacao/ci.md`).
+3. Marcar como falso positivo no painel do GitGuardian os alertas "Generic Password" em `SettingsTest.kt` e `guard.sh` (valores fictícios / linha de código).
+4. Ler `docs/superpowers/relatorio-2026-10-28.md` (relatório da noite) e decidir sobre as ideias de `docs/superpowers/ideias-de-cards-a-partir-da-referencia.md` (pontos de parada PP1 a PP4).
 
 ## O que o usuário precisa ter pronto (a IA não consegue sozinha)
 
@@ -37,7 +44,7 @@ Quase sempre é o clone ou a tarefa antigos mandando usar contêiner/banco de se
 
 ## Próximos passos, em ordem
 
-1. **Fase 0** (PC da empresa) → **Plano 9** (CI e endurecimento; cria o `.github/` que ainda não existe) → **Plano 14a** (primeira conexão real, quando o usuário ligar a flag) → **Plano 4, Tarefas 4 a 9** → 5a → 5b → 6a → 6b → 7a → 7b → 10 → 11 → 14b → 8 → 12 → 13 → 15. O **Plano 16** (escrita no Jira pelo painel) é futuro e só com decisão do usuário. Justificativa e dependências: índice dos planos.
+1. **Fase 0** (PC da empresa; o Plano 9 e a Tarefa 0 do Plano 14 já estão feitos) → **Plano 14a** (primeira conexão real, quando o usuário ligar a flag) → **Plano 4, Tarefas 4 a 9** → 5a → 5b → 6a → 6b → 7a → 7b → 10 → 11 → 14b → 8 → 12 → 13 → 15. O **Plano 16** (escrita no Jira pelo painel) é futuro e só com decisão do usuário. Justificativa e dependências: índice dos planos.
 2. Cada plano/bloco = uma branch `feat/<nome>` a partir da `main` atualizada = um PR, mesclado ao fim conforme `docs/superpowers/fluxo-de-entrega.md`; só então o próximo começa.
 3. Migrações: hoje só existe a `V1`; a próxima é a `V2` (confirmar com `ls app/backend/src/main/resources/db/migration`); nunca editar migração já mesclada.
 
@@ -49,7 +56,7 @@ Quase sempre é o clone ou a tarefa antigos mandando usar contêiner/banco de se
 - Conversar em pt-BR; comentários de código em pt-BR.
 - Não editar nem commitar `.env` nem as configs reais (`papeis.yaml`, `equipes.yaml`, `ausencias.yaml`, `squads.yaml`); usar `.exemplo`/`.demo`. `Filtros_Status_tool.txt` (usernames reais) está no `.gitignore`.
 - `DASHBOARD_DEV_MODE=true` e `JIRA_LIVE_ENABLED=false` são os padrões.
-- **Hooks e a flag (atenção):** o painel lê a flag só de `app/.env`, mas hoje os hooks de proteção ainda leem a variável da flag do ambiente do processo da IA (Claude Code ou VS Code/Cline). Enquanto a Tarefa 0 do Plano 14 não for feita, o usuário precisa, ao ligar a flag no `app/.env`, definir também a variável de usuário do Windows com o mesmo nome e valor e reiniciar o VS Code; senão os hooks continuam barrando comandos que citem o Jira. Os hooks também barram a palavra "jira" em caminhos (falso positivo conhecido): clone numa pasta sem "jira" no nome. Com a flag desligada, continua barrado exibir token.
+- **Hooks e a flag (desde 28/10, PR #26):** os hooks (`.claude/hooks/guard.sh`, `.clinerules/hooks/PreToolUse` e `PreToolUse.ps1`) leem a flag **só da linha da flag em `<raiz>/app/.env`** (ambiente do processo ignorado; ausente/ilegível = desligada), igual ao painel. Com a flag desligada bloqueiam apenas **URL/host de Jira** (rótulo do host com `jira`; `jira`+`sidia` na mesma URL; `*.atlassian.net` com `sidia`); documentação em `atlassian.com` e a palavra "jira" solta passam. Continuam barrados: MCP da Atlassian, variáveis `JIRA_*` de conexão, ligar a flag por texto/arquivo, exibir token, ler/escrever `.env`. Risco residual aceito: host montado em tempo de execução, IP direto, redirects. O `.ps1` é provado no CI do Windows (job `guarda-windows`, PowerShell 5.1 e 7).
 
 ## Decisões principais (resumo; detalhe na spec e na memória do projeto)
 
