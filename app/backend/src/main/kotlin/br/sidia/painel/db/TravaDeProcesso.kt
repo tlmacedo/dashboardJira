@@ -12,6 +12,9 @@ import java.nio.file.StandardOpenOption
  * processo viver (e some sozinha se ele morrer). Sem isto, dois painéis sincronizariam o mesmo Jira ao mesmo tempo.
  */
 class TravaDeProcesso private constructor(private val canal: FileChannel, private val trava: FileLock) : AutoCloseable {
+    /** Verdadeiro enquanto esta instância ainda detém a trava do sistema operacional. */
+    val valida: Boolean get() = trava.isValid && canal.isOpen
+
     override fun close() {
         runCatching { trava.release() }
         runCatching { canal.close() }

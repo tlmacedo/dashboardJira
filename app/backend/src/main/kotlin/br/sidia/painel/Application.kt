@@ -19,6 +19,9 @@ import br.sidia.painel.http.protecaoCsrf
 import br.sidia.painel.http.registrarNegacaoCsrf
 import br.sidia.painel.operacao.ConfiguradorDeLog
 import br.sidia.painel.operacao.MascaraDeLog
+import br.sidia.painel.operacao.Prontidao
+import br.sidia.painel.operacao.prontidaoPadrao
+import br.sidia.painel.operacao.rotaProntidao
 import br.sidia.painel.operacao.instalarLogDeRequisicao
 import br.sidia.painel.security.Authenticator
 import br.sidia.painel.security.DevAuthenticator
@@ -107,6 +110,7 @@ fun Application.module(
     authenticator: Authenticator = autenticadorPadrao(context.settings),
     agendador: Agendador? = null,
     catalogo: CatalogoDeCartoes = catalogoPadrao(),
+    prontidao: Prontidao? = prontidaoPadrao(context),
 ) {
     val settings = context.settings
     val inicioDoProcesso = context.clock.instant()
@@ -167,6 +171,7 @@ fun Application.module(
             rotasSyncStatus(context, SqliteSyncStateStore(ds), AccessLog(ds))
         }
         get("/api/health") { call.respond(HealthResposta(ok = true)) }
+        rotaProntidao(prontidao)
         get("/api/meta") {
             call.respond(
                 MetaResposta(

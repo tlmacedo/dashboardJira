@@ -12,12 +12,24 @@ data class OperacaoSettings(
     val logFormato: String? = null,
     /** `PAINEL_LOG_DIR`: pasta do `painel.log` com rotação; nulo = só saída padrão. */
     val logDir: Path? = null,
+    /** `PAINEL_DISCO_MIN_MB`: abaixo disso de espaço livre na pasta do banco o painel deixa de estar pronto (50 a 1.000.000). */
+    val discoMinMb: Int = 500,
 ) {
     companion object {
-        fun fromEnv(env: Map<String, String>): OperacaoSettings = OperacaoSettings(
-            logFormato = texto(env, "PAINEL_LOG_FORMATO"),
-            logDir = caminho(env, "PAINEL_LOG_DIR"),
-        )
+        fun fromEnv(env: Map<String, String>): OperacaoSettings {
+            val padrao = OperacaoSettings()
+            return OperacaoSettings(
+                logFormato = texto(env, "PAINEL_LOG_FORMATO"),
+                logDir = caminho(env, "PAINEL_LOG_DIR"),
+                discoMinMb = inteiro(env, "PAINEL_DISCO_MIN_MB", 50..1_000_000, padrao.discoMinMb),
+            )
+        }
+
+        internal fun inteiro(env: Map<String, String>, nome: String, faixa: IntRange, padrao: Int): Int =
+            texto(env, nome)?.let {
+                it.toIntOrNull()?.takeIf { n -> n in faixa }
+                    ?: throw IllegalArgumentException("$nome inválido (esperado inteiro de ${faixa.first} a ${faixa.last})")
+            } ?: padrao
 
         internal fun texto(env: Map<String, String>, nome: String): String? = env[nome]?.trim()?.takeIf { it.isNotEmpty() }
 

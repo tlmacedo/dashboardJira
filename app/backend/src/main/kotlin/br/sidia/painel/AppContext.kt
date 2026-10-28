@@ -45,11 +45,14 @@ class AppContext(
     val regrasAuditoria: RegrasDeAuditoria,
     val clock: Clock = Clock.system(settings.zone),
     /** Trava do arquivo do banco (um painel por banco); solta ao fechar. Nula nos testes, que usam arquivos próprios. */
-    private val travaDeProcesso: AutoCloseable? = null,
+    private val travaDeProcesso: TravaDeProcesso? = null,
     /** Metas e limites do card Metas e prazos; lido de `metas.yaml` (o modelo `metas.exemplo.yaml` só vale em desenvolvimento). */
     val regrasDeMetas: RegrasDeMetas = RegrasDeMetas.PADRAO,
 ) : AutoCloseable {
     private val aoFechar = java.util.concurrent.CopyOnWriteArrayList<() -> Unit>()
+
+    /** Verdadeiro se a trava do banco ainda é nossa; sem trava (só testes) vale verdadeiro. Usado pela prontidão. */
+    fun travaValida(): Boolean = travaDeProcesso?.valida ?: true
 
     /** Registra uma ação que roda ANTES de fechar o Jira e o banco (ex.: parar o agendador). */
     fun aoFechar(acao: () -> Unit) {

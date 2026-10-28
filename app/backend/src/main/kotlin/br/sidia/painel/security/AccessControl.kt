@@ -18,7 +18,7 @@ import io.ktor.util.AttributeKey
 private val chavePrincipal = AttributeKey<Principal>("painel.principal")
 
 /** Únicas rotas públicas, já normalizadas. Todo o resto exige principal (negar por padrão). */
-internal val rotasPublicas =setOf(listOf("api", "health"), listOf("api", "meta"))
+internal val rotasPublicas = setOf(listOf("api", "health"), listOf("api", "health", "pronto"), listOf("api", "meta"))
 
 /**
  * Normaliza o caminho como o roteador do Ktor: divide por `/`, descarta segmentos vazios e
