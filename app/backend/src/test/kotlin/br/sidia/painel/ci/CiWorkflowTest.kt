@@ -42,8 +42,23 @@ class CiWorkflowTest {
     private fun com(passo: YamlMap): YamlMap? = passo.get<YamlNode>("with") as? YamlMap
 
     @Test
-    fun quatroJobsObrigatorios() {
-        assertEquals(setOf("backend", "frontend", "guarda", "varredura"), jobs.keys)
+    fun cincoJobsDoWorkflow() {
+        assertEquals(setOf("backend", "frontend", "guarda", "guarda-windows", "varredura"), jobs.keys)
+    }
+
+    @Test
+    fun guardaWindowsProvaOHookNosDoisPowerShell() {
+        assertEquals("windows-latest", texto(jobs.getValue("guarda-windows").get<YamlNode>("runs-on")))
+        val testes = passos("guarda-windows").filter { texto(it.get<YamlNode>("run"))?.contains("test-PreToolUse.ps1") == true }
+        assertEquals(listOf("powershell", "pwsh"), testes.map { texto(it.get<YamlNode>("shell")) }, "5.1 e depois 7")
+        testes.forEach {
+            val cmd = texto(it.get<YamlNode>("run"))!!
+            assertTrue(cmd.contains("-NoProfile -ExecutionPolicy Bypass -File .clinerules\\hooks\\test-PreToolUse.ps1"), cmd)
+            assertTrue(cmd.contains("\$LASTEXITCODE"), "precisa checar o código de saída")
+            assertTrue(cmd.contains("falhas: 0"), "precisa checar o resumo de falhas")
+        }
+        // CRLF/BOM dos .ps1 não podem ser alterados pelo checkout.
+        assertTrue(comandos("guarda-windows").any { it.contains("core.autocrlf false") })
     }
 
     @Test
@@ -104,7 +119,7 @@ class CiWorkflowTest {
     @Test
     fun checkoutSemCredencialPersistida() {
         val checkouts = jobs.keys.flatMap { passos(it) }.filter { texto(it.get<YamlNode>("uses"))?.startsWith("actions/checkout") == true }
-        assertEquals(4, checkouts.size, "Um checkout por job")
+        assertEquals(5, checkouts.size, "Um checkout por job")
         checkouts.forEach { assertEquals("false", texto(com(it)?.get<YamlNode>("persist-credentials"))) }
     }
 
