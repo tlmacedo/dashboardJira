@@ -1,0 +1,23 @@
+# Modelo dos parâmetros do card "Previsão" (copie para previsao.yaml e ajuste). Não leva dado pessoal.
+# Estrito: chave desconhecida ou valor fora da faixa falha ao carregar. Em produção o arquivo real é obrigatório.
+# O Monte Carlo usa a vazão e a taxa de chegada do escopo de quem consulta; a semente vem do dia e dos filtros.
+versao: 1
+
+# Quantas semanas FECHADAS (segunda a domingo de Manaus) entram nas séries de vazão e de chegada.
+semanasHistorico: 16
+
+# Quantos sorteios por simulação.
+sorteios: 10000
+
+# Passou deste número de semanas, a resposta é "mais de N semanas" (nunca um número inventado).
+limiteSemanas: 104
+
+# Confiança: "baixa" com menos que estas semanas com dado, "média" até completar semanasHistorico, "alta" com todas.
+minSemanasConfianca: 8
+
+# Com a taxa de chegada ligada, o que entra em cada semana também é sorteado (padrão). Em false só a vazão conta
+# (reproduz o app anterior).
+comChegada: true
+
+# Previsão por épico: só com a vazão do próprio épico e ao menos este número de concluídos no histórico.
+minItensEpico: 5

@@ -4,7 +4,11 @@ import { LangProvider } from './i18n/LangProvider'
 import { inicioDoPapel } from './nav/nav'
 import { Abertas } from './screens/Abertas/Abertas'
 import { Auditoria } from './screens/Auditoria/Auditoria'
+import { Epicos } from './screens/Epicos/Epicos'
 import { Fechadas } from './screens/Fechadas/Fechadas'
+import { Negativas } from './screens/Negativas/Negativas'
+import { Previsao } from './screens/Previsao/Previsao'
+import { Riscos } from './screens/Riscos/Riscos'
 import { Metas } from './screens/Metas/Metas'
 import { Negligenciadas } from './screens/Negligenciadas/Negligenciadas'
 import { Divergencia } from './screens/Divergencia/Divergencia'
@@ -35,6 +39,10 @@ export default function App() {
                 <Route path="negligenciadas" element={<Negligenciadas />} />
                 <Route path="fechadas" element={<Fechadas />} />
                 <Route path="metas" element={<Metas />} />
+                <Route path="negativas" element={<Negativas />} />
+                <Route path="riscos" element={<Riscos />} />
+                <Route path="previsao" element={<Previsao />} />
+                <Route path="epicos" element={<Epicos />} />
                 <Route path="tempo" element={<TempoEmStatus />} />
                 <Route path="auditoria" element={<Auditoria />} />
                 <Route path="divergencia" element={<Divergencia />} />

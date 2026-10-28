@@ -39,6 +39,14 @@ fun fichasDeTeste(campos: FieldDictionary = camposDeTeste()): Map<String, CardSp
 fun regrasDeMetasDeTeste(): br.sidia.painel.cards.metas.RegrasDeMetas =
     br.sidia.painel.cards.metas.RegrasDeMetas.fromYaml(TestPaths.configDir.resolve("metas.exemplo.yaml"))
 
+/** Pesos do risco do modelo versionado (`risco.exemplo.yaml`). */
+fun regrasDeRiscoDeTeste(): br.sidia.painel.riscos.RegrasDeRisco =
+    br.sidia.painel.riscos.RegrasDeRisco.fromYaml(TestPaths.configDir.resolve("risco.exemplo.yaml"))
+
+/** Parâmetros da previsão do modelo versionado (`previsao.exemplo.yaml`). */
+fun regrasDePrevisaoDeTeste(): br.sidia.painel.previsao.RegrasDePrevisao =
+    br.sidia.painel.previsao.RegrasDePrevisao.fromYaml(TestPaths.configDir.resolve("previsao.exemplo.yaml"))
+
 /** Contexto de teste sem banco (`dataSource = null`), com calendário, papéis, mapa de status, dicionário e fichas dos arquivos de exemplo. */
 fun testContext(settings: Settings): AppContext {
     val campos = camposDeTeste()
@@ -56,5 +64,7 @@ fun testContext(settings: Settings): AppContext {
         labelsDeAtraso = labelsDeAtrasoDeTeste(),
         regrasAuditoria = regrasDeAuditoriaDeTeste(vinculos),
         regrasDeMetas = regrasDeMetasDeTeste(),
+        regrasDeRisco = regrasDeRiscoDeTeste(),
+        regrasDePrevisao = regrasDePrevisaoDeTeste(),
     )
 }

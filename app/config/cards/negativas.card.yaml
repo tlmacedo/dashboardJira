@@ -1,0 +1,45 @@
+# Ficha do card "Negativas" (Plano 5b). Estrita: chave desconhecida falha ao carregar.
+# NÃO exclui status de cancelamento: as canceladas também entram (elas formam o NE-03). Lê os MESMOS tipos da ficha
+# de sincronização, como Fechadas e Metas: o atraso é o mesmo "no prazo" da Auditoria.
+
+id: negativas
+titulo: Negativas
+instancia: samsung
+
+campos:
+  - OS Version
+  - priority
+  - timeoriginalestimate
+  - timespent
+
+filtrosFixos:
+  project: ["TG-Basic"]
+  issuetype: ["Checklist", "Checklist TG", "Checklist Review", "Feature check", "TG Feature check", "Task"]
+
+parametros:
+  - nome: squad
+    tipo: squad
+    obrigatorio: false
+  - nome: periodo
+    tipo: periodo
+    obrigatorio: false
+  - nome: os
+    tipo: os
+    obrigatorio: false
+
+formula: >-
+  Do que saiu do trilho no período (padrão: 90 dias, dia de Manaus): reabertas (concluído para não concluído) e
+  devolvidas (volta a uma etapa anterior do fluxo) pela DATA DO EVENTO no changelog, canceladas, concluídas com atraso
+  (e as sem label que justifique), abertas vencidas, estouro de estimativa (gasto acima de 125% da estimativa) e muitas
+  trocas de responsável (3 ou mais). As taxas são sobre as concluídas do período; acima de 20% a tela marca ▲.
+
+exemplo: >-
+  squad=[dev.alfa, dev.beta], periodo=2026-08-01 a 2026-10-30.
+
+aceite:
+  - Evento antigo numa task atualizada agora não conta no período (vale a data do changelog).
+  - Devolvida não inclui a reabertura (concluído para não concluído é "reaberta").
+  - Cada contagem abre as mesmas tasks que a formam; a contagem por pessoa vai para o responsável no instante do evento.
+  - Pessoas em ordem alfabética, sem posição.
+
+expandChangelog: true

@@ -1,0 +1,36 @@
+# Modelo dos pesos do card "Riscos" (copie para risco.yaml e ajuste). Não leva dado pessoal.
+# Estrito: chave desconhecida, fator sem peso ou limiares incoerentes falham ao carregar. Em produção o arquivo real
+# é obrigatório. Os pesos são HEURÍSTICOS (herdados do app anterior): calibrar com o histórico real (Plano 14b).
+versao: 1
+
+# Pontos de cada fator. IDADE_ACIMA_P85 e IDADE_ACIMA_P50 são exclusivos (vale o maior); VENCIDA, PREVISAO_APOS_VENCIMENTO
+# e VENCE_EM_BREVE também são exclusivos, nessa precedência. O total passa de 100? Fica em 100.
+pesos:
+  IDADE_ACIMA_P85: 30
+  IDADE_ACIMA_P50: 10
+  PARADA: 15
+  VENCIDA: 25
+  PREVISAO_APOS_VENCIMENTO: 20
+  VENCE_EM_BREVE: 8
+  BLOQUEADA: 15
+  REABERTA: 10
+  MUITAS_TROCAS: 10
+  ESTOURO_DE_HORAS: 15
+  SEM_ATUALIZACAO: 10
+  SEM_ESTIMATIVA: 5
+
+# Níveis: pontos >= alto é "alto"; pontos >= medio é "médio"; abaixo disso, "baixo" (fora da lista do card).
+alto: 60
+medio: 30
+
+# "Vence em breve": vencimento a no máximo estes dias CORRIDOS de hoje (e ainda não vencido).
+venceEmDias: 3
+
+# Estouro de horas: tempo gasto acima desta razão da estimativa original.
+estouro: 1.25
+
+# Muitas trocas: este número de mudanças de responsável, ou mais.
+trocas: 3
+
+# Sem atualização: em andamento sem mudança no Jira há mais que estes dias corridos.
+diasSemAtualizacao: 7

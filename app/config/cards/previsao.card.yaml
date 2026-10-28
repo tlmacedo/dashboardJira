@@ -1,0 +1,41 @@
+# Ficha do card "Previsão" (Plano 5b). Estrita: chave desconhecida falha ao carregar.
+# NÃO exclui status de cancelamento: as canceladas formam a série "canceladas à parte" da vazão (SerieSemanal).
+# Mesmos tipos de Abertas (o backlog é o mesmo).
+
+id: previsao
+titulo: Previsão
+instancia: samsung
+
+campos:
+  - OS Version
+  - priority
+
+filtrosFixos:
+  project: ["TG-Basic"]
+  issuetype: ["Checklist", "Checklist TG", "Checklist Review"]
+
+parametros:
+  - nome: squad
+    tipo: squad
+    obrigatorio: false
+  - nome: os
+    tipo: os
+    obrigatorio: false
+
+formula: >-
+  Backlog = tasks abertas do escopo. A vazão é o número de entregas por semana e a chegada o número de tasks criadas por
+  semana, nas últimas 16 semanas FECHADAS (segunda a domingo de Manaus). O Monte Carlo (10.000 sorteios, semente do dia e
+  dos filtros) sorteia vazão e chegada de cada semana até o backlog zerar e informa P50, P85 e P95 em semanas e na data da
+  semana alvo; acima de 104 semanas a resposta é "mais de 104 semanas". Também projeta quantos itens saem em 2, 4 e 8
+  semanas (percentis conservadores) e, por task em andamento, o que falta pelo histórico de ciclos do mesmo tipo.
+
+exemplo: >-
+  squad=[dev.alfa, dev.beta], os não informado.
+
+aceite:
+  - A vazão e a chegada vêm só das tasks que o papel vê (usuário só vê as próprias).
+  - Chegada igual ou maior que a vazão não converge e a tela diz "mais de 104 semanas".
+  - Card, detalhamento e recarga no mesmo dia mostram o mesmo número (semente do dia).
+  - Os parâmetros e a versão vêm de previsao.yaml.
+
+expandChangelog: true

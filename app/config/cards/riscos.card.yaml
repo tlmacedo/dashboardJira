@@ -1,0 +1,46 @@
+# Ficha do card "Riscos" (Plano 5b). Estrita: chave desconhecida falha ao carregar.
+# A leitura no banco aplica estes tipos e a exclusão de status (FiltroDeFicha); o JQL só serve à sincronização e ao ensaio.
+
+id: riscos
+titulo: Riscos
+instancia: samsung
+
+campos:
+  - OS Version
+  - priority
+  - timeoriginalestimate
+  - timeestimate
+  - timespent
+
+filtrosFixos:
+  project: ["TG-Basic"]
+  issuetype: ["Checklist", "Checklist TG", "Checklist Review"]
+
+filtrosExcluidos:
+  status: ["Cancelled", "Canceled", "Dropped"]
+
+parametros:
+  - nome: squad
+    tipo: squad
+    obrigatorio: false
+  - nome: os
+    tipo: os
+    obrigatorio: false
+
+formula: >-
+  Score de 0 a 100 de cada task aberta, somando pontos dos fatores de risco (pesos em risco.yaml, versionados):
+  idade acima do P85 ou da mediana do PRÓPRIO tipo (dias úteis), parada no status, vencida (ou previsão depois do
+  vencimento, ou vence em até 3 dias), bloqueada, reaberta, 3 ou mais trocas de responsável, estouro de horas
+  (acima de 125% da estimativa), sem atualização há mais de 7 dias e sem estimativa. Alto a partir de 60 pontos, médio
+  a partir de 30; a lista mostra alto e médio e o nível baixo fica no detalhamento.
+
+exemplo: >-
+  squad=[dev.alfa, dev.beta], os não informado.
+
+aceite:
+  - Os pesos e a versão vêm de risco.yaml; a versão sai em toda resposta.
+  - Idade, parada e sem atualização seguem as mesmas regras de Abertas e Negligenciadas.
+  - Sinais por pessoa mostram issues em risco sobre abertas, em ordem alfabética, sem ranking.
+  - O histórico e os totais seguem a visão do papel (usuário só vê as próprias).
+
+expandChangelog: true

@@ -1,6 +1,8 @@
 package br.sidia.painel
 
 import br.sidia.painel.cards.metas.RegrasDeMetas
+import br.sidia.painel.previsao.RegrasDePrevisao
+import br.sidia.painel.riscos.RegrasDeRisco
 import br.sidia.painel.config.Settings
 import br.sidia.painel.db.Database
 import br.sidia.painel.db.TravaDeProcesso
@@ -48,6 +50,10 @@ class AppContext(
     private val travaDeProcesso: TravaDeProcesso? = null,
     /** Metas e limites do card Metas e prazos; lido de `metas.yaml` (o modelo `metas.exemplo.yaml` só vale em desenvolvimento). */
     val regrasDeMetas: RegrasDeMetas = RegrasDeMetas.PADRAO,
+    /** Pesos e limiares do card Riscos; lido de `risco.yaml` (o modelo `risco.exemplo.yaml` só vale em desenvolvimento). */
+    val regrasDeRisco: RegrasDeRisco = RegrasDeRisco.PADRAO,
+    /** Parâmetros da Previsão (Monte Carlo) e dos Épicos; lido de `previsao.yaml` (o modelo só vale em desenvolvimento). */
+    val regrasDePrevisao: RegrasDePrevisao = RegrasDePrevisao.PADRAO,
 ) : AutoCloseable {
     private val aoFechar = java.util.concurrent.CopyOnWriteArrayList<() -> Unit>()
 
@@ -116,6 +122,12 @@ class AppContext(
             // Metas do card Metas e prazos: config versionada sem dado pessoal; o modelo só cai em dev.
             val arquivoMetas = resolver(settings, "metas")
             val regrasDeMetas = lerYaml(arquivoMetas) { RegrasDeMetas.fromYaml(arquivoMetas) }
+            // Pesos do card Riscos: config versionada sem dado pessoal; o modelo só cai em dev.
+            val arquivoRisco = resolver(settings, "risco")
+            val regrasDeRisco = lerYaml(arquivoRisco) { RegrasDeRisco.fromYaml(arquivoRisco) }
+            // Parâmetros da Previsão e dos Épicos: config versionada sem dado pessoal; o modelo só cai em dev.
+            val arquivoPrevisao = resolver(settings, "previsao")
+            val regrasDePrevisao = lerYaml(arquivoPrevisao) { RegrasDePrevisao.fromYaml(arquivoPrevisao) }
 
             // Valida na subida todas as instâncias do Jira configuradas (sem enviar nada); só id e regra na falha.
             val jira = JiraClientFactory(settings)
@@ -136,7 +148,8 @@ class AppContext(
             }
             return AppContext(
                 settings, calendario, papeis, ds, jira, mapaDeStatus, campos, fichas, vinculos, labelsDeAtraso, regrasAuditoria, clock,
-                travaDeProcesso = trava, regrasDeMetas = regrasDeMetas,
+                travaDeProcesso = trava, regrasDeMetas = regrasDeMetas, regrasDeRisco = regrasDeRisco,
+                regrasDePrevisao = regrasDePrevisao,
             )
         }
 

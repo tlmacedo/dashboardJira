@@ -252,6 +252,64 @@ function metasMock(granularidade: string) {
   }
 }
 
+function negativasMock() {
+  return {
+    reabertas: 3, devolvidas: 2, canceladas: 2, concluidasComAtraso: 5, atrasadasSemJustificativa: 2, abertasVencidas: 4,
+    estouroDeEstimativa: 3, muitasTrocas: 1, concluidas: 18,
+    taxaReabertura: 3 / 18, taxaDevolucao: 2 / 18, taxaAtraso: 5 / 18, taxaAtrasoSemJustificativa: 2 / 18, limiteDaTaxa: 0.2,
+    porResponsavel: PESSOAS.map((p, i) => ({ pessoa: p, reabertas: i % 2, devolvidas: (i + 1) % 2, atrasadas: i % 3 })),
+    unit: 'util',
+    avisos: [] as unknown[],
+  }
+}
+
+function riscosMock() {
+  const fatores = (f: [string, number][]) => f.map(([fator, pontos]) => ({ fator, pontos }))
+  const linhas = [
+    { key: 'TG-2101', resumo: 'Ajustar tela de login', tipo: 'Checklist', status: 'Em andamento', responsavel: 'ana', pontos: 85, nivel: 'alto', fatorPrincipal: 'IDADE_ACIMA_P85',
+      fatores: fatores([['IDADE_ACIMA_P85', 30], ['VENCIDA', 25], ['PARADA', 15], ['SEM_ATUALIZACAO', 10], ['SEM_ESTIMATIVA', 5]]) },
+    { key: 'TG-2108', resumo: 'Corrigir exportação', tipo: 'Checklist', status: 'Bloqueado', responsavel: 'carla', pontos: 63, nivel: 'alto', fatorPrincipal: 'PARADA',
+      fatores: fatores([['PARADA', 15], ['BLOQUEADA', 15], ['ESTOURO_DE_HORAS', 15], ['IDADE_ACIMA_P50', 10], ['VENCE_EM_BREVE', 8]]) },
+    { key: 'TG-2115', resumo: 'Revisar contrato da API', tipo: 'Checklist Review', status: 'Em revisão', responsavel: 'bruno', pontos: 30, nivel: 'medio', fatorPrincipal: 'IDADE_ACIMA_P85',
+      fatores: fatores([['IDADE_ACIMA_P85', 30]]) },
+  ]
+  return {
+    versaoRegras: 'risco v1', alto: 2, medio: 1, baixo: 5, emRisco: 3, limiteAlto: 60, limiteMedio: 30, linhas,
+    sinaisPorPessoa: PESSOAS.map((p, i) => ({ pessoa: p, issuesEmRisco: i % 2, abertas: 3 + (i % 3) })),
+    avisos: [] as unknown[],
+  }
+}
+
+function previsaoMock(corrido: boolean) {
+  const semanas = ['2026-09-28', '2026-10-05', '2026-10-12', '2026-10-19']
+  const f = corrido ? 1.4 : 1
+  return {
+    versaoRegras: 'previsao v1', backlog: 24,
+    termina: { p50: '2026-11-23', p85: '2026-12-07', p95: null, semanasP50: 4, semanasP85: 6, semanasP95: null },
+    confianca: 'media', semanasComDado: 12, semanasHistorico: 16, limiteSemanas: 104, comChegada: true, entregasNaJanela: 48,
+    vazaoSemanal: semanas.map((semana, i) => ({ semana, n: 5 + (i % 3) })),
+    chegadaSemanal: semanas.map((semana, i) => ({ semana, n: 3 + (i % 2) })),
+    quantos: [2, 4, 8].map((s) => ({ semanas: s, p50: s * 5, p85: s * 4, p95: s * 3 })),
+    porIssue: [
+      { key: 'TG-2101', resumo: 'Ajustar tela de login', tipo: 'Checklist', status: 'Em andamento', responsavel: 'ana', idade: +(12 * f).toFixed(1), restanteP50: +(4.5 * f).toFixed(1), restanteP85: +(7.8 * f).toFixed(1), n: 9 },
+      { key: 'TG-2108', resumo: 'Corrigir exportação', tipo: 'Checklist', status: 'Bloqueado', responsavel: 'carla', idade: +(30 * f).toFixed(1), restanteP50: null, restanteP85: null, n: 2 },
+    ],
+    unit: corrido ? 'corrido' : 'util',
+    avisos: [{ codigo: 'AMOSTRA_PEQUENA', gravidade: 'informativo', mensagem: 'x', params: { tipo: 'Checklist Review', n: '3', minimo: '5' } }],
+  }
+}
+
+function epicosMock() {
+  return {
+    minItens: 5,
+    linhas: [
+      { id: 'a1b2c3d4e5f6', epico: 'TG-900', itens: 6, concluidos: 4, progresso: 0.666667, maisAntigo: '2026-09-10', vencidos: 1, pontos: 8, previsaoSemanasP85: null },
+      { id: '0f1e2d3c4b5a', epico: 'TG-910', itens: 11, concluidos: 8, progresso: 0.727273, maisAntigo: '2026-10-01', vencidos: 0, pontos: null, previsaoSemanasP85: 3 },
+    ],
+    avisos: [] as unknown[],
+  }
+}
+
 const URL_BASE_FICTICIA = 'https://jira.exemplo.invalid/browse'
 
 function taskReview() {
@@ -384,6 +442,10 @@ function catalogo() {
     ...trabalho('negligenciadas', 'ng', intervalo(6), 'QUALIDADE'),
     ...trabalho('fechadas', 'fe', intervalo(12), 'FLUXO'),
     ...trabalho('metas', 'mt', intervalo(14), 'PRAZO'),
+    ...trabalho('negativas', 'ne', [1, 2, 3, 4, 5, 6, 7, 8, 10], 'QUALIDADE'),
+    ...trabalho('riscos', 'ri', intervalo(3), 'ESTOQUE').map((c) => ({ ...c, grupo: 'trabalho' })),
+    ...trabalho('previsao', 'pv', intervalo(6), 'FLUXO').map((c) => ({ ...c, grupo: 'trabalho', temDrill: c.id !== 'PV-05' })),
+    ...trabalho('epicos', 'ep', [1], 'ESTOQUE').map((c) => ({ ...c, grupo: 'trabalho' })),
   ]
   return { cartoes: [...ts, ...sy, ...au, ...tr] }
 }
@@ -404,6 +466,10 @@ export function mockApi(): Plugin {
         else if (url.pathname === '/api/cards/negligenciadas') corpo = negligenciadasMock(url.searchParams.get('movimento') === 'semReal')
         else if (url.pathname === '/api/cards/fechadas') corpo = fechadasMock(url.searchParams.get('unit') === 'corrido')
         else if (url.pathname === '/api/cards/metas') corpo = metasMock(url.searchParams.get('granularidade') ?? 'semana')
+        else if (url.pathname === '/api/cards/negativas') corpo = negativasMock()
+        else if (url.pathname === '/api/cards/riscos') corpo = riscosMock()
+        else if (url.pathname === '/api/cards/previsao') corpo = previsaoMock(url.searchParams.get('unit') === 'corrido')
+        else if (url.pathname === '/api/cards/epicos') corpo = epicosMock()
         else if (url.pathname === '/api/auditoria/sinais') corpo = auditoria()
         else if (url.pathname.startsWith('/api/auditoria/historico/')) corpo = historico(decodeURIComponent(url.pathname.split('/')[4] ?? ''))
         else if (url.pathname === '/api/cards/task-review') corpo = taskReview()
