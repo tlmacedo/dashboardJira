@@ -56,7 +56,10 @@ class Metricas(val registro: PrometheusMeterRegistry = PrometheusMeterRegistry(P
 
     /** `painel_http_requisicoes_total` e `painel_http_duracao_segundos`, com a rota pelo MODELO (nunca o caminho real). */
     fun requisicaoHttp(rota: String, metodo: String, status: Int, duracaoSegundos: Double) {
-        val tags = Tags.of("rota", rota, "metodo", metodo, "status", status.toString())
+        // Rótulos de lista fechada: o cliente (até o anônimo da porta pública) não escolhe a cardinalidade.
+        val metodoFechado = if (metodo in METODOS_CONHECIDOS) metodo else "OUTRO"
+        val statusFechado = if (status in 100..599) status else 0
+        val tags = Tags.of("rota", rota, "metodo", metodoFechado, "status", statusFechado.toString())
         Counter.builder("painel.http.requisicoes").tags(tags).register(registro).increment()
         DistributionSummary.builder("painel.http.duracao").baseUnit("segundos").tags(tags)
             .serviceLevelObjectives(0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0)
@@ -155,6 +158,10 @@ class Metricas(val registro: PrometheusMeterRegistry = PrometheusMeterRegistry(P
             instancia == INSTANCIA_RETENCAO -> "local"
             else -> "desconhecida"
         }
+
+    private companion object {
+        val METODOS_CONHECIDOS = setOf("GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS")
+    }
 
     /** Texto Prometheus (formato 0.0.4) de todas as métricas. */
     fun texto(): String = registro.scrape()

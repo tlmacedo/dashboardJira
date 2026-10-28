@@ -18,6 +18,7 @@ import br.sidia.painel.testContext
 import br.sidia.painel.time.BusinessCalendar
 import br.sidia.painel.TestPaths
 import io.ktor.client.request.get
+import io.ktor.client.request.request
 import io.ktor.server.application.ApplicationCall
 import io.ktor.server.response.respondText
 import io.ktor.server.routing.get
@@ -72,6 +73,22 @@ class MetricasTest {
         assertEquals(1.0, valor(l.single()))
         assertTrue(linhas(texto, "painel_http_duracao_segundos_count", "rota=\"/api/tarefa/{key}\"").isNotEmpty())
         assertFalse("TG-1" in texto)
+    }
+
+    @Test
+    fun metodoInventadoNaoCriaSerieSemLimite() = testApplication {
+        val metricas = Metricas()
+        val s = Settings.fromEnv(emptyMap())
+        application { module(s, testContext(s), metricas = metricas) }
+        repeat(100) { i ->
+            client.request("/api/qualquer/$i") { method = io.ktor.http.HttpMethod("FOO$i") }
+        }
+        client.get("/api/health")
+        val series = metricas.texto().lines().filter { it.startsWith("painel_http_requisicoes_total") }
+        assertTrue(series.size <= 8, "no máximo 7 métodos + OUTRO, achou ${series.size}")
+        assertTrue(series.any { "metodo=\"OUTRO\"" in it })
+        assertFalse(metricas.texto().contains("FOO"))
+        assertFalse(metricas.texto().contains("/api/qualquer/5"), "rota é o modelo, nunca o caminho cru")
     }
 
     @Test
