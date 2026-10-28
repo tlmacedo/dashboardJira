@@ -12,7 +12,7 @@ Branch: `feat/contrato-do-cartao` (bloco 17a = Tarefas 1 a 7). Executor: Claude 
 - [x] Tarefa 2: drill genérico e teste de contrato (testes: ver contagem final no fechamento; +13 em `ContratoDeCartoesTest`)
 - [x] Tarefa 3: componente `Cartao` e ajuda (ⓘ) (frontend 86 totais, 0 falhas; +12 em `Cartao.test.tsx`; build ok)
 - [x] Tarefa 4: gaveta de tasks compartilhada e "Abrir no Jira" (backend 890 totais, 0 falhas; +8 em `LinkJiraTest`; frontend 104 totais, 0 falhas; +18 em `GavetaDeTasks.test.tsx`, +4 em `csv.test.ts`, −4 que saíram de `TempoEmStatus.test.tsx` sem mudança de asserção; build ok)
-- [ ] Tarefa 5: migrar Tempo em status e Sincronização para o contrato
+- [x] Tarefa 5: migrar Tempo em status e Sincronização para o contrato (backend 890 totais, 0 falhas; frontend 104 totais, 0 falhas; build ok; `Sincronizacao.test.tsx` sem nenhuma alteração; `TempoEmStatus.test.tsx` só nas linhas listadas em "Asserções alteradas")
 - [ ] Tarefa 6: tela Mapa de cartões
 - [ ] Tarefa 7: revisão visual, acessibilidade e fechamento do 17a
 
@@ -51,7 +51,17 @@ Branch: `feat/contrato-do-cartao` (bloco 17a = Tarefas 1 a 7). Executor: Claude 
 - Ruling: a gaveta só aceita `linkJira` https e sem credencial (defesa contra `javascript:`/`http:` vindos de uma resposta adulterada), além de o backend já montar só https.
 - Ruling: o teste `pessoasEmOrdemAlfabetica` do plano ficou como `ordemDaListaVemDaApiSemRanking` na gaveta (a lista é de tasks, não de pessoas: a ordem natural de chaves vem do backend e a gaveta não reordena por responsável nem por tempo); a ordem alfabética de pessoas é verificada no contrato do backend (`drillOrdenaPessoasAlfabeticamente`, segmentos de TS-06) e na matriz da tela, que já tem teste. A coluna Responsável mostra `—` para null (fora da visão OU sem responsável: o `DrillRow` não distingue os dois, então "outra pessoa" seria falso para task sem dono) — custo se errado: distinguir no DTO e trocar o texto.
 - Ruling: `csv.ts` foi para `shared/csv.ts` e seus 4 testes para `shared/csv.test.ts`; as regras de tabela e de gaveta ganharam `shared/tabela.css` e `shared/gaveta.css` (as cópias em `tempo.css` saem na Tarefa 5, junto do `DrillDrawer`).
+- Ruling: na Tarefa 5 os três KPIs e as seções (TS-04, TS-06, TS-07) de Tempo em status usam `Cartao`; a Sincronização usa `Cartao` nos três blocos (SY-01 faixa do modo, SY-02 por instância, SY-03 retenção), pois a tela não tem KPIs numéricos. TS-05 não tem elemento próprio na tela (a seção de barras é TS-04). `Cartao` ganhou a prop `idDoTitulo` para as tabelas continuarem nomeadas pelo título (`aria-labelledby`).
+- Ruling: o `DrillDrawer`, a rota `/api/drill/tempo-em-status`, a função `fetchDrill`, o tipo `DrillRow` do frontend, as chaves `tempo.gaveta.*`, `tempo.fechar`, `tempo.verTasks` e as regras de KPI, bloco, tabela e gaveta de `tempo.css` foram removidos; o mock de desenvolvimento (`dev-mock/mockApi.ts`) serve o catálogo e o drill genérico.
 - Ruling: o papel que filtra o catálogo vem de `papeisVigentes` (diretório de hoje; exceção só do `dev`), a mesma regra de `/api/me`, e não do `principal.roles` bruto.
+
+## Asserções alteradas (Tarefa 5)
+
+Nenhuma asserção de comportamento foi alterada. Mudaram apenas as entradas dos testes, por causa da rota única do drill:
+
+- `TempoEmStatus.test.tsx`: a constante `DRILL` passou de `/api/drill/tempo-em-status` para `/api/cartoes/TS-03/tasks`; a resposta simulada do drill passou de uma lista de linhas para o objeto do drill genérico (`linhas(n)` devolve `TasksDoCartao`); o teste `clicarNoKpiAbreAGaveta` procura `segmento=paradas` no lugar de `kind=paradas`; a importação de `DrillRow` virou a de `TasksDoCartao`; os 4 testes de CSV foram movidos sem mudança para `shared/csv.test.ts`. Mesmos seletores, mesmos textos, mesmo foco (inclusive o ⏸ no KPI e o foco de volta ao KPI após Esc).
+- `TempoEmStatusRoutesTest.kt` (backend): todas as chamadas a `/api/drill/tempo-em-status?kind=X` passaram a `/api/cartoes/<TS-nn>/tasks?segmento=X` por um auxiliar (`rotaDrill`); o corpo agora é `DrillGenericoDto` (as asserções leem `linhas`); a lista de rotas do `access_log` no teste `consultaEhRegistrada` troca a rota antiga pela nova. Os 400 de filtro continuam sem corpo.
+- `DadosDeDemonstracaoTest.kt`: a leitura das analisadas usa a rota nova e o campo `linhas`.
 
 ## Minor adiados
 

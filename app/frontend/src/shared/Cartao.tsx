@@ -36,6 +36,8 @@ export type CartaoProps = {
   titulo: string
   /** Nível do título na página (2 ou 3). */
   nivelDoTitulo?: 2 | 3
+  /** Id do título, quando o corpo precisa nomear tabelas e regiões por ele (`aria-labelledby`). */
+  idDoTitulo?: string
   /** Número já formatado pelo idioma, com unidade. Sempre renderizado como TEXTO. */
   valor?: string
   /** Símbolo decorativo antes do valor (ex.: ⏸); não substitui o texto do estado. */
@@ -81,7 +83,8 @@ export function Cartao(props: CartaoProps) {
   const { t, lang } = useLang()
   const { meta: metaDe } = useCatalogo()
   const meta = metaDe(props.id)
-  const idDoTitulo = useId()
+  const idGerado = useId()
+  const idDoTitulo = props.idDoTitulo ?? idGerado
   const idDoConteudo = useId()
   const idDaAcao = useId()
   const emRouter = useInRouterContext()

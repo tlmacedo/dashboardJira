@@ -7,7 +7,8 @@ import { LangProvider } from '../../i18n/LangProvider'
 import { ThemeProvider } from '../../theme/ThemeProvider'
 import { Shell } from '../../shell/Shell'
 import { TempoEmStatus } from './TempoEmStatus'
-import type { DrillRow, TempoEmStatusDto } from './api'
+import type { TasksDoCartao } from '../../shared/tasksApi'
+import type { TempoEmStatusDto } from './api'
 
 const DTO: TempoEmStatusDto = {
   analisadas: 236,
@@ -32,14 +33,21 @@ const DTO: TempoEmStatusDto = {
   avisos: [],
 }
 
-const linhas = (n: number): DrillRow[] =>
-  Array.from({ length: n }, (_, i) => ({
+/** Resposta do drill genérico (`GET /api/cartoes/{id}/tasks`) com n tasks. */
+const linhas = (n: number): TasksDoCartao => ({
+  tituloChave: 'tempo.kpi.paradas',
+  definicaoChave: 'card.ts03.oQueMostra',
+  total: n,
+  colunas: ['chave', 'resumo', 'responsavel', 'status', 'detalhe'],
+  linkJira: null,
+  linhas: Array.from({ length: n }, (_, i) => ({
     key: `TG-${i + 1}`,
     resumo: `Task ${i + 1}`,
     responsavel: 'ana',
     status: 'Em revisão',
     detalhe: `${i + 1},0 dias úteis em Em revisão`,
-  }))
+  })),
+})
 
 type Resp = { status: number; corpo?: unknown }
 type Rotas = Record<string, Resp | (() => Resp)>
@@ -86,7 +94,8 @@ afterEach(() => {
 })
 
 const CARD = '/api/cards/tempo-em-status'
-const DRILL = '/api/drill/tempo-em-status'
+// Gaveta dos KPIs de Paradas: cartão TS-03, segmento "paradas".
+const DRILL = '/api/cartoes/TS-03/tasks'
 
 describe('tela Tempo em status', () => {
   it('rendersKpis', async () => {
@@ -121,7 +130,7 @@ describe('tela Tempo em status', () => {
     await within(gaveta).findByText('TG-1')
     // cabeçalho + 17 linhas
     expect(within(gaveta).getAllByRole('row')).toHaveLength(18)
-    expect(mock.mock.calls.some((c) => String(c[0]).includes('kind=paradas'))).toBe(true)
+    expect(mock.mock.calls.some((c) => String(c[0]).includes('segmento=paradas'))).toBe(true)
     // Esc fecha e devolve o foco ao KPI
     await userEvent.keyboard('{Escape}')
     expect(screen.queryByRole('dialog')).toBeNull()

@@ -2,6 +2,7 @@ package br.sidia.painel.cards
 
 import br.sidia.painel.BancoEmArquivo
 import br.sidia.painel.AppContext
+import br.sidia.painel.cards.contrato.DrillGenericoDto
 import br.sidia.painel.config.Settings
 import br.sidia.painel.module
 import br.sidia.painel.security.AtribuicaoPapel
@@ -233,13 +234,27 @@ class TempoEmStatusRoutesTest {
         }
 
         suspend fun drill(usuario: String, kind: String, consulta: String = ""): List<DrillRow> {
-            val r = get(usuario, "/api/drill/tempo-em-status?kind=${enc(kind)}$consulta")
+            val r = get(usuario, rotaDrill(kind) + consulta)
             assertEquals(HttpStatusCode.OK, r.status, r.corpo)
-            return Json.decodeFromString(r.corpo)
+            val dto = Json.decodeFromString<DrillGenericoDto>(r.corpo)
+            assertEquals(dto.linhas.size, dto.total, "total da gaveta = linhas")
+            return dto.linhas
         }
     }
 
     private fun enc(s: String) = URLEncoder.encode(s, Charsets.UTF_8)
+
+    /** Cartão que conta cada recorte (o drill é a rota genérica dos cartões TS-nn). */
+    private fun cartaoDoRecorte(kind: String) = when {
+        kind == "paradas" -> "TS-03"
+        kind.startsWith("status:") -> "TS-04"
+        kind.startsWith("pessoa:") -> "TS-06"
+        else -> "TS-01"
+    }
+
+    /** `/api/cartoes/<cartão>/tasks?segmento=<kind>`; sem [kind] é a chamada sem segmento. */
+    private fun rotaDrill(kind: String?) =
+        "/api/cartoes/${cartaoDoRecorte(kind.orEmpty())}/tasks" + (if (kind == null) "" else "?segmento=${enc(kind)}")
 
     private fun rodar(
         auth: Authenticator = autenticador,
@@ -365,7 +380,7 @@ class TempoEmStatusRoutesTest {
         val controle = get("gerente.exemplo", "/api/cards/tempo-em-status?os=a%00b")
         assertEquals(HttpStatusCode.BadRequest, controle.status)
         assertEquals("", controle.corpo)
-        val drillRuim = get("gerente.exemplo", "/api/drill/tempo-em-status?kind=analisadas&os=a%0Ab")
+        val drillRuim = get("gerente.exemplo", rotaDrill("analisadas") + "&os=a%0Ab")
         assertEquals(HttpStatusCode.BadRequest, drillRuim.status)
         assertEquals("", drillRuim.corpo)
     }
@@ -456,7 +471,7 @@ class TempoEmStatusRoutesTest {
         assertEquals(HttpStatusCode.Forbidden, r.status)
         assertEquals("", r.corpo)
         assertEquals(HttpStatusCode.Forbidden, get("carla", "/api/cards/tempo-em-status?pessoa=ana").status)
-        assertEquals(HttpStatusCode.Forbidden, get("ana", "/api/drill/tempo-em-status?kind=pessoa:bruno:status:Em+andamento").status)
+        assertEquals(HttpStatusCode.Forbidden, get("ana", rotaDrill("pessoa:bruno:status:Em andamento")).status)
         // Dentro da visibilidade, pode.
         assertEquals(HttpStatusCode.OK, get("lider.alfa", "/api/cards/tempo-em-status?pessoa=bruno").status)
         assertEquals(HttpStatusCode.OK, get("ana", "/api/cards/tempo-em-status?pessoa=ana").status)
@@ -547,8 +562,8 @@ class TempoEmStatusRoutesTest {
         assertTrue(gerente.porStatus.any { it.status == "Em revisão" })
         // Status que não existe no card: lista vazia, igual a n=0.
         assertEquals(emptyList(), drill("gerente.exemplo", "status:Inexistente"))
-        assertEquals(HttpStatusCode.BadRequest, get("gerente.exemplo", "/api/drill/tempo-em-status?kind=outra").status)
-        assertEquals(HttpStatusCode.BadRequest, get("gerente.exemplo", "/api/drill/tempo-em-status").status)
+        assertEquals(HttpStatusCode.BadRequest, get("gerente.exemplo", rotaDrill("outra")).status)
+        assertEquals(HttpStatusCode.BadRequest, get("gerente.exemplo", rotaDrill(null)).status)
     }
 
     // ---- Dados ruins ----
@@ -632,11 +647,11 @@ class TempoEmStatusRoutesTest {
     fun drillDaPropriaPessoaSemIssuesDaListaVazia() = rodar {
         // Sem nenhuma issue na base, a pessoa não aparece em lugar nenhum: a própria ana ainda recebe lista vazia.
         executarSql("DELETE FROM change_event; DELETE FROM issue")
-        val r = get("ana", "/api/drill/tempo-em-status?kind=${enc("pessoa:ana:status:Em revisão")}")
+        val r = get("ana", rotaDrill("pessoa:ana:status:Em revisão"))
         assertEquals(HttpStatusCode.OK, r.status, r.corpo)
-        assertEquals(emptyList(), Json.decodeFromString<List<DrillRow>>(r.corpo))
+        assertEquals(emptyList(), Json.decodeFromString<DrillGenericoDto>(r.corpo).linhas)
         // Outra pessoa continua negada.
-        assertEquals(HttpStatusCode.Forbidden, get("ana", "/api/drill/tempo-em-status?kind=${enc("pessoa:bruno:status:Em revisão")}").status)
+        assertEquals(HttpStatusCode.Forbidden, get("ana", rotaDrill("pessoa:bruno:status:Em revisão")).status)
     }
 
     @Test
@@ -698,7 +713,7 @@ class TempoEmStatusRoutesTest {
     fun consultaEhRegistrada() = rodar {
         assertEquals(HttpStatusCode.OK, get("ana", "/api/me").status)
         assertEquals(HttpStatusCode.OK, get("ana", "/api/cards/tempo-em-status?squad=Alfa&token=segredo123").status)
-        assertEquals(HttpStatusCode.OK, get("ana", "/api/drill/tempo-em-status?kind=analisadas").status)
+        assertEquals(HttpStatusCode.OK, get("ana", rotaDrill("analisadas")).status)
         assertEquals(HttpStatusCode.Forbidden, get("ana", "/api/cards/tempo-em-status?pessoa=bruno").status)
         assertEquals(HttpStatusCode.Forbidden, get("ex.papel", "/api/me").status)
         val linhas = linhasDoAccessLog()
@@ -706,7 +721,7 @@ class TempoEmStatusRoutesTest {
         assertEquals(listOf("ana", "ana", "ana", "ana", "ex.papel"), linhas.map { it.first })
         assertEquals(
             listOf(
-                "/api/me", "/api/cards/tempo-em-status", "/api/drill/tempo-em-status",
+                "/api/me", "/api/cards/tempo-em-status", "/api/cartoes/TS-01/tasks",
                 "/api/cards/tempo-em-status", "/api/me",
             ),
             linhas.map { it.second },
@@ -726,7 +741,7 @@ class TempoEmStatusRoutesTest {
         // Sem a tabela a gravação falha; o banco de issues segue funcionando.
         executarSql("ALTER TABLE access_log RENAME TO access_log_fora")
         try {
-            for (caminho in listOf("/api/cards/tempo-em-status", "/api/drill/tempo-em-status?kind=analisadas", "/api/me")) {
+            for (caminho in listOf("/api/cards/tempo-em-status", rotaDrill("analisadas"), "/api/me")) {
                 val r = get("gerente.exemplo", caminho)
                 assertEquals(HttpStatusCode.ServiceUnavailable, r.status, caminho)
                 assertEquals("", r.corpo, caminho)
@@ -763,7 +778,7 @@ class TempoEmStatusRoutesTest {
             val card = get("gerente.exemplo", "/api/cards/tempo-em-status$consulta")
             assertEquals(HttpStatusCode.BadRequest, card.status, consulta)
             assertEquals("", card.corpo, consulta)
-            val drill = get("gerente.exemplo", "/api/drill/tempo-em-status?kind=analisadas&${consulta.drop(1)}")
+            val drill = get("gerente.exemplo", rotaDrill("analisadas") + "&${consulta.drop(1)}")
             assertEquals(HttpStatusCode.BadRequest, drill.status, consulta)
             assertEquals("", drill.corpo, consulta)
         }
@@ -813,7 +828,7 @@ class TempoEmStatusRoutesTest {
             val linha = drill(lider, "analisadas").single { it.key == "TG-12" }
             assertEquals(null, linha.responsavel,"o responsável atual (outro squad) não pode aparecer para $lider")
             assertFalse("carla" in linha.toString(), linha.toString())
-            assertEquals(HttpStatusCode.Forbidden, get(lider, "/api/drill/tempo-em-status?kind=${enc("pessoa:carla:status:Em andamento")}").status)
+            assertEquals(HttpStatusCode.Forbidden, get(lider, rotaDrill("pessoa:carla:status:Em andamento")).status)
         }
         // O gerente vê a carla normalmente.
         assertTrue(drill("gerente.exemplo", "pessoa:carla:status:Em andamento").any { it.key == "TG-12" })
@@ -837,14 +852,14 @@ class TempoEmStatusRoutesTest {
     fun drillPorPessoaForaDoSquadDoLider() = rodar {
         val kind = "pessoa:carla:status:Em andamento"
         // Pessoa fora da visibilidade: 403 sem corpo.
-        val r = get("lider.alfa", "/api/drill/tempo-em-status?kind=${enc(kind)}")
+        val r = get("lider.alfa", rotaDrill(kind))
         assertEquals(HttpStatusCode.Forbidden, r.status)
         assertEquals("", r.corpo)
         // Pessoa visível, mas fora do filtro atual (squad Beta): lista vazia.
-        assertEquals(HttpStatusCode.OK, get("gerente.exemplo", "/api/drill/tempo-em-status?kind=${enc("pessoa:ana:status:Em andamento")}&squad=Beta").status)
+        assertEquals(HttpStatusCode.OK, get("gerente.exemplo", rotaDrill("pessoa:ana:status:Em andamento") + "&squad=Beta").status)
         assertEquals(emptyList(), drill("gerente.exemplo", "pessoa:ana:status:Em andamento", "&squad=Beta"))
         // O usuário comum não vê o colega.
-        assertEquals(HttpStatusCode.Forbidden, get("ana", "/api/drill/tempo-em-status?kind=${enc("pessoa:bruno:status:Em andamento")}").status)
+        assertEquals(HttpStatusCode.Forbidden, get("ana", rotaDrill("pessoa:bruno:status:Em andamento")).status)
     }
 
     @Test
@@ -873,6 +888,6 @@ class TempoEmStatusRoutesTest {
     @Test
     fun semLoginRetorna401() = rodar {
         assertEquals(HttpStatusCode.Unauthorized, get(null, "/api/cards/tempo-em-status").status)
-        assertEquals(HttpStatusCode.Unauthorized, get(null, "/api/drill/tempo-em-status?kind=analisadas").status)
+        assertEquals(HttpStatusCode.Unauthorized, get(null, rotaDrill("analisadas")).status)
     }
 }

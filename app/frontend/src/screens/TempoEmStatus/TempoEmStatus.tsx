@@ -3,8 +3,12 @@ import { useMemo, useState, type FormEvent } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { ErroDaApi } from '../../api/client'
 import { useLang } from '../../i18n/LangProvider'
+import { Cartao } from '../../shared/Cartao'
+import { baixarCsv } from '../../shared/csv'
+import { GavetaDeTasks } from '../../shared/GavetaDeTasks'
 import {
   fetchTempoEmStatus,
+  paramsDe,
   type Aviso,
   type Categoria,
   type Filtros,
@@ -12,9 +16,18 @@ import {
   type TempoEmStatusDto,
   type Unidade,
 } from './api'
-import { baixarCsv } from '../../shared/csv'
-import { DrillDrawer } from './DrillDrawer'
-import { dataCurta, faixaDe, inteiro, linhaFiltrosCsv, numero, percentual, SIMBOLO, type Faixa } from './format'
+import {
+  dataCurta,
+  faixaDe,
+  inteiro,
+  linhaFiltrosCsv,
+  numero,
+  percentual,
+  resumoDosFiltros,
+  SIMBOLO,
+  type Faixa,
+} from './format'
+import '../../shared/tabela.css'
 import './tempo.css'
 
 const MAX_PARADAS = 50
@@ -45,7 +58,11 @@ function paraUrl(f: Filtros): URLSearchParams {
   return p
 }
 
-type Gaveta = { kind: string; titulo: string }
+/** Recorte aberto na gaveta: o cartão que o conta e o segmento (ver `CartaoRegistrado.drill` no backend). */
+type Gaveta = { cartaoId: string; segmento: string; titulo: string }
+
+/** Ids dos títulos dos cartões de seção: nomeiam as tabelas e regiões (leitor de tela). */
+const ID_TITULO_MATRIZ = 'h-matriz'
 
 export function TempoEmStatus() {
   const { t, lang } = useLang()
@@ -200,7 +217,14 @@ export function TempoEmStatus() {
       )}
 
       {gaveta && (
-        <DrillDrawer kind={gaveta.kind} titulo={gaveta.titulo} filtros={filtros} aoFechar={() => setGaveta(null)} />
+        <GavetaDeTasks
+          cartaoId={gaveta.cartaoId}
+          segmento={gaveta.segmento}
+          titulo={gaveta.titulo}
+          filtros={paramsDe(filtros)}
+          resumoDosFiltros={resumoDosFiltros(filtros, t, lang)}
+          aoFechar={() => setGaveta(null)}
+        />
       )}
     </div>
   )
@@ -260,57 +284,35 @@ function Kpis(props: { dto: TempoEmStatusDto; aoAbrir: (g: Gaveta) => void }) {
   const eficiencia = indisponivel || dto.eficienciaFluxo == null ? dash : percentual(dto.eficienciaFluxo, lang)
   const paradas = indisponivel ? dash : inteiro(dto.paradas, lang)
 
+  const temAnalisadas = !indisponivel && dto.analisadas > 0
+  const temParadas = !indisponivel && dto.paradas > 0
+
   return (
     <div role="group" aria-label={t('tempo.indicadores')} className="kpis">
-      <KpiBotao
-        rotulo={t('tempo.kpi.analisadas')}
+      <Cartao
+        id="TS-01"
+        titulo={t('tempo.kpi.analisadas')}
         valor={analisadas}
-        dica={t('tempo.kpi.analisadas.dica')}
-        clicavel={!indisponivel && dto.analisadas > 0}
-        aoClicar={() => aoAbrir({ kind: 'analisadas', titulo: t('tempo.kpi.analisadas') })}
+        legenda={t('tempo.kpi.analisadas.dica')}
+        aoAbrir={temAnalisadas ? () => aoAbrir({ cartaoId: 'TS-01', segmento: 'analisadas', titulo: t('tempo.kpi.analisadas') }) : undefined}
       />
-      <div className="kpi">
-        <span className="kpi-rotulo">{t('tempo.kpi.eficiencia')}</span>
-        <span className="kpi-valor">{eficiencia}</span>
-        <span className="kpi-dica">{t('tempo.kpi.eficiencia.dica')}</span>
-      </div>
-      <KpiBotao
-        rotulo={t('tempo.kpi.paradas')}
+      {/* Percentual não tem tasks próprias: abre as analisadas, que são o numerador e o denominador. */}
+      <Cartao
+        id="TS-02"
+        titulo={t('tempo.kpi.eficiencia')}
+        valor={eficiencia}
+        legenda={t('tempo.kpi.eficiencia.dica')}
+        aoAbrir={temAnalisadas ? () => aoAbrir({ cartaoId: 'TS-02', segmento: 'analisadas', titulo: t('tempo.kpi.analisadas') }) : undefined}
+      />
+      <Cartao
+        id="TS-03"
+        titulo={t('tempo.kpi.paradas')}
         valor={paradas}
-        simbolo={!indisponivel && dto.paradas > 0 ? '⏸' : undefined}
-        dica={t('tempo.kpi.paradas.dica')}
-        clicavel={!indisponivel && dto.paradas > 0}
-        aoClicar={() => aoAbrir({ kind: 'paradas', titulo: t('tempo.kpi.paradas') })}
+        simboloDoValor={temParadas ? '⏸' : undefined}
+        legenda={t('tempo.kpi.paradas.dica')}
+        aoAbrir={temParadas ? () => aoAbrir({ cartaoId: 'TS-03', segmento: 'paradas', titulo: t('tempo.kpi.paradas') }) : undefined}
       />
     </div>
-  )
-}
-
-function KpiBotao(props: {
-  rotulo: string
-  valor: string
-  dica: string
-  simbolo?: string
-  clicavel: boolean
-  aoClicar: () => void
-}) {
-  const { t } = useLang()
-  const conteudo = (
-    <>
-      <span className="kpi-rotulo">{props.rotulo}</span>
-      <span className="kpi-valor">
-        {props.simbolo && <span aria-hidden="true" className="kpi-simbolo">{props.simbolo} </span>}
-        {props.valor}
-      </span>
-      <span className="kpi-dica">{props.dica}</span>
-      {props.clicavel && <span className="kpi-ver">{t('tempo.verTasks')} →</span>}
-    </>
-  )
-  if (!props.clicavel) return <div className="kpi">{conteudo}</div>
-  return (
-    <button type="button" className="kpi kpi--botao" onClick={props.aoClicar}>
-      {conteudo}
-    </button>
   )
 }
 
@@ -328,10 +330,8 @@ function PorStatus(props: { dto: TempoEmStatusDto; unidadeTxt: string; aoAbrir: 
   if (dto.porStatus.length === 0) return null
   const maximo = Math.max(...dto.porStatus.map((s) => s.p85), 0.001)
   return (
-    <section className="bloco" aria-labelledby="h-status">
-      <h2 id="h-status">
-        {t('tempo.porStatus')} <span className="h-nota">({props.unidadeTxt})</span>
-      </h2>
+    <Cartao id="TS-04" variante="serie" nivelDoTitulo={2} titulo={t('tempo.porStatus')}>
+      <p className="h-nota">({props.unidadeTxt})</p>
       <ul className="barras">
         {dto.porStatus.map((s) => {
           const cat = CATEGORIA[s.category] ?? CATEGORIA.TODO
@@ -340,7 +340,9 @@ function PorStatus(props: { dto: TempoEmStatusDto; unidadeTxt: string; aoAbrir: 
               <button
                 type="button"
                 className={`barra-linha cat-${s.category}`}
-                onClick={() => props.aoAbrir({ kind: `status:${s.status}`, titulo: `${t('tempo.col.status')}: ${s.status}` })}
+                onClick={() =>
+                  props.aoAbrir({ cartaoId: 'TS-04', segmento: `status:${s.status}`, titulo: `${t('tempo.col.status')}: ${s.status}` })
+                }
               >
                 <span className="barra-nome">{s.status}</span>
                 <span className="barra-cat">
@@ -362,7 +364,7 @@ function PorStatus(props: { dto: TempoEmStatusDto; unidadeTxt: string; aoAbrir: 
         })}
       </ul>
       <p className="legenda">{t('tempo.porStatus.legenda')}</p>
-    </section>
+    </Cartao>
   )
 }
 
@@ -383,10 +385,9 @@ function Matriz(props: { dto: TempoEmStatusDto; aoAbrir: (g: Gaveta) => void }) 
   const faixaTxt: Record<Faixa, string> = { ok: t('tempo.faixa.ok'), atencao: t('tempo.faixa.atencao'), alto: t('tempo.faixa.alto') }
 
   return (
-    <section className="bloco" aria-labelledby="h-matriz">
-      <h2 id="h-matriz">{t('tempo.matriz')}</h2>
-      <div className="tabela-rolagem" tabIndex={0} role="region" aria-labelledby="h-matriz">
-        <table className="tabela tabela--matriz" aria-labelledby="h-matriz">
+    <Cartao id="TS-06" variante="tabela" nivelDoTitulo={2} idDoTitulo={ID_TITULO_MATRIZ} titulo={t('tempo.matriz')}>
+      <div className="tabela-rolagem" tabIndex={0} role="region" aria-labelledby={ID_TITULO_MATRIZ}>
+        <table className="tabela tabela--matriz" aria-labelledby={ID_TITULO_MATRIZ}>
           <thead>
             <tr>
               <th scope="col">{t('tempo.col.pessoa')}</th>
@@ -412,7 +413,7 @@ function Matriz(props: { dto: TempoEmStatusDto; aoAbrir: (g: Gaveta) => void }) 
                         className={`celula celula--${faixa}`}
                         aria-label={`${p}, ${s}: ${numero(c.median, lang)} ${t('tempo.dias')}, ${faixaTxt[faixa]}, n=${c.n}`}
                         onClick={() =>
-                          props.aoAbrir({ kind: `pessoa:${p}:status:${s}`, titulo: `${p} · ${s}` })
+                          props.aoAbrir({ cartaoId: 'TS-06', segmento: `pessoa:${p}:status:${s}`, titulo: `${p} · ${s}` })
                         }
                       >
                         {`${SIMBOLO[faixa]} ${numero(c.median, lang)}`}
@@ -430,7 +431,7 @@ function Matriz(props: { dto: TempoEmStatusDto; aoAbrir: (g: Gaveta) => void }) 
         {' — '}
         {t('tempo.matriz.legenda')}
       </p>
-    </section>
+    </Cartao>
   )
 }
 
@@ -439,8 +440,7 @@ function Paradas(props: { dto: TempoEmStatusDto; unidadeTxt: string }) {
   const { abertasParadas } = props.dto
   const mostradas = abertasParadas.slice(0, MAX_PARADAS)
   return (
-    <section className="bloco" aria-labelledby="h-paradas">
-      <h2 id="h-paradas">{t('tempo.paradas')}</h2>
+    <Cartao id="TS-07" variante="lista" nivelDoTitulo={2} idDoTitulo="h-paradas" titulo={t('tempo.paradas')}>
       {abertasParadas.length === 0 ? (
         <p className="vazio">{t('tempo.paradas.vazio')}</p>
       ) : (
@@ -481,7 +481,7 @@ function Paradas(props: { dto: TempoEmStatusDto; unidadeTxt: string }) {
           </p>
         </>
       )}
-    </section>
+    </Cartao>
   )
 }
 

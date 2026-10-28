@@ -15,8 +15,8 @@ export function faixaDe(dias: number): Faixa {
 
 export const SIMBOLO: Record<Faixa, string> = { ok: '✓', atencao: '●', alto: '▲' }
 
-/** Linha "# filtros: ... (unidade)" usada nos dois CSV, com o que o usuário vê na tela. */
-export function linhaFiltrosCsv(
+/** "Squad: Alfa | Período: ... (dias úteis)": os filtros ativos em texto, para a gaveta e para o CSV. */
+export function resumoDosFiltros(
   f: import('./api').Filtros,
   t: (k: string) => string,
   lang: Lang,
@@ -30,5 +30,14 @@ export function linhaFiltrosCsv(
   }
   if (f.semOutliers) partes.push(t('tempo.filtro.semOutliers'))
   const unidade = t(f.unit === 'util' ? 'tempo.unidade.util' : 'tempo.unidade.corrido').toLowerCase()
-  return `# ${t('tempo.csv.filtros')}: ${partes.join(' | ') || t('tempo.csv.nenhum')} (${unidade})`
+  return `${partes.join(' | ') || t('tempo.csv.nenhum')} (${unidade})`
+}
+
+/** Linha "# filtros: ..." do CSV da tela, com o que o usuário vê na tela. */
+export function linhaFiltrosCsv(
+  f: import('./api').Filtros,
+  t: (k: string) => string,
+  lang: Lang,
+): string {
+  return `# ${t('tempo.csv.filtros')}: ${resumoDosFiltros(f, t, lang)}`
 }

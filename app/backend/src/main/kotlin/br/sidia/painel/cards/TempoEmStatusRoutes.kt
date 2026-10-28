@@ -64,7 +64,7 @@ private const val MAX_FILTRO = 100
 private const val ID_DEV = "dev"
 
 /** Única lista de filtros que vai para a auditoria: o que não está aqui nunca é gravado. */
-private val FILTROS_AUDITADOS = setOf("squad", "pessoa", "tipo", "os", "de", "ate", "unit", "semOutliers", "kind", "segmento")
+private val FILTROS_AUDITADOS = setOf("squad", "pessoa", "tipo", "os", "de", "ate", "unit", "semOutliers", "segmento")
 
 private val FORMATO_USERNAME = Regex("[a-z0-9._-]{1,64}")
 
@@ -116,7 +116,8 @@ internal sealed interface Detalhe {
 }
 
 /**
- * Rotas `GET /api/me`, `GET /api/cards/tempo-em-status` e `GET /api/drill/tempo-em-status`.
+ * Rotas `GET /api/me` e `GET /api/cards/tempo-em-status`. O detalhamento (as tasks por trás de cada número) é a rota
+ * genérica `GET /api/cartoes/{id}/tasks` dos cartões TS-nn (ver `cards/contrato/DrillGenericoRoutes.kt`).
  * Toda leitura passa por [Visibility] (nega por padrão) e toda chamada, inclusive a negada, vai para o
  * `access_log`. Se o registro falhar, a resposta com dados não sai (503).
  */
@@ -138,11 +139,6 @@ fun Route.rotasTempoEmStatus(ctx: AppContext, store: IssueStore, auditoria: Acce
         }
     }
 
-    get("/api/drill/tempo-em-status") {
-        call.executar(ctx, auditoria) {
-            drillDeTempoEmStatus(ctx, store, call.principal, call.request.queryParameters, call.request.queryParameters["kind"])
-        }
-    }
 }
 
 /**
@@ -157,8 +153,8 @@ internal fun papeisVigentes(ctx: AppContext, principal: Principal): Set<Role> =
     }
 
 /**
- * Tasks de um segmento (`kind` da rota antiga, `segmento` da genérica) com os mesmos filtros do card. Único
- * caminho do detalhamento de Tempo em status: a rota antiga e os cartões TS-nn passam por aqui.
+ * Tasks de um segmento com os mesmos filtros do card. Único caminho do detalhamento de Tempo em status: os cartões
+ * TS-nn passam por aqui.
  */
 internal fun drillDeTempoEmStatus(
     ctx: AppContext, store: IssueStore, principal: Principal, params: Parameters, segmento: String?,

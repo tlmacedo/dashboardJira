@@ -3,10 +3,13 @@
   max-width: 1280px;
   font-variant-numeric: tabular-nums;
 }
-.sinc h2 {
+/* Cada bloco da tela é um cartão (SY-01 a SY-03); o título é o do próprio cartão. */
+.sinc .cartao {
+  margin-bottom: 12px;
+}
+.sinc .cartao-titulo {
   font-size: 14px;
-  margin: 0 0 8px;
-  letter-spacing: 0;
+  color: var(--text);
 }
 .sinc-carregando {
   color: var(--text2);
@@ -38,7 +41,6 @@
   border-left-width: 4px;
   border-radius: 10px;
   padding: 10px 14px;
-  margin-bottom: 12px;
 }
 .sinc-faixa--aviso {
   border-color: var(--warn);
@@ -49,13 +51,6 @@
 .sinc-faixa span {
   color: var(--text2);
   font-size: 12.5px;
-}
-.sinc-bloco {
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  padding: 12px 14px;
-  margin-bottom: 12px;
 }
 .sinc-dl {
   display: flex;

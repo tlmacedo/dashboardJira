@@ -41,6 +41,13 @@
   color: var(--text2);
   letter-spacing: 0;
 }
+/* Cartões de seção (série, tabela, lista) têm título de leitura; o KPI usa o rótulo discreto. */
+.cartao--serie .cartao-titulo,
+.cartao--tabela .cartao-titulo,
+.cartao--lista .cartao-titulo {
+  font-size: 14px;
+  color: var(--text);
+}
 .cartao-natureza {
   font-size: 11px;
   font-weight: 600;
