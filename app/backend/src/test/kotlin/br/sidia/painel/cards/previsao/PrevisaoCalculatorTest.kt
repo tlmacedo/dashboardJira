@@ -86,6 +86,9 @@ class PrevisaoCalculatorTest {
         assertEquals(listOf(4, 3, 0, 1), a.chegadaSemanal.takeLast(4).map { it.n })
         assertEquals(4, a.entregasNaJanela)
         assertEquals("previsao v1", a.versaoRegras)
+        assertEquals("util", a.unit)
+        assertEquals("corrido", PrevisaoCalculator(Trb1.calendario, Trb1.statusMap, RegrasDePrevisao.PADRAO)
+            .analisar(abertas(), resolvidas(), Trb1.agora, SEMENTE, TimeUnitMode.CORRIDO).dto.unit)
         assertEquals(16, a.semanasHistorico)
         assertEquals(104, a.limiteSemanas)
     }

@@ -76,7 +76,7 @@ object CardPrevisao : CardDeLeitura<PrevisaoDto> {
     override fun vazio(avisos: List<AvisoDto>) = PrevisaoDto(
         versaoRegras = "", backlog = 0, termina = QuandoDto(null, null, null, null, null, null), confianca = "baixa", semanasComDado = 0,
         semanasHistorico = 0, limiteSemanas = 0, comChegada = true, entregasNaJanela = 0, vazaoSemanal = emptyList(),
-        chegadaSemanal = emptyList(), quantos = emptyList(), porIssue = emptyList(), avisos = avisos,
+        chegadaSemanal = emptyList(), quantos = emptyList(), porIssue = emptyList(), unit = "util", avisos = avisos,
     )
 }
 

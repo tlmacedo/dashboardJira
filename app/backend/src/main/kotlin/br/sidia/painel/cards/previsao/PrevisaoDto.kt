@@ -28,6 +28,8 @@ data class PrevisaoDto(
     val chegadaSemanal: List<SemanaDto>,
     val quantos: List<QuantosDto>,
     val porIssue: List<PrevisaoIssueDto>,
+    /** Unidade da idade e do restante de [porIssue]: `util` ou `corrido`. */
+    val unit: String,
     val avisos: List<AvisoDto>,
 )
 

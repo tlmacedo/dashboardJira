@@ -102,6 +102,7 @@ class PrevisaoCalculator(
             chegadaSemanal = serie.map { SemanaDto(it.semana.toString(), it.entradas.size) },
             quantos = quantos,
             porIssue = porIssue,
+            unit = if (unit == TimeUnitMode.UTIL) "util" else "corrido",
             avisos = avisos,
         )
         return PrevisaoAnalise(dto, segmentos)
