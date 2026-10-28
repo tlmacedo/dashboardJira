@@ -209,6 +209,20 @@ export function Cruzamentos() {
                 </table>
               </div>
             )}
+            {dto.linhas.length > 0 && !dto.totaisDasLinhas && (
+              // Sem total por pessoa, o total geral (não é por pessoa) continua alcançável fora da tabela.
+              <p className="legenda-meta">
+                {t('cruzamentos.totalGeral')}:{' '}
+                {bloqueado ? traco : dto.total > 0 ? (
+                  <button
+                    type="button" className="contagem-botao" aria-label={`${t('cruzamentos.totalGeral')}: ${dto.total}`}
+                    onClick={() => abrir('total', t('cruzamentos.totalGeral'))}
+                  >
+                    {inteiro(dto.total, lang)}
+                  </button>
+                ) : inteiro(0, lang)}
+              </p>
+            )}
             {!comPessoa && <p className="legenda-meta">{t('cruzamentos.legendaFaixa')}</p>}
           </Cartao>
         )}

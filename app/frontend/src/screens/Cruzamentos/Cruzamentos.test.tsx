@@ -128,6 +128,20 @@ describe('aba Cruzamentos', () => {
     expect(within(tabela).queryByRole('button', { name: /Total ana/ })).toBeNull()
   })
 
+  it('totalGeralContinuaAlcancavelQuandoALinhaEPessoa', async () => {
+    const porPessoa: CruzamentosDto = {
+      ...DTO, linhasEixo: 'pessoa', linhas: ['ana', 'bruno'], celulas: [[celula(3), celula(1), celula(0)], [celula(1), celula(1), celula(0)]],
+      totaisDasLinhas: null, totaisDasColunas: [4, 2, 0], total: 6,
+    }
+    const mock = simular({ [CARD]: { status: 200, corpo: porPessoa }, '/api/cartoes/CZ-01/tasks': { status: 200, corpo: gaveta(6, 'card.cz01.titulo') } })
+    renderizarTela(<Cruzamentos />, '/cruzamentos', '/cruzamentos?linhas=pessoa')
+    await screen.findByRole('table', { name: TABELA })
+    await userEvent.click(screen.getByRole('button', { name: 'Total geral: 6' }))
+    await screen.findByRole('dialog')
+    const url = String(mock.mock.calls.find((c) => String(c[0]).startsWith('/api/cartoes/CZ-01/tasks'))?.[0])
+    expect(decodeURIComponent(url.match(/segmento=([^&]+)/)![1])).toBe('total')
+  })
+
   it('celulaMaisAltaTemPadraoENumeroNaoSoCor', async () => {
     simular({ [CARD]: { status: 200, corpo: DTO } })
     renderizarTela(<Cruzamentos />, '/cruzamentos')
