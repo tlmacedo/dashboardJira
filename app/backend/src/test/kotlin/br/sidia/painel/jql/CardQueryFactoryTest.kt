@@ -141,6 +141,12 @@ class CardQueryFactoryTest {
     }
 
     @Test
+    fun jqlSnapshotRiscosComoAbertas() {
+        // Riscos lê as abertas dos 3 tipos Checklist, sem as canceladas: o mesmo JQL de Abertas.
+        assertEquals(jqlDaFicha("abertas"), jqlDaFicha("riscos"))
+    }
+
+    @Test
     fun jqlSnapshotNegativas() {
         // Como Fechadas: os 6 tipos da sincronização e nenhuma exclusão de status (as canceladas contam em NE-03).
         val todosOsTipos = "project in (\"TG-Basic\") AND issuetype in (\"Checklist\", \"Checklist TG\", \"Checklist Review\", " +

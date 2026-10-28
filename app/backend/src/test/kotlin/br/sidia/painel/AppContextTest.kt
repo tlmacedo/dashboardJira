@@ -89,12 +89,13 @@ class AppContextTest {
         Files.copy(TestPaths.configDir.resolve("labels_atraso.exemplo.yaml"), pasta.resolve("labels_atraso.yaml"))
         Files.copy(TestPaths.configDir.resolve("auditoria.exemplo.yaml"), pasta.resolve("auditoria.yaml"))
         Files.copy(TestPaths.configDir.resolve("metas.exemplo.yaml"), pasta.resolve("metas.yaml"))
+        Files.copy(TestPaths.configDir.resolve("risco.exemplo.yaml"), pasta.resolve("risco.yaml"))
         copiarFichas()
     }
 
     @Test
     fun appContextCarregaComFallbackDeDev() {
-        listOf("papeis", "calendario", "status_map", "jira_campos", "vinculos", "labels_atraso", "auditoria", "metas").forEach {
+        listOf("papeis", "calendario", "status_map", "jira_campos", "vinculos", "labels_atraso", "auditoria", "metas", "risco").forEach {
             Files.copy(TestPaths.configDir.resolve("$it.exemplo.yaml"), pasta.resolve("$it.exemplo.yaml"))
         }
         copiarFichas()
@@ -117,7 +118,7 @@ class AppContextTest {
 
     @Test
     fun producaoSemArquivoRealFalha() {
-        for (nome in listOf("labels_atraso", "auditoria", "metas")) {
+        for (nome in listOf("labels_atraso", "auditoria", "metas", "risco")) {
             pasta.toFile().listFiles()?.forEach { it.deleteRecursively() }
             escreverArquivosReais()
             // o modelo existe, mas em produção só o arquivo real vale
@@ -139,7 +140,7 @@ class AppContextTest {
 
     @Test
     fun metasComFallbackDeDevEInvalidasFalhamSemVazarConteudo() {
-        listOf("papeis", "calendario", "status_map", "jira_campos", "vinculos", "labels_atraso", "auditoria", "metas").forEach {
+        listOf("papeis", "calendario", "status_map", "jira_campos", "vinculos", "labels_atraso", "auditoria", "metas", "risco").forEach {
             Files.copy(TestPaths.configDir.resolve("$it.exemplo.yaml"), pasta.resolve("$it.exemplo.yaml"))
         }
         copiarFichas()
@@ -159,7 +160,7 @@ class AppContextTest {
 
     @Test
     fun appContextCarregaVinculosComFallbackDeDev() {
-        listOf("papeis", "calendario", "status_map", "jira_campos", "vinculos", "labels_atraso", "auditoria", "metas").forEach {
+        listOf("papeis", "calendario", "status_map", "jira_campos", "vinculos", "labels_atraso", "auditoria", "metas", "risco").forEach {
             Files.copy(TestPaths.configDir.resolve("$it.exemplo.yaml"), pasta.resolve("$it.exemplo.yaml"))
         }
         copiarFichas()
@@ -205,7 +206,7 @@ class AppContextTest {
     @Test
     fun appContextCarregaDicionarioEFichas() {
         // dev sem arquivos reais: modelos de exemplo; as fichas versionadas vêm de cards/
-        listOf("papeis", "calendario", "status_map", "jira_campos", "vinculos", "labels_atraso", "auditoria", "metas").forEach {
+        listOf("papeis", "calendario", "status_map", "jira_campos", "vinculos", "labels_atraso", "auditoria", "metas", "risco").forEach {
             Files.copy(TestPaths.configDir.resolve("$it.exemplo.yaml"), pasta.resolve("$it.exemplo.yaml"))
         }
         copiarFichas()
@@ -290,6 +291,7 @@ class AppContextTest {
         Files.copy(TestPaths.configDir.resolve("labels_atraso.exemplo.yaml"), pasta.resolve("labels_atraso.exemplo.yaml"))
         Files.copy(TestPaths.configDir.resolve("auditoria.exemplo.yaml"), pasta.resolve("auditoria.exemplo.yaml"))
         Files.copy(TestPaths.configDir.resolve("metas.exemplo.yaml"), pasta.resolve("metas.exemplo.yaml"))
+        Files.copy(TestPaths.configDir.resolve("risco.exemplo.yaml"), pasta.resolve("risco.exemplo.yaml"))
         copiarFichas()
         val s = Settings(
             dashboardDevMode = true,

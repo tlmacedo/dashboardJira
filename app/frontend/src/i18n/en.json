@@ -757,5 +757,14 @@
   "card.ne08.comoCalcula": "Each rate = numerator tasks (the same lists as the count cards) divided by the period's positive completions. With no completions the rate shows a dash. The card opens the numerator tasks.",
   "card.ne10.titulo": "Negatives by assignee",
   "card.ne10.oQueMostra": "Reopened, sent back and late deliveries of each person in your scope. No ranking: alphabetical order.",
-  "card.ne10.comoCalcula": "Each event goes to whoever was the assignee at the instant of the event (or of the resolution, for lateness). Only people in your scope; no position or comparison between people."
+  "card.ne10.comoCalcula": "Each event goes to whoever was the assignee at the instant of the event (or of the resolution, for lateness). Only people in your scope; no position or comparison between people.",
+  "card.ri01.titulo": "High and medium risk",
+  "card.ri01.oQueMostra": "How many open tasks are at high risk and at medium risk.",
+  "card.ri01.comoCalcula": "A score from 0 to 100 adding points from factors (age above the P85 or median of its own type, stuck, overdue, blocked, reopened, reassignments, hours overrun, no update, no estimate). High from 60 points and medium from 30 (weights in risco.yaml, versioned).",
+  "card.ri02.titulo": "Tasks at risk",
+  "card.ri02.oQueMostra": "The list of tasks at high or medium risk, with the main factor and the points of each factor. The low level stays in the detail view for checking.",
+  "card.ri02.comoCalcula": "Same score as the high and medium risk card; the list shows tasks with points equal to or above the medium limit. Each task's total is capped at 100 points.",
+  "card.ri03.titulo": "Risk signals by person",
+  "card.ri03.oQueMostra": "How many tasks at risk and how many open tasks each person in your scope has, as a proportion. No ranking: alphabetical order.",
+  "card.ri03.comoCalcula": "By the open task's current assignee. It is a proportion of signals, not an assessment of the person; only people in your scope and no position or comparison."
 }

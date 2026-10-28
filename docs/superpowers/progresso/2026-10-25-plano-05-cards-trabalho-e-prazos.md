@@ -40,7 +40,13 @@ Ponto de partida (main `ad17750`, 5a mesclado): backend 1129 testes, 0 falhas.
 |---|---|---|---|
 | 10 Negativas (domínio e API) | Concluída (backend 1146, 0 falhas) | ver `git log` | Cartões `NE-01` a `NE-08` e `NE-10` (o NE-09 é do Plano 10); cenário NEG-1 em `src/test/.../trabalho/Neg1.kt` |
 
+| 11 Riscos (regras em YAML, domínio e API) | Concluída (backend 1165, 0 falhas) | ver `git log` | Cartões `RI-01` a `RI-03`; `risco.exemplo.yaml` + `AppContext.regrasDeRisco` (obrigatório em produção); `ContratoDeCartoesTest` agora exige par positivo também em NE e RI |
+
 ### Rulings do 5b
+
+- Ruling: Riscos (T11) — o score segue o `risk.py` do app anterior: total limitado a 100; SEM_ESTIMATIVA só quando não há estimativa NEM pontos; REABERTA = alguma vez saiu de DONE; trocas = total de mudanças de responsável; bloqueada = categoria BLOCKED ou flag. Diferenças deliberadas (a documentar na T14): a parada usa o piso de 3 dias úteis e vale sem mediana (regra de Negligenciadas; o legado usava 2 dias e exigia mediana) e SEM_ATUALIZACAO vale só para tasks em andamento (NG-01; o legado contava toda aberta). Custo se errado: trocar `NegligenciadasCalculator` por contas próprias.
+- Ruling: Riscos (T11) — base sem prioridade em nenhuma issue (`temCamposDeTrabalho` falso) tira o fator SEM_ESTIMATIVA e mostra o aviso `CAMPOS_DE_TRABALHO_INDISPONIVEIS`, para o card não punir "sem estimativa" por falta de sincronização (mesmo cuidado do Foco da revisão 3). A `RiscoCalculator.avaliar` ganhou o parâmetro opcional `camposDeTrabalho`.
+- Ruling: Riscos (T11) — `risco.yaml` entrou no `AppContext.load` (`regrasDeRisco`, último parâmetro com padrão); em produção o arquivo real é obrigatório e o `.exemplo` só em dev. Pendência de implantação: criar `risco.yaml` a partir do modelo. O DTO ganhou `baixo`, `emRisco`, `limiteAlto` e `limiteMedio` (o drill `nivel:baixo` precisa de número; a tela mostra os limiares). Ficha `riscos` = a de Abertas (3 tipos Checklist, sem Cancelled/Canceled/Dropped).
 
 - Ruling: Negativas (T10) — `devolvida` NÃO inclui a reabertura (de categoria DONE para outra): a reabertura de TG-131 volta na ordem do fluxo, mas o plano espera `devolvidas = 1` (só TG-132) e `reabertas = 1`; os dois conceitos não se sobrepõem. Custo se errado: tirar a guarda `else if` do calculador (a reaberta passaria a contar também como devolvida).
 - Ruling: Negativas (T10) — `NegativasCalculator.calcular/analisar` ganhou os parâmetros `agora` (para "abertas vencidas", que é o retrato de hoje) e `unit` (devolvido no DTO); o plano não tinha o relógio na assinatura. Custo: nenhum.

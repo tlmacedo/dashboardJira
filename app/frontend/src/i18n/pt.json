@@ -757,5 +757,14 @@
   "card.ne08.comoCalcula": "Cada taxa = tasks do numerador (as mesmas listas dos cartões de contagem) dividido pelas concluídas positivas do período. Sem concluídas, a taxa fica em traço. O cartão abre as tasks do numerador.",
   "card.ne10.titulo": "Negativas por responsável",
   "card.ne10.oQueMostra": "Reabertas, devolvidas e entregues com atraso de cada pessoa da sua visão. Sem ranking: ordem alfabética.",
-  "card.ne10.comoCalcula": "Cada evento vai para quem era o responsável no instante do evento (ou da resolução, no atraso). Só pessoas da sua visão; sem posição nem comparação entre pessoas."
+  "card.ne10.comoCalcula": "Cada evento vai para quem era o responsável no instante do evento (ou da resolução, no atraso). Só pessoas da sua visão; sem posição nem comparação entre pessoas.",
+  "card.ri01.titulo": "Risco alto e médio",
+  "card.ri01.oQueMostra": "Quantas tasks abertas estão em risco alto e em risco médio.",
+  "card.ri01.comoCalcula": "Score de 0 a 100 somando pontos de fatores (idade acima do P85 ou da mediana do próprio tipo, parada, vencida, bloqueada, reaberta, trocas, estouro de horas, sem atualização, sem estimativa). Alto a partir de 60 pontos e médio a partir de 30 (pesos em risco.yaml, versionados).",
+  "card.ri02.titulo": "Tasks em risco",
+  "card.ri02.oQueMostra": "A lista das tasks em risco alto ou médio, com o fator principal e os pontos de cada fator. O nível baixo fica no detalhamento para conferência.",
+  "card.ri02.comoCalcula": "Mesmo score do cartão de risco alto e médio; a lista mostra as tasks com pontos iguais ou acima do limite médio. O total de cada task é limitado a 100 pontos.",
+  "card.ri03.titulo": "Sinais de risco por pessoa",
+  "card.ri03.oQueMostra": "Quantas tasks em risco e quantas abertas cada pessoa da sua visão tem, em proporção. Sem ranking: ordem alfabética.",
+  "card.ri03.comoCalcula": "Pelo responsável atual da task aberta. É uma proporção de sinais, não uma avaliação da pessoa; só pessoas da sua visão e sem posição nem comparação."
 }
