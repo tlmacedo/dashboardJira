@@ -56,7 +56,6 @@ class GeradorSinteticoTest {
         val r = popular(ds)
         assertEquals(e.issues, r.issues)
         assertEquals(e.issues.toLong(), escalar(ds, "SELECT count(*) FROM issue"))
-        assertEquals(e.pessoas.toLong(), escalar(ds, "SELECT count(*) FROM person"))
         assertEquals(e.worklogs.toLong(), escalar(ds, "SELECT count(*) FROM worklog"))
         // cada issue tem pelo menos eventosPorIssue eventos (a trilha de status mais longa pode passar disso)
         assertTrue(escalar(ds, "SELECT count(*) FROM change_event") >= e.issues.toLong() * e.eventosPorIssue)
@@ -83,7 +82,6 @@ class GeradorSinteticoTest {
             0L,
             escalar(ds, "SELECT count(*) FROM issue WHERE assignee_ref IS NOT NULL AND assignee_ref NOT GLOB 'dev.sint[0-9][0-9][0-9]'"),
         )
-        assertEquals(0L, escalar(ds, "SELECT count(*) FROM person WHERE jira_ref NOT GLOB 'dev.sint[0-9][0-9][0-9]'"))
         assertEquals(0L, escalar(ds, "SELECT count(*) FROM change_event WHERE author_ref NOT GLOB 'dev.sint[0-9][0-9][0-9]'"))
         assertEquals(0L, escalar(ds, "SELECT count(*) FROM worklog WHERE author_ref NOT GLOB 'dev.sint[0-9][0-9][0-9]'"))
         // worklog por instância (V4): cada linha tem a instância e um id próprio, sem comentário nem texto livre

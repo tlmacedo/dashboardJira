@@ -8,8 +8,13 @@ Branch `feat/auditoria-completa-lgpd-plano-11`, a partir da `main` `31c95e1` (mi
 |---|---|---|
 | 1 Trava do DPO no backend | Concluída | `lgpd/{LgpdSettings,TravaDpo}.kt`, Auditoria atrás da trava, VG-14, access_log sem alvo |
 | 2 Trava do DPO na tela | Concluída | `shared/AguardandoDpo.tsx`, Menu com ⏸ e texto, Central com aviso |
+| 3 Ampliar dados guardados (opção A) | Concluída | migração `V6__dados_para_auditoria_completa.sql` |
 
 ## Rulings
+
+- Ruling: T3 (ponto de parada) — opção A (Recomendada): guardar o valor das estimativas no `change_event` (segundos brutos) e a data de criação do worklog; a migração zera `sync_state.watermark` (conferido: `SyncStateStore.cursor` lê `sync_state.watermark`) e remove a tabela `person` (sem uso em `src/main`; só dois testes a usavam e foram ajustados). Decisão tomada pelo executor sem o usuário, pela regra do roteiro (seção 0); data 28/10/2026; reversão: não ligar nada, a migração só tem efeito quando o usuário ligar a flag do Jira. O usuário deve registrar o "sim" no `HANDOFF.md` ao ligar a flag.
+- Ruling: T3 — número da migração: V6 (a V5 é a última na `main` `31c95e1`). O Plano 10 pode usar a V6; no push final conferir `origin/main` e renumerar para a próxima livre.
+- Ruling: T3 — a regravação de `change_event` compara `lower(field)` com a lista JSON dos dois campos de estimativa e só toca linhas com `from_value` e `to_value` nulos; `WorklogStore` regrava `criado_em` no `ON CONFLICT` junto com os demais campos (o registro é substituído por inteiro a cada sincronização).
 
 - Ruling: T2 — `shared/EstadoDaTela.tsx` e `estadoDe` são do Plano 10 (não existem na `main`): criado `shared/AguardandoDpo.tsx` (`ehAguardandoDpo` + componente) e usado em CardPage, Auditoria, Divergência e Integridade. Quando o Plano 10 mesclar, `estadoDe` deve chamar `ehAguardandoDpo` antes do caso genérico de 403. O menu só sabe do bloqueio fora do modo dev (o `/api/me` não é consultado em dev, por teste existente).
 

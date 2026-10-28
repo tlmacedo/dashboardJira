@@ -329,8 +329,12 @@ class SqliteIssueStore(private val ds: DataSource) : IssueStore, IssueIndex {
         val sql = """
             INSERT INTO change_event (changelog_id, issue_id, field, from_value, to_value, at, author_ref)
             VALUES (?, ?, ?, ?, ?, ?, ?)
-            ON CONFLICT (issue_id, changelog_id) DO NOTHING
+            ON CONFLICT (issue_id, changelog_id) DO UPDATE SET from_value = excluded.from_value, to_value = excluded.to_value
+            WHERE lower(change_event.field) IN (SELECT value FROM json_each(?))
+              AND change_event.from_value IS NULL AND change_event.to_value IS NULL
         """.trimIndent()
+        // Evento antigo SEM valor só é regravado nos campos de estimativa (carga anterior ao Plano 11); nenhum outro campo muda.
+        val camposDeEstimativa = ChangelogParser.CAMPOS_DE_ESTIMATIVA.emJson()
         con.prepareStatement(sql).use { ps ->
             for (e in events) {
                 ps.setString(1, e.changelogId)
@@ -340,6 +344,7 @@ class SqliteIssueStore(private val ds: DataSource) : IssueStore, IssueIndex {
                 ps.setString(5, e.to)
                 ps.setTimestamp(6, Timestamp.from(e.at))
                 ps.setString(7, e.authorRef)
+                ps.setString(8, camposDeEstimativa)
                 ps.addBatch()
             }
             ps.executeBatch()

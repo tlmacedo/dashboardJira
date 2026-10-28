@@ -163,14 +163,6 @@ object GeradorSintetico {
         var totalEventos = 0
         ds.connection.use { c ->
             c.autoCommit = false
-            c.prepareStatement("INSERT INTO person(jira_ref, name, active) VALUES (?, ?, 1)").use { ps ->
-                for (p in 1..pessoas) {
-                    ps.setString(1, usuario(p))
-                    ps.setString(2, "Dev Sintetico %03d".format(p))
-                    ps.addBatch()
-                }
-                ps.executeBatch()
-            }
             c.commit()
 
             val baseId = c.createStatement().use { st -> st.executeQuery("SELECT COALESCE(MAX(id), 0) FROM issue").use { it.next(); it.getLong(1) } }

@@ -58,7 +58,7 @@ class RetentionTest {
                 "SELECT name FROM sqlite_master WHERE type='table'",
             ).use { rs -> generateSequence { if (rs.next()) rs.getString(1) else null }.toSet() }
         }
-        val esperadas = setOf("person", "issue", "change_event", "worklog", "sync_state", "access_log")
+        val esperadas = setOf("issue", "change_event", "worklog", "sync_state", "access_log")
         assertEquals(true, nomes.containsAll(esperadas), "tabelas encontradas: $nomes")
     }
 
@@ -86,15 +86,13 @@ class RetentionTest {
 
     @Test
     fun retencaoNaoMexeEmIssuesSemDatas() {
-        // issue sem resolved/updated (nulos) nunca é apagada; person e sync_state também ficam
+        // issue sem resolved/updated (nulos) nunca é apagada; sync_state também fica
         issue(1)
         issue(2)
-        exec("INSERT INTO person(id, jira_ref, name, active) VALUES (1, 'u1', 'Ana', true)")
         exec("INSERT INTO sync_state(instance, watermark) VALUES ('main', '2020-01-01 00:00:00+00')")
         evento(1, 1, "2020-01-01 00:00:00+00")
         Retention(ds, calendario).purge(LocalDate.of(2026, 10, 24), 24)
         assertEquals(2, contar("issue"))
-        assertEquals(1, contar("person"))
         assertEquals(1, contar("sync_state"))
     }
 

@@ -17,7 +17,7 @@ import javax.sql.DataSource
  * - `access_log` por `at`, com limite próprio e mais longo (`accessLogMonths`: a auditoria não encurta com a
  *   retenção geral), `decisao_distribuicao` por `decidido_em` (o mesmo limite longo), `sync_run` por `started_at` e
  *   `jira_user_key` por `visto_em` (última vez vista).
- * Nunca toca em `person` nem em `sync_state`.
+ * Nunca toca em `sync_state`.
  */
 class Retention(private val ds: DataSource, private val calendar: BusinessCalendar) {
 
