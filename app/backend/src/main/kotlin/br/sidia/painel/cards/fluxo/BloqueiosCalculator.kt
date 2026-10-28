@@ -89,7 +89,10 @@ class BloqueiosCalculator(private val map: StatusMap, private val cfg: VinculosC
             .sortedWith(
                 compareBy<Par, LocalDate?>(nullsLast()) { it.bloqueada.duedate }
                     .then(compareBy(ORDEM_NATURAL_DE_CHAVES) { it.bloqueada.key })
-                    .then(compareBy(ORDEM_NATURAL_DE_CHAVES) { it.chave }),
+                    // Desempate só por dados que a linha mostra: vencimento da bloqueadora e, se a chave aparece, a chave.
+                    // A chave escondida ("task de outro squad") nunca entra, para não vazar a ordem relativa dela.
+                    .then(compareBy<Par, LocalDate?>(nullsLast()) { it.ponta?.vence })
+                    .then(compareBy(ORDEM_NATURAL_DE_CHAVES) { if (it.ponta != null && !it.visivel) "" else it.chave }),
             )
             .take(LIMITE_DE_LINHAS)
             .map { p ->

@@ -157,6 +157,20 @@ class BloqueiosCalculatorTest {
     }
 
     @Test
+    fun desempateDasLinhasNaoUsaAChaveEscondida() {
+        // TG-814 é bloqueada por TG-802 (vence 03/11) e TG-804 (vence 30/10), ambas de pessoas fora da visão da ana.
+        // Pela chave, TG-802 viria primeiro; o desempate vem do vencimento, que a linha mostra, e não da chave escondida.
+        val dupla = Trb1.issue(
+            "TG-814", "Checklist", "ana", "10-20T12", "In Progress", eventos = Trb1.trilha("TG-814", "Open", "10-26T12" to "In Progress"),
+        ).comLinks(bloqueadaPor = listOf("TG-802", "TG-804"))
+        Bq1.carregar(ds, listOf(dupla))
+        val a = analisar(visivel = { it == "ana" })
+        val doDuplo = a.dto.linhas.filter { it.bloqueada == "TG-814" }
+        assertEquals(listOf(null, null), doDuplo.map { it.bloqueadora.key })
+        assertEquals(listOf("2026-10-30", "2026-11-03"), doDuplo.map { it.bloqueadora.vence })
+    }
+
+    @Test
     fun bloqueadaSemCausaRegistradaNaQualidadeDosDados() {
         val a = analisar()
         // Status bloqueado com a única bloqueadora já concluída (TG-805) e flag de impedimento sem vínculo (TG-810).
