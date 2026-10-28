@@ -15,12 +15,12 @@ private class PadroesDeLabel(campo: String, padroes: List<String>) {
     private val prefixos = ArrayList<String>()
 
     init {
-        for (bruto in padroes) {
+        for ((i, bruto) in padroes.withIndex()) {
             val padrao = bruto.trim()
             require(padrao.isNotEmpty()) { "$campo: item vazio" }
             val estrelas = padrao.count { it == '*' }
             require(estrelas == 0 || (estrelas == 1 && padrao.endsWith('*') && padrao.length > 1)) {
-                "$campo: padrão '$padrao' inválido ('*' só é aceito no fim, depois de um prefixo)"
+                "$campo: item #${i + 1} inválido ('*' só é aceito no fim, depois de um prefixo)"
             }
             if (estrelas == 0) exatos += padrao.lowercase(RAIZ) else prefixos += padrao.dropLast(1).lowercase(RAIZ)
         }
@@ -48,8 +48,8 @@ class LabelsDeAtraso(val versao: Int, justificativas: List<String>, tardias: Set
     init {
         tardiasNormalizadas = tardias.map { bruto ->
             val label = bruto.trim()
-            require(label.isNotEmpty() && '*' !in label) { "tardias: item '$label' inválido (label exato, sem '*')" }
-            require(deJustificativa.casa(label)) { "tardias: '$label' precisa estar coberto por justificativas" }
+            require(label.isNotEmpty() && '*' !in label) { "tardias: item inválido (label exato, sem '*')" }
+            require(deJustificativa.casa(label)) { "tardias: item precisa estar coberto por justificativas" }
             label.lowercase(RAIZ)
         }.toSet()
     }

@@ -121,7 +121,10 @@ class SquadEMeuPainelRoutesTest {
         assertEquals(ana.fila.size, ana.minhasAbertas)
         // Em risco: o mesmo número do card Riscos (sinais por pessoa) e da gaveta do MP-03.
         val risco = cli.get("ana", "/api/cartoes/MP-03/tasks?segmento=emRisco")
-        if (risco.status == HttpStatusCode.OK) assertEquals(ana.emRisco, campo(risco, "total"))
+        if (ana.emRisco == 0) assertEquals(HttpStatusCode.BadRequest, risco.status) else {
+            assertEquals(HttpStatusCode.OK, risco.status, risco.corpo)
+            assertEquals(ana.emRisco, campo(risco, "total"))
+        }
         // Squad: os números são os dos cards com o filtro de squad.
         val s = squad(cli.get("lider.alfa", "/api/squad"))
         val riscos = cli.get("gerente.exemplo", "/api/cards/riscos?squad=Alfa")

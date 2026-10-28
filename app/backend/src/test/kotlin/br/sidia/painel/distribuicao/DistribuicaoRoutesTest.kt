@@ -198,6 +198,12 @@ class DistribuicaoRoutesTest {
     }
 
     @Test
+    fun periodoDasDecisoesNaoPassaDe366Dias() = rodar { c ->
+        assertEquals(HttpStatusCode.OK, c.get("gerente.exemplo", "/api/governanca/decisoes?de=2025-10-30&ate=2026-10-30").status, "366 dias inclusive")
+        assertEquals(HttpStatusCode.BadRequest, c.get("gerente.exemplo", "/api/governanca/decisoes?de=2025-10-29&ate=2026-10-30").status, "367 dias")
+    }
+
+    @Test
     fun doisCoordenadoresNaoDecidemAMesmaTaskDuasVezes() = rodar { c ->
         // Depois da restrição só quem vê tudo decide as pendentes, e todos veem o MESMO sugerido: a chave da sugestão é a mesma
         // e a segunda decisão (do mesmo dia) é 409, nunca uma decisão contraditória.

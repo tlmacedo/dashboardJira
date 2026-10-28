@@ -156,7 +156,7 @@ fun Route.rotasDeDistribuicao(ctx: AppContext, auditoria: AccessLog) {
             val params = call.request.queryParameters
             val ate = data(params, "ate") ?: hoje(ctx)
             val de = data(params, "de") ?: ate.minusDays(PERIODO_PADRAO_DIAS)
-            if (de.isAfter(ate) || de.plusDays(PERIODO_MAXIMO_DIAS).isBefore(ate)) throw ErroHttp(HttpStatusCode.BadRequest)
+            if (de.isAfter(ate) || de.plusDays(PERIODO_MAXIMO_DIAS - 1).isBefore(ate)) throw ErroHttp(HttpStatusCode.BadRequest)
             val zona = ctx.settings.zone
             val limite = DecisaoStore.LIMITE_PADRAO
             val achadas = decisoes.listar(

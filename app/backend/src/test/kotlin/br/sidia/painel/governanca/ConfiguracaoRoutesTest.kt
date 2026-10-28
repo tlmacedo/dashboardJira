@@ -68,9 +68,7 @@ class ConfiguracaoRoutesTest {
         val r = get("gerente.exemplo", rota)
         assertEquals(HttpStatusCode.OK, r.status, r.corpo)
         val corpo = r.corpo.lowercase()
-        for (proibido in listOf("ana", "carla", "lider.alfa", "https://", "http://", "token", "secret", "oidc", "senha", "password", pasta.toString().lowercase(), "papeis", "equipes", "ausencias")) {
-            // "ana" só pode aparecer como parte de outra palavra do vocabulário; o corpo não tem nenhum nome de pessoa.
-            if (proibido == "ana") continue
+        for (proibido in listOf("\"ana\"", "carla", "lider.alfa", "https://", "http://", "token", "secret", "oidc", "senha", "password", pasta.toString().lowercase(), "papeis", "equipes", "ausencias")) {
             assertFalse(proibido in corpo, "$proibido em ${r.corpo}")
         }
         val d = dto(r)
