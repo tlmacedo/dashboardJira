@@ -19,7 +19,12 @@ import java.time.LocalDate
 /** Um problema de configuração: código estável, arquivo (nome relativo) e linha. NUNCA o valor errado (pode ser nome de pessoa). */
 data class ProblemaDeConfig(val codigo: String, val arquivo: String, val linha: Int? = null)
 
-data class ResultadoDaValidacao(val problemas: List<ProblemaDeConfig>, val arquivosOk: List<String>) {
+data class ResultadoDaValidacao(
+    val problemas: List<ProblemaDeConfig>,
+    val arquivosOk: List<String>,
+    /** Avisos não reprovam a validação (ex.: métricas fora do loopback, que pode ser proposital). */
+    val avisos: List<ProblemaDeConfig> = emptyList(),
+) {
     val ok: Boolean get() = problemas.isEmpty()
 }
 
@@ -65,7 +70,12 @@ object ValidadorDeConfig {
         problemas += conferirBackup(settings, dev)
 
         val comProblema = problemas.map { it.arquivo }.toSet()
-        return ResultadoDaValidacao(problemas, arquivosDaPasta(dir).filter { it !in comProblema })
+        val avisos = if (settings.operacao.metricasPorta != 0 && settings.operacao.metricasHost !in LOOPBACK) {
+            listOf(ProblemaDeConfig("METRICAS_HOST_NAO_LOOPBACK", "PAINEL_METRICAS_HOST"))
+        } else {
+            emptyList()
+        }
+        return ResultadoDaValidacao(problemas, arquivosDaPasta(dir).filter { it !in comProblema }, avisos)
     }
 
     // ---- arquivos ----
@@ -200,11 +210,12 @@ object ValidadorDeConfig {
             return if (dev) emptyList() else listOf(ProblemaDeConfig("BACKUP_DIR_AUSENTE", "BACKUP_DIR"))
         }
         val problemas = mutableListOf<ProblemaDeConfig>()
-        val absoluto = dir.toAbsolutePath().normalize()
+        // Symlinks resolvidos: um atalho não esconde que o destino cai dentro do banco ou do repositório.
+        val absoluto = caminhoReal(dir)
         if (generateSequence(absoluto) { it.parent }.any { Files.exists(it.resolve(".git")) }) {
             problemas += ProblemaDeConfig("BACKUP_DIR_DENTRO_DO_REPOSITORIO", "BACKUP_DIR")
         }
-        val pastaDoBanco = settings.databasePath.toAbsolutePath().normalize().parent
+        val pastaDoBanco = settings.databasePath.toAbsolutePath().normalize().parent?.let { caminhoReal(it) }
         if (pastaDoBanco != null && absoluto.startsWith(pastaDoBanco)) {
             problemas += ProblemaDeConfig("BACKUP_DIR_NA_PASTA_DO_BANCO", "BACKUP_DIR")
         }
@@ -213,6 +224,20 @@ object ValidadorDeConfig {
             problemas += ProblemaDeConfig("BACKUP_DIR_SEM_ESCRITA", "BACKUP_DIR")
         }
         return problemas
+    }
+
+    private val LOOPBACK = setOf("127.0.0.1", "localhost", "::1", "[::1]")
+
+    /** Caminho absoluto com os symlinks do trecho que já existe resolvidos; o resto (a criar) segue como está. */
+    private fun caminhoReal(caminho: Path): Path {
+        val absoluto = caminho.toAbsolutePath().normalize()
+        val existente = generateSequence(absoluto) { it.parent }.firstOrNull { Files.exists(it) } ?: return absoluto
+        val real = try {
+            existente.toRealPath()
+        } catch (e: java.io.IOException) {
+            existente
+        }
+        return real.resolve(existente.relativize(absoluto)).normalize()
     }
 
     // ---- leitura tolerante de equipes/ausências ----

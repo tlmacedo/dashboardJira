@@ -251,6 +251,31 @@ class ValidadorDeConfigTest {
     }
 
     @Test
+    fun backupDirQueResolveParaDentroDoBancoPorSymlinkEhRejeitado() {
+        val dados = nova("painel-dados-")
+        val atalho = nova("painel-atalho-").resolve("atalho")
+        try {
+            Files.createSymbolicLink(atalho, dados)
+        } catch (e: Exception) {
+            assumeTrue(false, "sem symlink neste sistema")
+        }
+        val r = ValidadorDeConfig.validar(
+            producao("DATABASE_PATH" to dados.resolve("painel.db").toString(), "BACKUP_DIR" to atalho.resolve("copias").toString()),
+            pastaDeConfig(comoReal = true), hoje,
+        )
+        assertEquals(listOf("BACKUP_DIR_NA_PASTA_DO_BANCO"), codigos(r))
+    }
+
+    @Test
+    fun metricasForaDoLoopbackGeraAvisoSemFalhar() {
+        val r = ValidadorDeConfig.validar(dev + ("PAINEL_METRICAS_HOST" to "0.0.0.0"), TestPaths.configDir, hoje)
+        assertTrue(r.ok, "aviso não reprova a validação")
+        assertEquals(listOf(ProblemaDeConfig("METRICAS_HOST_NAO_LOOPBACK", "PAINEL_METRICAS_HOST")), r.avisos)
+        assertEquals(emptyList(), ValidadorDeConfig.validar(dev, TestPaths.configDir, hoje).avisos)
+        assertEquals(emptyList(), ValidadorDeConfig.validar(dev + ("PAINEL_METRICAS_HOST" to "localhost"), TestPaths.configDir, hoje).avisos)
+    }
+
+    @Test
     fun backupDirSemEscrita() {
         val arquivoComum = Files.createTempFile("painel-copias-arquivo-", ".txt").also { temporarias.add(it) }
         val r = ValidadorDeConfig.validar(producao("BACKUP_DIR" to arquivoComum.resolve("dentro").toString()), pastaDeConfig(comoReal = true), hoje)

@@ -103,7 +103,7 @@ O modelo é `app/.env.example` (copie para `app/.env`, que o git ignora, ou apon
 | `RETENTION_MONTHS`, `ACCESS_LOG_RETENTION_MONTHS` | 24 | Meses de dados locais e de registro de acesso |
 | `PAINEL_LOG_FORMATO`, `PAINEL_LOG_DIR` | `JSON`, vazio | Formato e pasta dos logs ([observabilidade](observabilidade.md)) |
 | `PAINEL_DISCO_MIN_MB` | 500 | Espaço livre mínimo para o painel estar pronto |
-| `PAINEL_METRICAS_PORTA`, `PAINEL_METRICAS_HOST` | 9464, `127.0.0.1` | Porta interna das métricas; `0` desliga |
+| `PAINEL_METRICAS_PORTA`, `PAINEL_METRICAS_HOST` | 9464, `127.0.0.1` | Porta interna das métricas; `0` desliga. Host fora do loopback gera `AVISO METRICAS_HOST_NAO_LOOPBACK` no `validar-config` (não muda o código de saída) |
 | `PAINEL_ALERTAS_ARQUIVO` | vazio | Arquivo de texto dos alertas |
 | `SYNC_PAT_VALIDADE_SAMSUNG`, `SYNC_PAT_VALIDADE_SIDIA` | vazio | Validade do token, `aaaa-mm-dd`, informada por você |
 | `SESSION_SECRET`, `SESSION_SECRET_ANTERIOR` | vazio | Assinatura do cookie de sessão ([rotação de segredos](rotacao-de-segredos.md)) |

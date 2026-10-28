@@ -167,6 +167,8 @@ private fun validarConfig(args: List<String>, env: Map<String, String>, saida: (
     resultado.problemas.forEach { p ->
         saida("ERRO ${p.codigo} ${p.arquivo}" + (p.linha?.let { ":$it" } ?: ""))
     }
+    // Avisos não mudam o código de saída: só chamam a atenção (ex.: métricas fora do loopback).
+    resultado.avisos.forEach { a -> saida("AVISO ${a.codigo} ${a.arquivo}") }
     return if (resultado.ok) {
         saida("VALIDACAO OK")
         0

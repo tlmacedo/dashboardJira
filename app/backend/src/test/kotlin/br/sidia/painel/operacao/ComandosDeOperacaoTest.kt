@@ -55,6 +55,14 @@ class ComandosDeOperacaoTest {
     }
 
     @Test
+    fun avisoDeMetricasForaDoLoopbackApareceSemMudarOCodigo() {
+        val env = dev + mapOf("PAINEL_METRICAS_PORTA" to "9100", "PAINEL_METRICAS_HOST" to "0.0.0.0")
+        val (codigo, saida) = executar(listOf("validar-config", "--dir", TestPaths.configDir.toString()), env)
+        assertEquals(0, codigo, saida.toString())
+        assertTrue(saida.any { it.startsWith("AVISO METRICAS_HOST_NAO_LOOPBACK") }, saida.toString())
+    }
+
+    @Test
     fun usaPainelConfigDirQuandoNaoHaDir() {
         val (codigo, _) = executar(listOf("validar-config"), dev + ("PAINEL_CONFIG_DIR" to TestPaths.configDir.toString()))
         assertEquals(0, codigo)
