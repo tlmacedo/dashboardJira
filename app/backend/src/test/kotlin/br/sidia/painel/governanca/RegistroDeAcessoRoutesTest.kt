@@ -76,6 +76,21 @@ class RegistroDeAcessoRoutesTest {
     }
 
     @Test
+    fun valoresDeFiltroGravadosNaoVazamParaATela() = rodar { get ->
+        val q = get("gerente.exemplo", "/api/cards/riscos?pessoa=bruno&squad=Alfa")
+        assertEquals(HttpStatusCode.OK, q.status, q.corpo)
+        // Precondição: o access_log guarda mesmo os valores (é o que a tela NÃO pode mostrar).
+        val cru = requireNotNull(ctx!!.dataSource).connection.use { c ->
+            c.createStatement().executeQuery("SELECT filters FROM access_log WHERE route = '/api/cards/riscos' ORDER BY id DESC LIMIT 1").use { rs -> rs.next(); rs.getString(1).orEmpty() }
+        }
+        assertTrue("bruno" in cru && "Alfa" in cru, "o registro guarda os valores: $cru")
+        val r = get("gerente.exemplo", "$rota?rota=/api/cards")
+        assertEquals(HttpStatusCode.OK, r.status, r.corpo)
+        assertFalse("bruno" in r.corpo || "Alfa" in r.corpo, "a tela só pode mostrar os NOMES dos filtros: ${r.corpo}")
+        assertEquals(listOf("pessoa", "squad"), dto(r).acessos.single { it.rota == "/api/cards/riscos" }.filtros)
+    }
+
+    @Test
     fun linhaAntigaComChaveNaRotaSaiMascarada() {
         assertEquals("/api/tasks/{key}", rotaSemChave("/api/tasks/TG-701"))
         assertEquals("/api/tasks/{key}/historico", rotaSemChave("/api/tasks/tg-701/historico"))
