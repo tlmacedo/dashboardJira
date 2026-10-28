@@ -6,6 +6,7 @@ import { MemoryRouter, useLocation } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ErroDaApi } from '../api/client'
 import { LangProvider } from '../i18n/LangProvider'
+import { simular } from '../test/telas'
 import { CardPage } from './CardPage'
 import { Filtros, useFiltrosDaUrl } from './Filtros'
 import { textoDoAviso, temBloqueio, type Aviso } from './useCard'
@@ -34,7 +35,16 @@ function renderizar(ui: ReactNode, inicial = '/') {
   )
 }
 
-beforeEach(() => localStorage.clear())
+beforeEach(() => {
+  localStorage.clear()
+  // As opções dos filtros vêm do backend; aqui só squads e OS (o resto cai nos padrões da tela).
+  simular({
+    '/api/filtros/opcoes': {
+      status: 200,
+      corpo: { squads: ['Alfa', 'Beta'], pessoas: [], tipos: [], prioridades: [], os: [], campos: [], avisos: [], rapidos: [] },
+    },
+  })
+})
 afterEach(() => {
   cleanup()
   vi.restoreAllMocks()
@@ -56,7 +66,7 @@ describe('Filtros', () => {
     const u = userEvent.setup()
     await u.type(screen.getByLabelText('De'), '2026-10-01')
     await u.type(screen.getByLabelText('Até'), '2026-10-30')
-    await u.type(screen.getByLabelText('Squad'), 'Alfa')
+    await u.selectOptions(await screen.findByRole('combobox', { name: 'Squad' }), 'Alfa')
     await u.selectOptions(screen.getByLabelText('Pessoa'), 'ana')
     await u.click(screen.getByRole('checkbox', { name: 'Checklist' }))
     await u.click(screen.getByRole('checkbox', { name: 'Checklist Review' }))
@@ -78,7 +88,7 @@ describe('Filtros', () => {
     expect(screen.getByLabelText('Squad')).toHaveValue('Beta')
     expect(screen.getByRole('checkbox', { name: 'Checklist' })).toBeChecked()
     const u = userEvent.setup()
-    await u.clear(screen.getByLabelText('Squad'))
+    await u.selectOptions(screen.getByLabelText('Squad'), '')
     await u.click(screen.getByRole('button', { name: 'Aplicar filtros' }))
     const p = new URLSearchParams(screen.getByTestId('url').textContent ?? '')
     expect(p.get('squad')).toBeNull()

@@ -86,6 +86,7 @@ private fun opcoesDe(ctx: AppContext, store: SqliteWorkStore, principal: Princip
         os = lista("os", noEscopo.asSequence().mapNotNull { it.osVersion }),
         campos = campos,
         avisos = avisos,
+        rapidos = FiltrosRapidos.ler(ctx.settings.configDir),
     )
 }
 

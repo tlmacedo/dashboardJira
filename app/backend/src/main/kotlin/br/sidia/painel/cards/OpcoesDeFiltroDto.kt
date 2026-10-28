@@ -16,6 +16,8 @@ data class OpcoesDeFiltroDto(
     val os: List<String>,
     val campos: List<CampoOpcoesDto>,
     val avisos: List<AvisoDto> = emptyList(),
+    /** Filtros rápidos nomeados de `filtros_rapidos.yaml` (I-27); vazio quando o arquivo não existe. */
+    val rapidos: List<FiltroRapidoDto> = emptyList(),
 )
 
 /** Valores de um campo do dicionário (`slug` é o que vai em `campo.<slug>` na URL). */

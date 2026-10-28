@@ -1,0 +1,40 @@
+# Filtros rápidos nomeados (ideia I-27): botões acima dos cards que aplicam, com um clique, uma combinação de filtros
+# que JÁ existem. Modelo versionado, somente leitura, sem dado pessoal; copie para filtros_rapidos.yaml para ajustar.
+#
+# Cada item de `filtros` tem:
+#   id         identificador estável (minúsculas, dígitos e hífen)
+#   rotuloPt   texto do botão em português
+#   rotuloEn   texto do botão em inglês
+#   aplica     parâmetros de URL -> lista de valores. Permitidos: squad, tipo, prioridade, os, unit (util|corrido) e
+#              campo.<slug> (slug do campo do dicionário com filtro: true, ex.: campo.checklist-type).
+#
+# Não é JQL do Jira. Não nomeie pessoas ("minhas tasks" é o Meu painel). A visão do papel continua valendo.
+# Os valores abaixo são exemplos: ajuste ao vocabulário real depois da primeira conexão.
+
+versao: 1
+filtros:
+  - id: checklist-review
+    rotuloPt: Só Checklist Review
+    rotuloEn: Checklist Review only
+    aplica:
+      tipo: ["Checklist Review"]
+  - id: prioridade-alta
+    rotuloPt: Prioridade alta
+    rotuloEn: High priority
+    aplica:
+      prioridade: ["Highest", "High"]
+  - id: checklist-completo
+    rotuloPt: Checklist Type Full
+    rotuloEn: Checklist Type Full
+    aplica:
+      campo.checklist-type: ["Full"]
+  - id: primeira-operadora-global
+    rotuloPt: 1st Carrier (Global)
+    rotuloEn: 1st Carrier (Global)
+    aplica:
+      campo.sku-type: ["1st Carrier (Global)"]
+  - id: dias-corridos
+    rotuloPt: Em dias corridos
+    rotuloEn: In calendar days
+    aplica:
+      unit: ["corrido"]

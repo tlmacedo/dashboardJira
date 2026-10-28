@@ -174,6 +174,19 @@ describe('tela Abertas', () => {
     expect(screen.getByText('Prioridade ainda não sincronizada: sem números aqui até a próxima sincronização.')).toBeInTheDocument()
   })
 
+  it('porCampoDoDicionarioAbreAGavetaDoGrupo', async () => {
+    const dto = { ...DTO, porCampo: [{ campo: 'SKU Type', slug: 'sku-type', grupos: [{ valor: 'MR', n: 2 }, { valor: null, n: 2 }] }] }
+    const mock = simular({ [CARD]: { status: 200, corpo: dto }, '/api/cartoes/AB-10/tasks': { status: 200, corpo: gaveta(2, 'card.ab10.titulo') } })
+    renderizarTela(<Abertas />, '/abertas', '/abertas?campo.sku-type=MR')
+    const tabela = await screen.findByRole('table', { name: 'Por campo: SKU Type' })
+    await userEvent.click(within(tabela).getByRole('button', { name: 'MR: 2' }))
+    expect(await screen.findByRole('dialog')).toBeInTheDocument()
+    const chamada = mock.mock.calls.map((c) => String(c[0])).find((u) => u.startsWith('/api/cartoes/AB-10/tasks')) ?? ''
+    expect(decodeURIComponent(chamada)).toContain('segmento=campo:sku-type:MR')
+    // Os mesmos filtros do cartão (inclusive o campo do dicionário) vão para a gaveta.
+    expect(decodeURIComponent(chamada)).toContain('campo.sku-type=MR')
+  })
+
   it('emInglesTraduzTitulosEFaixas', async () => {
     localStorage.setItem('painel.idioma', 'en')
     simular({ [CARD]: { status: 200, corpo: DTO } })

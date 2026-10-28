@@ -2,6 +2,7 @@
 // As tasks por trás de cada número vêm do drill genérico (`shared/tasksApi.ts`): cartões AB-01 a AB-09.
 
 import type { Aviso } from '../../shared/useCard'
+import type { Agrupamento } from '../../shared/PorCampo'
 
 export type Contagem = { chave: string; n: number }
 
@@ -31,4 +32,6 @@ export type AbertasDto = {
   linhas: LinhaAberta[]
   unit: 'util' | 'corrido' | string
   avisos: Aviso[]
+  /** Por campo do dicionário (cartão AB-10 ou FE-13); ausente em respostas antigas. */
+  porCampo?: Agrupamento[]
 }

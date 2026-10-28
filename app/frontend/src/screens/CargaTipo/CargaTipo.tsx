@@ -98,7 +98,7 @@ export function CargaTipo() {
         titulo={t('nav.cargaTipo')}
         pergunta={t('cargaTipo.pergunta')}
         filtros={
-          <Filtros key={sp.toString()} campos={['periodo', 'squad', 'pessoa', 'tipo', 'prioridade', 'os']} valor={sp} aoAplicar={aplicar} />
+          <Filtros key={sp.toString()} campos={['periodo', 'squad', 'pessoa', 'tipo', 'prioridade', 'os', 'campos']} valor={sp} aoAplicar={aplicar} />
         }
         consulta={consulta}
         avisos={dto?.avisos}

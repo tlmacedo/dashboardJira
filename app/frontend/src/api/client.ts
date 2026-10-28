@@ -109,6 +109,28 @@ export function fetchMeta(): Promise<Meta> {
   return getJson<Meta>('/api/meta')
 }
 
+/** Valores de um campo do dicionário (`slug` é o que vai em `campo.<slug>` na URL). */
+export type CampoOpcoes = { nome: string; slug: string; valores: string[] }
+
+/** Filtro rápido nomeado (`filtros_rapidos.yaml`): botão que aplica uma combinação de filtros já existentes. */
+export type FiltroRapido = { id: string; rotuloPt: string; rotuloEn: string; aplica: Record<string, string[]> }
+
+/** Opções dos filtros (`GET /api/filtros/opcoes`), só do escopo visível de quem pergunta. */
+export type OpcoesDeFiltro = {
+  squads: string[]
+  pessoas: string[]
+  tipos: string[]
+  prioridades: string[]
+  os: string[]
+  campos: CampoOpcoes[]
+  avisos: { codigo: string; gravidade: string; mensagem: string; params?: Record<string, string> }[]
+  rapidos: FiltroRapido[]
+}
+
+export function fetchOpcoesDeFiltro(): Promise<OpcoesDeFiltro> {
+  return getJson<OpcoesDeFiltro>('/api/filtros/opcoes')
+}
+
 /** Um alerta operacional ativo (`GET /api/operacao/alertas`, só gerente). Só códigos e instantes: nenhum dado pessoal. */
 export type AlertaOperacional = {
   codigo: string

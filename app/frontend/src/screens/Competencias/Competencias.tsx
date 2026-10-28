@@ -56,7 +56,7 @@ export function Competencias() {
         pergunta={t('competencias.pergunta')}
         filtros={
           <Filtros
-            key={sp.toString()} campos={['squad', 'pessoa', 'tipo', 'prioridade', 'os']} valor={sp} aoAplicar={aplicar}
+            key={sp.toString()} campos={['squad', 'pessoa', 'tipo', 'prioridade', 'os', 'campos']} valor={sp} aoAplicar={aplicar}
             pessoas={dto?.pessoas}
           />
         }

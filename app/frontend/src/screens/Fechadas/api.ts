@@ -1,6 +1,7 @@
 // Contrato do card Fechadas (espelha `FechadasDto` do backend). Cartões FE-01 a FE-12.
 
 import type { Aviso } from '../../shared/useCard'
+import type { Agrupamento } from '../../shared/PorCampo'
 import type { Contagem, FaixaTipo } from '../Abertas/api'
 
 export type Faixa = { p50: number; p85: number; n: number }
@@ -58,4 +59,6 @@ export type FechadasDto = {
   semResolution: number
   unit: 'util' | 'corrido' | string
   avisos: Aviso[]
+  /** Por campo do dicionário (cartão AB-10 ou FE-13); ausente em respostas antigas. */
+  porCampo?: Agrupamento[]
 }
