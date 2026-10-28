@@ -35,10 +35,11 @@ class CargaCalculator(private val motor: MotorDePessoas, private val regrasDeRis
     /**
      * [pessoas]: as da visão que constam na equipe. [abertas]: as abertas da visão. [historico]: as concluídas recentes (faixa
      * de ciclo por tipo, base de "acima do P85" e do risco). [temCampos]: a base já tem prioridade e estimativas sincronizadas.
+     * [horasRegistradas30d]: horas do worklog por autor nos últimos 30 dias (nulo ou vazio = worklog não sincronizado).
      */
     fun calcular(
         pessoas: List<String>, abertas: List<IssueSnapshot>, historico: List<IssueSnapshot>, hoje: LocalDate, agora: Instant,
-        temCampos: Boolean, versaoRegras: String,
+        temCampos: Boolean, versaoRegras: String, horasRegistradas30d: Map<String, Double>? = null,
     ): CargaAnalise {
         val naoConcluidas = abertas.filter { map.category(it.status) != StatusCategory.DONE }
         val calcRisco = RiscoCalculator(motor.calendario, map, regrasDeRisco, motor.agenda.comoPrevisao(naoConcluidas, hoje))
@@ -91,7 +92,8 @@ class CargaCalculator(private val motor: MotorDePessoas, private val regrasDeRis
                 capacidade4SemH = motor.capacidade.semanas(p, hoje, SEMANAS).sumOf { it.second },
                 ocupacao = o.paraDto(regras, demandaTotal),
                 ausenciaDias = motor.capacidade.diasDeAusencia(p, hoje, fimDaJanela),
-                horasRegistradas30d = null, acimaDoP85 = acimaP85.size, vencidas = vencidas.size, riscoAlto = altas.size,
+                // Mapa vazio = worklog ainda não sincronizado: "indisponível" (nulo), nunca "0 h" enganoso.
+                horasRegistradas30d = horasRegistradas30d?.takeIf { it.isNotEmpty() }?.let { it[p] ?: 0.0 }, acimaDoP85 = acimaP85.size, vencidas = vencidas.size, riscoAlto = altas.size,
                 atrasoAcumuladoH = carga.atrasoAcumuladoH, horasAssumidas = carga.horasAssumidas,
             )
         }

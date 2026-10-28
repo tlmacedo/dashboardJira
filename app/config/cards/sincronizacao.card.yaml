@@ -18,6 +18,8 @@ campos:
   - timeoriginalestimate
   - timeestimate
   - timespent
+  # Registros de horas (Plano 6, Tarefa 10): vêm embutidos na busca; só id, autor, início e segundos são guardados.
+  - worklog
   - components
   - Story Points
   - Epic Link

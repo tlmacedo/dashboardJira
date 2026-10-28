@@ -3,6 +3,7 @@ package br.sidia.painel
 import br.sidia.painel.cards.metas.RegrasDeMetas
 import br.sidia.painel.pessoas.Ausencias
 import br.sidia.painel.pessoas.Equipes
+import br.sidia.painel.pessoas.RegrasDeEsforco
 import br.sidia.painel.pessoas.linhaDoItem
 import br.sidia.painel.pessoas.RegrasDePlanejamento
 import br.sidia.painel.previsao.RegrasDePrevisao
@@ -66,6 +67,8 @@ class AppContext(
     val ausencias: Ausencias = Ausencias(emptyList()),
     /** Heurísticas de capacidade e planejamento; lido de `planejamento.yaml` (o modelo só vale em desenvolvimento). */
     val regrasPlanejamento: RegrasDePlanejamento = RegrasDePlanejamento.PADRAO,
+    /** Pesos do esforço por task fechada (proposta inicial); lido de `esforco.yaml` (o modelo só vale em desenvolvimento). */
+    val regrasEsforco: RegrasDeEsforco = RegrasDeEsforco.PADRAO,
 ) : AutoCloseable {
     private val aoFechar = java.util.concurrent.CopyOnWriteArrayList<() -> Unit>()
 
@@ -159,6 +162,9 @@ class AppContext(
             val ausencias = lerYamlCitandoItem(arquivoAusencias, "ausencias") { Ausencias.fromYaml(arquivoAusencias, papeis) }
             val arquivoPlanejamento = resolver(settings, "planejamento")
             val regrasPlanejamento = lerYaml(arquivoPlanejamento) { RegrasDePlanejamento.fromYaml(arquivoPlanejamento) }
+            // Pesos do esforço (Fase 6, bloco 6b): config versionada sem dado pessoal; o modelo só cai em dev.
+            val arquivoEsforco = resolver(settings, "esforco")
+            val regrasEsforco = lerYaml(arquivoEsforco) { RegrasDeEsforco.fromYaml(arquivoEsforco) }
 
             // Valida na subida todas as instâncias do Jira configuradas (sem enviar nada); só id e regra na falha.
             val jira = JiraClientFactory(settings)
@@ -181,6 +187,7 @@ class AppContext(
                 settings, calendario, papeis, ds, jira, mapaDeStatus, campos, fichas, vinculos, labelsDeAtraso, regrasAuditoria, clock,
                 travaDeProcesso = trava, regrasDeMetas = regrasDeMetas, regrasDeRisco = regrasDeRisco,
                 regrasDePrevisao = regrasDePrevisao, equipes = equipes, ausencias = ausencias, regrasPlanejamento = regrasPlanejamento,
+                regrasEsforco = regrasEsforco,
             )
         }
 

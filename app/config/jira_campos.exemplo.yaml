@@ -113,6 +113,10 @@ campos:
     tipo: NUMBER
     instancia: samsung
     finalidade: Tempo gasto em segundos
+  - nome: worklog
+    tipo: TEXT
+    instancia: samsung
+    finalidade: Registros de horas (Plano 6); a sincronização guarda só id, autor, início e segundos, nunca o comentário
   - nome: components
     tipo: SELECT
     instancia: samsung

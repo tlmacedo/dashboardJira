@@ -1,0 +1,43 @@
+{
+  "startAt": 0,
+  "maxResults": 1048576,
+  "total": 3,
+  "worklogs": [
+    {
+      "self": "https://jira.exemplo.invalid/rest/api/2/issue/10301/worklog/70001",
+      "id": "70001",
+      "issueId": "10301",
+      "author": {"name": "Ana.Silva", "key": "JIRAUSER10500", "displayName": "Ana Silva Ficticia"},
+      "updateAuthor": {"name": "Ana.Silva", "key": "JIRAUSER10500"},
+      "comment": "COMENTARIO-SECRETO-DO-WORKLOG-1",
+      "created": "2026-10-02T18:00:00.000-0400",
+      "started": "2026-10-02T09:00:00.000-0400",
+      "timeSpent": "2h",
+      "timeSpentSeconds": 7200
+    },
+    {
+      "self": "https://jira.exemplo.invalid/rest/api/2/issue/10301/worklog/70002",
+      "id": "70002",
+      "issueId": "10301",
+      "author": {"name": "Ana.Silva", "key": "JIRAUSER10500"},
+      "updateAuthor": {"name": "Ana.Silva"},
+      "comment": "COMENTARIO-SECRETO-DO-WORKLOG-4",
+      "created": "2026-10-05T18:00:00.000-0400",
+      "started": "2026-10-05T09:00:00.000-0400",
+      "timeSpent": "3h",
+      "timeSpentSeconds": 10800
+    },
+    {
+      "self": "https://jira.exemplo.invalid/rest/api/2/issue/10301/worklog/70003",
+      "id": "70003",
+      "issueId": "10301",
+      "author": {"name": "Bruno.Costa", "key": "JIRAUSER10501"},
+      "updateAuthor": {"name": "Bruno.Costa"},
+      "comment": "COMENTARIO-SECRETO-DO-WORKLOG-5",
+      "created": "2026-10-06T18:00:00.000-0400",
+      "started": "2026-10-06T09:00:00.000-0400",
+      "timeSpent": "1h",
+      "timeSpentSeconds": 3600
+    }
+  ]
+}

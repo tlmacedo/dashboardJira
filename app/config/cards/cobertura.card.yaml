@@ -1,0 +1,43 @@
+# Ficha do card "Cobertura por ausência" (Plano 6). Estrita: chave desconhecida falha ao carregar.
+# A leitura no banco aplica estes tipos e a exclusão de status (FiltroDeFicha); o JQL só serve à sincronização e ao ensaio.
+
+id: cobertura
+titulo: Cobertura por ausência
+instancia: samsung
+
+campos:
+  - OS Version
+  - priority
+  - timeoriginalestimate
+  - timeestimate
+  - timespent
+
+filtrosFixos:
+  project: ["TG-Basic"]
+  issuetype: ["Checklist", "Checklist TG", "Checklist Review"]
+
+filtrosExcluidos:
+  status: ["Cancelled", "Canceled", "Dropped"]
+
+parametros:
+  - nome: squad
+    tipo: squad
+    obrigatorio: false
+
+formula: >-
+  Para cada ausência das pessoas da sua visão que toca os próximos dias (padrão: 30; de 1 a 90): as tasks abertas da pessoa que a
+  agenda pela capacidade, SEM a ausência, colocaria nos dias dela, mais as que vencem durante a ausência e não terminariam antes;
+  as horas a replanejar (agendadas nesses dias e que não cabem na capacidade real do dia); as competências pedidas (labels
+  skill:x) e quem pode cobrir: pessoas visíveis do mesmo squad com folga nas semanas da ausência, em ordem alfabética (a folga
+  vai ao lado, nunca define a ordem). A ausência não tem motivo.
+
+exemplo: >-
+  dias=30.
+
+aceite:
+  - Candidatos em ordem alfabética, sem ordenar por folga.
+  - A ausência não mostra motivo.
+  - Só liderança; pessoa fora da visão não aparece como ausente nem como candidata.
+  - Cada número abre as mesmas tasks que o formam.
+
+expandChangelog: true

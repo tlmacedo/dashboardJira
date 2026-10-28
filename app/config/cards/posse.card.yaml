@@ -1,0 +1,38 @@
+# Ficha do card "Posse da task" (Plano 6). Estrita: chave desconhecida falha ao carregar.
+# A leitura no banco aplica estes tipos e a exclusão de status (FiltroDeFicha); o JQL só serve à sincronização e ao ensaio.
+
+id: posse
+titulo: Posse da task
+instancia: samsung
+
+campos:
+  - OS Version
+  - priority
+
+filtrosFixos:
+  project: ["TG-Basic"]
+  issuetype: ["Checklist", "Checklist TG", "Checklist Review"]
+
+filtrosExcluidos:
+  status: ["Cancelled", "Canceled", "Dropped"]
+
+parametros:
+  - nome: squad
+    tipo: squad
+    obrigatorio: false
+
+formula: >-
+  Para cada task do período (resolvidas nele, mais as abertas) em que alguém da sua visão teve posse: o tempo que cada
+  pessoa ficou com ela (cada trecho com o mesmo responsável, fora dos status concluídos), em dias úteis ou corridos, até a
+  resolução ou até agora. A fração é o tempo da pessoa ÷ o tempo total da task. Quem está fora da visão aparece como "outra
+  pessoa", nunca pelo nome. Sem ranking: pessoas em ordem alfabética.
+
+exemplo: >-
+  squad=[dev.alfa, dev.beta], unit=util.
+
+aceite:
+  - A soma das frações de uma task é 1,0.
+  - Pessoa fora da visão aparece como "outra pessoa", sem nome.
+  - A contagem de cada cartão abre as mesmas tasks.
+
+expandChangelog: true

@@ -1,0 +1,30 @@
+# =====================================================================================
+# MODELO DAS REGRAS DO ESFORÇO POR TASK FECHADA  (100% FICTÍCIO, versionado; copie para esforco.yaml)
+# =====================================================================================
+#
+# PARA QUE SERVE
+#   O esforço de uma task concluída tem TRÊS componentes e um índice composto:
+#     peso do tipo        quanto o tipo de task costuma custar;
+#     testes              quantas labels distintas começam com o prefixo de teste (TEST-*);
+#     horas               o worklog sincronizado (soma de todos os autores; sem worklog, o tempo gasto do Jira, com aviso).
+#   INDICE = pesoDoTipo + testes x pesoTeste + horas x fatorHora.
+#   Os valores abaixo são PROPOSTA INICIAL: calibre com o histórico real depois da 1ª conexão.
+#   O esforço por pessoa NÃO usa o autor do worklog: divide cada componente pela POSSE da task (fração do tempo com ela).
+#   Não leva dado pessoal. Em produção o arquivo real é OBRIGATÓRIO. A "versao" sai em toda resposta ("esforço v1").
+#   O leitor é ESTRITO: chave desconhecida ou valor fora do limite recusa o arquivo.
+versao: 1
+
+# Peso por tipo de issue (compara sem diferenciar maiúsculas). Tipo fora da lista usa pesoPadrao.
+pesoPorTipo:
+  Checklist: 3.0
+  "Checklist TG": 3.0
+  "Checklist Review": 1.0
+  "Feature check": 2.0
+pesoPadrao: 1.0
+
+# Labels que contam como teste: começam com este prefixo (sem diferenciar maiúsculas) e contam uma vez cada.
+prefixoTeste: "TEST-"
+pesoTeste: 0.5
+
+# Peso de cada hora registrada.
+fatorHora: 1.0

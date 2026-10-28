@@ -1,0 +1,41 @@
+# Ficha do card "Matriz de competências" (Plano 6). Estrita: chave desconhecida falha ao carregar.
+# A leitura no banco aplica estes tipos e a exclusão de status (FiltroDeFicha); o JQL só serve à sincronização e ao ensaio.
+
+id: competencias
+titulo: Matriz de competências
+instancia: samsung
+
+campos:
+  - OS Version
+  - priority
+  - timeoriginalestimate
+  - timeestimate
+  - timespent
+
+filtrosFixos:
+  project: ["TG-Basic"]
+  issuetype: ["Checklist", "Checklist TG", "Checklist Review"]
+
+filtrosExcluidos:
+  status: ["Cancelled", "Canceled", "Dropped"]
+
+parametros:
+  - nome: squad
+    tipo: squad
+    obrigatorio: false
+
+formula: >-
+  As competências de cada pessoa vêm do equipes.yaml (rótulos em minúsculas). A matriz mostra, para as pessoas da sua visão em
+  ordem alfabética, quem tem cada competência; "pessoa única" é a competência que exatamente uma pessoa da visão tem (só com 2
+  ou mais pessoas na visão). As competências pedidas vêm dos labels skill:x das tasks abertas da visão; "sem ninguém" é a pedida
+  que nenhuma pessoa da visão tem. As horas são as abertas por competência, pelas regras de planejamento.
+
+exemplo: >-
+  squad=[dev.alfa].
+
+aceite:
+  - O usuário comum só vê a própria linha e nenhum indicador do conjunto.
+  - A visão do líder não revela competências de pessoas de outro squad.
+  - Cada contagem de tasks abre as mesmas tasks que a formam.
+
+expandChangelog: false
