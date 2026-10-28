@@ -60,6 +60,70 @@ class ErrosSemValorLidoTest {
         }
     }
 
+    /** Falha e confere que NENHUM sentinela aparece na mensagem, em toda a cadeia de causas nem no toString. */
+    private fun semSentinela(c: String, sentinelas: List<String>, carga: (Path) -> Unit) {
+        val e = assertFailsWith<IllegalArgumentException>(c) { carga(arquivo(c)) }
+        val todos = generateSequence<Throwable>(e) { it.cause }.toList()
+        val texto = todos.joinToString("\n") { "${it.message} | $it" } + "\n" + e.stackTraceToString()
+        for (s in sentinelas) assertTrue(s !in texto, "'$s' vazou ($texto) para:\n$c")
+        assertTrue(e.cause == null, "a exceção não encadeia a causa do parser: $c")
+    }
+
+    private val sentinelas = listOf("SEGREDOABC", "xpto7", "ZZ9", "joao.silva", "talvezSEG", "dataSEG")
+
+    @Test
+    fun equipesNoCaminhoDoParser() {
+        val cab = "membros:\n  - id: dev.alfa1\n    alocacao: 1.0\n"
+        listOf(
+            "${cab}    horasSemanais: SEGREDOABC\n", // tipo numérico errado
+            "${cab}    horasSemanais: 40\n    foco: talvezSEG\n",
+            "${cab}    horasSemanais: 40\n    joao.silva: 1\n", // chave desconhecida
+            "membros: [SEGREDOABC\n  - id: x\n", // sintaxe inválida
+            "membros:\n  joao.silva: SEGREDOABC\n", // mapa no lugar de lista
+            "${cab}    horasSemanais:\n", // valor vazio
+            "${cab}    horasSemanais: 40\n    competencias: {joao.silva: SEGREDOABC}\n", // mapa no lugar de lista
+        ).forEach { c -> semSentinela(c, sentinelas) { Equipes.fromYaml(it, papeis) } }
+    }
+
+    @Test
+    fun ausenciasNoCaminhoDoParser() {
+        val ok = "ausencias:\n  - pessoa: dev.alfa1\n    de: 2031-07-02\n    ate: 2031-07-09\n"
+        listOf(
+            "${ok}    fracao: xpto7\n", // tipo numérico errado
+            "ausencias:\n  - pessoa: dev.alfa1\n    de: dataSEG\n    ate: 2031-07-09\n", // data malformada
+            "${ok}    joao.silva: 1\n", // chave desconhecida
+            "ausencias: [SEGREDOABC\n", // sintaxe inválida
+            "ausencias:\n  joao.silva: SEGREDOABC\n", // mapa no lugar de lista
+            "ausencias:\n  - pessoa:\n    de: 2031-07-02\n    ate: 2031-07-09\n", // valor vazio
+            "ausencias:\n  - [SEGREDOABC, joao.silva]\n", // lista no lugar de item
+            "ausencias:\n  - pessoa: dev.alfa1\n    de: 2031-07-02\n    ate: 2031-07-09\n    fracao: [xpto7]\n",
+        ).forEach { c -> semSentinela(c, sentinelas) { Ausencias.fromYaml(it, papeis) } }
+    }
+
+    @Test
+    fun planejamentoNoCaminhoDoParser() {
+        listOf(
+            modelo.replace("focoPadrao: 0.7", "focoPadrao: ZZ9"), // tipo numérico errado
+            modelo.replace("wipPorPessoa: 3", "wipPorPessoa: 1.5SEGREDOABC"),
+            modelo.replace("versao: 1", "versao: SEGREDOABC"),
+            modelo + "\njoao.silva: 1\n", // chave desconhecida
+            modelo.replace("horasPadrao: 6.0", "horasPadrao: [SEGREDOABC"), // sintaxe inválida
+            modelo.replace("horasPorTipo:", "horasPorTipo: [SEGREDOABC]\nx:"), // lista no lugar de mapa
+            modelo.replace("horasPadrao: 6.0", "horasPadrao:"), // valor vazio
+            modelo.replace("wipPorStatus:", "wipPorStatus: talvezSEG\nx:"),
+        ).forEach { c -> semSentinela(c, sentinelas) { RegrasDePlanejamento.fromYaml(it) } }
+    }
+
+    @Test
+    fun anoForaDoIntervaloNasAusenciasEhRecusadoSemOValor() {
+        for (ano in listOf("1969", "2201", "9999")) {
+            val c = "ausencias:\n  - pessoa: dev.alfa1\n    de: $ano-07-02\n    ate: $ano-07-09\n"
+            val m = assertFailsWith<IllegalArgumentException> { Ausencias.fromYaml(arquivo(c), papeis) }.message.orEmpty()
+            assertTrue(ano !in m.substringAfterLast(": "), "o ano vazou: $m")
+            assertTrue("#1" in m, m)
+        }
+    }
+
     @Test
     fun planejamentoNaoCitaValoresLidos() {
         val casos = listOf(

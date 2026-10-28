@@ -139,6 +139,23 @@ class AppContextTest {
     }
 
     @Test
+    fun yamlDePessoasInvalidoFalhaNaSubidaSemValorLidoNemCausa() {
+        for ((nome, conteudo) in listOf(
+            "equipes" to "membros:\n  - id: gerente.exemplo\n    horasSemanais: SEGREDOABC\n    alocacao: 1.0\n",
+            "ausencias" to "ausencias:\n  - pessoa: gerente.exemplo\n    de: 2031-07-02\n    ate: 2031-07-09\n    fracao: xpto7\n",
+            "planejamento" to "versao: 1\nfocoPadrao: ZZ9\n",
+        )) {
+            pasta.toFile().listFiles()?.forEach { it.deleteRecursively() }
+            escreverArquivosReais()
+            Files.writeString(pasta.resolve("$nome.yaml"), conteudo)
+            val e = assertFailsWith<IllegalStateException> { AppContext.load(producao()) }
+            assertTrue(pasta.resolve("$nome.yaml").toString() in e.message.orEmpty(), e.message)
+            assertEquals(null, e.cause, "a causa do parser não pode ser encadeada ($nome)")
+            for (s in listOf("SEGREDOABC", "xpto7", "ZZ9", "gerente.exemplo", "2031")) assertFalse(s in e.stackTraceToString(), "'$s' vazou ($nome)")
+        }
+    }
+
+    @Test
     fun auditoriaInvalidaFalhaSemVazarConteudo() {
         escreverArquivosReais()
         Files.writeString(pasta.resolve("auditoria.yaml"), "versao: 1\nsegredo-xyz: 1\n")

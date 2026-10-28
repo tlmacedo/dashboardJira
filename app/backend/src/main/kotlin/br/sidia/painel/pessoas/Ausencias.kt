@@ -74,10 +74,15 @@ class Ausencias private constructor(lista: List<Ausencia>, validarSobreposicao: 
                 bruto.ausencias.mapIndexed { i, a ->
                     val n = i + 1
                     require(roles.conhece(a.pessoa)) { "ausência #$n: pessoa não existe no papeis.yaml" }
-                    fun data(s: String, campo: String) = try {
-                        LocalDate.parse(s)
-                    } catch (e: DateTimeParseException) {
-                        throw IllegalArgumentException("ausência #$n: '$campo' não é uma data aaaa-mm-dd")
+                    fun data(s: String, campo: String): LocalDate {
+                        val d = try {
+                            LocalDate.parse(s)
+                        } catch (e: DateTimeParseException) {
+                            throw IllegalArgumentException("ausência #$n: '$campo' não é uma data aaaa-mm-dd")
+                        }
+                        // Mesmo intervalo de anos dos filtros: uma data extrema estouraria as contas de período.
+                        require(d.year in 1970..2200) { "ausência #$n: '$campo' fora do intervalo de anos 1970 a 2200" }
+                        return d
                     }
                     try {
                         Ausencia(a.pessoa, data(a.de, "de"), data(a.ate, "ate"), a.fracao)
