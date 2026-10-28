@@ -70,6 +70,66 @@ Códigos de falha: `PASTA_SEM_ESCRITA` (a pasta não existe ou não aceita escri
 
 Cada tentativa fica em `backup_run`. A linha de um backup é gravada **depois** da cópia, então a própria cópia não a contém: ao restaurar, o registro volta ao estado daquela hora. Por isso, logo depois de restaurar, rode `backup-agora` de novo.
 
+## 4. Como a restauração é testada
+
+Depois de cada backup `OK` (e quando você pedir), o painel **restaura a cópia numa pasta temporária** e confere: o SHA-256 do arquivo contra o registrado (`COPIA_ALTERADA` se mudou depois), `integrity_check` (`INTEGRIDADE_FALHOU`), migrações (`MIGRACAO_PENDENTE`: cópia de uma versão antiga do esquema) e, tabela a tabela, a contagem de linhas e um SHA-256 do conteúdo contra a cópia (`CONTAGEM_DIVERGENTE`). O temporário é apagado em qualquer desfecho, e o banco vivo não é tocado. O resultado fica em `backup_run` como `RESTAURACAO OK|FALHA`. Se nenhuma restauração `OK` acontecer em 3 dias, o alerta `RESTAURACAO_NAO_TESTADA` avisa.
+
+Conferir uma cópia à mão (a mais recente de `BACKUP_DIR`, ou a indicada):
+
+PowerShell:
+
+```powershell
+.\app\scripts\painel-cli.ps1 verificar-restauracao
+.\app\scripts\painel-cli.ps1 verificar-restauracao D:\painel-copias\painel-2026-10-30-020000.db
+# RESTAURACAO OK 11 tabelas
+# issue 500
+# change_event 2500
+# ...
+# RESTAURACAO FALHOU INTEGRIDADE_FALHOU     (código de saída 1)
+```
+
+sh:
+
+```sh
+sh app/scripts/painel-cli.sh verificar-restauracao
+sh app/scripts/painel-cli.sh verificar-restauracao /var/backups/painel/painel-2026-10-30-020000.db
+```
+
+A saída só tem nomes de tabela e números (e, ao lado, a contagem do banco vivo quando ela difere: só informativo, porque o painel continua gravando). O comando funciona **sem** o banco vivo, para a recuperação de um desastre.
+
+## 5. Restaurar uma cópia
+
+Só com o serviço **parado**. Nunca restaure por cima de um banco com arquivos `-wal` e `-shm` antigos: o resultado fica corrompido. Os três arquivos (`painel.db`, `painel.db-wal` e `painel.db-shm`) saem de lá **juntos**, para uma pasta de quarentena fora do repositório; **não se apaga nada**. O passo a passo completo, com a escolha da cópia, está no incidente `BANCO_PERDIDO_OU_CORROMPIDO` do [runbook de incidentes](runbook-incidentes.md). Resumo:
+
+PowerShell:
+
+```powershell
+Stop-Service painel-squads
+New-Item -ItemType Directory -Force D:\painel-quarentena | Out-Null
+Move-Item D:\painel\data\painel.db, D:\painel\data\painel.db-wal, D:\painel\data\painel.db-shm D:\painel-quarentena -ErrorAction SilentlyContinue
+.\app\scripts\painel-cli.ps1 verificar-restauracao D:\painel-copias\painel-2026-10-30-020000.db    # precisa dar RESTAURACAO OK
+Copy-Item D:\painel-copias\painel-2026-10-30-020000.db D:\painel\data\painel.db                    # só o .db, sem -wal nem -shm
+icacls D:\painel\data\painel.db /inheritance:r /grant:r "CONTA_DO_SERVICO:F" "Administrators:F"
+Start-Service painel-squads
+Invoke-RestMethod http://127.0.0.1:8080/api/health/pronto
+.\app\scripts\painel-cli.ps1 backup-agora      # novo ponto de partida (o backup_run voltou ao estado da cópia)
+```
+
+sh:
+
+```sh
+sudo systemctl stop painel-squads
+mkdir -p /var/quarentena-painel
+mv /srv/painel/data/painel.db /srv/painel/data/painel.db-wal /srv/painel/data/painel.db-shm /var/quarentena-painel/ 2>/dev/null
+sh app/scripts/painel-cli.sh verificar-restauracao /var/backups/painel/painel-2026-10-30-020000.db   # precisa dar RESTAURACAO OK
+sudo install -m 600 -o painel -g painel /var/backups/painel/painel-2026-10-30-020000.db /srv/painel/data/painel.db
+sudo systemctl start painel-squads
+curl -fsS http://127.0.0.1:8080/api/health/pronto
+sh app/scripts/painel-cli.sh backup-agora
+```
+
+O que se perde entre o backup e a falha: as decisões e o registro de acesso feitos depois da cópia (registre isso no incidente); com a flag do Jira ligada **pelo usuário**, a sincronização repõe o que vem do Jira. Se o pacote em uso é mais novo que a cópia, a subida aplica as migrações que faltam; se for mais antigo, troque o pacote antes.
+
 ## Depois da flag / com o usuário
 
 Itens com efeito fora do repositório; o painel não decide nenhum deles (ponto de parada 2 da spec, opção 1 adotada como recomendada):

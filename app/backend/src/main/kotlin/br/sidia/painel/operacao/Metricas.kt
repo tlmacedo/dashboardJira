@@ -103,6 +103,11 @@ class Metricas(val registro: PrometheusMeterRegistry = PrometheusMeterRegistry(P
         }
     }
 
+    /** Conta uma verificação de restauração (`painel_restauracao_execucoes_total{status}`). */
+    fun restauracao(status: StatusDeBackup) {
+        Counter.builder("painel.restauracao.execucoes").tag("status", status.name).register(registro).increment()
+    }
+
     /** Espaço livre do volume `banco` ou `backup` (o rótulo nunca leva o caminho). */
     fun discoLivre(volume: String, bytes: Long) {
         require(volume == "banco" || volume == "backup") { "volume desconhecido" }

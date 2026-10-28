@@ -21,14 +21,82 @@ fun comandoDeOperacao(args: List<String>, env: Map<String, String>, saida: (Stri
     return when (args.first()) {
         "validar-config" -> validarConfig(resto, env, saida)
         "backup-agora" -> if (resto.isEmpty()) backupAgora(env, saida) else uso(saida)
+        "verificar-restauracao" -> if (resto.size <= 1) verificarRestauracao(resto.firstOrNull(), env, saida) else uso(saida)
         else -> uso(saida)
     }
 }
 
 private fun uso(saida: (String) -> Unit): Int {
-    saida("USO: painel validar-config [--dir <caminho>] | backup-agora")
+    saida("USO: painel validar-config [--dir <caminho>] | backup-agora | verificar-restauracao [<arquivo>]")
     return 2
 }
+
+/**
+ * `painel verificar-restauracao [<arquivo>]`: restaura a cópia (a mais recente de `BACKUP_DIR` quando não se indica uma) numa
+ * pasta temporária e confere integridade, migrações e, tabela a tabela, contagem e conteúdo. Funciona com o banco vivo
+ * ausente (recuperação de desastre: nesse caso nada é registrado). Imprime `RESTAURACAO OK <n> tabelas` e uma linha
+ * `<tabela> <linhas>` por tabela (com a contagem do banco vivo ao lado quando ela difere: só informativo), ou
+ * `RESTAURACAO FALHOU <codigo>`. Saída 0, 1 ou 2.
+ */
+private fun verificarRestauracao(arquivo: String?, env: Map<String, String>, saida: (String) -> Unit): Int {
+    val settings = try {
+        Settings.fromEnv(env)
+    } catch (e: IllegalArgumentException) {
+        saida("RESTAURACAO FALHOU SETTINGS_INVALIDO")
+        return 1
+    }
+    val alvo: Path = if (arquivo != null) {
+        try {
+            Path.of(arquivo)
+        } catch (e: InvalidPathException) {
+            return uso(saida)
+        }
+    } else {
+        val dir = settings.operacao.backup.dir
+        if (dir == null) {
+            saida("Informe o arquivo da cópia ou defina BACKUP_DIR para usar a cópia mais recente.")
+            return 2
+        }
+        val maisRecente = if (Files.isDirectory(dir)) {
+            Files.list(dir).use { itens ->
+                itens.filter { Files.isRegularFile(it) && NOME_DE_BACKUP.matches(it.fileName.toString()) }
+                    .max(Comparator.comparing { it.fileName.toString() }).orElse(null)
+            }
+        } else {
+            null
+        }
+        if (maisRecente == null) {
+            saida("RESTAURACAO FALHOU SEM_COPIA")
+            return 1
+        }
+        maisRecente
+    }
+    val vivo = settings.databasePath.takeIf { Files.isRegularFile(it) }
+    val ds = vivo?.let { Database.connect(Database.urlDeArquivo(it), poolSize = 1) }
+    try {
+        val runs: BackupRunStore = ds?.let { SqliteBackupRunStore(it) } ?: SemRegistroDeBackup
+        val r = VerificadorDeRestauracao(runs, null, Clock.system(settings.zone)).verificar(alvo)
+        if (!r.ok) {
+            saida("RESTAURACAO FALHOU ${r.codigoErro}")
+            return 1
+        }
+        saida("RESTAURACAO OK ${r.tabelas.size} tabelas")
+        for ((tabela, linhas) in r.tabelas.toSortedMap()) {
+            val noVivo = ds?.let { contarLinhas(it, tabela) }
+            saida("$tabela $linhas" + if (noVivo != null && noVivo != linhas) " (banco vivo: $noVivo)" else "")
+        }
+        return 0
+    } finally {
+        (ds as? AutoCloseable)?.close()
+    }
+}
+
+private fun contarLinhas(ds: javax.sql.DataSource, tabela: String): Long? =
+    try {
+        ds.connection.use { c -> c.createStatement().executeQuery("SELECT count(*) FROM \"$tabela\"").use { it.next(); it.getLong(1) } }
+    } catch (e: Exception) {
+        null
+    }
 
 /**
  * `painel backup-agora`: uma cópia imediata do banco para `BACKUP_DIR`, a mesma do agendamento. Abre o banco SEM tomar a
@@ -58,7 +126,14 @@ private fun backupAgora(env: Map<String, String>, saida: (String) -> Unit): Int 
         when (val r = servico.executar()) {
             is ResultadoDoBackup.Ok -> {
                 saida("BACKUP OK ${r.arquivo.fileName} ${r.tamanhoBytes}")
-                0
+                // A mesma prova do agendamento: a cópia recém-feita se restaura num temporário.
+                val verificacao = VerificadorDeRestauracao(SqliteBackupRunStore(ds), null, relogio).verificar(r.arquivo)
+                if (verificacao.ok) {
+                    0
+                } else {
+                    saida("RESTAURACAO FALHOU ${verificacao.codigoErro}")
+                    1
+                }
             }
             is ResultadoDoBackup.Falha -> {
                 saida("BACKUP FALHOU ${r.codigo}")

@@ -134,6 +134,52 @@ class ComandosDeOperacaoTest {
     }
 
     @Test
+    fun verificarRestauracaoUsaACopiaMaisRecenteEListaAsTabelas() {
+        val banco = bancoComDados()
+        val copias = nova()
+        val env = dev + mapOf("DATABASE_PATH" to banco.toString(), "BACKUP_DIR" to copias.toString())
+        assertEquals(0, executar(listOf("backup-agora"), env).first)
+        val (codigo, saida) = executar(listOf("verificar-restauracao"), env)
+        assertEquals(0, codigo, saida.toString())
+        assertTrue(Regex("^RESTAURACAO OK \\d+ tabelas$").matches(saida.first()), saida.first())
+        assertTrue("issue 1" in saida, saida.toString())
+        // só nomes de tabela e números: nenhum dado das linhas nem o caminho
+        assertFalse(saida.joinToString("\n").contains("TG-1"))
+        assertFalse(saida.joinToString("\n").contains(copias.toString()))
+    }
+
+    @Test
+    fun verificarRestauracaoFuncionaSemBancoVivo() {
+        val banco = bancoComDados()
+        val copias = nova()
+        val env = dev + mapOf("DATABASE_PATH" to banco.toString(), "BACKUP_DIR" to copias.toString())
+        executar(listOf("backup-agora"), env)
+        val copia = copias.listDirectoryEntries().single()
+        // recuperação de desastre: o banco vivo foi para a quarentena
+        val semBanco = dev + ("DATABASE_PATH" to nova().resolve("nao-existe.db").toString())
+        val (codigo, saida) = executar(listOf("verificar-restauracao", copia.toString()), semBanco)
+        assertEquals(0, codigo, saida.toString())
+        assertTrue(saida.first().startsWith("RESTAURACAO OK"))
+    }
+
+    @Test
+    fun verificarRestauracaoCopiaInvalidaSaiCom1() {
+        val ruim = nova().resolve("painel-2026-10-30-020000.db")
+        Files.writeString(ruim, "isto não é um banco SQLite")
+        val (codigo, saida) = executar(listOf("verificar-restauracao", ruim.toString()))
+        assertEquals(1, codigo)
+        assertEquals(listOf("RESTAURACAO FALHOU INTEGRIDADE_FALHOU"), saida)
+    }
+
+    @Test
+    fun verificarRestauracaoSemArquivoNemDirSaiCom2() {
+        val (codigo, saida) = executar(listOf("verificar-restauracao"))
+        assertEquals(2, codigo)
+        assertTrue(saida.single().contains("BACKUP_DIR"))
+        assertEquals(2, executar(listOf("verificar-restauracao", "a", "b")).first)
+    }
+
+    @Test
     fun backupAgoraNaoCriaBancoNovo() {
         val pasta = nova()
         val (codigo, saida) = executar(

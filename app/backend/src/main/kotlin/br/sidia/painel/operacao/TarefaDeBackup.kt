@@ -19,6 +19,7 @@ fun tarefaDeBackup(ctx: AppContext, clock: Clock, metricas: Metricas?): TarefaDe
     val ds = ctx.dataSource ?: return null
     val runs = SqliteBackupRunStore(ds)
     val servico = ServicoDeBackup(ds, Database.arquivoDe(ds) ?: ctx.settings.databasePath, cfg, runs, metricas, clock, ctx.settings.zone)
+    val verificador = VerificadorDeRestauracao(runs, metricas, clock)
     return TarefaDeOperacao(
         nome = "BACKUP",
         devida = { agora ->
@@ -26,7 +27,11 @@ fun tarefaDeBackup(ctx: AppContext, clock: Clock, metricas: Metricas?): TarefaDe
             Agenda.diariaDevidaDesde(agora, ultima, cfg.hora, ctx.settings.zone)
         },
         executar = {
-            withContext(Dispatchers.IO) { servico.executar() }
+            withContext(Dispatchers.IO) {
+                val resultado = servico.executar()
+                // Logo depois de cada cópia OK, prova que ela se restaura (em pasta temporária; o banco vivo não é tocado).
+                if (resultado is ResultadoDoBackup.Ok) verificador.verificar(resultado.arquivo)
+            }
         },
     )
 }
