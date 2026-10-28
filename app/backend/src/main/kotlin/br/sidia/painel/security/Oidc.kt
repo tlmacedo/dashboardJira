@@ -251,7 +251,8 @@ internal class ConsumoUnico(private val relogio: Clock, private val limite: Int 
     /**
      * `true` na primeira vez; `false` se o `state` já foi consumido. Com o registro cheio, descarta primeiro os vencidos e,
      * se ainda estiver cheio, o MAIS ANTIGO: recusar quem chega deixaria um atacante que enche o registro com logins
-     * anônimos bloquear os logins legítimos por 10 minutos. O custo (um `state` muito antigo e ainda vigente poder ser
+     * anônimos bloquear os logins legítimos por 10 minutos. Com o registro cheio, a recusa de replay de um `state` já
+     * descartado passa a depender do uso único do `code` no provedor e do PKCE. O custo (um `state` muito antigo e ainda vigente poder ser
      * reapresentado) exige antes um cookie de login assinado, o `code` do provedor e o `nonce` do token.
      */
     @Synchronized

@@ -24,7 +24,7 @@ class OidcSettings(
     val duracaoDaSessao: Duration = Duration.ofHours(8),
     /**
      * `OIDC_HOSTS_PERMITIDOS` (opcional): hosts aceitos nos endereços da descoberta. Vazia = qualquer nome de host público
-     * (IP literal, loopback e rede interna são recusados).
+     * (IP literal, `localhost`, `*.local` e `*.localhost` são recusados; só pelo NOME, sem resolver DNS).
      */
     val hostsPermitidos: Set<String> = emptySet(),
 ) {
