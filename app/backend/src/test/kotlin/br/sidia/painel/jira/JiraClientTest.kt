@@ -38,7 +38,7 @@ class JiraClientTest {
     fun guardBloqueiaSemLive() = runBlocking {
         val engine = MockEngine { respond(corpoOk, HttpStatusCode.OK, json) }
         val client = JiraClient(cfg(), HttpClient(engine), LiveGuard(false), semEspera())
-        assertFailsWith<JiraLiveDisabledException> { client.search(SearchRequest("x", listOf("summary"))) }
+        assertFailsWith<JiraLiveDisabledException> { client.search(req("x", listOf("summary"))) }
         assertEquals(0, engine.requestHistory.size)
     }
 
@@ -46,7 +46,7 @@ class JiraClientTest {
     fun enviaPostComCorpoEBearer() = runBlocking {
         val engine = MockEngine { respond(corpoOk, HttpStatusCode.OK, json) }
         val client = JiraClient(cfg(), HttpClient(engine), LiveGuard(true), semEspera())
-        val page = client.search(SearchRequest("project = TG", listOf("summary", "status"), expandChangelog = true, startAt = 5, maxResults = 50))
+        val page = client.search(req("project = TG", listOf("summary", "status"), expandChangelog = true, startAt = 5, maxResults = 50))
 
         assertEquals(1, page.total)
         assertEquals("TG-1", page.issues.single()["key"]!!.jsonPrimitive.content)
@@ -67,7 +67,7 @@ class JiraClientTest {
     fun semChangelogNaoEnviaExpand() = runBlocking {
         val engine = MockEngine { respond(corpoOk, HttpStatusCode.OK, json) }
         val client = JiraClient(cfg(), HttpClient(engine), LiveGuard(true), semEspera())
-        client.search(SearchRequest("x", listOf("summary")))
+        client.search(req("x", listOf("summary")))
         val corpo = Json.parseToJsonElement(String(engine.requestHistory.single().body.toByteArray())).jsonObject
         assertFalse("expand" in corpo)
     }
@@ -76,7 +76,7 @@ class JiraClientTest {
     fun usaBasicParaSidia() = runBlocking {
         val engine = MockEngine { respond(corpoOk, HttpStatusCode.OK, json) }
         val client = JiraClient(cfg(JiraAuthKind.BASIC, "segredo", "usuario"), HttpClient(engine), LiveGuard(true), semEspera())
-        client.search(SearchRequest("x", listOf("summary")))
+        client.search(req("x", listOf("summary")))
         val esperado = "Basic " + Base64.getEncoder().encodeToString("usuario:segredo".toByteArray())
         assertEquals(esperado, engine.requestHistory.single().headers[HttpHeaders.Authorization])
     }
@@ -86,7 +86,7 @@ class JiraClientTest {
         val engine = MockEngine { respond(corpoOk, HttpStatusCode.OK, json) }
         // guard desligado: a validação de fields deve vir antes dele
         val client = JiraClient(cfg(), HttpClient(engine), LiveGuard(false), semEspera())
-        assertFailsWith<IllegalArgumentException> { client.search(SearchRequest(jql = "x", fields = emptyList())) }
+        assertFailsWith<IllegalArgumentException> { client.search(req(jql = "x", fields = emptyList())) }
         assertEquals(0, engine.requestHistory.size)
     }
 
@@ -94,7 +94,7 @@ class JiraClientTest {
     fun erroPreservaStatus() = runBlocking {
         val engine = MockEngine { respond("""{"errorMessages":["JQL inválido"]}""", HttpStatusCode.BadRequest, json) }
         val client = JiraClient(cfg(), HttpClient(engine), LiveGuard(true), semEspera())
-        val e = assertFailsWith<JiraException> { client.search(SearchRequest("x", listOf("summary"))) }
+        val e = assertFailsWith<JiraException> { client.search(req("x", listOf("summary"))) }
         assertEquals(400, e.status)
         assertContains(e.message!!, "JQL inválido")
         assertEquals(1, engine.requestHistory.size)
@@ -105,7 +105,7 @@ class JiraClientTest {
         val longo = "linha1\nlinha2\r\n" + "x".repeat(1000)
         val engine = MockEngine { respond(longo, HttpStatusCode.InternalServerError, json) }
         val client = JiraClient(cfg(), HttpClient(engine), LiveGuard(true), semEspera())
-        val e = assertFailsWith<JiraException> { client.search(SearchRequest("x", listOf("summary"))) }
+        val e = assertFailsWith<JiraException> { client.search(req("x", listOf("summary"))) }
         assertEquals(500, e.status)
         val d = e.details!!
         assertEquals(true, d.length <= 300)
@@ -123,7 +123,7 @@ class JiraClientTest {
         }
         val retry = RetryPolicy(maxRetries = 5, backoff = { 1.seconds }, delay = { esperas += it })
         val client = JiraClient(cfg(), HttpClient(engine), LiveGuard(true), retry)
-        val page = client.search(SearchRequest("x", listOf("summary")))
+        val page = client.search(req("x", listOf("summary")))
         assertEquals(1, page.total)
         assertEquals(3, engine.requestHistory.size)
         assertEquals(listOf(7.seconds, 7.seconds), esperas)
@@ -135,7 +135,7 @@ class JiraClientTest {
         val engine = MockEngine { respond("", HttpStatusCode.ServiceUnavailable) }
         val retry = RetryPolicy(maxRetries = 2, backoff = { (it + 1).seconds }, delay = { esperas += it })
         val client = JiraClient(cfg(), HttpClient(engine), LiveGuard(true), retry)
-        val e = assertFailsWith<JiraException> { client.search(SearchRequest("x", listOf("summary"))) }
+        val e = assertFailsWith<JiraException> { client.search(req("x", listOf("summary"))) }
         assertEquals(503, e.status)
         assertEquals(3, engine.requestHistory.size)
         assertEquals(listOf(1.seconds, 2.seconds), esperas)
@@ -145,7 +145,7 @@ class JiraClientTest {
     fun naoRepeteErroDeCliente() = runBlocking {
         val engine = MockEngine { respond("", HttpStatusCode.Unauthorized) }
         val client = JiraClient(cfg(), HttpClient(engine), LiveGuard(true), semEspera())
-        assertFailsWith<JiraException> { client.search(SearchRequest("x", listOf("summary"))) }
+        assertFailsWith<JiraException> { client.search(req("x", listOf("summary"))) }
         assertEquals(1, engine.requestHistory.size)
     }
 
@@ -159,7 +159,7 @@ class JiraClientTest {
             else respond(corpoOk, HttpStatusCode.OK, json)
         }
         val retry = RetryPolicy(maxRetries = 5, backoff = { 1.seconds }, delay = { esperas += it })
-        JiraClient(cfg(), HttpClient(engine), LiveGuard(true), retry).search(SearchRequest("x", listOf("summary")))
+        JiraClient(cfg(), HttpClient(engine), LiveGuard(true), retry).search(req("x", listOf("summary")))
         assertEquals(listOf(120.seconds), esperas)
     }
 
@@ -176,7 +176,7 @@ class JiraClientTest {
             }
         }
         val retry = RetryPolicy(maxRetries = 5, backoff = { 9.seconds }, delay = { esperas += it })
-        JiraClient(cfg(), HttpClient(engine), LiveGuard(true), retry).search(SearchRequest("x", listOf("summary")))
+        JiraClient(cfg(), HttpClient(engine), LiveGuard(true), retry).search(req("x", listOf("summary")))
         assertEquals(listOf(0.seconds, 9.seconds), esperas)
     }
 
@@ -186,7 +186,7 @@ class JiraClientTest {
             respond("", HttpStatusCode.Found, headersOf(HttpHeaders.Location, "https://outro.exemplo.invalid/x"))
         }
         val client = JiraClient(cfg(), HttpClient(engine), LiveGuard(true), semEspera())
-        val e = assertFailsWith<JiraException> { client.search(SearchRequest("x", listOf("summary"))) }
+        val e = assertFailsWith<JiraException> { client.search(req("x", listOf("summary"))) }
         assertEquals(302, e.status)
         assertEquals(1, engine.requestHistory.size)
         assertEquals("jira.exemplo.invalid", engine.requestHistory.single().url.host)
@@ -199,7 +199,7 @@ class JiraClientTest {
             respond("falha: token=segredo-super auth=Basic $basic fim", HttpStatusCode.BadRequest, json)
         }
         val client = JiraClient(cfg(JiraAuthKind.BASIC, "segredo-super", "usuario"), HttpClient(engine), LiveGuard(true), semEspera())
-        val e = assertFailsWith<JiraException> { client.search(SearchRequest("x", listOf("summary"))) }
+        val e = assertFailsWith<JiraException> { client.search(req("x", listOf("summary"))) }
         for (texto in listOf(e.details!!, e.message!!)) {
             assertFalse(texto.contains("segredo-super"))
             assertFalse(texto.contains(basic))

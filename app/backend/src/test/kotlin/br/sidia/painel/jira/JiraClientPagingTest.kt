@@ -47,7 +47,7 @@ class JiraClientPagingTest {
     @Test
     fun searchAllPercorreTodasAsPaginas() = runBlocking {
         val engine = jiraComIssues(2500)
-        val issues = cliente(engine).searchAll(SearchRequest("project = TG", listOf("summary")), pageSize = 1000).toList()
+        val issues = cliente(engine).searchAll(req("project = TG", listOf("summary")), pageSize = 1000).toList()
 
         assertEquals(2500, issues.size)
         assertEquals("TG-1", issues.first()["key"]!!.jsonPrimitive.content)
@@ -65,7 +65,7 @@ class JiraClientPagingTest {
             val issues = if (chamadas == 1) """{"key":"TG-1"},{"key":"TG-2"}""" else ""
             respond("""{"startAt":0,"maxResults":2,"total":50,"issues":[$issues]}""", HttpStatusCode.OK, json)
         }
-        val issues = cliente(engine).searchAll(SearchRequest("x", listOf("summary")), pageSize = 2).toList()
+        val issues = cliente(engine).searchAll(req("x", listOf("summary")), pageSize = 2).toList()
         assertEquals(2, issues.size)
         assertEquals(2, engine.requestHistory.size)
     }
@@ -74,10 +74,10 @@ class JiraClientPagingTest {
     fun pageSizeAcimaDeCincoMilFalha() {
         val engine = jiraComIssues(10)
         assertFailsWith<IllegalArgumentException> {
-            cliente(engine).searchAll(SearchRequest("x", listOf("summary")), pageSize = 5001)
+            cliente(engine).searchAll(req("x", listOf("summary")), pageSize = 5001)
         }
         assertFailsWith<IllegalArgumentException> {
-            cliente(engine).searchAll(SearchRequest("x", listOf("summary")), pageSize = 0)
+            cliente(engine).searchAll(req("x", listOf("summary")), pageSize = 0)
         }
         assertEquals(0, engine.requestHistory.size)
     }
@@ -148,7 +148,7 @@ class JiraClientPagingTest {
     fun guardBloqueiaAsTresFuncoesSemRequisicao() = runBlocking {
         val engine = jiraComIssues(10)
         val c = cliente(engine, live = false)
-        assertFailsWith<JiraLiveDisabledException> { c.searchAll(SearchRequest("x", listOf("summary"))).toList() }
+        assertFailsWith<JiraLiveDisabledException> { c.searchAll(req("x", listOf("summary"))).toList() }
         assertFailsWith<JiraLiveDisabledException> { c.count("x") }
         assertFailsWith<JiraLiveDisabledException> { c.fullChangelog("TG-1") }
         assertEquals(0, engine.requestHistory.size)
