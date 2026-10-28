@@ -82,6 +82,13 @@ abstract class CenarioDeCarga(
         const val ORCAMENTO_CENTRAL_MS = 3_000L
         const val ORCAMENTO_CONCORRENTE_MS = 4_000L
         const val MARGEM_DE_RUIDO = 1.25
+
+        /**
+         * Telas do catálogo que não têm `/api/cards/<tela>` (Fase 7, bloco 7b) e as rotas próprias delas, medidas no lugar. O líder
+         * de squad recebe 403 onde a rota é da coordenação (aceito pelo teste).
+         */
+        val TELAS_COM_ROTA_PROPRIA = setOf("distribuicao", "rebalanceamento", "decisoes")
+        val ROTAS_PROPRIAS = listOf("/api/distribuicao", "/api/rebalanceamento", "/api/governanca/decisoes")
     }
 
     private val banco = BancoEmArquivo()
@@ -173,8 +180,8 @@ abstract class CenarioDeCarga(
      * medição de propósito: o banco de carga tem sincronização registrada e a porta do DPO a mantém fechada (403 para todos).
      */
     private fun rotasDeCards(): List<String> =
-        (catalogoPadrao().cartoes.map { it.meta.tela }.filter { it != "auditoria" && it != "sincronizacao" && it != "integridade" }.map { "/api/cards/$it" } +
-            "/api/cards/task-review" + "/api/auditoria/sinais" + "/api/sync/status" + "/api/cartoes/catalogo" + "/api/me")
+        (catalogoPadrao().cartoes.map { it.meta.tela }.filter { it != "auditoria" && it != "sincronizacao" && it != "integridade" && it !in TELAS_COM_ROTA_PROPRIA }.map { "/api/cards/$it" } +
+            "/api/cards/task-review" + "/api/auditoria/sinais" + "/api/sync/status" + "/api/cartoes/catalogo" + "/api/me" + ROTAS_PROPRIAS)
             .distinct().sorted()
 
     // ---------------------------------------------------------------- leitura de um cliente

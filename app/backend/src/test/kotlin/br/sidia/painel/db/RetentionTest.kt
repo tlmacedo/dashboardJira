@@ -166,6 +166,21 @@ class RetentionTest {
     }
 
     @Test
+    fun decisoesDeDistribuicaoUsamOLimiteLongoDaAuditoria() {
+        // O registro de decisões é auditoria como o access_log: com 6 meses gerais e 24 de auditoria só sai a mais antiga que 24 meses.
+        fun decisao(id: Int, quando: String) = exec(
+            "INSERT INTO decisao_distribuicao(id, instance, tipo, issue_key, decisao, decidido_por, decidido_em, versao_regras, chave_sugestao) " +
+                "VALUES ($id, 'main', 'DISTRIBUICAO', 'TG-$id', 'APROVADA', 'u', '$quando', 'v1', 'k$id')",
+        )
+        decisao(1, "2025-06-01 12:00:00+00")
+        decisao(2, "2024-09-01 12:00:00+00")
+        val removidas = mutableMapOf<String, Int>()
+        Retention(ds, calendario).purge(LocalDate.of(2026, 10, 30), 6, accessLogMonths = 24) { tabela, n -> removidas[tabela] = n }
+        assertEquals(1, contar("decisao_distribuicao"))
+        assertEquals(1, removidas["decisao_distribuicao"])
+    }
+
+    @Test
     fun issueRemovidaSemResolvedEParadaEApagadaComCascata() {
         // removida no Jira, nunca resolvida, parada há mais que o limite (2024-10-30): apaga
         exec("INSERT INTO issue(id, key, instance, project, updated, removida_em) VALUES (1, 'TG-1', 'main', 'TG', '2024-01-01 12:00:00+00', '2024-02-01 12:00:00+00')")
