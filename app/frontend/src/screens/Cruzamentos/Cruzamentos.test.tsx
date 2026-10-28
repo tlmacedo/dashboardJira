@@ -141,6 +141,28 @@ describe('aba Cruzamentos', () => {
     expect(screen.getByText(/Hachurado = faixa mais alta/)).toBeInTheDocument()
   })
 
+  it('semFaixaMaisAltaQuandoALinhaOuAColunaEPessoa', async () => {
+    const porPessoa: CruzamentosDto = {
+      ...DTO, linhasEixo: 'pessoa', linhas: ['ana', 'bruno'], celulas: [[celula(9), celula(1), celula(0)], [celula(1), celula(1), celula(0)]],
+      totaisDasLinhas: null, totaisDasColunas: [10, 2, 0], total: 12,
+    }
+    simular({ [CARD]: { status: 200, corpo: porPessoa } })
+    renderizarTela(<Cruzamentos />, '/cruzamentos', '/cruzamentos?linhas=pessoa')
+    let tabela = await screen.findByRole('table', { name: TABELA })
+    expect(tabela.querySelectorAll('[data-faixa]')).toHaveLength(0)
+    expect(screen.queryByText(/faixa mais alta/)).toBeNull()
+    cleanup()
+    const colunaPessoa: CruzamentosDto = {
+      ...DTO, linhasEixo: 'tipo', colunasEixo: 'pessoa', colunas: ['ana', 'bruno', 'carla'],
+      celulas: [[celula(9), celula(1), celula(0)], [celula(1), celula(1), celula(0)]], totaisDasLinhas: [10, 2], totaisDasColunas: [10, 2, 0], total: 12,
+    }
+    simular({ [CARD]: { status: 200, corpo: colunaPessoa } })
+    renderizarTela(<Cruzamentos />, '/cruzamentos', '/cruzamentos?colunas=pessoa')
+    tabela = await screen.findByRole('table', { name: TABELA })
+    expect(tabela.querySelectorAll('[data-faixa]')).toHaveLength(0)
+    expect(screen.queryByText(/faixa mais alta/)).toBeNull()
+  })
+
   it('idadeP50MostraValorNEAvisoDeAmostraPequena', async () => {
     const idade: CruzamentosDto = {
       ...DTO, medida: 'idadeP50',

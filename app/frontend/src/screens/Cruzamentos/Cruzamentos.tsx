@@ -64,7 +64,9 @@ export function Cruzamentos() {
   const valores = (dto?.celulas ?? []).flat().map((c) => (idade ? (c.valor ?? 0) : c.n))
   const maior = Math.max(0, ...valores)
   const limiteAlto = maior * 0.75
-  const ehAlta = (c: Celula) => maior > 0 && (idade ? (c.valor ?? 0) : c.n) >= limiteAlto && c.n > 0
+  // Com pessoa em qualquer eixo não há destaque: seria um ranking visual de pessoas.
+  const comPessoa = (dto?.linhasEixo ?? linhasEixo) === 'pessoa' || (dto?.colunasEixo ?? colunasEixo) === 'pessoa'
+  const ehAlta = (c: Celula) => !comPessoa && maior > 0 &&(idade ? (c.valor ?? 0) : c.n) >= limiteAlto && c.n > 0
 
   function exportar() {
     if (!dto) return
@@ -207,7 +209,7 @@ export function Cruzamentos() {
                 </table>
               </div>
             )}
-            <p className="legenda-meta">{t('cruzamentos.legendaFaixa')}</p>
+            {!comPessoa && <p className="legenda-meta">{t('cruzamentos.legendaFaixa')}</p>}
           </Cartao>
         )}
       </CardPage>
