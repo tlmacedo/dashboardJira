@@ -1,19 +1,44 @@
 #!/bin/sh
 # Testes do guard.sh: cada caso informa o código de saída esperado (2 = bloqueado, 0 = liberado).
 # Uso: sh .claude/hooks/test-guard.sh
-dir=$(dirname "$0")
+dir=$(cd "$(dirname "$0")" && pwd)
 falhas=0
 resultado() { # esperado, descrição, código obtido
   if [ "$3" = "$1" ]; then echo "ok    $2"; else echo "FALHA $2 (saiu $3, esperado $1)"; falhas=$((falhas+1)); fi
 }
-# A flag do ambiente é REMOVIDA por padrão: nenhum caso depende do terminal de quem roda o teste.
-caso() { # modo, JSON, esperado, descrição
-  printf '%s' "$2" | env -u JIRA_LIVE_ENABLED "$dir/guard.sh" "$1" >/dev/null 2>&1
+# Plano 14, Tarefa 0: a flag vem do arquivo app/.env da RAIZ DO REPOSITÓRIO, deduzida do caminho do script.
+# Os testes montam uma raiz de mentira num diretório temporário (cópia do guard.sh em .claude/hooks e um
+# app/.env de teste); o app/.env real do repositório NUNCA é lido nem escrito pelos testes.
+TMP=$(mktemp -d)
+trap 'rm -rf "$TMP"' EXIT
+mkdir -p "$TMP/.claude/hooks" "$TMP/app"
+cp "$dir/guard.sh" "$TMP/.claude/hooks/guard.sh"
+chmod +x "$TMP/.claude/hooks/guard.sh"
+guard="$TMP/.claude/hooks/guard.sh"
+ARQ="$TMP/app/.env"
+# A flag do AMBIENTE é REMOVIDA por padrão: ela não vale nem liga nada; nenhum caso depende do terminal de quem roda.
+caso() { # modo, JSON, esperado, descrição (sem arquivo de variáveis: flag desligada)
+  rm -rf "$ARQ"
+  printf '%s' "$2" | env -u JIRA_LIVE_ENABLED "$guard" "$1" >/dev/null 2>&1
   resultado "$3" "$4" $?
 }
-casov() { # valor da flag, modo, JSON, esperado, descrição (a flag é definida explicitamente)
-  printf '%s' "$3" | env JIRA_LIVE_ENABLED="$1" "$dir/guard.sh" "$2" >/dev/null 2>&1
+casov() { # valor da flag NO ARQUIVO, modo, JSON, esperado, descrição
+  rm -rf "$ARQ"
+  printf 'JIRA_LIVE_ENABLED=%s\n' "$1" > "$ARQ"
+  printf '%s' "$3" | env -u JIRA_LIVE_ENABLED "$guard" "$2" >/dev/null 2>&1
   resultado "$4" "$5" $?
+}
+casoa() { # conteúdo bruto do arquivo (printf %b), modo, JSON, esperado, descrição
+  rm -rf "$ARQ"
+  printf '%b' "$1" > "$ARQ"
+  printf '%s' "$3" | env -u JIRA_LIVE_ENABLED "$guard" "$2" >/dev/null 2>&1
+  resultado "$4" "$5" $?
+}
+casoe() { # valor da flag NO AMBIENTE, conteúdo do arquivo ("-" = sem arquivo), modo, JSON, esperado, descrição
+  rm -rf "$ARQ"
+  [ "$2" = "-" ] || printf '%b' "$2" > "$ARQ"
+  printf '%s' "$4" | env JIRA_LIVE_ENABLED="$1" "$guard" "$3" >/dev/null 2>&1
+  resultado "$5" "$6" $?
 }
 bash_json() { jq -nc --arg c "$1" '{tool_name:"Bash",tool_input:{command:$c}}'; }
 j() { caso jira "$(bash_json "$1")" "$2" "jira: $1"; }
@@ -21,7 +46,7 @@ a() { caso arquivos "$(bash_json "$1")" "$2" "arquivos: $1"; }
 jt() { casov true jira "$(bash_json "$1")" "$2" "jira [flag=true]: $1"; }     # flag true
 
 j 'curl -s https://jira.exemplo.com/rest/api/2/search' 2
-j 'python3 -c "import urllib.request as u;u.urlopen(\"https://x.atlassian.net/a\")"' 2
+j 'python3 -c "import urllib.request as u;u.urlopen(\"https://sidia.atlassian.net/a\")"' 2
 j 'echo $JIRA_TOKEN' 2
 j 'echo $JIRA_SAMSUNG_TOKEN' 2
 j 'printenv JIRA_SIDIA_URL' 2
@@ -46,7 +71,10 @@ caso jira '{"tool_name":"mcp__claude_ai_Atlassian_MCP__searchJiraIssuesUsingJql"
 
 # Falsos positivos ACEITOS: o guard erra para o lado seguro e bloqueia comandos inofensivos.
 caso jira "$(bash_json 'grep -n JIRA_SAMSUNG_TOKEN app/backend/src/main/kotlin/br/sidia/painel/config/Settings.kt')" 2 "falso positivo aceito: grep que cita a variável do token Samsung é bloqueado"
-caso jira "$(bash_json 'curl -s http://127.0.0.1:8080/api/health # em /Volumes/Development/SIDIA/dashboardJira')" 2 "falso positivo aceito: curl local junto de caminho com dashboardJira é bloqueado"
+caso jira "$(bash_json 'JIRA_X=1 true')" 2 "falso positivo aceito: qualquer variável JIRA_* no comando é bloqueada"
+# (28/10/2026) o antigo falso positivo "curl local junto de caminho com dashboardJira" deixou de existir: a palavra
+# jira solta não bloqueia mais; os casos novos estão no fim deste arquivo.
+caso jira "$(bash_json 'curl -s http://127.0.0.1:8080/api/health # em /Volumes/Development/SIDIA/dashboardJira')" 0 "regra nova: curl local junto de caminho com dashboardJira é liberado"
 
 # Limites DOCUMENTADOS: burlas deliberadas que o guard não consegue ver (o guard é trava de acidente, não de má-fé).
 caso jira "$(bash_json 'JIRA_LIVE_ENABLED=$(echo true) ./gradlew test')" 0 "limite documentado: JIRA_LIVE_ENABLED=\$(echo true) passa (valor calculado em tempo de execução)"
@@ -232,6 +260,164 @@ for v in false true ""; do
     casov "$v" arquivos "$(bash_json "$c")" 0 "não regressão [flag='$v']: $c"
   done
 done
+
+# ===== 28/10/2026: só ENDEREÇOS de Jira são bloqueados (a palavra solta não) =====
+# Com a flag desligada (sem arquivo). Rótulo com jira, jira+sidia em host+caminho e *.atlassian.net com sidia
+# bloqueiam; documentação pública (atlassian.com e subdomínios) é liberada pelo host REAL.
+# 1) palavra jira solta: liberada
+for c in 'cd /Volumes/Development/SIDIA/dashboardJira && ls' 'ls dashboardJira/docs/jira' 'cat docs/jira/checklist-primeira-conexao.md' \
+         'git clone https://github.com/tlmacedo/dashboardJira.git' 'git -C dashboardJira status' 'cd dashboardJira && curl -s http://localhost:8080/api/health' \
+         'curl -s http://127.0.0.1:8080/api/health' 'curl -s -o jira-saida.txt http://127.0.0.1:8080/api/health' \
+         'wget -q -O jira.json http://127.0.0.1:8080/x' 'echo jira atlassian' 'grep -rn jira docs' 'git log --oneline -- docs/jira' \
+         'curl -s -H "X-Projeto: dashboardJira" http://127.0.0.1:8080/x' 'ls /home/x/dashboardJira/app' 'ssh-add -l' \
+         'python -m pytest tests/test_jira_client.py' 'curl -s file:///Users/x/dashboardJira/docs/a.html' \
+         'curl -d "{\"nome\":\"jira\"}" http://127.0.0.1:8080/x' 'cat jira.md' 'cd app/backend && ./gradlew test --tests "*JiraClient*"' \
+         'curl -s localhost:8080/api/jira-status' 'curl -s http://127.0.0.1:8080/jira.json' 'git add docs/jira/checklist-primeira-conexao.md' \
+         'git commit --author="Fulano <fulano@exemplo.invalid>" -m x' 'git clone git@github.com:tlmacedo/dashboardJira.git'; do
+  j "$c" 0
+done
+# 2) URL/host de Jira: bloqueada (com e sem esquema, porta, userinfo, maiúsculas, escapes, ponto final)
+for c in 'curl -s https://jira.exemplo.invalid/rest/api/2/myself' 'curl https://meu-jira.x.com/a' 'curl http://jira-lab:8080/' \
+         'curl jira.exemplo.invalid/x' 'curl jira-lab:8080' 'wget https://JIRA.Exemplo.Invalid/' 'curl https://jira.exemplo.invalid./x' \
+         'curl https://usuario:senha@jira.x.com/' 'curl https://a@jira.x.com' 'curl https://jira.x.com:8443/a' 'CURL HTTPS://JIRA.X.COM' \
+         'curl https://jira%2Eexemplo.invalid/x' 'curl https://%6aira.x.com/' 'curl https://jira%252Ex.com/' 'curl https://jira.x.com%2Fa' \
+         'curl https://x.com/jira/sidia' 'curl https://tracker.sidia.invalid/jira/browse/X' 'curl https://sidia.invalid/rest/jira/2' \
+         'curl https://sidia.atlassian.net/x' 'curl https://SIDIA.Atlassian.NET/x' 'curl https://x.atlassian.net/sidia' \
+         'curl https://x.atlassian.net/?q=sidia' 'ssh jira-lab' 'ssh -p 22 usuario@jira.x.com' 'nc -z jira-lab 8080' 'telnet jira.x.com 80' \
+         'iwr jira.exemplo.invalid' 'Invoke-RestMethod -Uri https://jira.x/rest' 'Invoke-WebRequest jira.x.com' 'curl.exe https://jira.x.com' \
+         'python -c "import urllib.request as u;u.urlopen(\"https://jira.x.com/a\")"' 'git clone https://jira.x.com/r.git' \
+         'curl -s -H "Host: jira.x.com" http://10.0.0.1/' 'curl --resolve jira.x.com:443:10.0.0.1 https://10.0.0.1/' 'curl --url=jira.x.com/a' \
+         'git clone git@jira.x.com:r.git' 'scp arquivo usuario@jira-lab:/tmp/' 'curl -x jira.x:3128 http://a.com' \
+         'curl -s "https://jira.x.com/a" -o jira.json''curl http://[::1]/ http://jira/' 'echo ok; curl http://jira.x.com'; do
+  j "$c" 2
+done
+# 3) documentação pública da Atlassian: liberada, mesmo com jira no caminho ou no rótulo do subdomínio atlassian.com
+for c in 'curl -s https://confluence.atlassian.com/jirasoftwareserver/jira-software-server-documentation-939937427.html' \
+         'curl -s https://support.atlassian.com/jira-software-cloud/docs/x' 'curl https://developer.atlassian.com/server/jira/platform/rest/' \
+         'curl https://docs.atlassian.com/software/jira/docs/api/REST/9.12.0/' 'curl https://community.atlassian.com/t5/Jira/x' \
+         'curl https://www.atlassian.com/software/jira' 'wget https://DOCS.Atlassian.COM/jira/' 'curl https://www.atlassian.com./software/jira' \
+         'curl confluence.atlassian.com/jirasoftwareserver' 'curl https://confluence.atlassian.com:443/jirasoftwareserver' \
+         'curl https://jira.x.com@docs.atlassian.com/' 'curl https://jira.atlassian.com/browse/JRASERVER-1' \
+         'curl https://x.atlassian.net/rest' 'curl https://empresa.atlassian.net/jira/software'; do
+  j "$c" 0
+done
+# 4) tentativas de burla da decisão pelo host real
+for c in 'curl https://confluence.atlassian.com@jira.x.com/' 'curl https://docs.atlassian.com:443@jira.x.com/' \
+         'curl https://atlassian.com.jira.x.com/' 'curl https://docs.atlassian.com.jira.x.com/jirasoftwareserver' 'curl https://jira.x.com/atlassian.com' \
+         'curl "https://jira.x.com/?u=confluence.atlassian.com"' 'curl https://docs.atlassian.com/x?redirect=https://jira.x.com/' \
+         'curl https://docs.atlassian.com/x?redirect=https%3A%2F%2Fjira.x.com%2F' 'curl https://docs.atlassian.com%40jira.x.com/' \
+         'curl https://docs.atlassian.com\@jira.x.com/' 'curl https://notatlassian.com/jira/sidia' 'curl https://x.com/atlassian.com/jira/sidia' \
+         'curl https://x.atlassian.com.sidia.atlassian.net/' 'curl https://jira.x.com\.atlassian.com/' 'curl "https://docs.atlassian.com/x?next=jira.x.com" https://jira.x.com'; do
+  j "$c" 2
+done
+# 5) WebFetch do Claude Code (vale se o matcher o incluir): a URL pode vir sem esquema
+web_json() { jq -nc --arg u "$1" '{tool_name:"WebFetch",tool_input:{url:$u,prompt:"resuma"}}'; }
+caso jira "$(web_json 'jira.exemplo.invalid/x')" 2 "WebFetch: host jira sem esquema"
+caso jira "$(web_json 'https://jira.exemplo.invalid/x')" 2 "WebFetch: host jira"
+caso jira "$(web_json 'https://empresa.invalid/jira/sidia')" 2 "WebFetch: jira+sidia no caminho"
+caso jira "$(web_json 'https://docs.atlassian.com/software/jira/docs/api/')" 0 "WebFetch: documentação pública liberada"
+caso jira "$(web_json 'https://empresa.invalid/jira/browse/X-1')" 0 "WebFetch: jira só no caminho, sem sidia, liberado"
+casov "$T" jira "$(web_json 'https://jira.exemplo.invalid/x')" 0 "WebFetch: flag ligada libera"
+# 6) modos url/urlesq (usados pelo adaptador do Cline) e modo flag
+caso url 'jira.exemplo.invalid/x' 2 "modo url: host sem esquema"
+caso url 'https://docs.atlassian.com/jira' 0 "modo url: documentação pública"
+caso url 'file:///Users/x/dashboardJira/docs/a.html' 0 "modo url: arquivo local"
+caso urlesq 'um texto qualquer jira.md e jira.x' 0 "modo urlesq: sem esquema não conta"
+caso urlesq 'veja https://jira.x.com/a' 2 "modo urlesq: URL com esquema conta"
+casov "$T" url 'jira.exemplo.invalid/x' 0 "modo url: flag ligada libera"
+casov "$T" flag '' 0 "modo flag: ligada responde 0"
+casov false flag '' 1 "modo flag: desligada responde 1"
+caso flag '' 1 "modo flag: sem arquivo responde 1"
+
+# ===== Plano 14, Tarefa 0: a flag vem do app/.env da raiz do repositório =====
+CURL_J='{"tool_name":"Bash","tool_input":{"command":"curl -s https://jira.exemplo.invalid/rest/api/2/myself"}}'
+# flagVemDoArquivoDeVariaveis
+casoa "JIRA_LIVE_ENABLED=$T\n" jira "$CURL_J" 0 "arquivo: flag ligada libera"
+casoa "JIRA_LIVE_ENABLED=false\n" jira "$CURL_J" 2 "arquivo: flag false bloqueia"
+casoa "OUTRA=1\n" jira "$CURL_J" 2 "arquivo: sem a linha da flag bloqueia"
+casoa "" jira "$CURL_J" 2 "arquivo: vazio bloqueia"
+# sintaxe igual à do ArquivoEnv.kt
+for v in "\"$T\"" "'$T'" "$T # comentário" "TRUE" "True" " $T " "\" $T \"" "'TrUe'"; do
+  casoa "JIRA_LIVE_ENABLED=$v\n" jira "$CURL_J" 0 "arquivo: valor [$v] liga"
+done
+casoa "export JIRA_LIVE_ENABLED=$T\n" jira "$CURL_J" 0 "arquivo: prefixo export liga"
+casoa "  JIRA_LIVE_ENABLED = $T  \n" jira "$CURL_J" 0 "arquivo: espaços ao redor do = e nas pontas ligam"
+casoa "JIRA_LIVE_ENABLED=$T\r\n" jira "$CURL_J" 0 "arquivo: fim de linha CRLF liga"
+casoa "\357\273\277JIRA_LIVE_ENABLED=$T\n" jira "$CURL_J" 0 "arquivo: BOM no começo liga"
+casoa "A=1\n\nB=2\nJIRA_LIVE_ENABLED=$T\nC=3\n" jira "$CURL_J" 0 "arquivo: linha da flag no meio de outras liga"
+casoa "JIRA_LIVE_ENABLED=$T" jira "$CURL_J" 0 "arquivo: sem quebra de linha final liga"
+for v in sim yes 1 0 "tr ue" "${T};" "${T}#x" "${T}x" "x${T}" "" "\"$T" "$T\"" "'$T\"" "\"$T\" # c" "$T,"; do
+  casoa "JIRA_LIVE_ENABLED=$v\n" jira "$CURL_J" 2 "arquivo: valor inválido [$v] bloqueia"
+done
+casoa "# JIRA_LIVE_ENABLED=$T\n" jira "$CURL_J" 2 "arquivo: linha comentada não liga"
+casoa "  # JIRA_LIVE_ENABLED=$T\n" jira "$CURL_J" 2 "arquivo: comentário indentado não liga"
+casoa "JIRA_LIVE_ENABLED_X=$T\n" jira "$CURL_J" 2 "arquivo: nome parecido (sufixo) não liga"
+casoa "XJIRA_LIVE_ENABLED=$T\n" jira "$CURL_J" 2 "arquivo: nome parecido (prefixo) não liga"
+casoa "jira_live_enabled=$T\n" jira "$CURL_J" 2 "arquivo: nome em minúsculas não liga (igual ao painel)"
+casoa "JIRA_LIVE_ENABLED:$T\n" jira "$CURL_J" 2 "arquivo: dois-pontos no lugar de = não liga"
+casoa "SEGREDO=JIRA_LIVE_ENABLED=$T\n" jira "$CURL_J" 2 "arquivo: nome citado dentro de outro valor não liga"
+# a ÚLTIMA ocorrência vale
+casoa "JIRA_LIVE_ENABLED=$T\nJIRA_LIVE_ENABLED=false\n" jira "$CURL_J" 2 "arquivo: ligada e depois desligada bloqueia"
+casoa "JIRA_LIVE_ENABLED=false\nJIRA_LIVE_ENABLED=$T\n" jira "$CURL_J" 0 "arquivo: desligada e depois ligada libera"
+casoa "JIRA_LIVE_ENABLED=$T\nJIRA_LIVE_ENABLED=\n" jira "$CURL_J" 2 "arquivo: ligada e depois vazia bloqueia"
+casoa "JIRA_LIVE_ENABLED=$T\n# JIRA_LIVE_ENABLED=false\n" jira "$CURL_J" 0 "arquivo: comentário depois não desliga"
+# ambienteDoProcessoNaoLiga / ambienteDoProcessoNaoDesliga
+casoe "$T" "JIRA_LIVE_ENABLED=false\n" jira "$CURL_J" 2 "ambiente ligado e arquivo false: bloqueia"
+casoe "$T" "-" jira "$CURL_J" 2 "ambiente ligado e sem arquivo: bloqueia"
+casoe "$T" "OUTRA=1\n" jira "$CURL_J" 2 "ambiente ligado e arquivo sem a flag: bloqueia"
+casoe "$T" "JIRA_LIVE_ENABLED=\n" jira "$CURL_J" 2 "ambiente ligado e arquivo com valor vazio: bloqueia"
+casoe "1" "JIRA_LIVE_ENABLED=sim\n" jira "$CURL_J" 2 "ambiente 1 e arquivo inválido: bloqueia"
+casoe "false" "JIRA_LIVE_ENABLED=$T\n" jira "$CURL_J" 0 "ambiente false e arquivo ligado: libera"
+casoe "" "JIRA_LIVE_ENABLED=$T\n" jira "$CURL_J" 0 "ambiente vazio e arquivo ligado: libera"
+casoe "lixo" "JIRA_LIVE_ENABLED=$T\n" jira "$CURL_J" 0 "ambiente inválido e arquivo ligado: libera"
+casoe "$T" "-" flag '' 1 "modo flag: ambiente ligado e sem arquivo responde 1"
+# arquivoIlegivelFalhaFechado: ausente, não é arquivo comum, valor inválido
+rm -rf "$ARQ"; mkdir "$ARQ"
+printf '%s' "$CURL_J" | env -u JIRA_LIVE_ENABLED "$guard" jira >/dev/null 2>&1
+resultado 2 "arquivo ilegível (é um diretório): bloqueia" $?
+printf '%s' "$CURL_J" | env JIRA_LIVE_ENABLED="$T" "$guard" jira >/dev/null 2>&1
+resultado 2 "arquivo ilegível (é um diretório) e ambiente ligado: bloqueia" $?
+rm -rf "$ARQ"
+printf '\377\376JIRA_LIVE_ENABLED=\000%s\n' "$T" > "$ARQ"
+printf '%s' "$CURL_J" | env -u JIRA_LIVE_ENABLED "$guard" jira >/dev/null 2>&1
+resultado 2 "arquivo binário/lixo: bloqueia" $?
+# a raiz vem do caminho do script, não do diretório corrente nem de variável do ambiente
+OUTRO="$TMP/outro"; mkdir -p "$OUTRO/app"
+printf 'JIRA_LIVE_ENABLED=%s\n' "$T" > "$OUTRO/app/.env"
+rm -rf "$ARQ"; printf 'JIRA_LIVE_ENABLED=false\n' > "$ARQ"
+printf '%s' "$CURL_J" | (cd "$OUTRO" && env -u JIRA_LIVE_ENABLED CLAUDE_PROJECT_DIR="$OUTRO" PWD="$OUTRO" "$guard" jira) >/dev/null 2>&1
+resultado 2 "raiz pelo caminho do script: app/.env do diretório corrente e de CLAUDE_PROJECT_DIR não vale" $?
+printf '%s' "$CURL_J" | (cd "$OUTRO" && env -u JIRA_LIVE_ENABLED sh "$guard" jira) >/dev/null 2>&1
+resultado 2 "raiz pelo caminho do script: chamado por sh de outro diretório" $?
+rm -rf "$ARQ"; printf 'JIRA_LIVE_ENABLED=%s\n' "$T" > "$ARQ"
+printf '%s' "$CURL_J" | (cd "$OUTRO" && env -u JIRA_LIVE_ENABLED sh "$guard" jira) >/dev/null 2>&1
+resultado 0 "raiz pelo caminho do script: arquivo da raiz do script vale mesmo chamado de outro diretório" $?
+# o hook nunca imprime o conteúdo do arquivo
+rm -rf "$ARQ"; printf 'JIRA_SAMSUNG_TOKEN=segredo-do-teste-123\nJIRA_LIVE_ENABLED=false\nOUTRA=valor-outra-456\n' > "$ARQ"
+saida=$(printf '%s' "$CURL_J" | env -u JIRA_LIVE_ENABLED "$guard" jira 2>&1)
+case "$saida" in *segredo-do-teste-123*|*valor-outra-456*) resultado ok "hook não imprime o arquivo (vazou)" falhou ;; *) resultado ok "hook não imprime o conteúdo do arquivo" ok ;; esac
+saida=$(printf '%s' "$CURL_J" | env -u JIRA_LIVE_ENABLED "$guard" flag 2>&1)
+[ -z "$saida" ] && resultado ok "modo flag não imprime nada" ok || resultado ok "modo flag não imprime nada" falhou
+# leituraDaIaAoArquivoContinuaBarrada: o hook lê o arquivo para si, mas a IA continua barrada
+for v in false "$T" ""; do
+  casov "$v" arquivos "$(bash_json 'cat app/.env > /tmp/x')" 2 "IA [flag='$v']: copiar app/.env por redirecionamento"
+  casov "$v" arquivos "$(bash_json 'ln -sf /tmp/x app/.env')" 2 "IA [flag='$v']: symlink para app/.env"
+  casov "$v" arquivos "$(bash_json 'cp /tmp/x app/.env')" 2 "IA [flag='$v']: cp para app/.env"
+  casov "$v" arquivos "$(bash_json 'sed -i s/a/b/ app/.env')" 2 "IA [flag='$v']: sed -i em app/.env"
+  casov "$v" arquivos "$(bash_json 'git add app/.env')" 2 "IA [flag='$v']: git add app/.env"
+  casov "$v" arquivos "$(bash_json "echo JIRA_LIVE_ENABLED=$T >> app/.env")" 2 "IA [flag='$v']: ligar a flag em app/.env por echo"
+  casov "$v" arquivos '{"tool_name":"Write","tool_input":{"file_path":"app/.env","content":"A=1"}}' 2 "IA [flag='$v']: Write em app/.env"
+  casov "$v" arquivos '{"tool_name":"Edit","tool_input":{"file_path":"/x/app/.ENV","old_string":"a","new_string":"b"}}' 2 "IA [flag='$v']: Edit em app/.ENV"
+  casov "$v" arquivos "$(conteudo_json docs/x.md "JIRA_LIVE_ENABLED=$T")" 2 "IA [flag='$v']: gravar o texto que liga a flag em qualquer arquivo"
+  casov "$v" arquivos '{"tool_name":"Write","tool_input":{"file_path":"app/.env.example","content":"A=1"}}' 0 "IA [flag='$v']: modelo .env.example continua liberado"
+done
+# a variável do ambiente com valor ligado não abre exceção para ligar a flag no comando
+casoe "$T" "JIRA_LIVE_ENABLED=false\n" jira "$(bash_json "JIRA_LIVE_ENABLED=$T ./gradlew test")" 2 "ambiente ligado e arquivo false: ligar a flag no comando continua barrado"
+# com a flag ligada no arquivo, o comportamento antigo se mantém (nada de acesso é bloqueado, token no terminal sim)
+casoa "JIRA_LIVE_ENABLED=$T\n" jira "$(bash_json 'echo $JIRA_SAMSUNG_TOKEN')" 2 "arquivo ligado: exibir token continua barrado"
+casoa "JIRA_LIVE_ENABLED=$T\n" jira "$MCP_ATL" 0 "arquivo ligado: MCP Atlassian liberado"
+casoa "JIRA_LIVE_ENABLED=false\n" jira "$MCP_ATL" 2 "arquivo false: MCP Atlassian bloqueado"
+casoa "JIRA_LIVE_ENABLED=$T\n" jira "$(bash_json 'curl -s https://sidia.atlassian.net/x')" 0 "arquivo ligado: URL de Jira liberada"
 
 echo "falhas: $falhas"
 [ "$falhas" = 0 ]
