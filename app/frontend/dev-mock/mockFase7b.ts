@@ -127,7 +127,7 @@ function squadMock() {
 
 function meuPainelMock() {
   return {
-    pessoa: 'dev', minhasAbertas: 2, vencemEm7d: 2, emRisco: 1,
+    pessoa: 'dev', minhasAbertas: 2, vencemEm7d: 2, emRisco: 1, noPrazo: 15, noPrazoAjustado: 18, universoDePrazo: 20,
     ocupacao4Sem: { fracao: 0.25, semCapacidade: false, estado: 'ok' },
     ausenciasFuturas: [{ pessoa: 'dev', de: '2026-11-04', ate: '2026-11-05', fracao: 1 }],
     fila: [

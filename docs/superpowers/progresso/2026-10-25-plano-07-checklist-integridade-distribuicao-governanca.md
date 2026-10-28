@@ -211,3 +211,7 @@ Ruling: migração — migrações existentes V1 a V4 na `main` e em todas as br
 - `HANDOFF.md` atualizado (bloco 7b, migração V5 e o próximo passo).
 - Fechamento do bloco 7b: ver a lista de commits, as contagens das suítes e os Minor adiados no relatório final.
 
+
+### Correções da revisão em Opus do PR #43
+
+- Ruling: I-1 — o Meu painel mostra "no prazo" e "no prazo ajustado" LADO A LADO (90 dias, as do card Metas para a pessoa, `noPrazo`, `noPrazoAjustado`, `universoDePrazo` no `MeuPainelDto`), com o cartão `MP-06` e a gaveta; decisão do CLAUDE.md (duas métricas lado a lado), sem nova pergunta ao usuário. Prova: mutação (ajustado = no prazo) derrubou `meuPainelTemNoPrazoENoPrazoAjustadoLadoALado`.

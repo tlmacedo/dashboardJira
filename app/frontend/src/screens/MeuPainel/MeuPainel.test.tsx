@@ -10,6 +10,9 @@ const DTO: MeuPainelDto = {
   minhasAbertas: 2,
   vencemEm7d: 2,
   emRisco: 1,
+  noPrazo: 15,
+  noPrazoAjustado: 18,
+  universoDePrazo: 20,
   ocupacao4Sem: { fracao: 0.25, semCapacidade: false, estado: 'ok' },
   ausenciasFuturas: [{ pessoa: 'ana', de: '2026-11-04', ate: '2026-11-05', fracao: 1 }],
   fila: [
@@ -42,6 +45,16 @@ describe('tela Meu painel', () => {
     expect(linhas[1]).toHaveTextContent('▲ alto')
     expect(linhas[2]).toHaveTextContent('■ sem vencimento')
     expect(linhas[2]).toHaveTextContent('não cabe no horizonte')
+  })
+
+  it('meuPainelNoPrazoENoPrazoAjustadoLadoALado', async () => {
+    simular({ [API]: { status: 200, corpo: DTO } })
+    renderizarTela(<MeuPainel />, '/meu')
+    const grupo = await screen.findByRole('group', { name: 'Meus indicadores' })
+    expect(within(grupo).getByText('No prazo (90 dias)')).toBeInTheDocument()
+    expect(within(grupo).getByText('No prazo ajustado (90 dias)')).toBeInTheDocument()
+    expect(within(grupo).getByText('15/20')).toBeInTheDocument()
+    expect(within(grupo).getByText('18/20')).toBeInTheDocument()
   })
 
   it('meuPainelEsforcoTresComponentes', async () => {
@@ -84,7 +97,7 @@ describe('tela Meu painel', () => {
       [API]: {
         status: 200,
         corpo: {
-          ...DTO, minhasAbertas: null, vencemEm7d: null, emRisco: null, fila: [],
+          ...DTO, minhasAbertas: null, vencemEm7d: null, emRisco: null, noPrazo: null, noPrazoAjustado: null, universoDePrazo: null, fila: [],
           avisos: [{ codigo: 'STATUS_SEM_MAPEAMENTO', gravidade: 'bloqueante', mensagem: 'x', params: { status: 'X' } }],
         },
       },

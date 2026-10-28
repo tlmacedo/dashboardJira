@@ -74,6 +74,16 @@ export function MeuPainel() {
                 simboloDoValor={!bloqueado && (dto.emRisco ?? 0) > 0 ? '▲' : undefined}
                 aoAbrir={abrir(dto.emRisco, 'MP-03', 'emRisco', t('meu.kpi.risco'))}
               />
+              <Cartao
+                id="MP-06" ajudaComTitulo titulo={t('meu.kpi.noPrazo')}
+                valor={bloqueado || dto.noPrazo === null ? traco : dto.universoDePrazo ? `${inteiro(dto.noPrazo, lang)}/${inteiro(dto.universoDePrazo, lang)}` : inteiro(dto.noPrazo, lang)}
+                aoAbrir={abrir(dto.noPrazo, 'MP-06', 'noPrazo', t('meu.kpi.noPrazo'))}
+              />
+              <Cartao
+                id="MP-06" ajudaComTitulo titulo={t('meu.kpi.noPrazoAjustado')}
+                valor={bloqueado || dto.noPrazoAjustado === null ? traco : dto.universoDePrazo ? `${inteiro(dto.noPrazoAjustado, lang)}/${inteiro(dto.universoDePrazo, lang)}` : inteiro(dto.noPrazoAjustado, lang)}
+                aoAbrir={abrir(dto.noPrazoAjustado, 'MP-06', 'noPrazoAjustado', t('meu.kpi.noPrazoAjustado'))}
+              />
               <Cartao id="MP-02" variante="tabela" nivelDoTitulo={2} titulo={t('meu.kpi.ocupacao')}>
                 {dto.ocupacao4Sem === null ? <p className="vazio">{t('meu.ocupacao.semCadastro')}</p> : <Ocupacao o={dto.ocupacao4Sem} />}
               </Cartao>

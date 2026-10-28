@@ -24,6 +24,10 @@ export type MeuPainelDto = {
   minhasAbertas: number | null
   vencemEm7d: number | null
   emRisco: number | null
+  /** "No prazo" e "no prazo ajustado" (90 dias, as do card Metas) lado a lado; `universoDePrazo` é o total com vencimento. */
+  noPrazo: number | null
+  noPrazoAjustado: number | null
+  universoDePrazo: number | null
   ocupacao4Sem: OcupacaoDto | null
   ausenciasFuturas: AusenciaFutura[]
   fila: ItemDaFila[]

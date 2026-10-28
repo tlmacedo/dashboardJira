@@ -201,7 +201,8 @@ private fun montarMeuPainel(ctx: AppContext, principal: Principal, alvo: String)
         ctx, principal, br.sidia.painel.cards.esforco.CardEsforco,
         parametros("pessoa" to alvo, "de" to hoje.withDayOfMonth(1).toString(), "ate" to hoje.toString()),
     )
-    val avisos = (carga.avisos + vencimentos.avisos + riscos.avisos + esforco.avisos).semRepetir()
+    val metas = calcularCard(ctx, principal, br.sidia.painel.cards.metas.CardMetas, dePessoa)
+    val avisos = (carga.avisos + vencimentos.avisos + riscos.avisos + esforco.avisos + metas.avisos).semRepetir()
     val travado = bloqueado(avisos)
     val linha = carga.linhas.firstOrNull { it.pessoa == alvo }
 
@@ -224,6 +225,9 @@ private fun montarMeuPainel(ctx: AppContext, principal: Principal, alvo: String)
         minhasAbertas = if (travado) null else linha?.abertas ?: 0,
         vencemEm7d = if (travado) null else vencimentos.vencem,
         emRisco = if (travado) null else riscos.sinaisPorPessoa.firstOrNull { it.pessoa == alvo }?.issuesEmRisco ?: 0,
+        noPrazo = if (travado) null else metas.noPrazo,
+        noPrazoAjustado = if (travado) null else metas.noPrazoAjustado,
+        universoDePrazo = if (travado) null else metas.universo,
         ocupacao4Sem = linha?.ocupacao,
         ausenciasFuturas = ctx.ausencias.daPessoa(alvo).filter { !it.ate.isBefore(hoje) }.sortedBy { it.de }
             .map { AusenciaDto(it.pessoa, it.de.toString(), it.ate.toString(), it.fracao) },

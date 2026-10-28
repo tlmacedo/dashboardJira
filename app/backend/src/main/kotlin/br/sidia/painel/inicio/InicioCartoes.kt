@@ -217,5 +217,11 @@ private fun cartoesDoMeuPainel(catalogo: () -> CatalogoDeCartoes): List<CartaoRe
         CartaoMeuPainel(meta("MP-03", Natureza.QUALIDADE, comChangelog), mapOf("emRisco" to DestinoMeu("RI-03") { "pessoa:$it:emRisco" }), catalogo),
         CartaoDeCentralSemGaveta(meta("MP-04", Natureza.PESSOAS, comConfig, temDrill = false)),
         CartaoMeuPainel(meta("MP-05", Natureza.FLUXO, comConfig), mapOf("fila" to fila), catalogo),
+        // "No prazo" e "no prazo ajustado" lado a lado (90 dias), as do card Metas para a pessoa.
+        CartaoMeuPainel(
+            meta("MP-06", Natureza.PRAZO, comConfig),
+            mapOf("noPrazo" to DestinoMeu("MT-01") { "noPrazo" }, "noPrazoAjustado" to DestinoMeu("MT-01") { "noPrazoAjustado" }, "universo" to DestinoMeu("MT-01") { "universo" }),
+            catalogo,
+        ),
     )
 }

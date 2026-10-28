@@ -135,6 +135,24 @@ class SquadEMeuPainelRoutesTest {
     }
 
     @Test
+    fun meuPainelTemNoPrazoENoPrazoAjustadoLadoALado() {
+        // TG-111 entregue no prazo e TG-113 entregue atrasada com label de atraso justificado: as duas métricas diferem.
+        val extras = br.sidia.painel.trabalho.Trb1.issues().filter { it.json.toString().let { j -> "TG-111" in j || "TG-113" in j } }
+        val c = Di1.novoContexto(banco, Di1.issues() + extras).also { ctx = it }
+        Di1.rodar(c) { cli ->
+            val d = meu(cli.get("ana", "/api/meu-painel"))
+            val metas = cli.get("gerente.exemplo", "/api/cards/metas?pessoa=ana")
+            assertEquals(campo(metas, "noPrazo"), d.noPrazo)
+            assertEquals(campo(metas, "noPrazoAjustado"), d.noPrazoAjustado)
+            assertEquals(campo(metas, "universo"), d.universoDePrazo)
+            assertTrue((d.noPrazoAjustado ?: 0) > (d.noPrazo ?: 0), "o atraso justificado só conta no ajustado: $d")
+            // As duas abrem a gaveta com o mesmo total.
+            assertEquals(d.noPrazo, campo(cli.get("ana", "/api/cartoes/MP-06/tasks?segmento=noPrazo"), "total"))
+            assertEquals(d.noPrazoAjustado, campo(cli.get("ana", "/api/cartoes/MP-06/tasks?segmento=noPrazoAjustado"), "total"))
+        }
+    }
+
+    @Test
     fun ausenciasDoSquadSemMotivoNemOutroSquad() = rodar { cli ->
         val r = cli.get("lider.alfa", "/api/squad")
         val d = squad(r)
