@@ -55,6 +55,37 @@ class TravaDpoTest {
         assertFailsWith<BloqueadoPeloDpoException> { trava.exigir(ModuloSensivel.INTEGRIDADE) }
     }
 
+    private fun execucao(ds: DataSource, kind: String) = ds.connection.use { c ->
+        c.createStatement().use {
+            it.executeUpdate("INSERT INTO sync_run(instance, kind, started_at, finished_at, status) VALUES ('-', '$kind', 1, 2, 'OK')")
+        }
+    }
+
+    @Test
+    fun retencaoNaoContaComoSincronizacaoReal() {
+        // A retenção roda sempre (inclusive com o Jira desligado) e grava sync_run: banco de demonstração segue ABERTO.
+        val ds = bancoNovo()
+        execucao(ds, "RETENCAO")
+        assertTrue(TravaDpo(dev, ds).liberada)
+    }
+
+    @Test
+    fun incrementalOuReconciliacaoFecham() {
+        for (kind in listOf("INCREMENTAL", "RECONCILIACAO")) {
+            val ds = bancoNovo()
+            execucao(ds, "RETENCAO")
+            execucao(ds, kind)
+            assertFalse(TravaDpo(dev, ds).liberada, kind)
+        }
+    }
+
+    @Test
+    fun semBancoFecha() {
+        // Sem como provar que o banco é de demonstração, a porta fica fechada (fail-closed).
+        assertFalse(TravaDpo(dev, null).liberada)
+        assertFailsWith<BloqueadoPeloDpoException> { TravaDpo(dev, null).exigir(ModuloSensivel.INTEGRIDADE) }
+    }
+
     @Test
     fun marcaDeSincronizacaoSemExecucaoRegistradaTambemFecha() {
         // A retenção pode apagar o histórico de execuções; a marca d'água da sincronização continua dizendo que houve dado real.

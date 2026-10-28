@@ -3,7 +3,10 @@ package br.sidia.painel.lgpd
 import br.sidia.painel.config.Settings
 import javax.sql.DataSource
 
-/** Os módulos que tratam dados pessoais sensíveis e ficam atrás da trava do DPO. */
+/**
+ * Os módulos que tratam dados pessoais sensíveis e ficam (ou ficarão) atrás da trava do DPO. HOJE só a INTEGRIDADE passa pela
+ * [TravaDpo]; a AUDITORIA está listada para o Plano 11 ligar e ainda NÃO é barrada nem tem o registro de acesso mascarado.
+ */
 enum class ModuloSensivel { AUDITORIA, INTEGRIDADE }
 
 /** O módulo está fechado pela trava do DPO. O código estável é [TravaDpo.CODIGO]; a mensagem nunca leva dado. */
@@ -28,12 +31,17 @@ class TravaDpo(private val settings: Settings, private val dataSource: DataSourc
     val liberada: Boolean get() = settings.dashboardDevMode && !settings.jiraLiveEnabled && semDadoSincronizado()
 
     private fun semDadoSincronizado(): Boolean {
-        val ds = dataSource ?: return true
+        // Sem banco não há como provar que é demonstração: fecha.
+        val ds = dataSource ?: return false
         return try {
             ds.connection.use { c ->
                 c.createStatement().use { st ->
-                    // Execução de sincronização registrada, ou marca d'água de sincronização (a retenção pode apagar o histórico de execuções).
-                    st.executeQuery("SELECT 1 FROM sync_run UNION ALL SELECT 1 FROM sync_state WHERE watermark IS NOT NULL LIMIT 1").use { !it.next() }
+                    // Execução de sincronização REAL (incremental ou reconciliação; a retenção roda sempre, até em demonstração, e não
+                    // conta), ou marca d'água de sincronização (a retenção pode apagar o histórico de execuções).
+                    st.executeQuery(
+                        "SELECT 1 FROM sync_run WHERE kind IN ('INCREMENTAL', 'RECONCILIACAO') " +
+                            "UNION ALL SELECT 1 FROM sync_state WHERE watermark IS NOT NULL LIMIT 1",
+                    ).use { !it.next() }
                 }
             }
         } catch (e: Exception) {
