@@ -198,7 +198,7 @@ object CardChecklistReview : CardDeLeitura<ChecklistReviewDto> {
                 atrasosEmCadeia = 0, aprendizados = emptyList(), amostraMinima = r.amostraMinima, limiteVenceDepois = r.limiteVenceDepois,
                 limiteMesmaPessoa = r.limiteMesmaPessoa, limiteParesComAlerta = r.limiteParesComAlerta,
             ),
-            pares = emptyList(), semReview = emptyList(), avisos = avisos,
+            pares = emptyList(), semReview = emptyList(), avisos = avisos, unit = "util",
         )
     }
 }

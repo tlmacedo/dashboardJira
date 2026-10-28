@@ -5,6 +5,7 @@ import br.sidia.painel.cards.cartoesDeSincronizacao
 import br.sidia.painel.cards.cartoesDeTempoEmStatus
 import br.sidia.painel.cards.cartoesDeTrabalho
 import br.sidia.painel.cards.checklist.cartoesDeChecklistReview
+import br.sidia.painel.integridade.cartoesDeIntegridade
 
 /**
  * O catálogo do painel: todo cartão que existe numa tela se registra aqui (teste `todaRotaDeCardEstaNoRegistro`).
@@ -13,5 +14,5 @@ import br.sidia.painel.cards.checklist.cartoesDeChecklistReview
 fun catalogoPadrao(): CatalogoDeCartoes =
     CatalogoDeCartoes(
         cartoesDeTempoEmStatus() + cartoesDeSincronizacao() + cartoesDeAuditoria() + cartoesDeTrabalho() +
-            cartoesDeChecklistReview(),
+            cartoesDeChecklistReview() + cartoesDeIntegridade(),
     )

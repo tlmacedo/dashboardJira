@@ -38,8 +38,41 @@ function checklistReviewMock() {
   }
 }
 
+const SINAIS_MOCK = [
+  'RESGATE_POR_PRORROGACAO', 'TROCA_ANTES_DE_FECHAR', 'CRIADA_E_FECHADA_RAPIDO', 'REABRE_E_FECHA_RAPIDO', 'FECHAMENTO_EM_LOTE', 'VENCIMENTO_PRORROGADO',
+  'VENCIMENTO_TARDIO', 'PULOU_O_FLUXO', 'ESTIMATIVA_AUMENTADA', 'LABEL_CRITICIDADE_REMOVIDA', 'FECHADA_POR_OUTRO', 'FECHADA_NO_LIMITE',
+]
+
+function integridadeMock() {
+  const evidencias = [
+    { sinal: 'FECHADA_POR_OUTRO', gravidade: 2, key: 'TG-4301', pessoa: 'bruno', quando: '2026-10-14T13:00:00Z', dia: '2026-10-14', detalhe: { responsavel: 'ana' } },
+    { sinal: 'VENCIMENTO_PRORROGADO', gravidade: 2, key: 'TG-4302', pessoa: 'bruno', quando: '2026-10-15T13:00:00Z', dia: '2026-10-15', detalhe: { dias: '3' } },
+    { sinal: 'PULOU_O_FLUXO', gravidade: 3, key: 'TG-4303', pessoa: 'carla', quando: '2026-10-16T13:00:00Z', dia: '2026-10-16', detalhe: {} },
+  ]
+  return {
+    aviso: 'INDICIO_NAO_PROVA', avisoDpo: 'VALIDAR_BASE_LEGAL_COM_DPO', versaoRegras: 'integridade v1', de: '2026-07-30', ate: '2026-10-28',
+    resumo: {
+      evidencias: evidencias.length, issuesAfetadas: 3, medianaTaxa: 0.1,
+      porSinal: SINAIS_MOCK.map((s) => ({ sinal: s, gravidade: 2, ativo: s !== 'ESTIMATIVA_AUMENTADA', n: evidencias.filter((e) => e.sinal === s).length })),
+      pessoas: [{ pessoa: 'bruno', nivel: 'MEDIO', pontos: 4, concluidas: 12, taxa: 0.33, multiplo: 3.3, graves: 0, evidencias: 2 }],
+      pessoasAlto: 0, pessoasMedio: 1, evidenciasNivelAlto: 0, evidenciasNivelMedio: 2, impactoMetasPp: 6.5, taxaNoPrazo: 0.82, taxaOriginal: 0.75,
+      pontosAlto: 12, multiploAlto: 3, gravesAlto: 3, pontosMedio: 6, multiploMedio: 2, concluidasMinimas: 8,
+    },
+    evidencias,
+    avisos: [],
+  }
+}
+
 /** Resposta do mock para os cards do bloco 7a; `undefined` quando a rota não é deste bloco. */
 export function mockFase7a(pathname: string): unknown | undefined {
   if (pathname === '/api/cards/checklist-review') return checklistReviewMock()
+  if (pathname === '/api/integridade') return integridadeMock()
+  if (pathname === '/api/integridade/catalogo') {
+    return {
+      aviso: 'INDICIO_NAO_PROVA', avisoDpo: 'VALIDAR_BASE_LEGAL_COM_DPO', versaoRegras: 'integridade v1',
+      sinais: SINAIS_MOCK.map((s) => ({ sinal: s, gravidade: 2, ativo: true, params: {} })),
+      niveis: { pontosAlto: 12, multiploAlto: 3, gravesAlto: 3, pontosMedio: 6, multiploMedio: 2, concluidasMinimas: 8, pisoMediana: 0.05 },
+    }
+  }
   return undefined
 }

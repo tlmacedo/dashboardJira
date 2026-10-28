@@ -12,6 +12,8 @@ import br.sidia.painel.domain.TimeInStatusResult
 import br.sidia.painel.domain.TimeUnitMode
 import br.sidia.painel.domain.UnmappedStatusException
 import br.sidia.painel.http.ErroDto
+import br.sidia.painel.lgpd.BloqueadoPeloDpoException
+import br.sidia.painel.lgpd.TravaDpo
 import br.sidia.painel.security.Principal
 import br.sidia.painel.security.Role
 import br.sidia.painel.security.Visibility
@@ -223,8 +225,13 @@ private const val VALOR_INVALIDO = "(invalido)"
 private fun valorAuditado(parametro: String, valor: String): String = when (parametro) {
     "linhas", "colunas" -> if (Eixo.deId(valor) != null) valor else VALOR_INVALIDO
     "medida" -> if (Medida.deId(valor) != null) valor else VALOR_INVALIDO
+    // Segmento de gaveta que cita uma chave de issue (pedido malformado ou plantado): a chave nunca vai para a auditoria.
+    "segmento" -> if (CHAVE_DE_ISSUE_NO_TEXTO.containsMatchIn(valor)) VALOR_INVALIDO else valor
     else -> valor
 }
+
+/** Forma de uma chave de issue do Jira (`TG-701`) em qualquer lugar do texto. */
+private val CHAVE_DE_ISSUE_NO_TEXTO = Regex("\\b[A-Z][A-Z0-9_]*-\\d+\\b")
 
 /**
  * Executa [bloco] (fora do laço de eventos, pois usa JDBC), registra a consulta com o resultado e só então
@@ -245,6 +252,10 @@ internal suspend inline fun <reified T : Any> ApplicationCall.executar(
     } catch (e: ErroHttp) {
         status = e.status
         codigoDoErro = e.codigo
+    } catch (e: BloqueadoPeloDpoException) {
+        // Módulo sensível fechado pela trava do DPO: 403 com o código estável, sem dado; a consulta fica no `access_log`.
+        status = HttpStatusCode.Forbidden
+        codigoDoErro = TravaDpo.CODIGO
     } catch (e: CancellationException) {
         throw e
     } catch (e: Exception) {

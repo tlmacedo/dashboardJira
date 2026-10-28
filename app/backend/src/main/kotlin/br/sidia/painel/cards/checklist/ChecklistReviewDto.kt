@@ -24,7 +24,7 @@ data class ChecklistReviewDto(
     val semReview: List<SemReviewDto>,
     val avisos: List<AvisoDto>,
     /** `util` ou `corrido`: a unidade do ciclo. */
-    val unit: String = "util",
+    val unit: String,
 )
 
 /** Percentuais são FRAÇÕES (0,25 = 25%) sobre o número de pares; nulos sem pares. */
@@ -65,7 +65,7 @@ data class DiferencaDeLabelDto(val codigo: String, val pares: Int)
 
 /** Uma frase de aprendizado: o [codigo] escolhe o texto (traduzido no frontend) e [params] preenche os marcadores. */
 @Serializable
-data class AprendizadoDto(val codigo: String, val params: Map<String, String> = emptyMap())
+data class AprendizadoDto(val codigo: String, val params: Map<String, String>)
 
 /**
  * Um par. Responsáveis só se estiverem na visão; as datas são dias de Manaus (aaaa-mm-dd). [horasAtivasReview] são

@@ -7,6 +7,7 @@ import br.sidia.painel.cards.ErroHttp
 import br.sidia.painel.cards.executar
 import br.sidia.painel.cards.papeisVigentes
 import br.sidia.painel.db.AccessLog
+import br.sidia.painel.lgpd.TravaDpo
 import br.sidia.painel.security.principal
 import br.sidia.painel.sync.IssueStore
 import io.ktor.http.HttpStatusCode
@@ -35,6 +36,8 @@ fun Route.rotasDeDrillGenerico(ctx: AppContext, catalogo: CatalogoDeCartoes, sto
             val cartao = catalogo.porId(call.parameters["id"].orEmpty()) ?: throw ErroHttp(HttpStatusCode.NotFound)
             if (cartao.meta.papeis.none { it in papeis }) throw ErroHttp(HttpStatusCode.Forbidden)
             if (!cartao.meta.temDrill) throw ErroHttp(HttpStatusCode.NotFound)
+            // Cartão de módulo sensível: só com a trava do DPO aberta (depois do papel, para quem não vê o cartão não saber do módulo).
+            cartao.moduloSensivel?.let { TravaDpo(ctx.settings).exigir(it) }
             val segmento = call.request.queryParameters["segmento"] ?: throw ErroHttp(HttpStatusCode.BadRequest, CODIGO_SEGMENTO_INVALIDO)
             val linhas = cartao.drill(EntradaDeCartao(ctx, store, principal, call.request.queryParameters), segmento)
             // A auditoria guarda a quantidade, nunca as chaves das tasks.
