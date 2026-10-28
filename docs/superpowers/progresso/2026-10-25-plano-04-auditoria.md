@@ -14,8 +14,9 @@ Tarefas 1 a 3 já estão na `main` (PR #15, mesclada com squash em 26/10). Conti
 | 4 Sinais de labels de atraso | Concluída (branch `feat/auditoria-tarefas-4-a-9`, retomada de 28/10) | `55e4446` | `DetectoresDeLabels`; um sinal por label (a label adicionada vai em `Sinal.para`); `ContextoDeteccao.diaAntes` (corrido ou útil) |
 | 5 Task × Review, no prazo e calculador | Concluída | `5fb74f9` | `TaskReview`, `NoPrazo` (+ `detalhar`), `AuditCalculator`; modificador "em lote (N)" (I-15, spec 17 seção 6) |
 | 6 `AuditStore` sobre SQLite | Concluída | `64dba1c` | `SqliteAuditStore`; pares pelo `issue_link` (4A, T12) com as duas pontas ativas; sem migração |
-| 7 API de auditoria, histórico e card Task × Review | Concluída (parte backend; cartões no `CatalogoDeCartoes`) | ver `git log` | `GET /api/auditoria/sinais`, `GET /api/auditoria/historico/{key}`, `GET /api/cards/task-review`; cartões `AU-01`, `AU-02`, `AU-03` e `DV-01` |
-| 8 e 9 | Em andamento nesta branch (ver as linhas abaixo quando concluídas) | | |
+| 7 API de auditoria, histórico e card Task × Review | Concluída (parte backend; cartões no `CatalogoDeCartoes`) | `c146954` | `GET /api/auditoria/sinais`, `GET /api/auditoria/historico/{key}`, `GET /api/cards/task-review`; cartões `AU-01`, `AU-02`, `AU-03` e `DV-01` |
+| 8 Telas Auditoria e Divergência (React) | Concluída; captura de verificação (Passo 5) NÃO feita | ver `git log` | Usa `Cartao` e `GavetaDeTasks` do 17a; `shared/csv.ts` já existia desde o 17a |
+| 9 | Em andamento nesta branch (ver a linha abaixo quando concluída) | | |
 
 ### Rulings da retomada de 28/10/2026 (Tarefas 4 a 9; sem consultar o usuário, opção recomendada)
 
@@ -29,6 +30,10 @@ Tarefas 1 a 3 já estão na `main` (PR #15, mesclada com squash em 26/10). Conti
 - Ruling: instância fixa — a auditoria lê a instância `samsung` (a mesma constante do Tempo em status, `INSTANCIA_AUDITORIA`); a `sidia` entra quando houver ficha própria. Custo: parâmetro de instância nas rotas.
 - Ruling: "no prazo" respeita só o filtro `squad` (squad do responsável no dia da resolução), nunca `pessoa`: a taxa de uma pessoa sozinha seria um indicador por pessoa. `pessoa` filtra os sinais (responsável no instante ou autor).
 - Ruling: `TaskReviewDto` ganhou `divergencias: List<TaskReviewLinhaDto>` (só os pares divergentes, com os links) para a tela Divergência listar com link por linha; a gaveta de tasks do cartão continua sendo o drill genérico. Cada sinal é uma linha da gaveta (a mesma chave pode repetir: a gaveta do frontend passa a chavear por posição).
+- Ruling: Tarefa 8, `shared/csv.ts` — o plano manda mover `TempoEmStatus/csv.ts` para `shared/csv.ts`; o 17a já fez isso, então nada foi movido. Os testes de CSV da tela (`csvNeutralizaFormulas`) ficam em `Auditoria.test.tsx` e os do utilitário em `shared/csv.test.ts`.
+- Ruling: Tarefa 8, Passo 5 (captura em Chrome headless, 1440 e 390 px, três temas) — não executado: o ambiente desta execução não tem navegador. A tela só usa tokens dos temas e componentes do kit (`Cartao`, `GavetaDeTasks`, classes de `tempo.css` e `tabela.css`); a conferência visual fica para a revisão final do usuário, com `PAINEL_MOCK=1 pnpm dev` (o mock tem Auditoria, histórico e Task × Review). Custo se errado: uma rodada de captura e ajuste de `auditoria.css`.
+- Ruling: Tarefa 8, filtro de pessoa — `<select>` com as pessoas que já apareceram nos sinais (responsável e autor), em ordem alfabética, sem contagem; a pessoa selecionada sempre aparece. Os KPIs reutilizam o mesmo cartão do catálogo (`AU-01` duas vezes, `AU-03` três vezes) com títulos próprios, e a lista de sinais é o cartão `AU-01` em variante lista.
+- Ruling: `GavetaDeTasks` passou a chavear as linhas por chave + posição (uma issue pode ter dois sinais); teste `mostraAsDuasLinhasDaMesmaIssueSemAvisoDeChaveDoReact`.
 - Ruling: `ResultadoAuditoria` ganhou `noPrazoDetalhe` (campo extra além do plano) pelo mesmo motivo.
 
 Testes no último ponto verde conhecido: backend 745+, 0 falhas (SQLite real, desde a saída do Docker; era 744 com PostgreSQL). Confirme com `cd app/backend && ./gradlew test` antes de seguir.

@@ -2,6 +2,8 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { LangProvider } from './i18n/LangProvider'
 import { inicioDoPapel } from './nav/nav'
+import { Auditoria } from './screens/Auditoria/Auditoria'
+import { Divergencia } from './screens/Divergencia/Divergencia'
 import { MapaDeCartoes } from './screens/MapaDeCartoes/MapaDeCartoes'
 import { Sincronizacao } from './screens/Sincronizacao/Sincronizacao'
 import { TempoEmStatus } from './screens/TempoEmStatus/TempoEmStatus'
@@ -26,6 +28,8 @@ export default function App() {
               <Route element={<Shell />}>
                 <Route index element={<Inicio />} />
                 <Route path="tempo" element={<TempoEmStatus />} />
+                <Route path="auditoria" element={<Auditoria />} />
+                <Route path="divergencia" element={<Divergencia />} />
                 <Route path="sincronizacao" element={<Sincronizacao />} />
                 <Route path="mapaCartoes" element={<MapaDeCartoes />} />
                 <Route path="*" element={<Pagina />} />

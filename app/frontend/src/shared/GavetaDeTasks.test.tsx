@@ -136,6 +136,25 @@ describe('GavetaDeTasks: teclado e foco', () => {
   })
 })
 
+describe('GavetaDeTasks: chave repetida', () => {
+  it('mostraAsDuasLinhasDaMesmaIssueSemAvisoDeChaveDoReact', async () => {
+    // Dois sinais da auditoria na mesma issue: duas linhas com a mesma chave de task.
+    const duplicadas = resposta(2, {
+      linhas: [
+        { key: 'TG-5', resumo: 'Task 5', responsavel: 'ana.silva', status: 'Em revisão', detalhe: 'Primeiro sinal' },
+        { key: 'TG-5', resumo: 'Task 5', responsavel: 'ana.silva', status: 'Em revisão', detalhe: 'Segundo sinal' },
+      ],
+    })
+    simular(200, duplicadas)
+    const erros = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const gaveta = await abrir()
+    await within(gaveta).findByText('Primeiro sinal')
+    expect(within(gaveta).getByText('Segundo sinal')).toBeInTheDocument()
+    expect(within(gaveta).getAllByRole('row')).toHaveLength(3)
+    expect(erros.mock.calls.some((c) => String(c[0]).includes('same key'))).toBe(false)
+  })
+})
+
 describe('GavetaDeTasks: conteúdo', () => {
   it('consomeARotaGenericaComSegmentoEFiltros', async () => {
     const mock = simular(200, resposta(2))

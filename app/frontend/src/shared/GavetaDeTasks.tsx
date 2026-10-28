@@ -187,8 +187,9 @@ export function GavetaDeTasks(props: GavetaDeTasksProps) {
                   </tr>
                 </thead>
                 <tbody>
-                  {linhas.map((r) => (
-                    <tr key={r.key}>
+                  {/* Uma task pode aparecer mais de uma vez (ex.: dois sinais da auditoria na mesma issue): a posição entra na chave. */}
+                  {linhas.map((r, i) => (
+                    <tr key={`${r.key}:${i}`}>
                       {colunas.map((c) =>
                         c === 'chave' ? (
                           <th scope="row" className="mono" key={c}>

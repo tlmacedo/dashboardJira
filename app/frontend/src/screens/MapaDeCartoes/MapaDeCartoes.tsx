@@ -13,7 +13,7 @@ const NATUREZAS: CartaoCatalogo['natureza'][] = ['ESTOQUE', 'FLUXO', 'PRAZO', 'P
 const ROTA_DA_TELA = '/mapaCartoes'
 
 /** Id de tela do backend (`/api/cards/<tela>`) que não é igual ao id do item do menu. */
-const TELA_PARA_MENU: Record<string, string> = { 'tempo-em-status': 'tempo' }
+const TELA_PARA_MENU: Record<string, string> = { 'tempo-em-status': 'tempo', 'task-review': 'divergencia' }
 
 /** Item do menu da tela onde o cartão vive; nulo se o id da tela não corresponde a nenhum item. */
 function menuDaTela(tela: string): NavItem | undefined {
