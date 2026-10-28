@@ -103,6 +103,8 @@ O modelo é `app/.env.example` (copie para `app/.env`, que o git ignora, ou apon
 | `JIRA_SIDIA_URL`, `JIRA_SIDIA_USER`, `JIRA_SIDIA_TOKEN` | vazio | Instância `sidia` (Basic); só ativa com as três preenchidas |
 | `SYNC_INSTANCIAS`, `SYNC_INTERVALO_MIN`, `SYNC_HORA_RECONCILIACAO`, `SYNC_HORA_RETENCAO`, `SYNC_MAX_ITENS`, `SYNC_MAX_REQUISICOES`, `SYNC_SOBREPOSICAO_MIN`, `SYNC_FUSO_SERVIDOR`, `SYNC_TEMPO_MAX_MIN` | ver `app/README.md` | Intervalos e limites da sincronização (não ligam nada) |
 | `RETENTION_MONTHS`, `ACCESS_LOG_RETENTION_MONTHS` | 24 | Meses de dados locais e de registro de acesso |
+| `RETENTION_HISTORICO_MONTHS`, `RETENTION_ACCESS_LOG_MONTHS`, `RETENTION_DECISOES_MONTHS`, `RETENTION_EXECUCOES_MONTHS` | `RETENTION_MONTHS` | Retenção por categoria, de 1 a 120 meses (histórico, registro de acesso, decisões de distribuição, execuções); os valores finais são do DPO |
+| `DASHBOARD_DPO_ACEITE`, `DASHBOARD_DPO_ACEITE_REF` | falso e vazio | Trava do DPO: sem o aceite, Auditoria e Integridade só abrem no modo dev offline. Só o usuário liga, depois do parecer; com `true` a referência do parecer é obrigatória |
 | `PAINEL_LOG_FORMATO`, `PAINEL_LOG_DIR` | `JSON`, vazio | Formato e pasta dos logs ([observabilidade](observabilidade.md)) |
 | `PAINEL_DISCO_MIN_MB` | 500 | Espaço livre mínimo para o painel estar pronto |
 | `PAINEL_METRICAS_PORTA`, `PAINEL_METRICAS_HOST` | 9464, `127.0.0.1` | Porta interna das métricas; `0` desliga. Host fora do loopback gera `AVISO METRICAS_HOST_NAO_LOOPBACK` no `validar-config` (não muda o código de saída) |

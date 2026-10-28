@@ -1,6 +1,7 @@
 package br.sidia.painel.db
 
 import br.sidia.painel.BancoEmArquivo
+import br.sidia.painel.config.RetencaoSettings
 import br.sidia.painel.time.BusinessCalendar
 import java.time.LocalDate
 import java.time.ZoneId
@@ -176,6 +177,57 @@ class RetentionTest {
         Retention(ds, calendario).purge(LocalDate.of(2026, 10, 30), 6, accessLogMonths = 24) { tabela, n -> removidas[tabela] = n }
         assertEquals(1, contar("decisao_distribuicao"))
         assertEquals(1, removidas["decisao_distribuicao"])
+    }
+
+    private fun decisao(id: Int, quando: String) = exec(
+        "INSERT INTO decisao_distribuicao(id, instance, tipo, issue_key, decisao, decidido_por, decidido_em, versao_regras, chave_sugestao) " +
+            "VALUES ($id, 'main', 'DISTRIBUICAO', 'TG-$id', 'APROVADA', 'u', '$quando', 'v1', 'k$id')",
+    )
+
+    @Test
+    fun decisoesAntigasSaoApagadas() {
+        // Hoje 2026-10-30 e prazo de 24 meses (limite 2024-10-30 em Manaus): a de 2024-09-01 sai, a de 2024-11-01 fica.
+        decisao(1, "2024-09-01 12:00:00+00")
+        decisao(2, "2024-11-01 12:00:00+00")
+        Retention(ds, calendario).purge(LocalDate.of(2026, 10, 30), RetencaoSettings(24, 24, 24, 24))
+        assertEquals(1, contar("decisao_distribuicao"))
+        assertEquals(2, ds.connection.use { c -> c.createStatement().executeQuery("SELECT id FROM decisao_distribuicao").use { it.next(); it.getInt(1) } })
+    }
+
+    @Test
+    fun cadaCategoriaComSeuPrazo() {
+        val hoje = LocalDate.of(2026, 10, 30)
+        // Histórico 24 meses (limite 2024-10-30), access_log 6 (2026-04-30), decisões 12 (2025-10-30), execuções 3 (2026-07-30).
+        issue(1)
+        evento(1, 1, "2024-09-01 12:00:00+00") // fora de 24 meses: sai
+        evento(2, 1, "2025-10-01 12:00:00+00") // dentro de 24 meses (e fora de 12): fica
+        exec("INSERT INTO access_log(id, user_id, route, filters, at) VALUES (1, 'u', '/r', '{}', '2026-03-01 12:00:00+00')") // fora de 6: sai
+        exec("INSERT INTO access_log(id, user_id, route, filters, at) VALUES (2, 'u', '/r', '{}', '2026-06-01 12:00:00+00')") // fica
+        decisao(1, "2025-09-01 12:00:00+00") // fora de 12: sai
+        decisao(2, "2026-01-01 12:00:00+00") // fica
+        exec("INSERT INTO sync_run(id, instance, kind, started_at, status) VALUES (1, 'main', 'INCREMENTAL', '2026-06-01 12:00:00+00', 'OK')") // fora de 3: sai
+        exec("INSERT INTO sync_run(id, instance, kind, started_at, status) VALUES (2, 'main', 'INCREMENTAL', '2026-09-01 12:00:00+00', 'OK')") // fica
+        val removidas = mutableMapOf<String, Int>()
+        Retention(ds, calendario).purge(hoje, RetencaoSettings(historicoMeses = 24, accessLogMeses = 6, decisoesMeses = 12, execucoesMeses = 3)) { t, n -> removidas[t] = n }
+        assertEquals(1, contar("change_event"))
+        assertEquals(1, contar("access_log"))
+        assertEquals(1, contar("decisao_distribuicao"))
+        assertEquals(1, contar("sync_run"))
+        assertEquals(1, removidas["change_event"])
+        assertEquals(1, removidas["access_log"])
+        assertEquals(1, removidas["decisao_distribuicao"])
+        assertEquals(1, removidas["sync_run"])
+        // Cada prazo é independente: o mesmo banco com tudo em 120 meses não apaga nada mais.
+        assertEquals(0, Retention(ds, calendario).purge(hoje, RetencaoSettings(120, 120, 120, 120)))
+    }
+
+    @Test
+    fun retencaoNaoEscreveSyncRunNemMexeNaTravaDoDpo() {
+        // O expurgo só APAGA; quem registra a execução (RETENCAO) é o agendador, e a trava do DPO ignora esse tipo.
+        val antes = contar("sync_run")
+        Retention(ds, calendario).purge(LocalDate.of(2026, 10, 30), RetencaoSettings(24, 24, 24, 24))
+        assertEquals(antes, contar("sync_run"))
+        assertEquals(0, contar("sync_state"))
     }
 
     @Test

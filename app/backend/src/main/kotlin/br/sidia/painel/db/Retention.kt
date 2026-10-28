@@ -1,5 +1,6 @@
 package br.sidia.painel.db
 
+import br.sidia.painel.config.RetencaoSettings
 import br.sidia.painel.time.BusinessCalendar
 import java.time.Instant
 import java.time.LocalDate
@@ -7,17 +8,18 @@ import java.time.ZoneId
 import javax.sql.DataSource
 
 /**
- * Retenção de histórico. Apaga o que for anterior ao limite (hoje menos N meses, 00:00 no fuso do calendário):
- * - `change_event` por `at` e `worklog` por `started`;
- * - `issue` só se resolvida E sem alteração desde o limite (`resolved < limite` e `updated < limite`); os
- *   eventos e worklogs da issue saem em cascata. Também sai a issue removida no Jira (`removida_em` preenchido), nunca
- *   resolvida, com remoção e última alteração antes do limite. Issue aberta ativa ou recente nunca é apagada;
- * - `issue_link` (vínculos entre issues): apaga os que têm uma ponta purgada nesta execução e os removidos no Jira
- *   antes do limite (`removida_em < limite`);
- * - `access_log` por `at`, com limite próprio e mais longo (`accessLogMonths`: a auditoria não encurta com a
- *   retenção geral), `decisao_distribuicao` por `decidido_em` (o mesmo limite longo), `sync_run` por `started_at` e
- *   `jira_user_key` por `visto_em` (última vez vista).
- * Nunca toca em `sync_state`.
+ * Retenção de histórico, com um prazo por categoria ([RetencaoSettings]). Cada categoria apaga o que for anterior ao limite dela
+ * (hoje menos N meses, 00:00 no fuso do calendário):
+ * - HISTÓRICO: `change_event` por `at` e `worklog` por `started`; `issue` só se resolvida E sem alteração desde o limite
+ *   (`resolved < limite` e `updated < limite`; os eventos e worklogs da issue saem em cascata); também sai a issue removida no Jira
+ *   (`removida_em` preenchido), nunca resolvida, com remoção e última alteração antes do limite. Issue aberta ativa ou recente nunca
+ *   é apagada. `issue_link` (vínculos): os que têm uma ponta purgada nesta execução e os removidos no Jira antes do limite.
+ *   `jira_user_key` por `visto_em` (última vez vista);
+ * - ACCESS_LOG: `access_log` por `at`;
+ * - DECISÕES: `decisao_distribuicao` por `decidido_em`;
+ * - EXECUÇÕES: `sync_run` por `started_at` e `backup_run` por `started_at`.
+ * Nunca toca em `sync_state`. O expurgo só APAGA: não grava `sync_run` (quem registra a execução da retenção é o agendador, e a
+ * trava do DPO ignora esse tipo), então rodar a retenção nunca fecha a trava do DPO na demonstração.
  */
 class Retention(private val ds: DataSource, private val calendar: BusinessCalendar) {
 
@@ -39,8 +41,10 @@ class Retention(private val ds: DataSource, private val calendar: BusinessCalend
             "((i.resolved < ? AND i.updated < ?) OR " +
                 "(i.removida_em IS NOT NULL AND i.resolved IS NULL AND i.removida_em < ? AND i.updated < ?))"
 
-        /** Cada item: SQL e se usa o limite do `access_log` (os demais usam o limite geral). */
-        private class Purga(val sql: String, val doAccessLog: Boolean = false) {
+        private enum class Categoria { HISTORICO, ACCESS_LOG, DECISOES, EXECUCOES }
+
+        /** Cada item: SQL e a categoria de prazo que ele usa. */
+        private class Purga(val sql: String, val prazo: Categoria = Categoria.HISTORICO) {
             /** Nome da tabela do `DELETE FROM <tabela>`: é o rótulo da métrica de remoções (nunca dado). */
             val categoria: String get() = sql.substringAfter("DELETE FROM ").substringBefore(' ')
         }
@@ -54,31 +58,46 @@ class Retention(private val ds: DataSource, private val calendar: BusinessCalend
                     "AND i.key IN (l.from_key, l.to_key) AND $ISSUE_PURGAVEL)",
             ),
             Purga("DELETE FROM issue AS i WHERE $ISSUE_PURGAVEL"),
-            Purga("DELETE FROM access_log WHERE at < ?", doAccessLog = true),
-            // O registro de decisões de Distribuição é auditoria como o access_log: mesma retenção longa (quem decidiu e por quê).
-            Purga("DELETE FROM decisao_distribuicao WHERE decidido_em < ?", doAccessLog = true),
-            Purga("DELETE FROM sync_run WHERE started_at < ?"),
+            Purga("DELETE FROM access_log WHERE at < ?", Categoria.ACCESS_LOG),
+            // O registro de decisões de Distribuição é auditoria como o access_log (quem decidiu e por quê), com prazo próprio.
+            Purga("DELETE FROM decisao_distribuicao WHERE decidido_em < ?", Categoria.DECISOES),
+            Purga("DELETE FROM sync_run WHERE started_at < ?", Categoria.EXECUCOES),
             Purga("DELETE FROM jira_user_key WHERE visto_em < ?"),
-            Purga("DELETE FROM backup_run WHERE started_at < ?"),
+            Purga("DELETE FROM backup_run WHERE started_at < ?", Categoria.EXECUCOES),
         )
     }
 
     /**
-     * Remove registros anteriores a `today.minusMonths(months)` às 00:00 no fuso do calendário
-     * (o que está exatamente na data-limite permanece), numa só transação. Devolve a soma das linhas
-     * apagadas diretamente (as removidas em cascata junto com a issue não entram na conta).
+     * Atalho com dois prazos (histórico e execuções em [months]; access_log e decisões em [accessLogMonths]): o mesmo que o
+     * `purge` por categoria com [RetencaoSettings] derivado deles. Fica para os testes e chamadas simples.
      */
     fun purge(
         today: LocalDate,
         months: Int,
         accessLogMonths: Int = months,
-        /** Chamado depois do commit, uma vez por tabela, com o nome da tabela e as linhas removidas (para métricas). */
         aoRemover: (categoria: String, removidas: Int) -> Unit = { _, _ -> },
     ): Int {
         require(months >= 1) { "months deve ser >= 1 (recebido $months)" }
         require(accessLogMonths >= 1) { "accessLogMonths deve ser >= 1 (recebido $accessLogMonths)" }
-        val limite = limite(today, months, calendar.zone).atZone(calendar.zone).toOffsetDateTime()
-        val limiteAccessLog = limite(today, accessLogMonths, calendar.zone).atZone(calendar.zone).toOffsetDateTime()
+        return purge(today, RetencaoSettings(months, accessLogMonths, accessLogMonths, months), aoRemover)
+    }
+
+    /**
+     * Remove registros anteriores ao limite de cada categoria (o que está exatamente na data-limite permanece), numa só
+     * transação. Devolve a soma das linhas apagadas diretamente (as removidas em cascata junto com a issue não entram na conta).
+     */
+    fun purge(
+        today: LocalDate,
+        retencao: RetencaoSettings,
+        /** Chamado depois do commit, uma vez por tabela, com o nome da tabela e as linhas removidas (para métricas). */
+        aoRemover: (categoria: String, removidas: Int) -> Unit = { _, _ -> },
+    ): Int {
+        val limites = mapOf(
+            Categoria.HISTORICO to limite(today, retencao.historicoMeses, calendar.zone),
+            Categoria.ACCESS_LOG to limite(today, retencao.accessLogMeses, calendar.zone),
+            Categoria.DECISOES to limite(today, retencao.decisoesMeses, calendar.zone),
+            Categoria.EXECUCOES to limite(today, retencao.execucoesMeses, calendar.zone),
+        ).mapValues { it.value.atZone(calendar.zone).toOffsetDateTime() }
         return ds.connection.use { c ->
             c.autoCommit = false
             try {
@@ -86,7 +105,7 @@ class Retention(private val ds: DataSource, private val calendar: BusinessCalend
                 val porTabela = ArrayList<Pair<String, Int>>()
                 for (purga in PURGAS) {
                     val sql = purga.sql
-                    val corte = if (purga.doAccessLog) limiteAccessLog else limite
+                    val corte = limites.getValue(purga.prazo)
                     c.prepareStatement(sql).use { st ->
                         for (i in 1..sql.count { it == '?' }) st.setTimestamp(i, java.sql.Timestamp.from(corte.toInstant()))
                         val n = st.executeUpdate()

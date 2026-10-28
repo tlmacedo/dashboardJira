@@ -62,6 +62,8 @@ Trocar o pacote por um mais novo não pode apagar nada. Por isso a configuraçã
 | `PAINEL_CACHE_SEG` | Segundos em que as telas reaproveitam a leitura bruta do banco (padrão 60; `0` desliga). Sem isso, cada requisição relê as issues e o histórico inteiros |
 | `RETENTION_MONTHS` | Meses de dados locais mantidos (6 a 600; padrão 24; o prazo final é do DPO) |
 | `ACCESS_LOG_RETENTION_MONTHS` | Meses do registro de acesso (12 a 600; padrão 24) |
+| `RETENTION_HISTORICO_MONTHS`, `RETENTION_ACCESS_LOG_MONTHS`, `RETENTION_DECISOES_MONTHS`, `RETENTION_EXECUCOES_MONTHS` | Retenção por categoria (1 a 120 meses; padrão `RETENTION_MONTHS`); valores finais do DPO |
+| `DASHBOARD_DPO_ACEITE`, `DASHBOARD_DPO_ACEITE_REF` | Trava do DPO (LGPD): Auditoria e Integridade ficam fechadas em produção até o aceite, ligado só pelo usuário depois do parecer; com `true`, a referência do parecer é obrigatória |
 
 As demais variáveis (sincronização, logs, métricas, backup) estão em `docs/operacao/configuracao.md` e no modelo `.env.example`.
 
