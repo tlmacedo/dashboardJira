@@ -15,8 +15,17 @@ Tarefas 1 a 3 já estão na `main` (PR #15, mesclada com squash em 26/10). Conti
 | 5 Task × Review, no prazo e calculador | Concluída | `5fb74f9` | `TaskReview`, `NoPrazo` (+ `detalhar`), `AuditCalculator`; modificador "em lote (N)" (I-15, spec 17 seção 6) |
 | 6 `AuditStore` sobre SQLite | Concluída | `64dba1c` | `SqliteAuditStore`; pares pelo `issue_link` (4A, T12) com as duas pontas ativas; sem migração |
 | 7 API de auditoria, histórico e card Task × Review | Concluída (parte backend; cartões no `CatalogoDeCartoes`) | `c146954` | `GET /api/auditoria/sinais`, `GET /api/auditoria/historico/{key}`, `GET /api/cards/task-review`; cartões `AU-01`, `AU-02`, `AU-03` e `DV-01` |
-| 8 Telas Auditoria e Divergência (React) | Concluída; captura de verificação (Passo 5) NÃO feita | ver `git log` | Usa `Cartao` e `GavetaDeTasks` do 17a; `shared/csv.ts` já existia desde o 17a |
-| 9 | Em andamento nesta branch (ver a linha abaixo quando concluída) | | |
+| 8 Telas Auditoria e Divergência (React) | Concluída; captura de verificação (Passo 5) NÃO feita | `57d7892` | Usa `Cartao` e `GavetaDeTasks` do 17a; `shared/csv.ts` já existia desde o 17a |
+| 9 Diferenças com o app atual e 1ª conexão | Concluída | ver `git log` (commit `docs(auditoria)`) | `docs/analise/diferencas-esperadas-auditoria.md`, Passo 4 do checklist, matriz (`duedate` e `labels`), HANDOFF, índice e roteiro |
+
+Testes ao fim da Tarefa 9: backend 986, 0 falhas; frontend 143, 0 falhas; `pnpm build` sem erros; varredura de dados pessoais limpa.
+
+**Pendências / Minor adiados desta retomada:**
+- Captura visual (Passo 5 da Tarefa 8) não feita: sem navegador no ambiente.
+- Dados de demonstração (`DadosDeDemonstracao`) não ganharam casos para cada sinal (o plano 4A, T10, os cita; a base de demonstração atual só tem alguns eventos de responsável, vencimento e labels). A tela mostra o que houver; ampliar a fixture mexe nas contagens de outros testes e fica para um PR próprio.
+- O texto `detalhe` das linhas da gaveta (`linhaDoSinal`) é pt-BR fixo no backend (como o do Tempo em status); o título, o "o que mostra" e o "como calcula" dos cartões estão em pt e en.
+- A instância da auditoria é fixa (`samsung`).
+- Os Minor das Tarefas 1 a 3 (seção abaixo) seguem adiados.
 
 ### Rulings da retomada de 28/10/2026 (Tarefas 4 a 9; sem consultar o usuário, opção recomendada)
 
