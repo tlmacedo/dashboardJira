@@ -129,15 +129,13 @@ class TarefaRoutesTest {
     }
 
     @Test
-    fun responsavelForaDaVisaoViraNulo() = rodar { get ->
-        // ana já teve TG-501 (visível pela posse), mas hoje o responsável é carla, fora da visão dela.
+    fun exDonoNaoVeMaisATask() = rodar { get ->
+        // Ruling (I-2): a gaveta segue só o responsável ATUAL. ana já teve TG-501, mas hoje é de carla: 404 sem corpo.
         val r = get("ana", "/api/tarefa/TG-501")
-        assertEquals(HttpStatusCode.OK, r.status, r.corpo)
-        val t = tarefa(r)
-        assertNull(t.responsavel)
-        assertFalse("carla" in r.corpo, "o nome de quem está fora da visão vazou: ${r.corpo}")
-        // Na posse, quem está fora da visão é "outra pessoa" (nulo), nunca o nome.
-        assertEquals(setOf("ana", null), t.posse.map { it.pessoa }.toSet())
+        assertEquals(HttpStatusCode.NotFound, r.status)
+        assertEquals("", r.corpo)
+        // O gerente vê a task e o responsável atual.
+        assertEquals("carla", tarefa(get("gerente.exemplo", "/api/tarefa/TG-501")).responsavel)
     }
 
     @Test

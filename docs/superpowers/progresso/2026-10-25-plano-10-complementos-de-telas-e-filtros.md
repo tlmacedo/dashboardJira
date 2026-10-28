@@ -28,6 +28,7 @@ Branch `feat/complementos-telas-filtros-plano-10` (parte de `origin/main` com o 
 - Ruling: filtros rápidos (I-27) em `filtros_rapidos.yaml` opcional (ausente = lista vazia; inválido = log e lista vazia); só parâmetros existentes (`squad`, `tipo`, `prioridade`, `os`, `unit`, `campo.<slug>`), nunca pessoa.
 - Ruling: busca por chave (I-26) no Shell; só o número usa o único prefixo de chave da visão (`prefixosDeChave`).
 - Ruling: E13 sem mudança (a Auditoria já usa os helpers compartilhados); E12 já resolvido na main (teste estático `gavetaUnica.test.ts`); E5 já coberto por `ConsistenciaEntreTelasTest`.
+- Ruling (28/10, revisão do PR #44, I-2; opção restritiva e recomendada): a gaveta `/api/tarefa/{key}` segue só o responsável ATUAL (`permiteAtual`); a posse histórica não amplia a visão (ex-dono recebe 404). Prova: `TarefaRoutesTest.exDonoNaoVeMaisATask`.
 - Ruling: `HistoricoDrawer` mantido (colunas de autorização e aviso), agora com `useModalAcessivel` e `TabelaDeHistorico` compartilhada.
 - Ruling: telas com estado próprio (Auditoria, Divergência, Integridade, Sincronização, Mapa de cartões, Tempo em status, Detalhe) ficam fora do teste de estados em tabela.
 - Ruling: gráficos próprios existentes (Fluxo, Controle, Tendência, Idade, sparkline) mantidos, pois já têm padrão, forma e tabela; trocados `--s1..3` por `--cat-*`. Novos gráficos usam `Barras`, `Linhas`, `Dispersao`.

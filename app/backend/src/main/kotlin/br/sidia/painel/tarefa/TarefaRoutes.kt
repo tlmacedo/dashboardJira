@@ -61,13 +61,9 @@ private fun tarefaDe(ctx: AppContext, store: SqliteWorkStore, principal: Princip
     val map = ctx.statusMap
     val avisos = mutableListOf<AvisoDto>()
 
-    // Visível se o responsável atual está na visão OU se alguém da visão teve a task (a regra do Tempo em status).
-    val visivel = e.escopo.permiteAtual(s) || try {
-        e.escopo.permitePosse(s, map, e.agora)
-    } catch (x: UnmappedStatusException) {
-        false
-    }
-    if (!visivel) throw ErroHttp(HttpStatusCode.NotFound)
+    // Ruling (I-2): visível só se o responsável ATUAL está na visão. A posse histórica não amplia a gaveta: ela mostraria
+    // situação, vencimento, tempo por status e fatores de risco do trabalho atual de quem está fora da visão.
+    if (!e.escopo.permiteAtual(s)) throw ErroHttp(HttpStatusCode.NotFound)
 
     val categoria = try {
         map.category(s.status).name
