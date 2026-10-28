@@ -45,6 +45,13 @@ class CompatLegadoChecklistTest {
         )
     }
 
+    @Test
+    fun fechamentoRapidoEPuloDoFluxoSaoExclusivosComoNoLegado() {
+        val py = reports()
+        // No legado é `if life_min < 15 ... elif not started ...`: um fechamento rápido gera um sinal só.
+        assertTrue("if life_min < 15:" in py && "elif not started and r.time_spent_s == 0:" in py, "regra do legado mudou")
+    }
+
     private fun evidencias(pessoa: String, g3: Int = 0, g2: Int = 0, g1: Int = 0): List<EvidenciaIntegridade> {
         val regras = RegrasDeIntegridade.PADRAO
         var k = 0

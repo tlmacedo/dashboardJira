@@ -92,6 +92,12 @@ object DetectoresDePrazoEFluxo {
     private val puloOFluxo = DetectorIntegridade { issues, regras, ctx ->
         issues.mapNotNull { s ->
             val f = Fechamentos.de(s, ctx.map) ?: return@mapNotNull null
+            // Exclusividade do legado (`if life < 15 ... elif not started`): a task fechada em minutos já gera "criada e fechada em
+            // minutos" (o mais específico); o pulo do fluxo vale só para a que não saiu por esse sinal. Com aquele sinal desligado, volta a valer.
+            if (regras.ativo(SinalIntegridade.CRIADA_E_FECHADA_RAPIDO)) {
+                val vida = Duration.between(s.created, f.at)
+                if (!vida.isNegative && vida < Duration.ofMinutes(regras.criadaEFechadaMinutos.toLong())) return@mapNotNull null
+            }
             val visitados = listOf(s.timeline.initialStatus) + s.timeline.transitions.map { it.to }
             if (visitados.any { ctx.map.category(it) == StatusCategory.ACTIVE }) return@mapNotNull null
             regras.evidencia(SinalIntegridade.PULOU_O_FLUXO, s, f.at, Fechamentos.pessoa(f.autor, s, f.at))
