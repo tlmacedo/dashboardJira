@@ -31,5 +31,9 @@ Filtros_Status_tool.txt.bak
 **/dist/
 # Log do diagnóstico de conexão (contém dados pessoais do Jira)
 diagnostico_jira_*.txt
+
+# Worktrees temporarios dos agentes do Claude Code
+.claude/worktrees/
+
 # Nomes proibidos para a varredura de CI (só local; no CI vêm do segredo VARREDURA_NOMES)
 scripts/ci/nomes-proibidos.local.txt
