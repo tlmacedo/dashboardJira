@@ -6,7 +6,7 @@ Branch: `feat/identidade-visual` (Tarefas 1 a 4). Executor: Claude Code (subagen
 ## Checklist
 
 - [x] Tarefa 1: ativos de marca (registro; caminho alternativo)
-- [ ] Tarefa 2: logo saneado e componente `Marca`
+- [x] Tarefa 2: componente `Marca` e ativos saneados (frontend 350 testes, 0 falhas; build ok; CSP ok). Saneamento: o `favicon.svg` próprio já não tinha script, `on*`, `foreignObject` nem referência externa; só ganhou `<title>`. Os logos PNG existentes ficaram, isolados em `shell/marca-ativos.ts` (ponto único de troca). Testes de arquivo ficam em `src/a11y` (projeto TypeScript "node", fora do app).
 - [ ] Tarefa 3: fonte com alternativa de sistema
 - [ ] Tarefa 4: tokens finais, moldura do tema Sidia e tema sem piscada
 - [ ] Tarefas 5 a 11: fora deste bloco

@@ -3,6 +3,7 @@ import { NavLink } from 'react-router-dom'
 import { useLang } from '../i18n/LangProvider'
 import { ROLES, visibleNav, type Role } from '../nav/nav'
 import { TEMAS, useTheme } from '../theme/ThemeProvider'
+import { Marca } from './Marca'
 
 type Opcao<T extends string> = { valor: T; rotulo: string }
 
@@ -44,12 +45,7 @@ export function Menu(props: {
 
   return (
     <aside className={`menu${aberto ? ' menu--aberto' : ''}`}>
-      <div className="logo">
-        <img
-          alt="Sidia"
-          src={theme === 'light' ? '/logo-sidia-azul.png' : '/logo-sidia-branco.png'}
-        />
-      </div>
+      <Marca />
       <button
         type="button"
         className="btn burger"
@@ -60,7 +56,6 @@ export function Menu(props: {
       >
         ☰
       </button>
-      <div className="prod">{t('app.nome')}</div>
 
       <nav id="menu-principal" aria-label={t('shell.menuPrincipal')} className="menu-nav">
         {grupos.map((g) => (

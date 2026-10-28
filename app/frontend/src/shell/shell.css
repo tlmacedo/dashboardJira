@@ -102,17 +102,27 @@ button {
   min-height: 0;
   overflow-y: auto;
 }
-.menu .logo {
-  padding: 4px 8px 14px;
+/* Marca: logo (quando há) e nome do painel em texto. */
+.menu .marca {
+  display: grid;
+  gap: 8px;
+  padding: 4px 8px 12px;
 }
-.menu .logo img {
+.menu .marca__logo {
   height: 34px;
+  width: auto;
+  justify-self: start;
   display: block;
 }
-.menu .prod {
+.menu .marca__nome {
   font-size: 12px;
   color: var(--menu-text2);
-  padding: 0 8px 12px;
+}
+/* Sem logo, o nome vira a própria marca. */
+.menu .marca__nome:only-child {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--menu-text);
 }
 .grp {
   font-size: 11px;
@@ -264,8 +274,12 @@ h1 {
     padding: 10px 16px;
     overflow: visible;
   }
-  .menu .logo {
+  .menu .marca {
     padding-bottom: 4px;
+  }
+  /* No celular o nome sai de baixo do logo (a logo basta); sem logo ele permanece. */
+  .menu .marca__logo + .marca__nome {
+    display: none;
   }
   .burger {
     display: inline-block;
@@ -279,12 +293,10 @@ h1 {
   .menu-nav {
     overflow: visible;
   }
-  .menu .prod,
   .menu-nav,
   .menu .foot {
     display: none;
   }
-  .menu--aberto .prod,
   .menu--aberto .menu-nav {
     display: block;
   }
