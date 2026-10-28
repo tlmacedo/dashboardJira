@@ -142,4 +142,67 @@ class MascaraDeLogTest {
     fun settingsSemSegredosNaoDevolveNada() {
         assertTrue(Settings().valoresSecretos().isEmpty())
     }
+
+    /** Mediana de 5 execuções depois de 4 de aquecimento (a primeira chamada paga o carregamento das regex e do JIT). */
+    private fun medirMs(texto: String): Long {
+        repeat(4) { MascaraDeLog.mascarar(texto) }
+        val tempos = (1..5).map {
+            val ini = System.nanoTime()
+            MascaraDeLog.mascarar(texto)
+            (System.nanoTime() - ini) / 1_000_000
+        }.sorted()
+        return tempos[2]
+    }
+
+    @Test
+    fun senhaSeguidaDeEspacosNaoEhQuadratica() {
+        val casos = mapOf(
+            "espacos" to "password=x" + " ".repeat(20_000) + "y",
+            "espacoETab" to "password=a" + " \t".repeat(5_000),
+            "palavrasEEspacos" to "password=x" + (" ".repeat(4_000) + "abc").repeat(2),
+            "senhaDoisPontos" to "senha: " + "a ".repeat(10_000),
+        )
+        for ((nome, texto) in casos) {
+            val ms = medirMs(texto)
+            assertTrue(ms < 300, "$nome levou ${ms}ms")
+        }
+    }
+
+
+    @Test
+    fun entradaGrandeNaoTravaAMascara() {
+        // antes: tempo quadrático (cerca de 7 s com 20 mil caracteres)
+        val casos = mapOf(
+            "alfanumerico" to "a".repeat(20_000),
+            "espacos" to " ".repeat(20_000),
+            "alternado" to "a ".repeat(10_000),
+            "chaves" to "x=".repeat(10_000),
+            "esquema" to "://".repeat(7_000),
+            "bearer" to "Bearer ".repeat(3_000),
+            "senhas" to "senha: ".repeat(3_000),
+        )
+        for ((nome, texto) in casos) {
+            val ms = medirMs(texto)
+            assertTrue(ms < 300, "$nome levou ${ms}ms")
+        }
+    }
+
+    @Test
+    fun linhaLongaECortadaComMarcaAntesDeMascarar() {
+        val saida = MascaraDeLog.mascarar("password=segredo-1234 " + "x".repeat(20_000))
+        assertTrue(saida.length < 9_000, "${saida.length}")
+        assertTrue(saida.endsWith("[truncado]") && saida.startsWith("password=***"), saida.takeLast(30))
+        assertTrue("segredo-1234" !in saida)
+    }
+
+    @Test
+    fun segredoNoFimDaLinhaLongaNaoVazaPeloCorte() {
+        MascaraDeLog.registrarSegredos(listOf("SEGREDO-REGISTRADO-XYZ"))
+        // o segredo registrado cruza o limite do corte: nem inteiro nem pedaço pode sobrar
+        for (deslocamento in listOf(0, 3, 10, 21)) {
+            val texto = "a ".repeat(4_090 - deslocamento / 2) + "z".repeat(deslocamento % 2) + " SEGREDO-REGISTRADO-XYZ " + "b".repeat(200)
+            val saida = MascaraDeLog.mascarar(texto)
+            assertFalse("SEGREDO-REG" in saida, "deslocamento $deslocamento")
+        }
+    }
 }

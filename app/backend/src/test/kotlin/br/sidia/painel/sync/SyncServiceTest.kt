@@ -317,6 +317,38 @@ class SyncServiceTest {
     }
 
     @Test
+    fun cancelamentoInvalidaOCacheDeLeituras() = runBlocking {
+        // O que a execução gravou antes de ser cancelada já pode ser lido: o cache não pode servir o dado antigo.
+        br.sidia.painel.db.CacheDeLeituras.configurar(java.time.Duration.ofHours(1))
+        try {
+            val s = montar()
+            porPagina = 1
+            issues = listOf(issue(1, em("12:10:00")), issue(2, em("12:20:00")))
+            var cargas = 0
+            fun lerDoCache() = br.sidia.painel.db.CacheDeLeituras.obter("chave-do-teste") { ++cargas }
+            lerDoCache()
+            lerDoCache()
+            assertEquals(1, cargas)
+            val naSegunda = CompletableDeferred<Unit>()
+            aoReceber = { corpo ->
+                if (corpo.getValue("startAt").jsonPrimitive.content.toInt() >= 1) {
+                    naSegunda.complete(Unit)
+                    delay(60_000)
+                }
+                paginar(corpo)
+            }
+            val job = launch(Dispatchers.Default) { s.incremental("samsung") }
+            naSegunda.await()
+            job.cancelAndJoin()
+            assertEquals(RunStatus.CANCELADA, estado.ultimas("samsung").single().status)
+            lerDoCache()
+            assertEquals(2, cargas, "depois do cancelamento a leitura vai ao banco de novo")
+        } finally {
+            br.sidia.painel.db.CacheDeLeituras.desligar()
+        }
+    }
+
+    @Test
     fun canceladaRegistraCancelada() = runBlocking {
         val s = montar()
         porPagina = 1

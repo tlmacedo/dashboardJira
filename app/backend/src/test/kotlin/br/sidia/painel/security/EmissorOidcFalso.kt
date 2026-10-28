@@ -58,6 +58,12 @@ class EmissorOidcFalso(
 
     @Volatile var statusDoJwks: HttpStatusCode = HttpStatusCode.OK
     @Volatile var emissorDaDescoberta: String = issuer
+    @Volatile var statusDaDescoberta: HttpStatusCode = HttpStatusCode.OK
+
+    /** Endereços que a descoberta anuncia (padrão: os do próprio emissor). */
+    @Volatile var autorizacaoDaDescoberta: String = "$issuer/authorize"
+    @Volatile var tokenDaDescoberta: String = "$issuer/token"
+    @Volatile var jwksDaDescoberta: String = "$issuer/jwks"
 
     private fun MockRequestHandleScope.json(corpo: String, status: HttpStatusCode = HttpStatusCode.OK) =
         respond(corpo, status, headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString()))
@@ -78,8 +84,8 @@ class EmissorOidcFalso(
     val motor = MockEngine { req ->
         requisicoes += req.url.host + req.url.encodedPath
         when (req.url.encodedPath) {
-            "/.well-known/openid-configuration" -> json(
-                """{"issuer":"$emissorDaDescoberta","authorization_endpoint":"$issuer/authorize","token_endpoint":"$issuer/token","jwks_uri":"$issuer/jwks"}""",
+            "/.well-known/openid-configuration" -> if (statusDaDescoberta != HttpStatusCode.OK) respond("", statusDaDescoberta) else json(
+                """{"issuer":"$emissorDaDescoberta","authorization_endpoint":"$autorizacaoDaDescoberta","token_endpoint":"$tokenDaDescoberta","jwks_uri":"$jwksDaDescoberta"}""",
             )
             "/jwks" -> if (statusDoJwks == HttpStatusCode.OK) json(jwks()) else respond("", statusDoJwks)
             "/token" -> {

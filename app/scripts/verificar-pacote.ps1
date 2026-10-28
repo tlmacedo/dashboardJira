@@ -28,7 +28,7 @@ function Relativo($caminho) { return $caminho.Substring($pacote.Length).TrimStar
 # ---------------------------------------------------------------- 1. conteudo
 Write-Host '== Conteudo =='
 $todos = @(Get-ChildItem -Path $pacote -Recurse -Force)
-$achado = $todos | Where-Object { -not $_.PSIsContainer -and ($_.Name -eq '.env' -or ($_.Name -like '.env.*' -and $_.Name -ne '.env.example')) } | Select-Object -First 1
+$achado = $todos | Where-Object { -not $_.PSIsContainer -and ($_.Name -eq '.env' -or $_.Name -like '*.env' -or ($_.Name -like '.env.*' -and $_.Name -ne '.env.example')) } | Select-Object -First 1
 if ($achado) { Falhar "arquivo de variaveis dentro do pacote: $(Relativo $achado.FullName)" }
 $achado = $todos | Where-Object { -not $_.PSIsContainer -and ($_.Name -like '*.db' -or $_.Name -like '*.db-wal' -or $_.Name -like '*.db-shm' -or $_.Name -like '*.lock' -or $_.Name -like '*.rotacao') } | Select-Object -First 1
 if ($achado) { Falhar "arquivo de banco ou de trava dentro do pacote: $(Relativo $achado.FullName)" }

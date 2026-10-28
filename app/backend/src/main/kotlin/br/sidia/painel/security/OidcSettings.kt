@@ -22,6 +22,11 @@ class OidcSettings(
     /** `SESSION_SECRET` (e `SESSION_SECRET_ANTERIOR` durante a rotação). */
     val sessao: SegredosDaSessao,
     val duracaoDaSessao: Duration = Duration.ofHours(8),
+    /**
+     * `OIDC_HOSTS_PERMITIDOS` (opcional): hosts aceitos nos endereços da descoberta. Vazia = qualquer nome de host público
+     * (IP literal, `localhost`, `*.local` e `*.localhost` são recusados; só pelo NOME, sem resolver DNS).
+     */
+    val hostsPermitidos: Set<String> = emptySet(),
 ) {
     override fun toString() =
         "OidcSettings(issuer=$issuer, clientId=$clientId, clientSecret=${if (clientSecret != null) "***" else "nenhum"}, " +
@@ -63,7 +68,42 @@ class OidcSettings(
                 redirectUri = redirect,
                 claimUsername = claim,
                 sessao = segredos,
+                hostsPermitidos = hostsPermitidos(valor("OIDC_HOSTS_PERMITIDOS")),
             )
+        }
+
+        private val HOST_DA_LISTA = Regex("^[a-z0-9.:\\[\\]-]{1,253}$")
+
+        /** `OIDC_HOSTS_PERMITIDOS`: hosts (sem esquema, caminho nem porta) separados por vírgula, em minúsculas. */
+        private fun hostsPermitidos(bruto: String?): Set<String> {
+            if (bruto == null) return emptySet()
+            val hosts = bruto.split(',').map { it.trim().lowercase() }.filter { it.isNotEmpty() }
+            for (h in hosts) require(HOST_DA_LISTA.matches(h)) { "OIDC_HOSTS_PERMITIDOS inválida (esperado só nomes de host separados por vírgula)" }
+            return hosts.toSet()
+        }
+
+        /**
+         * O endereço de um endpoint da descoberta pode ser usado? Sem credencial na URL. Com [hosts] definida, só os hosts
+         * dela. Sem lista, recusa o que aponta para dentro da máquina ou da rede: IP literal (v4 em qualquer notação, v6),
+         * `localhost`, `*.local` e `*.localhost`; um nome de host público comum passa.
+         */
+        internal fun endpointPermitido(url: String, hosts: Set<String>): Boolean {
+            val uri = try {
+                URI(url)
+            } catch (e: URISyntaxException) {
+                return false
+            }
+            val bruto = uri.host?.lowercase() ?: return false
+            if (uri.rawUserInfo != null) return false
+            // Com a lista, o nome tem de ser IGUAL ao da lista (sem normalizar): "permitido." não vale como "permitido".
+            if (hosts.isNotEmpty()) return hosts.any { it.equals(bruto, ignoreCase = true) }
+            // Sem a lista, o ponto final de um nome absoluto ("localhost.") é tirado ANTES de todas as comparações.
+            val host = bruto.trimEnd('.')
+            if (host.isEmpty() || host.contains(':') || host.startsWith("[")) return false
+            if (host == "localhost" || host.endsWith(".localhost") || host.endsWith(".local")) return false
+            val ultimo = host.substringAfterLast('.')
+            // Nenhum domínio de topo é numérico: 127.0.0.1, 2130706433 e 0x7f.1 caem aqui.
+            return !(ultimo.all { it.isDigit() } || ultimo.startsWith("0x"))
         }
 
         /** `https`, com host, sem credencial na URL e sem fragmento (nem consulta, quando [semConsulta]). */

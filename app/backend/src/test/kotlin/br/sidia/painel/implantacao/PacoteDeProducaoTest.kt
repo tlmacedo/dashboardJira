@@ -83,6 +83,53 @@ class PacoteDeProducaoTest {
         }
     }
 
+    private fun verificarConteudo(sh: String, vararg arquivos: String): Pair<Int, String> {
+        val pacote = Files.createTempDirectory("painel-pacote-")
+        try {
+            for (a in arquivos) {
+                val alvo = pacote.resolve(a)
+                alvo.parent?.let { Files.createDirectories(it) }
+                Files.writeString(alvo, "x")
+            }
+            val p = ProcessBuilder(sh, scripts.resolve("verificar-pacote.sh").toString(), pacote.toString()).redirectErrorStream(true).start()
+            val saida = p.inputStream.bufferedReader().readText()
+            assertTrue(p.waitFor(60, TimeUnit.SECONDS), "verificar-pacote travou")
+            return p.exitValue() to saida
+        } finally {
+            pacote.toFile().deleteRecursively()
+        }
+    }
+
+    @Test
+    fun verificacaoRecusaArquivoDeVariaveisEChavesSemDiferenciarMaiusculas() {
+        val sh = listOf("/bin/sh", "/usr/bin/sh").firstOrNull { Files.isExecutable(Path.of(it)) }
+        assumeTrue(sh != null, "sem sh neste ambiente")
+        val ruins = mapOf(
+            "painel.env" to "variaveis", "config/PRODUCAO.ENV" to "variaveis", "ssl/chave.PEM" to "chave", "ssl/a.Key" to "chave",
+            "ssl/b.P12" to "chave", "lib/c.JKS" to "chave",
+        )
+        for ((arquivo, tipo) in ruins) {
+            val (codigo, saida) = verificarConteudo(sh!!, arquivo)
+            assertEquals(1, codigo, "$arquivo: $saida")
+            val esperado = if (tipo == "variaveis") "arquivo de variáveis" else "chave ou certificado"
+            assertTrue(esperado in saida, "$arquivo: $saida")
+        }
+        // controle: pacote sem esses arquivos passa da conferência de conteúdo (e só falha adiante, na estrutura)
+        val (codigo, saida) = verificarConteudo(sh!!, "leia-me.txt")
+        assertEquals(1, codigo)
+        assertTrue("falta bin/painel" in saida, saida)
+    }
+
+    @Test
+    fun verificacaoPowerShellTambemRecusaDotEnvEChavesSemDiferenciarMaiusculas() {
+        val ps = Files.readString(scripts.resolve("verificar-pacote.ps1"))
+        assertTrue("-like '*.env'" in ps, "o .ps1 não recusa *.env")
+        // -like e -in do PowerShell não diferenciam maiúsculas; o .ps1 não pode virar -clike/-ceq/-cin
+        assertFalse(Regex("-c(like|in|eq|match)\\b").containsMatchIn(ps), "comparação com diferenciação de maiúsculas no .ps1")
+        val sh = Files.readString(scripts.resolve("verificar-pacote.sh"))
+        assertTrue("-iname '*.pem'" in sh && "-iname '*.env'" in sh, "o .sh compara extensões com -iname")
+    }
+
     @Test
     fun verificacaoCobreOsRiscosDoPacote() {
         for (nome in listOf("verificar-pacote.ps1", "verificar-pacote.sh")) {
