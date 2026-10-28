@@ -88,12 +88,13 @@ class AppContextTest {
         Files.copy(TestPaths.configDir.resolve("vinculos.exemplo.yaml"), pasta.resolve("vinculos.yaml"))
         Files.copy(TestPaths.configDir.resolve("labels_atraso.exemplo.yaml"), pasta.resolve("labels_atraso.yaml"))
         Files.copy(TestPaths.configDir.resolve("auditoria.exemplo.yaml"), pasta.resolve("auditoria.yaml"))
+        Files.copy(TestPaths.configDir.resolve("metas.exemplo.yaml"), pasta.resolve("metas.yaml"))
         copiarFichas()
     }
 
     @Test
     fun appContextCarregaComFallbackDeDev() {
-        listOf("papeis", "calendario", "status_map", "jira_campos", "vinculos", "labels_atraso", "auditoria").forEach {
+        listOf("papeis", "calendario", "status_map", "jira_campos", "vinculos", "labels_atraso", "auditoria", "metas").forEach {
             Files.copy(TestPaths.configDir.resolve("$it.exemplo.yaml"), pasta.resolve("$it.exemplo.yaml"))
         }
         copiarFichas()
@@ -116,7 +117,7 @@ class AppContextTest {
 
     @Test
     fun producaoSemArquivoRealFalha() {
-        for (nome in listOf("labels_atraso", "auditoria")) {
+        for (nome in listOf("labels_atraso", "auditoria", "metas")) {
             pasta.toFile().listFiles()?.forEach { it.deleteRecursively() }
             escreverArquivosReais()
             // o modelo existe, mas em produção só o arquivo real vale
@@ -137,8 +138,28 @@ class AppContextTest {
     }
 
     @Test
+    fun metasComFallbackDeDevEInvalidasFalhamSemVazarConteudo() {
+        listOf("papeis", "calendario", "status_map", "jira_campos", "vinculos", "labels_atraso", "auditoria", "metas").forEach {
+            Files.copy(TestPaths.configDir.resolve("$it.exemplo.yaml"), pasta.resolve("$it.exemplo.yaml"))
+        }
+        copiarFichas()
+        val dev = Settings(dashboardDevMode = true, configDir = pasta, databasePath = pg.arquivo)
+        AppContext.load(dev).use { ctx ->
+            assertEquals(0.90, ctx.regrasDeMetas.metaNoPrazo)
+            assertEquals(1, ctx.regrasDeMetas.versao)
+        }
+        assertTrue(avisos().any { "metas.exemplo.yaml" in it }, avisos().toString())
+        pasta.toFile().listFiles()?.forEach { it.deleteRecursively() }
+        escreverArquivosReais()
+        Files.writeString(pasta.resolve("metas.yaml"), "versao: 1\nmetaNoPrazo: 0.9\nsegredo-xyz: 1\n")
+        val e = assertFailsWith<IllegalStateException> { AppContext.load(producao()) }
+        assertTrue(pasta.resolve("metas.yaml").toString() in e.message.orEmpty(), e.message)
+        assertFalse("segredo-xyz" in e.stackTraceToString())
+    }
+
+    @Test
     fun appContextCarregaVinculosComFallbackDeDev() {
-        listOf("papeis", "calendario", "status_map", "jira_campos", "vinculos", "labels_atraso", "auditoria").forEach {
+        listOf("papeis", "calendario", "status_map", "jira_campos", "vinculos", "labels_atraso", "auditoria", "metas").forEach {
             Files.copy(TestPaths.configDir.resolve("$it.exemplo.yaml"), pasta.resolve("$it.exemplo.yaml"))
         }
         copiarFichas()
@@ -184,7 +205,7 @@ class AppContextTest {
     @Test
     fun appContextCarregaDicionarioEFichas() {
         // dev sem arquivos reais: modelos de exemplo; as fichas versionadas vêm de cards/
-        listOf("papeis", "calendario", "status_map", "jira_campos", "vinculos", "labels_atraso", "auditoria").forEach {
+        listOf("papeis", "calendario", "status_map", "jira_campos", "vinculos", "labels_atraso", "auditoria", "metas").forEach {
             Files.copy(TestPaths.configDir.resolve("$it.exemplo.yaml"), pasta.resolve("$it.exemplo.yaml"))
         }
         copiarFichas()
@@ -268,6 +289,7 @@ class AppContextTest {
         Files.copy(TestPaths.configDir.resolve("vinculos.exemplo.yaml"), pasta.resolve("vinculos.exemplo.yaml"))
         Files.copy(TestPaths.configDir.resolve("labels_atraso.exemplo.yaml"), pasta.resolve("labels_atraso.exemplo.yaml"))
         Files.copy(TestPaths.configDir.resolve("auditoria.exemplo.yaml"), pasta.resolve("auditoria.exemplo.yaml"))
+        Files.copy(TestPaths.configDir.resolve("metas.exemplo.yaml"), pasta.resolve("metas.exemplo.yaml"))
         copiarFichas()
         val s = Settings(
             dashboardDevMode = true,

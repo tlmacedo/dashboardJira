@@ -35,6 +35,10 @@ fun fichasDeTeste(campos: FieldDictionary = camposDeTeste()): Map<String, CardSp
             .map { CardSpecs.fromYaml(it, campos) }.associateBy { it.id }
     }
 
+/** Metas do modelo versionado (`metas.exemplo.yaml`). */
+fun regrasDeMetasDeTeste(): br.sidia.painel.cards.metas.RegrasDeMetas =
+    br.sidia.painel.cards.metas.RegrasDeMetas.fromYaml(TestPaths.configDir.resolve("metas.exemplo.yaml"))
+
 /** Contexto de teste sem banco (`dataSource = null`), com calendário, papéis, mapa de status, dicionário e fichas dos arquivos de exemplo. */
 fun testContext(settings: Settings): AppContext {
     val campos = camposDeTeste()
@@ -51,5 +55,6 @@ fun testContext(settings: Settings): AppContext {
         vinculos = vinculos,
         labelsDeAtraso = labelsDeAtrasoDeTeste(),
         regrasAuditoria = regrasDeAuditoriaDeTeste(vinculos),
+        regrasDeMetas = regrasDeMetasDeTeste(),
     )
 }

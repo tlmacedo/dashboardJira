@@ -303,6 +303,43 @@ class SyncerTest {
     }
 
     @Test
+    fun gravaCamposDeTrabalho() = runBlocking {
+        val busca = alterarIssue(fixture("search-tg-basic-changelog.json"), "TG-1") {
+            it.comFields(
+                "priority" to obj("""{"name":"High"}"""),
+                "timeestimate" to JsonPrimitive(7200),
+                "timeoriginalestimate" to JsonPrimitive(14400),
+                "timespent" to JsonPrimitive(3600),
+                "customfield_10002" to JsonPrimitive(5),
+                "customfield_10003" to JsonPrimitive("TG-900"),
+                "customfield_10004" to Json.parseToJsonElement("""[{"value":"Impediment"}]"""),
+                "components" to Json.parseToJsonElement("""[{"name":"Camera"}]"""),
+            )
+        }
+        val dicionario = FieldDictionary(
+            listOf(
+                FieldDef("Story Points", FieldType.NUMBER, "samsung", "a confirmar", customId = "customfield_10002"),
+                FieldDef("Epic Link", FieldType.TEXT, "samsung", "a confirmar", customId = "cf[10003]"),
+                FieldDef("Flagged", FieldType.SELECT, "samsung", "a confirmar", customId = "customfield_10004"),
+            ),
+        )
+        Syncer(cliente(jira(busca = busca)), store, "samsung", campos = dicionario).run(consulta)
+        fun coluna(c: String, chave: String) = texto("SELECT CAST($c AS TEXT) FROM issue WHERE key = '$chave'").singleOrNull()
+        assertEquals("High", coluna("priority", "TG-1"))
+        assertEquals("7200", coluna("remaining_s", "TG-1"))
+        assertEquals("14400", coluna("estimate_s", "TG-1"))
+        assertEquals("3600", coluna("spent_s", "TG-1"))
+        assertEquals("5.0", coluna("story_points", "TG-1"))
+        assertEquals("TG-900", coluna("epic_key", "TG-1"))
+        assertEquals("1", coluna("flagged", "TG-1"))
+        assertEquals("""["Camera"]""", coluna("components", "TG-1"))
+        // Issue sem os campos: nulos, flag 0 e componentes vazios (nunca falha).
+        assertEquals(null, coluna("priority", "TG-2"))
+        assertEquals("0", coluna("flagged", "TG-2"))
+        assertEquals("[]", coluna("components", "TG-2"))
+    }
+
+    @Test
     fun aceitaCustomIdNoFormatoCf() = runBlocking {
         Syncer(cliente(jira()), store, "samsung", campos = dicionarioComOs("cf[12416]")).run(consulta)
         assertEquals("TG-1=Android 17.0 (OneUI_9.0)", osVersions().first())

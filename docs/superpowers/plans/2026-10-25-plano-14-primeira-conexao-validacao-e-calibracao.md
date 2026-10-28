@@ -222,6 +222,8 @@ HANDOFF.md, docs/superpowers/plans/2026-10-24-indice-dos-planos.md
 
 **Por quê:** as issues gravadas antes dos Planos 5 e 6 não têm prioridade, estimativas nem worklog (cobertura E14). O cursor do 4A é monotônico; é preciso zerá-lo para que o próximo incremental vire carga inicial.
 
+**Obrigatória se houver dados anteriores ao 5a (achado M1 da revisão do 5a):** a migração `V2` não é retroativa; as issues já gravadas ficam com `priority`, estimativa restante, pontos, épico, flag e componentes nulos até serem atualizadas, `temCamposDeTrabalho` vira verdadeiro com UMA issue com prioridade (o aviso `CAMPOS_DE_TRABALHO_INDISPONIVEIS` some) e AB-06/MT-12 mostram "(sem)" inflado. Em banco novo a carga inicial não tem o problema.
+
 **Arquivos:** Modificar `sync/SyncStateStore.kt` (`zerarCursor`), `validacao/ValidacaoCli.kt` (subcomando `recarga-completa <instancia>`); Teste `sync/SyncStateStoreTest.kt`, `validacao/RecargaCompletaTest.kt`, `sync/FlagDesligadaZeroRequisicoesTest.kt` (caso novo).
 
 **Interfaces:**

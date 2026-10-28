@@ -1,0 +1,47 @@
+# Ficha do card "Fechadas" (Plano 5). Estrita: chave desconhecida falha ao carregar.
+# NÃO exclui status de cancelamento: as canceladas também entram (elas formam o FE-06, "Canceladas").
+
+id: fechadas
+titulo: Fechadas
+instancia: samsung
+
+campos:
+  - OS Version
+  - priority
+  - timeoriginalestimate
+  - timespent
+  - Story Points
+
+# Os MESMOS tipos da ficha de sincronização: o universo de "no prazo" precisa ser o da Auditoria, que lê tudo o que a
+# sincronização traz (uma regra só nas três telas).
+filtrosFixos:
+  project: ["TG-Basic"]
+  issuetype: ["Checklist", "Checklist TG", "Checklist Review", "Feature check", "TG Feature check", "Task"]
+
+parametros:
+  - nome: squad
+    tipo: squad
+    obrigatorio: false
+  - nome: periodo
+    tipo: periodo
+    obrigatorio: false
+  - nome: os
+    tipo: os
+    obrigatorio: false
+
+formula: >-
+  Tasks concluídas (categoria concluído, resolução que não é cancelamento e data de resolução) no período, pelo dia de
+  Manaus da resolução (padrão: 90 dias). Mostra ciclo e lead time (P50 e P85), pontos, entregas por semana, por tipo,
+  por projeto e por pessoa (ordem alfabética), "no prazo" e "no prazo ajustado" lado a lado, e as canceladas à parte.
+
+exemplo: >-
+  squad=[dev.alfa, dev.beta], periodo=2026-08-01 a 2026-10-30.
+
+aceite:
+  - Concluída exige categoria concluído E resolução E data de resolução; resolução de cancelamento conta em Canceladas.
+  - Status concluído sem resolução vai para o aviso DONE_SEM_RESOLUTION, não para as concluídas.
+  - O dia da resolução é o de Manaus, igual em Fechadas, Metas e Auditoria.
+  - Percentis por tipo; menos de 5 tasks mostra o número com aviso de amostra pequena.
+  - Pessoas em ordem alfabética, sem posição.
+
+expandChangelog: true

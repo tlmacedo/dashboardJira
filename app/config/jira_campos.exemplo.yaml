@@ -96,6 +96,27 @@ campos:
     tipo: DATE
     instancia: samsung
     finalidade: Data em que a resolução foi registrada
+  # Campos de trabalho (Plano 5): prioridade, estimativas, tempo gasto e componentes.
+  - nome: priority
+    tipo: SELECT
+    instancia: samsung
+    finalidade: Prioridade da task (cards de trabalho)
+  - nome: timeoriginalestimate
+    tipo: NUMBER
+    instancia: samsung
+    finalidade: Estimativa original em segundos (horas estimadas)
+  - nome: timeestimate
+    tipo: NUMBER
+    instancia: samsung
+    finalidade: Estimativa restante em segundos
+  - nome: timespent
+    tipo: NUMBER
+    instancia: samsung
+    finalidade: Tempo gasto em segundos
+  - nome: components
+    tipo: SELECT
+    instancia: samsung
+    finalidade: Componentes da task
 
   # Campos customizados do TG-Basic
   - nome: OS Version
@@ -135,6 +156,20 @@ campos:
     tipo: TEXT
     instancia: samsung
     finalidade: Código da operadora (tipo a confirmar)
+
+  # Campos de trabalho que dependem de id customizado (descobertos pelo nome na primeira conexão autorizada).
+  - nome: Story Points
+    tipo: NUMBER
+    instancia: samsung
+    finalidade: a confirmar
+  - nome: Epic Link
+    tipo: TEXT
+    instancia: samsung
+    finalidade: a confirmar
+  - nome: Flagged
+    tipo: SELECT
+    instancia: samsung
+    finalidade: a confirmar
 
   # Campos referidos só por número, ainda sem finalidade confirmada
   - nome: "cf[12416]"

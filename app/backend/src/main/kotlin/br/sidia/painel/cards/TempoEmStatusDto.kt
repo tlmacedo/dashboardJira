@@ -45,6 +45,16 @@ data class AvisoDto(
         const val CALCULO_INDISPONIVEL = "CALCULO_INDISPONIVEL"
         const val DATAS_INCONSISTENTES = "DATAS_INCONSISTENTES"
         const val OS_INDISPONIVEL = "OS_INDISPONIVEL"
+        /** Faixa histórica (P50/P85) com menos itens que o mínimo: o número aparece, o aviso diz que é instável (`tipo`, `n`, `minimo`). */
+        const val AMOSTRA_PEQUENA = "AMOSTRA_PEQUENA"
+        /** Nenhuma issue da base tem prioridade: a base foi sincronizada antes dos campos de trabalho (informativo). */
+        const val CAMPOS_DE_TRABALHO_INDISPONIVEIS = "CAMPOS_DE_TRABALHO_INDISPONIVEIS"
+        /** Issues em andamento de um tipo sem concluídas no histórico: ficam fora da comparação com o P85 (`n`). */
+        const val SEM_HISTORICO_DO_TIPO = "SEM_HISTORICO_DO_TIPO"
+        /** Status concluído sem `resolution`: fica fora dos números e vai para a Qualidade dos dados (`n`). */
+        const val DONE_SEM_RESOLUTION = "DONE_SEM_RESOLUTION"
+        /** `status_map.ordem` não configurada: a "devolvida" não pode ser calculada. */
+        const val ORDEM_DO_FLUXO_AUSENTE = "ORDEM_DO_FLUXO_AUSENTE"
         const val BLOQUEANTE = "bloqueante"
         const val INFORMATIVO = "informativo"
 

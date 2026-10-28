@@ -81,6 +81,77 @@ class NoPrazoTest {
         assertEquals(0, calcular(issues = issues).concluidas)
     }
 
+    // ---- Regra única do universo (Plano 5, Tarefa 7): a mesma para Auditoria, Fechadas e Metas ----
+
+    private val mapaComNegativas = StatusMap(
+        mapOf("Done" to StatusCategory.DONE, "In Progress" to StatusCategory.ACTIVE),
+        resolucoesNegativas = setOf("Won't Do", "Duplicate"),
+    )
+
+    private fun noUniverso(i: br.sidia.painel.auditoria.AuditIssue, de: LocalDate = this.de, ate: LocalDate = this.ate) =
+        NoPrazo.noUniverso(i, mapaComNegativas, zona, de, ate)
+
+    @Test
+    fun canceladaComVencimentoForaDoUniverso() {
+        val cancelada = feita("TG-61", "2026-10-10T12:00:00Z", resolution = "Won't Do")
+        assertEquals(false, noUniverso(cancelada))
+        assertEquals(false, noUniverso(feita("TG-62", "2026-10-10T12:00:00Z", resolution = "duplicate")), "sem diferenciar maiúsculas")
+        assertEquals(true, noUniverso(feita("TG-63", "2026-10-10T12:00:00Z", resolution = "Done")))
+        // E o cálculo também não a conta (com o mapa que conhece a resolução negativa).
+        val r = NoPrazo.calcular(listOf(cancelada, feita("TG-64", "2026-10-10T12:00:00Z")), m.c.ctx.labels, mapaComNegativas, zona, de, ate)
+        assertEquals(1, r.concluidas)
+    }
+
+    @Test
+    fun epicForaDoUniverso() {
+        val epic = m.issue("TG-65", status = "Done", resolution = "Done", resolved = "2026-10-10T12:00:00Z", duedate = "2026-10-15", tipo = "Epic")
+        assertEquals(false, noUniverso(epic))
+        assertEquals(false, noUniverso(epic.copy(issueType = "epic")), "sem diferenciar maiúsculas")
+        assertEquals(true, noUniverso(epic.copy(issueType = "Checklist")))
+    }
+
+    @Test
+    fun resolvidaAntesDoPeriodoComVencimentoDentroEntra() {
+        // Resolvida em 28/09 e vencendo em 05/10: o período é pelo VENCIMENTO, então entra em outubro.
+        val antes = feita("TG-66", "2026-09-28T12:00:00Z", duedate = "2026-10-05")
+        assertEquals(true, noUniverso(antes))
+        val r = NoPrazo.calcular(listOf(antes), m.c.ctx.labels, mapaComNegativas, zona, de, ate)
+        assertEquals(1, r.noPrazo)
+        // Vencimento fora do período continua fora, qualquer que seja a data de resolução.
+        assertEquals(false, noUniverso(feita("TG-67", "2026-10-10T12:00:00Z", duedate = "2026-11-02")))
+    }
+
+    @Test
+    fun universoExigeCategoriaResolucaoEDataDeResolucao() {
+        assertEquals(false, noUniverso(m.issue("TG-68", status = "In Progress", resolution = "Done", resolved = "2026-10-10T12:00:00Z")))
+        assertEquals(false, noUniverso(m.issue("TG-69", status = "Done", resolution = null, resolved = "2026-10-10T12:00:00Z")))
+        assertEquals(false, noUniverso(m.issue("TG-70", status = "Done", resolution = "Done", resolved = null)))
+        assertEquals(false, noUniverso(m.issue("TG-71", status = "Desconhecido", resolution = "Done", resolved = "2026-10-10T12:00:00Z")))
+        assertEquals(false, noUniverso(m.issue("TG-72", status = "Done", resolution = "Done", resolved = "2026-10-10T12:00:00Z", duedate = null)))
+    }
+
+    @Test
+    fun classificarFaixas() {
+        val regras = m.c.ctx.labels
+        fun faixa(delta: Long) = NoPrazo.classificar(LocalDate.parse("2026-10-15").plusDays(delta), LocalDate.parse("2026-10-15"), emptyList(), regras)
+        assertEquals(FaixaDePrazo.D3_OU_ANTES, faixa(-3).faixa)
+        assertEquals(FaixaDePrazo.D3_OU_ANTES, faixa(-9).faixa)
+        assertEquals(FaixaDePrazo.D2, faixa(-2).faixa)
+        assertEquals(FaixaDePrazo.D1, faixa(-1).faixa)
+        assertEquals(FaixaDePrazo.D, faixa(0).faixa)
+        assertEquals(FaixaDePrazo.ATRASO_1_3, faixa(1).faixa)
+        assertEquals(FaixaDePrazo.ATRASO_1_3, faixa(3).faixa)
+        assertEquals(FaixaDePrazo.ATRASO_MAIS_3, faixa(4).faixa)
+        assertEquals(-3, faixa(-3).delta)
+        assertEquals(true, faixa(0).noPrazo)
+        assertEquals(false, faixa(1).noPrazo)
+        // Atrasada com label que justifica: fora do prazo, mas dentro do ajustado.
+        val comLabel = NoPrazo.classificar(LocalDate.parse("2026-10-20"), LocalDate.parse("2026-10-15"), listOf("late_sent"), regras)
+        assertEquals(false, comLabel.noPrazo)
+        assertEquals(true, comLabel.ajustado)
+        assertEquals(false, NoPrazo.classificar(LocalDate.parse("2026-10-20"), LocalDate.parse("2026-10-15"), listOf("login"), regras).ajustado)
+    }
+
     @Test
     fun labelsQueNaoJustificamNaoAjustam() {
         val r = calcular(issues = listOf(feita("TG-51", "2026-10-17T12:00:00Z", labels = listOf("login"))))

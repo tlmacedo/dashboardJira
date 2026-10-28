@@ -1,0 +1,143 @@
+/* Moldura e filtros das telas de trabalho e prazos. Só tokens dos temas; o resto vem de tempo.css e cartao.css. */
+.cardpage .campo-grupo {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  align-items: center;
+  margin: 0;
+  padding: 4px 8px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+}
+.cardpage .campo-grupo legend {
+  padding: 0 4px;
+  font-size: 12px;
+  color: var(--text2);
+}
+.campo-grupo .campo--check {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+}
+.cardpage .aviso--bloqueante {
+  border-color: var(--bad);
+}
+
+/* Grade de cartões KPI: lado a lado a partir de 560 px, empilhados no celular. */
+.cardpage-kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 12px;
+  margin-block: 12px;
+}
+.cardpage-duas-colunas {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 12px;
+  margin-block: 12px;
+}
+.cardpage .num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.cardpage .pilula {
+  display: inline-flex;
+  gap: 4px;
+  align-items: baseline;
+  padding: 1px 8px;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  font-size: 12px;
+}
+.cardpage .pilula--ok {
+  color: var(--ok);
+}
+.cardpage .pilula--atencao {
+  color: var(--warn);
+}
+.cardpage .pilula--problema {
+  color: var(--bad);
+}
+.cardpage .contagem-botao {
+  font: inherit;
+  padding: 0 4px;
+  background: none;
+  border: 0;
+  border-bottom: 1px dotted currentColor;
+  color: inherit;
+  cursor: pointer;
+}
+.cardpage .contagem-botao:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+.barra-celula {
+  width: 45%;
+  min-width: 80px;
+}
+.barra-cheia {
+  display: block;
+  height: 10px;
+  min-width: 2px;
+  border-radius: 3px;
+  background: var(--primary);
+}
+.cardpage .ordenar-botao {
+  font: inherit;
+  font-weight: 600;
+  background: none;
+  border: 0;
+  padding: 0;
+  color: inherit;
+  cursor: pointer;
+  text-align: inherit;
+}
+.cardpage .ordenar-botao:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+.cardpage .legenda-meta {
+  margin: 4px 0 0;
+  font-size: 12.5px;
+  color: var(--text2);
+}
+.cardpage .alerta-original {
+  margin: 8px 0;
+  padding: 6px 10px;
+  border: 1px solid var(--warn);
+  border-radius: 8px;
+  font-size: 13px;
+}
+.cardpage .alerta-original span {
+  color: var(--warn);
+}
+.cardpage .dispersao-percentis {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 4px 12px;
+  margin: 0;
+}
+.cardpage .dispersao-percentis dt {
+  font-weight: 600;
+}
+.cardpage .dispersao-percentis dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+.cardpage .resumo-task {
+  margin-left: 4px;
+  font-weight: 400;
+  color: var(--text2);
+}
+.cardpage .controle-granularidade {
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
+}
+.cardpage .controle-movimento {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  font-size: 13px;
+}

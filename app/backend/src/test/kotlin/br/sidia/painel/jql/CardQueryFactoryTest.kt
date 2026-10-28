@@ -110,6 +110,44 @@ class CardQueryFactoryTest {
         assertTrue("not in" !in q.jql)
     }
 
+    private fun jqlDaFicha(id: String, params: Map<String, Any> = emptyMap()) =
+        fabrica.build(CardSpecs.fromYaml(TestPaths.configDir.resolve("cards/$id.card.yaml"), dict), params).jql
+
+    private val filtrosDeTrabalho = "project in (\"TG-Basic\") AND issuetype in (\"Checklist\", \"Checklist TG\", \"Checklist Review\")"
+
+    @Test
+    fun jqlSnapshotAbertas() {
+        assertEquals(
+            "$filtrosDeTrabalho AND status not in (\"Cancelled\", \"Canceled\", \"Dropped\")",
+            jqlDaFicha("abertas"),
+        )
+        assertEquals(jqlDaFicha("abertas"), jqlDaFicha("negligenciadas"))
+        // Os filtros opcionais entram quando informados.
+        assertTrue("assignee in (\"dev.alfa\")" in jqlDaFicha("abertas", mapOf("squad" to listOf("dev.alfa"))))
+    }
+
+    @Test
+    fun jqlSnapshotFechadasNaoExcluiCanceladas() {
+        // As canceladas contam em "Canceladas" (FE-06): a ficha não tem filtro de exclusão de status.
+        // Fechadas e Metas leem os mesmos 6 tipos da sincronização (o "no prazo" é o mesmo da Auditoria).
+        val todosOsTipos = "project in (\"TG-Basic\") AND issuetype in (\"Checklist\", \"Checklist TG\", \"Checklist Review\", " +
+            "\"Feature check\", \"TG Feature check\", \"Task\")"
+        assertEquals(todosOsTipos, jqlDaFicha("fechadas"))
+        assertEquals(todosOsTipos, jqlDaFicha("metas"))
+        assertEquals(
+            "$todosOsTipos AND resolved >= \"2026-08-01\" AND resolved < \"2026-10-31\"",
+            jqlDaFicha("fechadas", mapOf("periodo" to mapOf("de" to "2026-08-01", "ate" to "2026-10-30"))),
+        )
+    }
+
+    @Test
+    fun fichaDeSincronizacaoPedeCamposNovos() {
+        val fields = fabrica.build(fichaSync, mapOf("desde" to desde)).fields
+        for (campo in listOf("priority", "timeestimate", "timespent", "timeoriginalestimate", "components")) {
+            assertEquals(1, fields.count { it == campo }, "$campo ausente em $fields")
+        }
+    }
+
     @Test
     fun fichaSincronizacaoPedeCustomfieldQuandoHaId() {
         val d = FieldDictionary(
@@ -124,6 +162,15 @@ class CardQueryFactoryTest {
                 FieldDef("OS Version", FieldType.SELECT, "samsung", "x", customId = "cf[12416]"),
                 FieldDef("SKU Type", FieldType.SELECT, "samsung", "x"),
                 FieldDef("Checklist Type", FieldType.SELECT, "samsung", "x"),
+                // Campos de trabalho que a ficha de sincronização também pede.
+                FieldDef("priority", FieldType.SELECT, "samsung", "x"),
+                FieldDef("timeoriginalestimate", FieldType.NUMBER, "samsung", "x"),
+                FieldDef("timeestimate", FieldType.NUMBER, "samsung", "x"),
+                FieldDef("timespent", FieldType.NUMBER, "samsung", "x"),
+                FieldDef("components", FieldType.SELECT, "samsung", "x"),
+                FieldDef("Story Points", FieldType.NUMBER, "samsung", "x"),
+                FieldDef("Epic Link", FieldType.TEXT, "samsung", "x"),
+                FieldDef("Flagged", FieldType.SELECT, "samsung", "x"),
             ),
         )
         val s = CardSpecs.fromYaml(TestPaths.configDir.resolve("cards/sincronizacao.card.yaml"), d)

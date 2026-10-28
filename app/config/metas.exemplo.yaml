@@ -1,0 +1,16 @@
+# Modelo das metas do card "Metas e prazos" (copie para metas.yaml e ajuste). Não leva dado pessoal.
+# Estrito: chave desconhecida falha ao carregar. Em produção o arquivo real é obrigatório.
+versao: 1
+
+# Meta de "no prazo" (fração de 0 a 1): linha na tabela por tipo/prioridade/squad/pessoa fica ✓ quando a taxa >= meta.
+metaNoPrazo: 0.90
+
+# Meta de entregas antecipadas (resolvidas pelo menos 1 dia antes do vencimento).
+metaAntecipadas: 0.35
+
+# Quando a taxa "no prazo" pela data ATUAL supera a taxa pela data ORIGINAL (1º vencimento do changelog) em pelo menos
+# estes pontos percentuais, a tela avisa que prazos foram renegociados.
+alertaDataOriginalPp: 5.0
+
+# Até quantos pontos percentuais abaixo da meta a linha fica ● (atenção); mais abaixo disso é ▲.
+faixaAtencaoPp: 10.0

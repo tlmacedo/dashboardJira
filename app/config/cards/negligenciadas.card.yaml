@@ -1,0 +1,42 @@
+# Ficha do card "Negligenciadas" (Plano 5). Estrita: chave desconhecida falha ao carregar.
+
+id: negligenciadas
+titulo: Negligenciadas
+instancia: samsung
+
+campos:
+  - OS Version
+  - priority
+
+filtrosFixos:
+  project: ["TG-Basic"]
+  issuetype: ["Checklist", "Checklist TG", "Checklist Review"]
+
+filtrosExcluidos:
+  status: ["Cancelled", "Canceled", "Dropped"]
+
+parametros:
+  - nome: squad
+    tipo: squad
+    obrigatorio: false
+  - nome: os
+    tipo: os
+    obrigatorio: false
+
+formula: >-
+  Seis listas separadas de tasks abertas: sem atualização (em andamento há mais de 7 dias corridos sem mudar o updated),
+  sem responsável, vencidas, bloqueadas, paradas no status (em andamento há mais que o maior entre 3 dias e 2 vezes a
+  mediana do status nas últimas 16 semanas) e a fazer há mais de 30 dias. Cada linha traz o último movimento real
+  (status, responsável, vencimento, labels ou resolução), e o filtro "sem movimento real" mostra só quem não teve nenhum
+  há mais de 7 dias.
+
+exemplo: >-
+  squad=[dev.alfa], movimento=semReal.
+
+aceite:
+  - Sem atualização e Paradas no status são listas separadas (a mesma task pode estar nas duas).
+  - Paradas só considera tasks em andamento.
+  - Issue sem responsável só aparece para coordenação e gerente.
+  - Cada contagem abre as mesmas tasks que a formam.
+
+expandChangelog: true

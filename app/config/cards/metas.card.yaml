@@ -1,0 +1,44 @@
+# Ficha do card "Metas e prazos" (Plano 5). Estrita: chave desconhecida falha ao carregar.
+# NÃO exclui status de cancelamento na leitura: as canceladas saem do universo pela resolução (status_map.yaml).
+
+id: metas
+titulo: Metas e prazos
+instancia: samsung
+
+campos:
+  - OS Version
+  - priority
+
+# Os MESMOS tipos da ficha de sincronização: o universo de "no prazo" precisa ser o da Auditoria, que lê tudo o que a
+# sincronização traz (uma regra só nas três telas).
+filtrosFixos:
+  project: ["TG-Basic"]
+  issuetype: ["Checklist", "Checklist TG", "Checklist Review", "Feature check", "TG Feature check", "Task"]
+
+parametros:
+  - nome: squad
+    tipo: squad
+    obrigatorio: false
+  - nome: periodo
+    tipo: periodo
+    obrigatorio: false
+  - nome: os
+    tipo: os
+    obrigatorio: false
+
+formula: >-
+  Das tasks concluídas (categoria concluído, resolução que não é cancelamento e data de resolução, fora de Epic) com
+  VENCIMENTO no período (padrão: 90 dias), quantas saíram até o vencimento (no prazo), quantas também contando as com
+  label que justifica o atraso (no prazo ajustado) e quantas pela data original do vencimento. Δ é o dia de Manaus da
+  resolução menos o vencimento: antecipadas Δ <= -1, em D-1/D-2, no dia (Δ = 0) e atrasadas (Δ > 0).
+
+exemplo: >-
+  squad=[dev.alfa], periodo=2026-08-01 a 2026-10-30, granularidade=semana.
+
+aceite:
+  - O universo é pelo vencimento no período, não pela data de resolução (uma resolvida em 28/09 que vence em 05/10 entra em outubro).
+  - Canceladas e Epic ficam fora do universo.
+  - No prazo e no prazo ajustado vêm da mesma regra da Auditoria e de Fechadas.
+  - Tabelas por pessoa e squad em ordem alfabética, nunca por taxa.
+
+expandChangelog: true

@@ -1,0 +1,45 @@
+# Ficha do card "Abertas" (Plano 5). Estrita: chave desconhecida falha ao carregar.
+# A leitura no banco aplica estes tipos e a exclusão de status (FiltroDeFicha); o JQL só serve à sincronização e ao ensaio.
+
+id: abertas
+titulo: Abertas
+instancia: samsung
+
+campos:
+  - OS Version
+  - priority
+  - timeoriginalestimate
+  - timeestimate
+  - timespent
+
+filtrosFixos:
+  project: ["TG-Basic"]
+  issuetype: ["Checklist", "Checklist TG", "Checklist Review"]
+
+filtrosExcluidos:
+  status: ["Cancelled", "Canceled", "Dropped"]
+
+# Todos opcionais: o card lê do banco e aplica estes filtros por parâmetro de URL.
+parametros:
+  - nome: squad
+    tipo: squad
+    obrigatorio: false
+  - nome: os
+    tipo: os
+    obrigatorio: false
+
+formula: >-
+  Tasks abertas (sem data de resolução e fora da categoria concluído) por status, prioridade, idade (desde a primeira
+  entrada em andamento) e vencimento; idade comparada ao P85 do ciclo do PRÓPRIO tipo, medido nas concluídas das
+  últimas 16 semanas dentro da visão de quem consulta.
+
+exemplo: >-
+  squad=[dev.alfa, dev.beta], os não informado.
+
+aceite:
+  - Só entram tasks do projeto TG-Basic dos tipos Checklist, Checklist TG e Checklist Review.
+  - Tasks Cancelled, Canceled e Dropped ficam de fora.
+  - Cada contagem abre as mesmas tasks que a formam.
+  - O histórico e os totais seguem a visão do papel (usuário só vê as próprias).
+
+expandChangelog: true

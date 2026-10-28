@@ -1,5 +1,6 @@
 package br.sidia.painel
 
+import br.sidia.painel.cards.metas.RegrasDeMetas
 import br.sidia.painel.config.Settings
 import br.sidia.painel.db.Database
 import br.sidia.painel.db.TravaDeProcesso
@@ -45,6 +46,8 @@ class AppContext(
     val clock: Clock = Clock.system(settings.zone),
     /** Trava do arquivo do banco (um painel por banco); solta ao fechar. Nula nos testes, que usam arquivos próprios. */
     private val travaDeProcesso: AutoCloseable? = null,
+    /** Metas e limites do card Metas e prazos; lido de `metas.yaml` (o modelo `metas.exemplo.yaml` só vale em desenvolvimento). */
+    val regrasDeMetas: RegrasDeMetas = RegrasDeMetas.PADRAO,
 ) : AutoCloseable {
     private val aoFechar = java.util.concurrent.CopyOnWriteArrayList<() -> Unit>()
 
@@ -107,6 +110,9 @@ class AppContext(
             val labelsDeAtraso = lerYaml(arquivoLabels) { LabelsDeAtraso.fromYaml(arquivoLabels) }
             val arquivoAuditoria = resolver(settings, "auditoria")
             val regrasAuditoria = lerYaml(arquivoAuditoria) { RegrasDeAuditoria.fromYaml(arquivoAuditoria, vinculos) }
+            // Metas do card Metas e prazos: config versionada sem dado pessoal; o modelo só cai em dev.
+            val arquivoMetas = resolver(settings, "metas")
+            val regrasDeMetas = lerYaml(arquivoMetas) { RegrasDeMetas.fromYaml(arquivoMetas) }
 
             // Valida na subida todas as instâncias do Jira configuradas (sem enviar nada); só id e regra na falha.
             val jira = JiraClientFactory(settings)
@@ -127,7 +133,7 @@ class AppContext(
             }
             return AppContext(
                 settings, calendario, papeis, ds, jira, mapaDeStatus, campos, fichas, vinculos, labelsDeAtraso, regrasAuditoria, clock,
-                travaDeProcesso = trava,
+                travaDeProcesso = trava, regrasDeMetas = regrasDeMetas,
             )
         }
 
