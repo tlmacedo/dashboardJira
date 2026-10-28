@@ -54,8 +54,8 @@ class JiraClientFactoryTest {
             aoAlcancarMotorDesligado = { motorAlcancado++ },
         )
         val c = f.create("samsung")
-        assertFailsWith<JiraLiveDisabledException> { c.search(SearchRequest("x", listOf("summary"))) }
-        assertFailsWith<JiraLiveDisabledException> { c.searchAll(SearchRequest("x", listOf("summary"))).toList() }
+        assertFailsWith<JiraLiveDisabledException> { c.search(req(instancia = "samsung")) }
+        assertFailsWith<JiraLiveDisabledException> { c.searchAll(req(instancia = "samsung")).toList() }
         assertFailsWith<JiraLiveDisabledException> { c.count("x") }
         assertFailsWith<JiraLiveDisabledException> { c.fullChangelog("TG-1") }
         assertEquals(0, criacoesDoHttpReal)

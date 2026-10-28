@@ -3,9 +3,14 @@ package br.sidia.painel
 import br.sidia.painel.cards.registrarNegacaoSemPapel
 import br.sidia.painel.cards.rotasTempoEmStatus
 import br.sidia.painel.config.ArquivoEnv
+import br.sidia.painel.config.PerfilDeExecucao
 import br.sidia.painel.config.Settings
 import br.sidia.painel.db.AccessLog
 import br.sidia.painel.demo.prepararDemonstracao
+import br.sidia.painel.http.ConfigCsrf
+import br.sidia.painel.http.cabecalhosDeSeguranca
+import br.sidia.painel.http.protecaoCsrf
+import br.sidia.painel.http.registrarNegacaoCsrf
 import br.sidia.painel.security.Authenticator
 import br.sidia.painel.security.DevAuthenticator
 import br.sidia.painel.security.OidcAuthenticator
@@ -48,7 +53,12 @@ fun main() {
     val arquivoEnv = System.getenv("PAINEL_ENV_FILE")?.takeIf { it.isNotBlank() }?.let { java.nio.file.Path.of(it) }
         ?: java.nio.file.Path.of(".env")
     // A flag de acesso ao Jira vem SÓ desse arquivo (true liga; false ou ausente desliga).
-    val settings = Settings.fromEnv(ArquivoEnv.combinarComFlagSoDoArquivo(ArquivoEnv.ler(arquivoEnv), System.getenv()))
+    // No pacote instalado (perfil de produção) a ausência de DASHBOARD_DEV_MODE vale false; ver PerfilDeExecucao.
+    val env = PerfilDeExecucao.aplicar(
+        System.getProperty(PerfilDeExecucao.PROPRIEDADE),
+        ArquivoEnv.combinarComFlagSoDoArquivo(ArquivoEnv.ler(arquivoEnv), System.getenv()),
+    )
+    val settings = Settings.fromEnv(env)
     // Falhas de configuração, papéis ou banco acontecem aqui, na subida, e não na primeira requisição.
     val context = AppContext.load(settings)
     // Dados fictícios (só em desenvolvimento, Jira desligado) ou recusa de banco misturado; ver DadosDeDemonstracao.
@@ -79,7 +89,7 @@ private fun autenticadorPadrao(settings: Settings): Authenticator =
  * compatibilidade de assinatura (posicional) e é ignorado, para que os dois nunca divirjam em silêncio.
  */
 fun Application.module(
-    @Suppress("UNUSED_PARAMETER") settingsIgnorado: Settings,
+    @Suppress("UNUSED_PARAMETER") settingsIgnorado: Settings? = null,
     context: AppContext,
     authenticator: Authenticator = autenticadorPadrao(context.settings),
     agendador: Agendador? = null,
@@ -102,10 +112,16 @@ fun Application.module(
     }
     monitor.subscribe(ApplicationStopping) { runBlocking { agendador?.parar() } }
     install(ContentNegotiation) { json() }
+    // CSP e demais cabeçalhos de segurança em toda resposta (ver CabecalhosDeSeguranca.kt).
+    install(cabecalhosDeSeguranca(settings.dashboardDevMode))
     // Sem banco (só em testes) não há auditoria nem rotas de dados.
     val auditoria = context.dataSource?.let { AccessLog(it) }
     installAccessControl(settings, authenticator, aoNegarSemPapel = { call, principal ->
         auditoria?.let { registrarNegacaoSemPapel(it, context, call, principal) }
+    })
+    // CSRF em todo método mutante (depois do controle de acesso, para a auditoria já ver o principal).
+    install(protecaoCsrf(ConfigCsrf(settings.origemPublica)) { call, codigo ->
+        auditoria?.let { registrarNegacaoCsrf(it, context, call, codigo) }
     })
     if (settings.dashboardDevMode && settings.jiraLiveEnabled) {
         log.warn("ATENÇÃO: modo de desenvolvimento (sem login) com Jira real ligado: dados reais ficam expostos sem autenticação.")

@@ -36,7 +36,7 @@ A 14a (bloco de sincronização) começa logo depois do 9, quando o usuário lig
 | 6 | `2026-10-25-plano-06-pessoas-planejamento-ausencias.md` | `../specs/2026-10-25-spec-fase-06-pessoas-planejamento-ausencias.md` | Escrito, aguardando execução |
 | 7 | `2026-10-25-plano-07-checklist-integridade-distribuicao-governanca.md` | `../specs/2026-10-25-spec-fase-07-checklist-integridade-distribuicao-governanca.md` | Escrito, aguardando execução |
 | 8 | `2026-10-25-plano-08-preparacao-final-e-remocao-do-legacy.md` | `../specs/2026-10-25-spec-fase-08-preparacao-final-e-remocao-do-legacy.md` | Escrito, aguardando execução |
-| 9 (12 tarefas) | `2026-10-25-plano-09-ci-e-endurecimento.md` | `../specs/2026-10-25-spec-fase-09-ci-e-endurecimento.md` | Escrito, aguardando execução |
+| 9 (12 tarefas) | `2026-10-25-plano-09-ci-e-endurecimento.md` | `../specs/2026-10-25-spec-fase-09-ci-e-endurecimento.md` | Executado na branch `feat/ci-e-endurecimento` (PR pendente) |
 | 10 (12 tarefas) | `2026-10-25-plano-10-complementos-de-telas-e-filtros.md` | `../specs/2026-10-25-spec-fase-10-complementos-de-telas-e-filtros.md` | Escrito, aguardando execução |
 | 11 (12 tarefas) | `2026-10-25-plano-11-auditoria-completa-e-lgpd.md` | `../specs/2026-10-25-spec-fase-11-auditoria-completa-e-lgpd.md` | Escrito, aguardando execução |
 | 12 (12 tarefas) | `2026-10-25-plano-12-operacao-em-producao.md` | `../specs/2026-10-25-spec-fase-12-operacao-em-producao.md` | Escrito, aguardando execução |

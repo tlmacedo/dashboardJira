@@ -1,7 +1,7 @@
 // Contrato do status do sincronizador (espelha SyncStatusDto do backend). Só fala com o backend do painel;
 // nunca com o Jira. O corpo só tem códigos, contagens e instantes: nunca URL, token, JQL nem texto de erro.
 
-import { ApiError } from '../TempoEmStatus/api'
+import { getJson } from '../../api/client'
 
 export type ExecucaoDto = {
   tipo: 'INCREMENTAL' | 'RECONCILIACAO' | 'RETENCAO' | string
@@ -34,8 +34,6 @@ export type SyncStatusDto = {
   retencao: ExecucaoDto | null
 }
 
-export async function fetchSyncStatus(): Promise<SyncStatusDto> {
-  const resposta = await fetch('/api/sync/status', { headers: { Accept: 'application/json' } })
-  if (!resposta.ok) throw new ApiError(resposta.status)
-  return (await resposta.json()) as SyncStatusDto
+export function fetchSyncStatus(): Promise<SyncStatusDto> {
+  return getJson<SyncStatusDto>('/api/sync/status')
 }
