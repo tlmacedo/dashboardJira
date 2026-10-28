@@ -283,6 +283,35 @@ class JiraClient internal constructor(
         return historicos
     }
 
+    /**
+     * Registros de horas de uma issue via GET `/rest/api/2/issue/{key}/worklog`, paginado (`startAt`/`maxResults`/`total`).
+     * Só é chamado quando o `fields.worklog` da busca veio truncado (`total` maior que o recebido). O endpoint e a paginação no
+     * Data Center ainda não foram validados contra um servidor real (checklist da primeira conexão). A chave vem de dado
+     * externo: é validada e o segmento do caminho é codificado. Guard, orçamento e retry valem como em toda requisição.
+     */
+    suspend fun worklogs(issueKey: String): List<JsonObject> {
+        require(CHAVE_ISSUE.matches(issueKey)) { "Chave de issue inválida" }
+        val segmento = issueKey.encodeURLPathPart()
+        val itens = mutableListOf<JsonObject>()
+        var inicio = 0
+        var paginas = 0
+        val maxPaginas = maxOf(1, (MAX_ITENS + WORKLOG_PAGINA - 1) / WORKLOG_PAGINA)
+        while (true) {
+            val url = "$baseUrl/rest/api/2/issue/$segmento/worklog?startAt=$inicio&maxResults=$WORKLOG_PAGINA"
+            val resposta = requisitarJson(HttpMethod.Get, url, null)
+            val total = exigirTotal(resposta)
+            val valores = (resposta.raiz["worklogs"] as? JsonArray)
+                ?.map { it as? JsonObject ?: throw respostaInesperada(resposta.status) }.orEmpty()
+            itens += valores
+            if (valores.isEmpty()) break
+            inicio += valores.size
+            paginas++
+            if (inicio >= total) break
+            if (paginas >= maxPaginas) throw JiraException(0, "Worklog excedeu o teto de $maxPaginas páginas", null)
+        }
+        return itens
+    }
+
     /** Lembra, por instância e em memória, que o endpoint paginado de changelog não existe neste servidor. */
     @Volatile
     private var changelogPaginadoAusente = false
@@ -455,6 +484,7 @@ class JiraClient internal constructor(
         // Teto do changelog de uma issue (vira o número máximo de páginas de 100).
         const val MAX_ITENS = 10_000
         const val CHANGELOG_PAGINA = 100
+        const val WORKLOG_PAGINA = 100
         val CHAVE_ISSUE = Regex("[A-Z][A-Z0-9_]*-\\d+")
         // Teto para Retry-After: um valor absurdo do servidor não pode travar o job.
         const val RETRY_AFTER_MAX_SEGUNDOS = 120L

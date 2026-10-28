@@ -26,7 +26,8 @@ object ChavesDeUsuario {
     private fun registrar(mapa: MutableMap<String, String>, usuario: JsonObject?) {
         usuario ?: return
         val chave = usuario.texto("key")?.trim()?.takeIf { ehChaveInterna(it) } ?: return
-        val nome = usuario.texto("name")?.takeIf { it.isNotBlank() } ?: return
+        // Um `name` que já é a chave interna (o DC às vezes repete a chave no nome) não é username: não vale como tradução.
+        val nome = usuario.texto("name")?.takeIf { it.isNotBlank() && !ehChaveInterna(it.trim()) } ?: return
         mapa[chave.uppercase()] = normalizarUsername(nome)
     }
 }
