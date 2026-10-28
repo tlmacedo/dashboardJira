@@ -43,6 +43,33 @@ DASHBOARD_DEMO_DATA=true sh iniciar.sh        # PowerShell: $env:DASHBOARD_DEMO_
 
 A flag `JIRA_LIVE_ENABLED` é a única chave de liga e desliga. As variáveis `SYNC_*` só ajustam limites e horários (vazio = padrão): `SYNC_INSTANCIAS` (padrão `samsung`), `SYNC_INTERVALO_MIN` (5 a 1440; padrão 10), `SYNC_HORA_RECONCILIACAO` (padrão 03:00), `SYNC_HORA_RETENCAO` (padrão 04:00), `SYNC_MAX_ITENS` (1 a 200000; padrão 50000), `SYNC_MAX_REQUISICOES` (1 a 20000; padrão 2000), `SYNC_SOBREPOSICAO_MIN` (1 a 60; padrão 5), `SYNC_FUSO_SERVIDOR` (padrão America/Manaus) e `SYNC_TEMPO_MAX_MIN` (1 a 240; padrão 60). A retenção local usa `RETENTION_MONTHS` (6 a 600; padrão 24) e a auditoria de acessos tem chave própria, `ACCESS_LOG_RETENTION_MONTHS` (12 a 600; padrão 24). Procedimento completo, status e códigos de erro: [runbook da sincronização](../docs/jira/runbook-sincronizacao.md).
 
+## Operação (logs, prontidão, métricas, alertas e backup)
+
+Passo a passo para quem opera o painel: [`docs/operacao/`](../docs/operacao/) (runbook diário, runbook de incidentes, configuração, observabilidade, backup e restauração, rotação de segredos). Todas as variáveis abaixo são opcionais, ficam no arquivo de variáveis (modelo `.env.example`) e **nenhuma liga o Jira**.
+
+| Variável | Padrão | Efeito |
+|---|---|---|
+| `PAINEL_LOG_FORMATO` | `JSON` | Formato dos logs: `JSON` (uma linha por evento, com máscara de segredos) ou `TEXTO` |
+| `PAINEL_LOG_DIR` | vazio | Pasta do `painel.log` (rotação de 20 MB, 14 dias, teto de 500 MB); vazio = só a saída do processo |
+| `PAINEL_DISCO_MIN_MB` | `500` | Espaço livre mínimo na pasta do banco; abaixo disso `/api/health/pronto` responde 503 `DISCO_BAIXO` |
+| `PAINEL_METRICAS_PORTA`, `PAINEL_METRICAS_HOST` | `9464`, `127.0.0.1` | Porta interna do `/metrics` (nunca na 8080); `0` desliga |
+| `PAINEL_ALERTAS_ARQUIVO` | vazio | Arquivo de texto onde cada mudança de alerta vira uma linha |
+| `SYNC_PAT_VALIDADE_SAMSUNG`, `SYNC_PAT_VALIDADE_SIDIA` | vazio | Validade do token do Jira (`aaaa-mm-dd`), informada por você; alerta 14 dias antes |
+| `SESSION_SECRET`, `SESSION_SECRET_ANTERIOR` | vazio | Segredo do cookie de sessão e o anterior, aceito só para ler durante uma rotação |
+| `BACKUP_DIR`, `BACKUP_HORA`, `BACKUP_RETENCAO_COPIAS` | vazio, `02:00`, `14` | Backup diário do banco (pasta fora do repositório, obrigatória em produção) |
+
+Endpoints: `GET /api/health` (vivacidade), `GET /api/health/pronto` (prontidão: banco, migrações, disco e trava), `GET /api/operacao/alertas` (gerente) e `GET /metrics` só na porta interna.
+
+Subcomandos do mesmo programa, que rodam e saem sem subir o servidor (use os scripts `scripts/painel-cli.sh` e `scripts/painel-cli.ps1`, que localizam o pacote em `PAINEL_HOME`):
+
+```sh
+sh scripts/painel-cli.sh validar-config [--dir config]   # confere a configuração antes de reiniciar (sem banco, sem Jira)
+sh scripts/painel-cli.sh backup-agora                    # cópia do banco na hora (funciona com o serviço rodando)
+sh scripts/painel-cli.sh verificar-restauracao [cópia]   # restaura a cópia num temporário e confere
+```
+
+No PowerShell: `.\scripts\painel-cli.ps1 validar-config`, `... backup-agora`, `... verificar-restauracao`.
+
 ## Aviso de segurança
 
 O modo desenvolvimento **não tem login**. Nunca o exponha em rede com dados reais. O painel escuta na porta `8080` e **quem restringe o acesso é o firewall/rede da máquina**: em estação de trabalho, deixe-o acessível só em `127.0.0.1`.

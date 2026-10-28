@@ -30,10 +30,11 @@ class MascaraDeLogTest {
 
     @Test
     fun senhaEmChaveValorMascarada() {
-        assertEquals("password=***", MascaraDeLog.mascarar("password=abc12345"))
-        assertEquals("senha: ***", MascaraDeLog.mascarar("senha: abc12345"))
-        assertEquals("SESSION_SECRET=*** fim", MascaraDeLog.mascarar("SESSION_SECRET=abc12345 fim"))
-        assertEquals("""{"token":"***"}""", MascaraDeLog.mascarar("""{"token":"abc12345"}"""))
+        // valores fictícios (a palavra "secreto" os marca como exemplo para a varredura de segredos do CI)
+        assertEquals("password=***", MascaraDeLog.mascarar("password=valor-secreto-1"))
+        assertEquals("senha: ***", MascaraDeLog.mascarar("senha: valor-secreto-1"))
+        assertEquals("SESSION_SECRET=*** fim", MascaraDeLog.mascarar("SESSION_SECRET=valor-secreto-1 fim"))
+        assertEquals("""{"token":"***"}""", MascaraDeLog.mascarar("""{"token":"valor-secreto-1"}"""))
     }
 
     @Test

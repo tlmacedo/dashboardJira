@@ -5,8 +5,11 @@
         PAINEL_LOG_DIR. O Logback inicia antes do arquivo de variáveis ser lido: o ConfiguradorDeLog regrava as duas
         propriedades no contexto e relê este arquivo no começo do main.
     -->
-    <conversionRule conversionWord="msgSeguro" converterClass="br.sidia.painel.operacao.MensagemSeguraConverter"/>
-    <conversionRule conversionWord="excSeguro" converterClass="br.sidia.painel.operacao.ExcecaoSeguraConverter"/>
+    <!-- Sem o despejo de status do próprio Logback na saída (os apêndices não usados geram avisos de "não referenciado"). -->
+    <statusListener class="ch.qos.logback.core.status.NopStatusListener"/>
+
+    <conversionRule conversionWord="msgSeguro" class="br.sidia.painel.operacao.MensagemSeguraConverter"/>
+    <conversionRule conversionWord="excSeguro" class="br.sidia.painel.operacao.ExcecaoSeguraConverter"/>
 
     <appender name="JSON" class="ch.qos.logback.core.ConsoleAppender">
         <encoder class="br.sidia.painel.operacao.EncoderJsonSeguro"/>

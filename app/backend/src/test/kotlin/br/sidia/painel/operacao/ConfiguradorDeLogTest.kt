@@ -77,6 +77,14 @@ class ConfiguradorDeLogTest {
     }
 
     @Test
+    fun reconfigurarNaoDespejaOStatusDoLogbackNaSaida() {
+        capturada.reset()
+        ConfiguradorDeLog.aplicar("JSON", novaPasta())
+        ConfiguradorDeLog.aplicar("TEXTO", null)
+        assertFalse("ch.qos.logback" in capturada.toString(Charsets.UTF_8), capturada.toString(Charsets.UTF_8))
+    }
+
+    @Test
     fun semPastaNaoCriaArquivo() {
         ConfiguradorDeLog.aplicar("JSON", null)
         LoggerFactory.getLogger("br.sidia.painel.teste").info("so na saida padrao")

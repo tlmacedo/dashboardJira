@@ -51,6 +51,48 @@ Branch: `feat/operacao-em-producao` (Tarefas 1 a 12 num só bloco). Executor: Cl
 - Ruling (T10): o hook de proteção barra texto que escreve a flag do Jira com valor verdadeiro em qualquer arquivo; os runbooks dizem "valor verdadeiro"/"valor falso" em vez de escrever a atribuição, o que também é mais seguro como documento. Os testes de documento (`RunbooksDocTest`) olham só os 6 documentos deste plano (o `ci.md` é do Plano 9 e cita a barreira contra Docker por extenso). `docs/implantacao.md` ainda não existe (Planos 8/13): é citado como texto, sem link; `cadaVariavelDoEnvExampleEstaDocumentada` o aceita quando existir.
 - Ruling (T10): `configuracao.md` ganhou a tabela de TODAS as variáveis do `.env.example` (o teste de documentação exige que cada uma apareça em `docs/operacao`, `docs/implantacao.md` ou `app/README.md`).
 - Ruling (T11): `docs/lgpd/relatorio-para-o-dpo.md` (Plano 11) não existe na `main`, então a seção 10 dele não foi editada; o Plano 11 deve apontar para `docs/operacao/runbook-incidentes.md`. O runbook não fixa prazo da ANPD (o teste `prazoDaAnpdNaoFixado` barra número de horas/dias junto de "ANPD") e diz "a confirmar com o DPO". O `secao()` do teste ignora títulos dentro de blocos de código (comentários de shell também começam com `# `).
+- Ruling (T12): `docs/implantacao.md` (Planos 8/13) e `docs/lgpd/` (Plano 11) não existem na `main`; não foram criados. Os links para `docs/operacao/*` entram quando esses documentos forem escritos. O índice dos planos não foi editado (arquivo compartilhado com os outros blocos); marcar o 12 como executado fica para o primeiro commit do próximo plano.
+- Ruling (T12): o `logback.xml` ganhou `NopStatusListener` e o atributo `class` nas regras de conversão (o `converterClass` é obsoleto): sem isso o Logback despejava na saída ~40 linhas de status a cada subida e a cada subcomando, por causa dos apêndices não referenciados. Custo: erros de configuração do próprio `logback.xml` (embutido no pacote) deixam de aparecer; o `ConfiguradorDeLogTest` cobre a configuração.
 
 ## Tarefas
+
+- Tarefa 1: concluída (commit 5d69316; logs JSON, máscara, `ConfiguradorDeLog`, `X-Request-Id` e linha por requisição).
+- Tarefa 2: concluída (commit a17a53a; `/api/health/pronto`).
+- Tarefa 3: concluída (commit 8330ff7; `validar-config`, scripts `painel-cli`, passo no CI).
+- Tarefa 4: concluída (commit 13ec09d; métricas na porta interna).
+- Tarefa 5: concluída (commit e5f0a84; alertas, `backup_run` V3).
+- Tarefa 6: concluída (commit 0013c78; faixa e lista de alertas na tela; frontend 244 testes).
+- Tarefa 7: concluída (commit 1682774; backup agendado e `backup-agora`).
+- Tarefa 8: concluída (commit 7d98342; `VerificadorDeRestauracao` e `verificar-restauracao`).
+- Tarefa 9: concluída (commit 29418b2; `SessaoAssinada` e rotação do `SESSION_SECRET`).
+- Tarefa 10: concluída (commit 5b64239; runbook diário e observabilidade).
+- Tarefa 11: concluída (commit 89e0624; runbook de incidentes).
+- Tarefa 12: ver o commit de fechamento no topo do histórico da branch.
+
+## Verificação final (sem cache)
+
+- Backend `./gradlew test --rerun-tasks`: 1425 testes, 0 falhas (a `main` tinha 1156 antes do bloco; foram +269). Frontend: `pnpm install --frozen-lockfile`, `pnpm vitest run` 244 testes (24 arquivos), 0 falhas; `pnpm build` e `node scripts/verificar-csp.mjs` ok. `sh .claude/hooks/test-guard.sh`: 0 falhas.
+- Subida de conferência (modo dev, fora do repositório, sem Jira): logs em JSON na saída e em `painel.log`, `/api/health/pronto` 200, `/metrics` 200 só na 9464 (404 na 8080), `validar-config` OK, backup agendado na subida, `backup-agora` OK com o serviço rodando e `verificar-restauracao` OK. Ensaio do incidente `BANCO_PERDIDO_OU_CORROMPIDO`: uma cópia foi corrompida (`COPIA_ALTERADA`), a anterior verificou OK, os arquivos do banco foram para a quarentena, a cópia boa virou o `painel.db`, o painel subiu e a prontidão deu 200; `backup-agora` criou o ponto novo. Tudo apagado depois (a pasta de ensaio ficou no diretório temporário do agente).
+
+## Minor adiados
+
+- `AvaliadorDeAlertas`: `ACCESS_LOG_FALHANDO` e as regras "nunca rodou" dependem do tempo no ar do processo; depois de um reinício elas só disparam após o tempo da regra. Aceito (os dados de execução persistem no banco; só "nunca" depende do processo).
+- `Prontidao`: a sonda lê só permissão do arquivo e da pasta (decisão do plano); uma pasta sem escrita por política de rede (compartilhamento) só aparece na primeira gravação.
+- `ServicoDeBackup`: falha de hoje só é tentada de novo no dia seguinte (o alerta `BACKUP_ATRASADO` cobre depois de 26 h; `backup-agora` tenta na hora). Se quiserem nova tentativa automática, é uma regra a mais na `TarefaDeOperacao`.
+- Backup de banco que ainda não tem a tabela `backup_run` (pacote novo sobre banco antigo, rodando `backup-agora` antes de subir): a cópia sai, só o registro falha (logado). Resolve ao subir o painel novo uma vez.
+- Faltam captura visual da faixa de alertas nos 3 temas (sem navegador neste ambiente); a faixa usa variáveis de tema e símbolo + texto.
+- `modeloDaRota` depende do evento `RoutingRoot.RoutingCallStarted` do Ktor; uma troca de versão do Ktor pode mudar isso (o teste `linhaPorRequisicaoComModeloDaRota` acusa).
+
+## Depois da flag / com o usuário
+
+Efeito fora do repositório: o código está pronto e nada abaixo foi decidido nem executado pela IA.
+
+- **Canal externo dos alertas** (e-mail, chat, webhook): hoje os alertas saem na tela, na rota do gerente, no log, na métrica e no arquivo de texto (`PAINEL_ALERTAS_ARQUIVO`). Um canal externo exige uma saída nova e uma requisição de saída para um host da empresa (autorizar com a rede/TI).
+- **Cópia dos backups para fora do servidor** e **cifragem em repouso** (BitLocker/LUKS) do volume do banco e do volume das cópias; escolher o volume separado para `BACKUP_DIR`; pasta definitiva e permissões (Plano 13). Sem isso, perder o servidor perde banco e cópias.
+- **Repositório privado dos YAML reais** (`papeis.yaml`, `equipes.yaml`, `ausencias.yaml`...) e a cópia para `PAINEL_CONFIG_DIR` na implantação; responsável pela edição semanal das ausências.
+- **Instalação do serviço** no Windows e no Linux, o nome real do serviço (os runbooks usam `painel-squads`) e o firewall (porta 8080 e, se houver coleta, a 9464 só para o coletor): Plano 13.
+- **Coleta opcional das métricas** (Prometheus) e uso de `ops/prometheus/alertas.yml`.
+- **Login/OIDC e cookie de sessão** (Plano 8): ligar `SessaoAssinada` (rotação do `SESSION_SECRET`) ao login e exigir `SESSION_SECRET` em produção.
+- **Linhas do Plano 11/13 que apontam para estes documentos:** seção 10 do relatório para o DPO → `docs/operacao/runbook-incidentes.md`; `docs/implantacao.md` → `docs/operacao/*`.
+- **Validação com o DPO** do prazo e do texto de comunicação à ANPD (o runbook diz "a confirmar com o DPO").
 
