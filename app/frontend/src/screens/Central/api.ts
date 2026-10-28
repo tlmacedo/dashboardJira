@@ -44,6 +44,10 @@ export type CentralDto = {
   confiancaDoBacklog: string | null
   squads: CartaoSquad[]
   avisos: Aviso[]
+  /** VG-02: concluídas dos últimos 30 dias, as dos 30 anteriores e a variação em % (nula sem base). */
+  concluidas30d?: { atual: number | null; anterior: number | null; variacao: number | null } | null
+  /** VG-03: P50 e P85 do ciclo (dias úteis) das concluídas dos últimos 30 dias. */
+  ciclo30d?: { p50: number; p85: number; n: number } | null
 }
 
 export const fetchCentral = () => getJson<CentralDto>('/api/central')
