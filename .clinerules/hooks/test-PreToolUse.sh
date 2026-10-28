@@ -1,27 +1,52 @@
 #!/bin/sh
 # Testes do hook PreToolUse do Cline (.clinerules/hooks/PreToolUse).
-# Cada caso informa a flag no ambiente do hook, o JSON de entrada e o resultado esperado
-# (cancel true = bloqueado, false = liberado). A flag é definida AQUI, por caso, e nunca na linha de comando.
+# Cada caso informa o valor da flag, o JSON de entrada e o resultado esperado
+# (cancel true = bloqueado, false = liberado).
+# Plano 14, Tarefa 0: a flag vem do app/.env da raiz do repositório (raiz deduzida do caminho do hook). Os testes
+# montam uma raiz de mentira num diretório temporário (cópias do PreToolUse e do guard.sh e um app/.env de
+# teste); o app/.env real do repositório NUNCA é lido nem escrito. A flag do AMBIENTE é removida por padrão.
 # Uso: sh .clinerules/hooks/test-PreToolUse.sh   (precisa de jq e bash)
 # No Windows o Cline usa o PreToolUse.ps1; os testes dele estão em test-PreToolUse.ps1 (mesmos casos).
 dir=$(cd "$(dirname "$0")" && pwd)
-hook="$dir/PreToolUse"
 falhas=0
+TMP=$(mktemp -d)
+trap 'rm -rf "$TMP"' EXIT
+mkdir -p "$TMP/.clinerules/hooks" "$TMP/.claude/hooks" "$TMP/app"
+cp "$dir/PreToolUse" "$TMP/.clinerules/hooks/PreToolUse"
+cp "$dir/../../.claude/hooks/guard.sh" "$TMP/.claude/hooks/guard.sh"
+chmod +x "$TMP/.clinerules/hooks/PreToolUse" "$TMP/.claude/hooks/guard.sh"
+hook="$TMP/.clinerules/hooks/PreToolUse"
+ARQ="$TMP/app/.env"
 
-caso() { # flag ("-" = ausente), JSON, esperado (true|false), descrição
-  if [ "$1" = "-" ]; then
-    saida=$(printf '%s' "$2" | env -u JIRA_LIVE_ENABLED bash "$hook" 2>/dev/null)
-  else
-    saida=$(printf '%s' "$2" | env JIRA_LIVE_ENABLED="$1" bash "$hook" 2>/dev/null)
-  fi
-  r=$?
+verificar() { # rótulo, esperado, descrição (usa $saida e $r, já capturados pelo chamador)
   obtido=$(printf '%s' "$saida" | jq -r '.cancel' 2>/dev/null)
-  if [ "$r" = 0 ] && [ "$obtido" = "$3" ]; then
-    echo "ok    [flag=$1] $4"
+  if [ "$r" = 0 ] && [ "$obtido" = "$2" ]; then
+    echo "ok    [$1] $3"
   else
-    echo "FALHA [flag=$1] $4 (exit $r, cancel=$obtido, esperado $3; saída: $saida)"
+    echo "FALHA [$1] $3 (exit $r, cancel=$obtido, esperado $2; saída: $saida)"
     falhas=$((falhas+1))
   fi
+}
+caso() { # flag NO ARQUIVO ("-" = sem arquivo), JSON, esperado (true|false), descrição
+  rm -rf "$ARQ"
+  [ "$1" = "-" ] || printf 'JIRA_LIVE_ENABLED=%s\n' "$1" > "$ARQ"
+  saida=$(printf '%s' "$2" | env -u JIRA_LIVE_ENABLED bash "$hook" 2>/dev/null)
+  r=$?
+  verificar "flag=$1" "$3" "$4"
+}
+casoa() { # conteúdo bruto do arquivo (printf %b), JSON, esperado, descrição
+  rm -rf "$ARQ"
+  printf '%b' "$1" > "$ARQ"
+  saida=$(printf '%s' "$2" | env -u JIRA_LIVE_ENABLED bash "$hook" 2>/dev/null)
+  r=$?
+  verificar "arquivo" "$3" "$4"
+}
+casoe() { # valor NO AMBIENTE, conteúdo do arquivo ("-" = sem arquivo), JSON, esperado, descrição
+  rm -rf "$ARQ"
+  [ "$2" = "-" ] || printf '%b' "$2" > "$ARQ"
+  saida=$(printf '%s' "$3" | env JIRA_LIVE_ENABLED="$1" bash "$hook" 2>/dev/null)
+  r=$?
+  verificar "ambiente=$1" "$4" "$5"
 }
 # payload da extensão VS Code: parâmetros como objeto
 cmd() { jq -nc --arg c "$1" '{taskId:"t",preToolUse:{toolName:"execute_command",parameters:{command:$c,requires_approval:"false"}}}'; }
@@ -43,15 +68,19 @@ for f in - false FALSE talvez " " 1; do
   caso "$f" "$(cmd "curl -s $URL")" true "trava: curl para o Jira"
   caso "$f" "$(cmd 'JIRA_LIVE_ENABLED=true ./gradlew test')" true "trava: ligar a flag dentro do comando"
   caso "$f" "$(mcp 'claude_ai_Atlassian_MCP' 'searchJiraIssuesUsingJql')" true "trava: MCP do Atlassian"
-  caso "$f" "$(web web_fetch 'https://docs.atlassian.com/jira/rest')" true "trava: web_fetch para documentação pública da Atlassian (efeito aceito pelo usuário)"
-  caso "$f" "$(nav 'https://empresa.invalid/JIRA/browse/X-1')" true "trava: navegador com JIRA no caminho (sem diferenciar maiúsculas)"
+  caso "$f" "$(web web_fetch 'https://sidia.atlassian.net/wiki/x')" true "trava: web_fetch para o Cloud da Atlassian com sidia"
+  caso "$f" "$(nav 'https://JIRA.empresa.invalid/browse/X-1')" true "trava: navegador com host jira (sem diferenciar maiúsculas)"
+  caso "$f" "$(nav 'https://empresa.invalid/JIRA/sidia/browse/X-1')" true "trava: navegador com jira e sidia no caminho"
+  # 28/10/2026: documentação pública e palavra jira solta passam
+  caso "$f" "$(web web_fetch 'https://docs.atlassian.com/jira/rest')" false "liberado: web_fetch para documentação pública da Atlassian"
+  caso "$f" "$(nav 'https://empresa.invalid/JIRA/browse/X-1')" false "liberado: navegador com JIRA só no caminho (sem sidia)"
 done
-caso - "$(mcp fetch fetch '{"url":"https://x.atlassian.net/wiki"}')" true "trava: MCP de fetch com URL da Atlassian"
+caso - "$(mcp fetch fetch '{"url":"https://sidia.atlassian.net/wiki"}')" true "trava: MCP de fetch com URL do Cloud da Atlassian com sidia"
 caso - "$(cmd 'Invoke-WebRequest -Uri https://jira.exemplo.invalid/x')" true "trava: Invoke-WebRequest"
 caso - "$(cmd 'iwr jira.exemplo.invalid')" true "trava: iwr sem esquema na URL"
 caso - "$(cmd 'setx JIRA_LIVE_ENABLED true')" true "trava: ligar a flag com setx"
 caso - "$(cmd "[Environment]::SetEnvironmentVariable('JIRA_LIVE_ENABLED','true','User')")" true "trava: ligar a flag com SetEnvironmentVariable"
-caso - "$(nav 'file:///Users/x/dashboardJira/docs/design/prototipo/a.html')" true "falso positivo aceito: pasta com Jira no nome (clone em pasta sem jira)"
+caso - "$(nav 'file:///Users/x/dashboardJira/docs/design/prototipo/a.html')" false "liberado (28/10): pasta com Jira no nome não bloqueia mais"
 caso - "$(cmd_txt "curl -s $URL")" true "trava: parâmetros em texto JSON"
 caso - "$(cmd_cli "wget $URL")" true "trava: formato da CLI (run_commands)"
 caso - "$(cmd 'echo $JIRA_TOKEN')" true "trava: variável de conexão do Jira"
@@ -275,6 +304,132 @@ grande=$(yes x | head -n 150000)
 caso - "$(cmd "$(printf 'cat .env\n%s' "$grande")")" true "falha fechada: comando grande (SIGPIPE) lendo .env"
 caso true "$(cmd "$(printf 'echo $JIRA_SAMSUNG_TOKEN\n%s' "$grande")")" true "falha fechada: token em comando grande"
 caso - "$(esc write_to_file 'C:\Users\USUARIO~1\x\README.md')" false "não regressão: pasta com nome curto 8.3 (TEMP do Windows)"
+
+# ===== 28/10/2026: só ENDEREÇOS de Jira são bloqueados (a palavra solta não) =====
+# 1) palavra jira solta: liberada (flag desligada)
+caso - "$(cmd 'cd /Volumes/Development/SIDIA/dashboardJira && ls')" false "palavra solta: caminho com dashboardJira"
+caso - "$(cmd 'git clone https://github.com/tlmacedo/dashboardJira.git')" false "palavra solta: git clone do repositório"
+caso - "$(cmd 'curl -s http://127.0.0.1:8080/api/health')" false "palavra solta: curl local"
+caso - "$(cmd 'cd dashboardJira && curl -s http://localhost:8080/api/health')" false "palavra solta: curl local numa pasta dashboardJira"
+caso - "$(cmd 'curl -s -o jira-saida.txt http://127.0.0.1:8080/api/health')" false "palavra solta: arquivo de saída com jira no nome"
+caso - "$(cmd 'cat docs/jira/checklist-primeira-conexao.md')" false "palavra solta: cat de arquivo em pasta jira"
+caso - "$(cmd 'echo jira atlassian')" false "palavra solta: texto"
+caso - "$(cmd 'Start-Process notepad jira.md')" false "palavra solta: Start-Process com arquivo jira.md"
+caso - "$(cmd 'Invoke-WebRequest http://127.0.0.1:8080/api/health -OutFile jira.json')" false "palavra solta: Invoke-WebRequest local, arquivo jira.json"
+caso - "$(nav 'http://127.0.0.1:8080/dashboardJira')" false "palavra solta: navegador no painel local com Jira no caminho"
+caso - "$(web web_fetch 'https://github.com/tlmacedo/dashboardJira')" false "palavra solta: web_fetch do repositório"
+caso - "$(ler 'docs/jira/checklist-primeira-conexao.md')" false "palavra solta: ler arquivo em pasta jira"
+caso - "$(mcp context7 get-library-docs '{"library":"jira-client"}')" false "palavra solta: argumento MCP sem URL"
+# 2) URL/host de Jira: bloqueada
+for c in 'curl -s https://jira.exemplo.invalid/rest/api/2/myself' 'curl https://meu-jira.x.com/a' 'curl http://jira-lab:8080/' 'curl jira.exemplo.invalid/x' \
+         'curl jira-lab:8080' 'wget https://JIRA.Exemplo.Invalid/' 'curl https://jira.exemplo.invalid./x' 'curl https://u:s@jira.x.com/' \
+         'curl https://jira%2Eexemplo.invalid/x' 'curl https://x.com/jira/sidia' 'curl https://sidia.atlassian.net/x' 'ssh jira-lab' \
+         'ssh usuario@jira.x.com' 'nc -z jira-lab 8080' 'iwr jira.exemplo.invalid' 'Invoke-RestMethod -Uri https://jira.x/rest' \
+         'Invoke-WebRequest jira.x.com' 'curl.exe https://jira.x.com' '(New-Object Net.WebClient).DownloadString("jira.x.com")' \
+         'curl https://confluence.atlassian.com@jira.x.com/' 'curl https://atlassian.com.jira.x.com/' 'curl https://jira.x.com/atlassian.com' \
+         'curl https://docs.atlassian.com/x?redirect=https://jira.x.com/' 'curl https://docs.atlassian.com/x?redirect=https%3A%2F%2Fjira.x.com' \
+         'curl https://docs.atlassian.com\@jira.x.com/'; do
+  caso - "$(cmd "$c")" true "URL de Jira em comando: $c"
+  caso false "$(cmd "$c")" true "URL de Jira em comando (flag false): $c"
+done
+for u in 'https://jira.x.com/a' 'jira.x.com/a' 'JIRA-LAB:8080' 'https://u@jira.x.com' 'https://x.com/jira/sidia' 'https://sidia.atlassian.net/x' 'https://SIDIA.ATLASSIAN.NET' \
+         'https://jira%2Ex.com/' 'https://confluence.atlassian.com@jira.x.com/' 'https://atlassian.com.jira.x.com/' 'https://jira.x.com/atlassian.com' \
+         'https://docs.atlassian.com/x?redirect=https://jira.x.com/' 'https://docs.atlassian.com/x?redirect=https%3A%2F%2Fjira.x.com' \
+         'https://docs.atlassian.com\@jira.x.com/' 'https://jira.x.com./'; do
+  caso - "$(web web_fetch "$u")" true "web_fetch bloqueado: $u"
+  caso - "$(nav "$u")" true "navegador bloqueado: $u"
+done
+caso - "$(mcp fetch fetch '{"url":"jira.exemplo.invalid/x"}')" true "MCP de fetch: url de Jira sem esquema"
+caso - "$(mcp fetch fetch '{"opcoes":{"url":"https://jira.exemplo.invalid/x"}}')" true "MCP de fetch: url aninhada"
+caso - "$(mcp fetch fetch '{"texto":"veja https://jira.exemplo.invalid/x"}')" true "MCP de fetch: URL com esquema em texto livre"
+caso - "$(mcp fetch fetch '{"texto":"veja jira.md"}')" false "MCP de fetch: texto livre com jira.md (sem esquema) liberado"
+caso - "$(jq -nc '{preToolUse:{toolName:"access_mcp_resource",parameters:{server_name:"fetch",uri:"https://jira.exemplo.invalid/x"}}}')" true "MCP: recurso com URI de Jira"
+caso - "$(jq -nc '{preToolUse:{toolName:"access_mcp_resource",parameters:{server_name:"docs",uri:"https://docs.atlassian.com/jira"}}}')" false "MCP: recurso com URI de documentação pública"
+# 3) documentação pública da Atlassian: liberada (mesmo com jira no caminho); o host real decide
+for u in 'https://confluence.atlassian.com/jirasoftwareserver/jira-software-server-documentation-939937427.html' \
+         'https://support.atlassian.com/jira-software-cloud/docs/x' 'https://developer.atlassian.com/server/jira/platform/rest/' \
+         'https://docs.atlassian.com/software/jira/docs/api/REST/9.12.0/' 'https://community.atlassian.com/t5/Jira/x' \
+         'https://www.atlassian.com/software/jira' 'https://DOCS.Atlassian.COM/jira/' 'https://www.atlassian.com./software/jira' \
+         'https://jira.x.com@docs.atlassian.com/' 'https://x.atlassian.net/rest'; do
+  caso - "$(web web_fetch "$u")" false "web_fetch liberado: $u"
+  caso - "$(nav "$u")" false "navegador liberado: $u"
+  caso - "$(cmd "curl -s $u")" false "curl liberado: $u"
+done
+caso - "$(cmd 'Invoke-WebRequest https://confluence.atlassian.com/jirasoftwareserver')" false "documentação: Invoke-WebRequest"
+caso - "$(cmd 'iwr confluence.atlassian.com/jirasoftwareserver')" false "documentação: iwr sem esquema"
+# 4) com a flag ligada no arquivo, tudo isso passa
+for u in 'https://jira.x.com/a' 'jira.x.com/a' 'https://sidia.atlassian.net/x' 'https://x.com/jira/sidia'; do
+  caso true "$(web web_fetch "$u")" false "flag ligada: web_fetch $u"
+  caso true "$(nav "$u")" false "flag ligada: navegador $u"
+  caso true "$(cmd "curl -s $u")" false "flag ligada: curl $u"
+done
+
+# ===== Plano 14, Tarefa 0: a flag vem do app/.env da raiz do repositório =====
+CURL_J="curl -s $URL"
+# flagVemDoArquivoDeVariaveis
+casoa "JIRA_LIVE_ENABLED=$T\n" "$(cmd "$CURL_J")" false "arquivo: flag ligada libera"
+casoa "JIRA_LIVE_ENABLED=false\n" "$(cmd "$CURL_J")" true "arquivo: flag false bloqueia"
+casoa "OUTRA=1\n" "$(cmd "$CURL_J")" true "arquivo: sem a linha da flag bloqueia"
+casoa "" "$(cmd "$CURL_J")" true "arquivo: vazio bloqueia"
+for v in "\"$T\"" "'$T'" "$T # comentário" "TRUE" " $T " "\" $T \"" "'TrUe'"; do
+  casoa "JIRA_LIVE_ENABLED=$v\n" "$(cmd "$CURL_J")" false "arquivo: valor [$v] liga"
+done
+casoa "export JIRA_LIVE_ENABLED=$T\n" "$(cmd "$CURL_J")" false "arquivo: prefixo export liga"
+casoa "JIRA_LIVE_ENABLED=$T\r\n" "$(cmd "$CURL_J")" false "arquivo: CRLF liga"
+casoa "\357\273\277JIRA_LIVE_ENABLED=$T\n" "$(cmd "$CURL_J")" false "arquivo: BOM liga"
+casoa "A=1\nJIRA_LIVE_ENABLED=$T\nC=3\n" "$(cmd "$CURL_J")" false "arquivo: linha da flag entre outras liga"
+for v in sim 1 0 "tr ue" "${T};" "${T}#x" "" "\"$T" "\"$T\" # c"; do
+  casoa "JIRA_LIVE_ENABLED=$v\n" "$(cmd "$CURL_J")" true "arquivo: valor inválido [$v] bloqueia"
+done
+casoa "# JIRA_LIVE_ENABLED=$T\n" "$(cmd "$CURL_J")" true "arquivo: linha comentada não liga"
+casoa "JIRA_LIVE_ENABLED_X=$T\n" "$(cmd "$CURL_J")" true "arquivo: nome parecido não liga"
+casoa "JIRA_LIVE_ENABLED=$T\nJIRA_LIVE_ENABLED=false\n" "$(cmd "$CURL_J")" true "arquivo: a última ocorrência vale (desliga)"
+casoa "JIRA_LIVE_ENABLED=false\nJIRA_LIVE_ENABLED=$T\n" "$(cmd "$CURL_J")" false "arquivo: a última ocorrência vale (liga)"
+# ambienteDoProcessoNaoLiga / ambienteDoProcessoNaoDesliga (em todas as ferramentas que olham a flag)
+casoe "$T" "JIRA_LIVE_ENABLED=false\n" "$(cmd "$CURL_J")" true "ambiente ligado e arquivo false: bloqueia comando"
+casoe "$T" "-" "$(cmd "$CURL_J")" true "ambiente ligado e sem arquivo: bloqueia comando"
+casoe "$T" "-" "$(web web_fetch 'https://jira.x.com/a')" true "ambiente ligado e sem arquivo: bloqueia web_fetch"
+casoe "$T" "-" "$(nav 'https://jira.x.com/a')" true "ambiente ligado e sem arquivo: bloqueia navegador"
+casoe "$T" "-" "$(mcp 'claude_ai_Atlassian_MCP' 'searchJiraIssuesUsingJql')" true "ambiente ligado e sem arquivo: bloqueia MCP do Atlassian"
+casoe "$T" "-" "$(cmd "setx JIRA_LIVE_ENABLED $T")" true "ambiente ligado e sem arquivo: ligar a flag por setx continua barrado"
+casoe "false" "JIRA_LIVE_ENABLED=$T\n" "$(cmd "$CURL_J")" false "ambiente false e arquivo ligado: libera comando"
+casoe "false" "JIRA_LIVE_ENABLED=$T\n" "$(web web_fetch 'https://jira.x.com/a')" false "ambiente false e arquivo ligado: libera web_fetch"
+casoe "" "JIRA_LIVE_ENABLED=$T\n" "$(nav 'https://jira.x.com/a')" false "ambiente vazio e arquivo ligado: libera navegador"
+casoe "false" "JIRA_LIVE_ENABLED=$T\n" "$(mcp 'claude_ai_Atlassian_MCP' 'searchJiraIssuesUsingJql')" false "ambiente false e arquivo ligado: libera MCP"
+casoe "false" "JIRA_LIVE_ENABLED=$T\n" "$(cmd 'echo $JIRA_SAMSUNG_TOKEN')" true "ambiente false e arquivo ligado: exibir token continua barrado"
+# arquivoIlegivelFalhaFechado
+rm -rf "$ARQ"; mkdir "$ARQ"
+saida=$(printf '%s' "$(cmd "$CURL_J")" | env -u JIRA_LIVE_ENABLED bash "$hook" 2>/dev/null); r=$?
+verificar "arquivo é diretório" true "arquivo ilegível (é um diretório): bloqueia"
+saida=$(printf '%s' "$(cmd "$CURL_J")" | env JIRA_LIVE_ENABLED="$T" bash "$hook" 2>/dev/null); r=$?
+verificar "arquivo é diretório, ambiente ligado" true "arquivo ilegível e ambiente ligado: bloqueia"
+# a raiz vem do caminho do hook, não do diretório corrente nem do ambiente
+OUTRO="$TMP/outro"; mkdir -p "$OUTRO/app"
+printf 'JIRA_LIVE_ENABLED=%s\n' "$T" > "$OUTRO/app/.env"
+rm -rf "$ARQ"; printf 'JIRA_LIVE_ENABLED=false\n' > "$ARQ"
+saida=$(cd "$OUTRO" && printf '%s' "$(cmd "$CURL_J")" | env -u JIRA_LIVE_ENABLED CLAUDE_PROJECT_DIR="$OUTRO" bash "$hook" 2>/dev/null); r=$?
+verificar "cwd com outro app/.env" true "raiz pelo caminho do hook: app/.env do diretório corrente não vale"
+# o hook nunca imprime o conteúdo do arquivo
+rm -rf "$ARQ"; printf 'JIRA_SAMSUNG_TOKEN=segredo-do-teste-123\nJIRA_LIVE_ENABLED=false\nOUTRA=valor-outra-456\n' > "$ARQ"
+saida=$(printf '%s' "$(cmd "$CURL_J")" | env -u JIRA_LIVE_ENABLED bash "$hook" 2>&1); r=$?
+case "$saida" in
+  *segredo-do-teste-123*|*valor-outra-456*) echo "FALHA o hook imprimiu o conteúdo do arquivo: $saida"; falhas=$((falhas+1)) ;;
+  *) echo "ok    o hook não imprime o conteúdo do arquivo" ;;
+esac
+# leituraDaIaAoArquivoContinuaBarrada: o hook lê o arquivo para si, mas a IA continua barrada (qualquer valor)
+for f in - false true; do
+  caso "$f" "$(ler 'app/.env')" true "IA [flag=$f]: read_file em app/.env"
+  caso "$f" "$(ler '/x/repo/app/.ENV')" true "IA [flag=$f]: read_file em app/.ENV"
+  caso "$f" "$(cmd 'cat app/.env')" true "IA [flag=$f]: cat app/.env"
+  caso "$f" "$(cmd 'Get-Content app\.env')" true "IA [flag=$f]: Get-Content app\\.env"
+  caso "$f" "$(cmd 'grep JIRA_LIVE_ENABLED app/.env')" true "IA [flag=$f]: grep na flag de app/.env"
+  caso "$f" "$(esc write_to_file 'app/.env')" true "IA [flag=$f]: escrever app/.env"
+  caso "$f" "$(cmd 'ln -sf /tmp/x app/.env')" true "IA [flag=$f]: symlink para app/.env"
+  caso "$f" "$(cmd "echo JIRA_LIVE_ENABLED=$T >> app/.env")" true "IA [flag=$f]: ligar a flag em app/.env por echo"
+  caso "$f" "$(escc write_to_file docs/x.md content "JIRA_LIVE_ENABLED=$T")" true "IA [flag=$f]: gravar texto que liga a flag"
+  caso "$f" "$(cmd 'git add app/.env')" true "IA [flag=$f]: git add app/.env"
+  caso "$f" "$(sf app 'JIRA_LIVE' '-')" true "IA [flag=$f]: buscar em app sem file_pattern"
+done
 
 echo "falhas: $falhas"
 [ "$falhas" = 0 ]
