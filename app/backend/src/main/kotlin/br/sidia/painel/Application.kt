@@ -21,7 +21,10 @@ import br.sidia.painel.operacao.ConfiguradorDeLog
 import br.sidia.painel.operacao.comandoDeOperacao
 import kotlin.system.exitProcess
 import br.sidia.painel.db.ObservadorDeAccessLog
+import br.sidia.painel.operacao.LacoDeAlertas
 import br.sidia.painel.operacao.MascaraDeLog
+import br.sidia.painel.operacao.montarAvaliadorDeAlertas
+import br.sidia.painel.operacao.rotasDeAlertas
 import br.sidia.painel.operacao.Metricas
 import br.sidia.painel.operacao.instalarMetricasHttp
 import br.sidia.painel.operacao.iniciarServidorDeMetricas
@@ -157,6 +160,11 @@ fun Application.module(
         agendador?.iniciar(app)
     }
     monitor.subscribe(ApplicationStopping) { runBlocking { agendador?.parar() } }
+    // Alertas operacionais: avaliados a cada 5 min no próprio processo (sem Jira), como o agendador.
+    val avaliador = montarAvaliadorDeAlertas(context, metricas ?: Metricas())
+    val lacoDeAlertas = avaliador?.let { LacoDeAlertas(it) }
+    monitor.subscribe(ApplicationStarted) { app -> lacoDeAlertas?.iniciar(app) }
+    monitor.subscribe(ApplicationStopping) { runBlocking { lacoDeAlertas?.parar() } }
     install(ContentNegotiation) { json() }
     // Id de requisição e uma linha de log por requisição, com o modelo da rota (ver LogDeRequisicao.kt).
     instalarLogDeRequisicao()
@@ -199,6 +207,7 @@ fun Application.module(
             rotasDeAuditoria(context, AccessLog(ds))
             rotasDosCardsDeTrabalho(context, AccessLog(ds))
             rotasSyncStatus(context, SqliteSyncStateStore(ds), AccessLog(ds))
+            avaliador?.let { rotasDeAlertas(context, it, AccessLog(ds)) }
         }
         get("/api/health") { call.respond(HealthResposta(ok = true)) }
         rotaProntidao(prontidao)

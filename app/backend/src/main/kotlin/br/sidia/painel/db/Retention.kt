@@ -56,6 +56,7 @@ class Retention(private val ds: DataSource, private val calendar: BusinessCalend
             Purga("DELETE FROM access_log WHERE at < ?", doAccessLog = true),
             Purga("DELETE FROM sync_run WHERE started_at < ?"),
             Purga("DELETE FROM jira_user_key WHERE visto_em < ?"),
+            Purga("DELETE FROM backup_run WHERE started_at < ?"),
         )
     }
 

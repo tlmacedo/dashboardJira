@@ -1,7 +1,10 @@
 package br.sidia.painel.operacao
 
+import br.sidia.painel.jira.INSTANCIAS_CONHECIDAS
 import java.nio.file.InvalidPathException
 import java.nio.file.Path
+import java.time.LocalDate
+import java.time.format.DateTimeParseException
 
 /**
  * Ajustes de operação (logs, prontidão, métricas, alertas e backup). Nenhuma variável liga a sincronização nem
@@ -18,6 +21,13 @@ data class OperacaoSettings(
     val metricasPorta: Int = 9464,
     /** `PAINEL_METRICAS_HOST`: interface da porta interna; o padrão só atende a própria máquina. */
     val metricasHost: String = "127.0.0.1",
+    /** `PAINEL_ALERTAS_ARQUIVO`: arquivo de texto onde cada mudança de alerta vira uma linha; nulo = só log, métrica e rota. */
+    val alertasArquivo: Path? = null,
+    /**
+     * `SYNC_PAT_VALIDADE_<INSTANCIA>` (aaaa-mm-dd): validade do token do Jira INFORMADA pelo operador, por instância. O painel
+     * nunca consulta o Jira para descobri-la; só o alerta de PAT usa isto.
+     */
+    val patValidade: Map<String, LocalDate> = emptyMap(),
 ) {
     companion object {
         fun fromEnv(env: Map<String, String>): OperacaoSettings {
@@ -28,8 +38,20 @@ data class OperacaoSettings(
                 discoMinMb = inteiro(env, "PAINEL_DISCO_MIN_MB", 50..1_000_000, padrao.discoMinMb),
                 metricasPorta = porta(env, padrao.metricasPorta),
                 metricasHost = host(env, padrao.metricasHost),
+                alertasArquivo = caminho(env, "PAINEL_ALERTAS_ARQUIVO"),
+                patValidade = INSTANCIAS_CONHECIDAS.sorted().mapNotNull { id ->
+                    val nome = "SYNC_PAT_VALIDADE_${id.uppercase()}"
+                    texto(env, nome)?.let { id to data(nome, it) }
+                }.toMap(),
             )
         }
+
+        private fun data(nome: String, valor: String): LocalDate =
+            try {
+                LocalDate.parse(valor)
+            } catch (e: DateTimeParseException) {
+                throw IllegalArgumentException("$nome inválido (esperado aaaa-mm-dd)")
+            }
 
         private const val PORTA_PUBLICA = 8080
 

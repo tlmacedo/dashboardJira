@@ -33,7 +33,7 @@ class Metricas(val registro: PrometheusMeterRegistry = PrometheusMeterRegistry(P
     private val discos = ConcurrentHashMap<String, AtomicLong>()
     private val backupUltimoOk = AtomicLong(0)
     private val backupTamanho = AtomicLong(0)
-    private val falhasDeAccessLog = Counter.builder("painel.access.log.falhas")
+    private val contadorDeFalhasDeAccessLog = Counter.builder("painel.access.log.falhas")
         .description("Falhas ao gravar no registro de acesso").register(registro)
 
     init {
@@ -69,7 +69,16 @@ class Metricas(val registro: PrometheusMeterRegistry = PrometheusMeterRegistry(P
             .register(registro).increment()
     }
 
-    fun falhaDeAccessLog() = falhasDeAccessLog.increment()
+    fun falhaDeAccessLog() = contadorDeFalhasDeAccessLog.increment()
+
+    /** Quantas falhas de gravação do registro de acesso já houve neste processo (base do alerta `ACCESS_LOG_FALHANDO`). */
+    fun falhasDeAccessLog(): Double = contadorDeFalhasDeAccessLog.count()
+
+    /** Restaura as métricas do último backup OK a partir do banco (depois de reiniciar), sem contar uma execução nova. */
+    fun ultimoBackupOk(quando: java.time.Instant, tamanhoBytes: Long?) {
+        backupUltimoOk.set(quando.epochSecond)
+        if (tamanhoBytes != null) backupTamanho.set(tamanhoBytes)
+    }
 
     fun retencaoRemoveu(categoria: String, n: Int) {
         Counter.builder("painel.retencao.removidas").tag("categoria", categoria).register(registro).increment(n.toDouble())
