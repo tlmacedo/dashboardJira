@@ -1,8 +1,89 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { ApiError } from '../screens/TempoEmStatus/api'
-import { enviarJson, ErroDaApi } from './client'
+import { fetchSyncStatus } from '../screens/Sincronizacao/api'
+import { fetchTempoEmStatus, ApiError, FILTROS_VAZIOS } from '../screens/TempoEmStatus/api'
+import {
+  caminhoDeVolta,
+  enviarJson,
+  ErroDaApi,
+  EVENTO_SESSAO_EXPIRADA,
+  fetchMe,
+  getJson,
+  urlDeLogin,
+} from './client'
 
 afterEach(() => vi.unstubAllGlobals())
+
+// Todo o código-fonte da aplicação (menos testes e o próprio cliente): nenhum arquivo pode chamar `fetch` direto.
+const fontes = import.meta.glob(['/src/**/*.{ts,tsx}', '!/src/**/*.test.{ts,tsx}', '!/src/api/client.ts'], {
+  query: '?raw',
+  import: 'default',
+  eager: true,
+}) as Record<string, string>
+
+describe('único cliente HTTP', () => {
+  it('nenhumFetchForaDoCliente', () => {
+    expect(Object.keys(fontes).length).toBeGreaterThan(10) // a varredura não pode ser vazia
+    const culpados = Object.entries(fontes)
+      .filter(([, texto]) => /(^|[^.\w])fetch\s*\(/.test(texto))
+      .map(([caminho]) => caminho)
+    expect(culpados).toEqual([])
+  })
+})
+
+describe('sessão expirada', () => {
+  function contarEventos() {
+    const ouvinte = vi.fn()
+    window.addEventListener(EVENTO_SESSAO_EXPIRADA, ouvinte)
+    return { ouvinte, parar: () => window.removeEventListener(EVENTO_SESSAO_EXPIRADA, ouvinte) }
+  }
+
+  it('respostas401DisparamSessaoExpirada', async () => {
+    const { ouvinte, parar } = contarEventos()
+    simular(new Response('', { status: 401 }))
+    await expect(fetchMe()).rejects.toBeInstanceOf(ErroDaApi)
+    expect(ouvinte).toHaveBeenCalledTimes(1)
+    await expect(fetchSyncStatus()).rejects.toBeInstanceOf(ErroDaApi)
+    expect(ouvinte).toHaveBeenCalledTimes(2)
+    await expect(fetchTempoEmStatus(FILTROS_VAZIOS)).rejects.toBeInstanceOf(ErroDaApi)
+    expect(ouvinte).toHaveBeenCalledTimes(3)
+    await expect(getJson('/api/x')).rejects.toBeInstanceOf(ErroDaApi)
+    await expect(enviarJson('POST', '/api/x')).rejects.toBeInstanceOf(ErroDaApi)
+    expect(ouvinte).toHaveBeenCalledTimes(5)
+    parar()
+  })
+
+  it('respostas403NaoDisparam', async () => {
+    const { ouvinte, parar } = contarEventos()
+    simular(new Response('', { status: 403 }))
+    await expect(fetchMe()).rejects.toBeInstanceOf(ErroDaApi)
+    await expect(fetchSyncStatus()).rejects.toBeInstanceOf(ErroDaApi)
+    await expect(enviarJson('POST', '/api/x')).rejects.toBeInstanceOf(ErroDaApi)
+    expect(ouvinte).not.toHaveBeenCalled()
+    parar()
+  })
+
+  it('getJson manda Accept e devolve o corpo', async () => {
+    const f = simular(new Response(JSON.stringify({ a: 1 }), { status: 200 }))
+    expect(await getJson('/api/x')).toEqual({ a: 1 })
+    const [, init] = f.mock.calls[0] as unknown as [string, RequestInit]
+    expect(new Headers(init.headers).get('Accept')).toBe('application/json')
+  })
+})
+
+describe('volta ao login', () => {
+  it('voltaSoAceitaCaminhoInterno', () => {
+    for (const ruim of ['//evil.example', 'https://evil.example', '/\\evil.example', 'javascript:alert(1)', '', 'auditoria', '/\t/evil.example', '/a\\b']) {
+      expect(caminhoDeVolta(ruim), ruim).toBeNull()
+    }
+    expect(caminhoDeVolta('/auditoria?de=2026-10-01')).toBe('/auditoria?de=2026-10-01')
+    expect(caminhoDeVolta('/')).toBe('/')
+  })
+
+  it('urlDeLogin codifica a volta', () => {
+    expect(urlDeLogin(null)).toBe('/auth/login')
+    expect(urlDeLogin('/auditoria?de=2026-10-01')).toBe('/auth/login?volta=%2Fauditoria%3Fde%3D2026-10-01')
+  })
+})
 
 function simular(resposta: Response) {
   const f = vi.fn(async () => resposta)

@@ -43,6 +43,40 @@ async function erroDaResposta(resposta: Response): Promise<ErroDaApi> {
   return new ErroDaApi(resposta.status)
 }
 
+/** Evento global disparado em todo 401: a sessão acabou (o diálogo `SessaoExpirada` escuta). 403 NÃO dispara. */
+export const EVENTO_SESSAO_EXPIRADA = 'painel:sessao-expirada'
+
+/** 401 avisa a tela inteira; qualquer outro status é tratado só por quem chamou. */
+export function avisarSeSessaoExpirou(status: number): void {
+  if (status === 401) window.dispatchEvent(new Event(EVENTO_SESSAO_EXPIRADA))
+}
+
+/**
+ * Caminho para voltar depois do login. Só aceita caminho interno do próprio site: começa com "/", não com "//",
+ * sem barra invertida nem caractere de controle (o navegador os trata como "//"), sem esquema. Senão `null`.
+ */
+export function caminhoDeVolta(atual: string): string | null {
+  if (!atual.startsWith('/') || atual.startsWith('//')) return null
+  // eslint-disable-next-line no-control-regex
+  if (/[\\\u0000-\u001f\u007f]/.test(atual)) return null
+  return atual
+}
+
+/** `/auth/login`, com `?volta=` quando há caminho interno para voltar. */
+export function urlDeLogin(volta: string | null): string {
+  return volta ? `/auth/login?volta=${encodeURIComponent(volta)}` : '/auth/login'
+}
+
+/** GET de JSON do próprio painel. Erro vira [ErroDaApi]; 401 avisa a tela (sessão expirada). */
+export async function getJson<T>(url: string): Promise<T> {
+  const resposta = await fetch(url, { headers: { Accept: 'application/json' }, credentials: 'same-origin' })
+  if (!resposta.ok) {
+    avisarSeSessaoExpirou(resposta.status)
+    throw await erroDaResposta(resposta)
+  }
+  return (await resposta.json()) as T
+}
+
 /**
  * Envia um método que altera estado (POST, PUT, PATCH, DELETE) com o cabeçalho anti-CSRF.
  * Resposta sem conteúdo (204) devolve `undefined`.
@@ -58,20 +92,19 @@ export async function enviarJson<T>(
     headers: { Accept: 'application/json', 'Content-Type': 'application/json', [CABECALHO_CSRF]: '1' },
     body: corpo === undefined ? undefined : JSON.stringify(corpo),
   })
-  if (!resposta.ok) throw await erroDaResposta(resposta)
+  if (!resposta.ok) {
+    avisarSeSessaoExpirou(resposta.status)
+    throw await erroDaResposta(resposta)
+  }
   if (resposta.status === 204) return undefined as T
   return (await resposta.json()) as T
 }
 
 /** Quem está logado e com quais papéis (vindos do diretório no backend). */
-export async function fetchMe(): Promise<Me> {
-  const resposta = await fetch('/api/me', { headers: { Accept: 'application/json' } })
-  if (!resposta.ok) throw new Error(`/api/me respondeu ${resposta.status}`)
-  return (await resposta.json()) as Me
+export function fetchMe(): Promise<Me> {
+  return getJson<Me>('/api/me')
 }
 
-export async function fetchMeta(): Promise<Meta> {
-  const resposta = await fetch('/api/meta', { headers: { Accept: 'application/json' } })
-  if (!resposta.ok) throw new Error(`/api/meta respondeu ${resposta.status}`)
-  return (await resposta.json()) as Meta
+export function fetchMeta(): Promise<Meta> {
+  return getJson<Meta>('/api/meta')
 }

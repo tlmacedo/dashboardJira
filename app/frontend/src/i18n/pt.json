@@ -11,6 +11,8 @@
   "shell.semPermissao": "Sem permissão para este papel.",
   "shell.telaPrevista": "Tela prevista no mapa de navegação; ainda não implementada.",
   "shell.metaErro": "Não foi possível consultar o servidor. O menu mostra apenas o mínimo.",
+  "sessao.expirada": "Sua sessão expirou. Entre de novo para continuar; os filtros da tela ficam na URL.",
+  "sessao.entrar": "Entrar de novo",
   "role.USUARIO": "Usuário",
   "role.SQUAD_LEADER": "Squad Leader",
   "role.COORDENADOR": "Coordenador",
