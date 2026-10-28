@@ -310,6 +310,31 @@ for c in 'curl https://confluence.atlassian.com@jira.x.com/' 'curl https://docs.
          'curl https://x.atlassian.com.sidia.atlassian.net/' 'curl https://jira.x.com\.atlassian.com/' 'curl "https://docs.atlassian.com/x?next=jira.x.com" https://jira.x.com'; do
   j "$c" 2
 done
+# 4b) correções da revisão adversarial (28/10/2026): barra invertida no userinfo, host sem ponto, --connect-to,
+# git/rsync/socat e "Host:" sem espaço
+BS='\'
+for c in "curl 'http://x${BS}@jira.corp/rest'" "wget 'http://a${BS}@jira.corp'" "Invoke-WebRequest 'http://a${BS}@jira.corp'" \
+         'curl https://evil.com%5c@jira.corp/' 'curl https://evil.com%5C@jira.corp/' "curl http://x${BS}@jira.corp" \
+         "curl http://jira.x.com${BS}@evil.com/"  "curl http://docs.atlassian.com${BS}jira.x.com/" \
+         'curl jira/rest/api/2/search' 'wget jira/x' 'iwr jira/rest' 'curl --proxy jira http://x.com' 'curl -x jira http://x.com' \
+         'curl -xjira.corp:3128 http://x.com' 'curl --preproxy jira http://x.com' 'curl jira-lab/x' 'echo ok; curl JIRA/x' \
+         'curl --connect-to ::jira.corp:443 https://example.com' 'curl --connect-to example.com:443:jira.corp:443 https://example.com' \
+         'curl --connect-to=::jira.corp:443 https://example.com' 'curl --connect-to jira.corp:443:example.com:443 https://example.com' \
+         'curl --resolve jira.corp:443:10.0.0.1 https://x.com' 'curl --resolve example.com:443:jira.corp https://example.com' \
+         'git clone jira.corp:x.git' 'git clone jira:x.git' 'git remote add o jira.corp:x' 'git remote set-url o jira:x' \
+         'git ls-remote jira.corp:x' 'git fetch jira.corp:x' 'git pull jira.corp:x' 'git push jira.corp:x main' \
+         'rsync -av x jira.corp:/tmp' 'scp x jira:/tmp' 'sftp jira.corp' 'socat - TCP:jira.corp:80' 'socat TCP4:jira:80 -' \
+         "curl -H 'Host:jira.corp' http://10.0.0.1" 'curl -H Host:jira.corp http://10.0.0.1' 'curl -H "Host:jira" http://10.0.0.1'; do
+  j "$c" 2
+done
+for c in "curl 'http://x${BS}@docs.atlassian.com/x'" "curl http://x${BS}@example.com/" "curl http://example.com${BS}@x.com/" \
+         'git push origin HEAD:feat/hooks-url-jira' 'git commit -m "guia do jira"' 'git push origin jira-fix' 'git checkout -B work-hooks-fix origin/feat/hooks-url-jira' \
+         'git fetch origin' 'git remote -v' 'git clone https://github.com/dono/dashboardJira.git' 'git pull --ff-only' \
+         'curl --connect-to example.com:443:example.org:443 https://example.com' 'curl --resolve example.com:443:10.0.0.1 https://example.com' \
+         'curl -H "Host: example.com" http://10.0.0.1' 'curl -H Host:localhost http://10.0.0.1' 'socat - TCP:example.com:80' \
+         'curl --proxy proxy.exemplo.com:3128 http://x.com' 'curl -s localhost:8080/api/jira-status' 'rsync -av docs/jira /tmp/copia' 'ssh-add -l'; do
+  j "$c" 0
+done
 # 5) WebFetch do Claude Code (vale se o matcher o incluir): a URL pode vir sem esquema
 web_json() { jq -nc --arg u "$1" '{tool_name:"WebFetch",tool_input:{url:$u,prompt:"resuma"}}'; }
 caso jira "$(web_json 'jira.exemplo.invalid/x')" 2 "WebFetch: host jira sem esquema"

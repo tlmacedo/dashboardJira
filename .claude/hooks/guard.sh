@@ -115,18 +115,34 @@ function decodifica(s,   r, c, hex) {
   return r s
 }
 function termina(h, suf) { return length(h) > length(suf) && substr(h, length(h) - length(suf) + 1) == suf }
-# separa "userinfo@host:porta/caminho" em HOST, RESTO, TEMPORTA, TEMUSER (o host real vem depois do último @)
-function separa(u,   n, auth, i) {
-  n = match(u, /[\/?#\\]/)
+# um candidato a host de uma autoridade: tira o userinfo (até o ÚLTIMO @), corta na barra invertida e na porta.
+# Define TEMUSER e TEMPORTA; devolve o host ("" se for IPv6 entre colchetes).
+function host_de(a,   i) {
+  TEMUSER = 0; TEMPORTA = 0
+  while ((i = index(a, "@")) > 0) { a = substr(a, i + 1); TEMUSER = 1 }
+  i = index(a, "\\")
+  if (i > 0) a = substr(a, 1, i - 1)
+  if (substr(a, 1, 1) == "[") return ""
+  i = index(a, ":")
+  if (i > 0) { TEMPORTA = 1; a = substr(a, 1, i - 1) }
+  sub(/\.+$/, "", a)
+  return a
+}
+# separa "userinfo@host:porta/caminho" em CH[1..NH] (hosts candidatos), RESTO, TEMPORTA, TEMUSER.
+# A autoridade termina só em / ? # ; a barra invertida fica DENTRO dela (curl trata "x\@jira.corp" como host
+# jira.corp; navegadores tratam "\" como "/"). Havendo "\", os DOIS hosts (o do curl e o de antes da barra)
+# são candidatos, e o texto depois da primeira barra invertida entra no RESTO.
+function separa(u,   n, auth, b, tp, tu) {
+  n = match(u, /[\/?#]/)
   if (n == 0) { auth = u; RESTO = "" } else { auth = substr(u, 1, n - 1); RESTO = substr(u, n) }
-  TEMUSER = 0
-  while ((i = index(auth, "@")) > 0) { auth = substr(auth, i + 1); TEMUSER = 1 }
-  TEMPORTA = 0; HOST = ""
-  if (substr(auth, 1, 1) == "[") return
-  i = index(auth, ":")
-  if (i > 0) { TEMPORTA = 1; auth = substr(auth, 1, i - 1) }
-  sub(/\.+$/, "", auth)
-  HOST = auth
+  NH = 0
+  CH[++NH] = host_de(auth); tp = TEMPORTA; tu = TEMUSER
+  b = index(auth, "\\")
+  if (b > 0) {
+    CH[++NH] = host_de(substr(auth, 1, b - 1)); tp = tp || TEMPORTA; tu = tu || TEMUSER
+    RESTO = substr(auth, b) RESTO
+  }
+  TEMPORTA = tp; TEMUSER = tu
 }
 # 1 = endereço de Jira (bloquear)
 function decide(host, rest,   n, i, p, hp) {
@@ -144,11 +160,29 @@ function decide(host, rest,   n, i, p, hp) {
   return 0
 }
 function base(w) { sub(/^.*[\/\\]/, "", w); sub(/\.exe$/, "", w); return w }
+# host sem ponto/porta/usuario: só vale se um rótulo (separado por . ou -) for exatamente "jira"
+# (jira, jira-lab, meu-jira); "dashboardjira" e "jira.md" (com ponto) seguem as outras regras.
+function estrito(h,   n, m, i, k, P, Q) {
+  n = split(h, P, ".")
+  for (i = 1; i <= n; i++) { m = split(P[i], Q, "-"); for (k = 1; k <= m; k++) if (Q[k] == "jira") return 1 }
+  return 0
+}
+# valor "a:b:c:d" de --connect-to / --resolve: examina o 1o e o 3o campo como hosts
+function campos(w,   F, f, j) {
+  split(w, F, ":")
+  for (j = 1; j <= 3; j += 2) {
+    f = F[j]; sub(/^\+/, "", f); sub(/\.+$/, "", f)
+    if (f != "" && decide(f, "")) bloq = 1
+  }
+}
 BEGIN {
   n = split("curl wget http https httpie xh nc ncat telnet ssh scp sftp ftp openssl socat aria2c lynx w3m rsync invoke-webrequest invoke-restmethod iwr irm start-bitstransfer bitsadmin certutil test-netconnection tnc resolve-dnsname nslookup ping dig", L, " ")
   for (i = 1; i <= n; i++) REDE[L[i]] = 1
   n = split("ssh scp sftp nc ncat telnet ftp socat ping dig nslookup tnc test-netconnection resolve-dnsname", L, " ")
   for (i = 1; i <= n; i++) ALVO[L[i]] = 1
+  # subcomandos do git que falam com um servidor (git entra como ferramenta de rede só com eles)
+  n = split("clone fetch pull push remote ls-remote submodule", L, " ")
+  for (i = 1; i <= n; i++) GITSUB[L[i]] = 1
 }
 { texto = texto " " $0 }
 END {
@@ -162,7 +196,7 @@ END {
     k = index(m, "://")
     pos = RSTART + k + 2
     separa(substr(m, k + 3))
-    if (HOST != "" && decide(HOST, RESTO)) bloq = 1
+    for (c = 1; c <= NH; c++) if (CH[c] != "" && decide(CH[c], RESTO)) bloq = 1
     s = substr(s, pos)
   }
   # B) host sem esquema
@@ -171,26 +205,48 @@ END {
   if (rede == "auto") {
     for (i = 1; i <= nw; i++) if ((base(W[i])) in REDE) r = 1
     if (t ~ /webclient|httpclient|xmlhttp|winhttp/) r = 1
+    # git só conta com subcomando que fala com servidor (clone, fetch, pull, push, remote, ls-remote, submodule)
+    for (i = 1; i <= nw; i++) if (base(W[i]) == "git") {
+      for (j = i + 1; j <= i + 6 && j <= nw; j++) if (W[j] in GITSUB) r = 1
+    }
   }
   # com ferramenta de rede, todas as palavras; sem ela, só as de forma usuario@host (git clone git@host:repo)
   if (nw > 0) {
     janela = 0
+    ult = 0     # posição da última ferramenta de comando (curl, wget...); no modo 1 (texto de URL) vale sempre
     for (i = 1; i <= nw; i++) {
       w = W[i]
       if (w == "") continue
+      if (((base(w)) in REDE) && w != "http" && w != "https") ult = i
       if (!r && index(w, "@") == 0) continue
       # valor de opção que é arquivo ou corpo (curl -o jira-saida.txt, -d, --data...) não é host
       salta = (ant ~ /^(-o|--output|--output-document|--upload-file|-d|--data|--data-raw|--data-binary|--cacert|--cert|--key|--config|-outfile|-infile|-body|-path|-filepath)$/)
+      prev = ant
       ant = w
       if (salta) continue
       if ((base(w)) in ALVO) { janela = 4; continue }
+      # --connect-to a:b:c:d e --resolve host:porta:endereço: campos separados por ":"
+      if (prev ~ /^(--connect-to|--resolve)$/) { campos(w); continue }
+      # valor de opção que é um host (proxy), "-xHOST" colado e cabeçalho Host:valor sem espaço
+      forca = (prev ~ /^(-x|--proxy|--preproxy|--socks4a?|--socks5(-hostname)?|--haproxy-[a-z-]+)$/)
+      if (w ~ /^-x[^-]/) { w = substr(w, 3); forca = 1 }
+      if (w ~ /^(host|x-forwarded-host|x-original-host|forwarded-host):/) { w = substr(w, index(w, ":") + 1); forca = 1 }
+      # socat: TCP:host:porta, SSL:host:porta...
+      if (w ~ /^(tcp|tcp4|tcp6|tcp-connect|udp|udp4|udp6|ssl|openssl|openssl-connect|socks4a?):/) w = substr(w, index(w, ":") + 1)
+      if (w == "") continue
       if (w ~ /:\/\//) continue
       if (w ~ /^-/ || w ~ /^[\/.~$]/ || index(w, "\\") > 0 || w ~ /^[a-z]:[\/\\]/ || w ~ /^[0-9]+$/) continue
       separa(w)
-      alvo = (janela > 0)
+      alvo = (janela > 0) || forca
       if (janela > 0) janela--
-      if (HOST == "") continue
-      if (alvo || index(HOST, ".") > 0 || TEMPORTA || TEMUSER) { if (decide(HOST, RESTO)) bloq = 1 }
+      for (c = 1; c <= NH; c++) {
+        h = CH[c]
+        if (h == "") continue
+        if (alvo || index(h, ".") > 0 || TEMPORTA || TEMUSER) { if (decide(h, RESTO)) bloq = 1 }
+        # host sem ponto, porta nem usuario (curl jira/rest, wget jira, iwr jira): só com ferramenta de comando
+        # nas 10 palavras anteriores (git não entra: evita bloquear nome de ramo como jira-fix)
+        else if ((rede == "1" || (ult > 0 && i - ult <= 10)) && estrito(h)) bloq = 1
+      }
     }
   }
   exit(bloq ? 3 : 0)
