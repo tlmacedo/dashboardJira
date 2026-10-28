@@ -1,0 +1,36 @@
+PAINEL DE SQUADS - PACOTE DE PRODUCAO
+======================================
+
+Este pacote NAO leva configuracao real, arquivo de variaveis real nem banco de dados. Tudo isso fica FORA desta pasta,
+para que trocar o pacote por outro mais novo nunca apague nada.
+
+O QUE TEM AQUI
+  bin/            painel (Linux/macOS) e painel.bat (Windows): sobem o painel
+  lib/            os jars (o painel e suas bibliotecas)
+  frontend/dist/  as telas (build do frontend)
+  config/         SOMENTE os modelos *.exemplo.yaml e as fichas de cards/ (nada real)
+  .env.example    modelo das variaveis (copie para fora do pacote e preencha)
+  VERSAO.txt      versao, commit e data de montagem
+
+COMO RODAR (a pasta de trabalho e a RAIZ DO PACOTE; JDK 21 em JAVA_HOME ou no PATH)
+
+  Windows 11 (PowerShell):
+    $env:PAINEL_CONFIG_DIR = '<pasta dos YAML reais>'
+    $env:DATABASE_PATH     = '<pasta de dados>\painel.db'
+    $env:PAINEL_ENV_FILE   = '<arquivo de variaveis>'
+    Set-Location <pasta do pacote>
+    .\bin\painel.bat
+
+  Linux/macOS (sh):
+    PAINEL_CONFIG_DIR=... DATABASE_PATH=... PAINEL_ENV_FILE=... ./bin/painel      (a partir da pasta do pacote)
+
+  O painel escuta em 127.0.0.1:8080 (PAINEL_HOST muda a interface; o proxy da empresa fica na frente e termina o TLS).
+  Este pacote sobe em MODO PRODUCAO: sem login configurado (OIDC_* e SESSION_SECRET) ele se recusa a subir. Isso e proposital.
+
+O QUE NAO FAZER
+  - Nao copie arquivos de configuracao real, de variaveis ou de banco para dentro desta pasta.
+  - Nao ligue o acesso ao Jira por conta propria: so o usuario responsavel muda essa chave, seguindo o checklist da
+    primeira conexao (docs/jira/checklist-primeira-conexao.md, no repositorio).
+  - Nao suba dois paineis no mesmo arquivo de banco (o segundo e recusado).
+
+GUIA COMPLETO: docs/implantacao.md (no repositorio). Servico do sistema operacional, backup e restauracao: docs/operacao/.

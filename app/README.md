@@ -37,6 +37,9 @@ DASHBOARD_DEMO_DATA=true sh iniciar.sh        # PowerShell: $env:DASHBOARD_DEMO_
 | `DASHBOARD_DEV_MODE` | `true` em `iniciar.sh`/`iniciar.ps1` e em `./gradlew run`; `false` no pacote instalado | Modo desenvolvimento: **sem login**, todos os dados, faixa vermelha. O pacote instalado (`installDist`) sobe em modo produção quando a variável falta; o modelo `.env.example` não a liga. |
 | `DASHBOARD_DEMO_DATA` | `false` | Carrega issues **fictícias** na subida, sem tocar no Jira. Só com `DASHBOARD_DEV_MODE=true` e `JIRA_LIVE_ENABLED=false`; qualquer outra combinação derruba a subida. |
 | `PAINEL_STATIC_DIR` | `frontend/dist` | Pasta do build do frontend servida em `/`. |
+| `PAINEL_HOST` | `127.0.0.1` | Interface em que o painel escuta (porta 8080). O padrão só atende a própria máquina; outra interface exige firewall (`docs/implantacao.md`). |
+| `PAINEL_CACHE_SEG` | `60` | Segundos em que as telas reaproveitam a leitura bruta do banco; `0` desliga. Fim de sincronização e de retenção invalidam na hora. |
+| `OIDC_ISSUER`, `OIDC_CLIENT_ID`, `OIDC_CLIENT_SECRET`, `OIDC_REDIRECT_URI`, `OIDC_CLAIM_USERNAME`, `SESSION_SECRET` | vazio | Login SSO/OIDC e assinatura da sessão. Obrigatórios em produção (menos o segredo do cliente e a claim); ver `docs/implantacao.md`. |
 | `DATABASE_PATH` | `data/painel.db` | Arquivo SQLite do painel. |
 
 ## Sincronização periódica (`SYNC_*`)
@@ -74,7 +77,7 @@ No PowerShell: `.\scripts\painel-cli.ps1 validar-config`, `... backup-agora`, `.
 
 O modo desenvolvimento **não tem login**. Nunca o exponha em rede com dados reais. O painel escuta na porta `8080` e **quem restringe o acesso é o firewall/rede da máquina**: em estação de trabalho, deixe-o acessível só em `127.0.0.1`.
 
-Para produção: use o pacote instalado (seção abaixo), que já sobe com `DASHBOARD_DEV_MODE=false` quando a variável não está definida, ou defina a variável como `false` (exige o login SSO/OIDC, previsto em plano posterior). Não exponha em rede enquanto o login não existir.
+Para produção: use o pacote instalado (seção abaixo), que já sobe com `DASHBOARD_DEV_MODE=false` quando a variável não está definida, ou defina a variável como `false` (exige o login SSO/OIDC: `OIDC_ISSUER`, `OIDC_CLIENT_ID`, `OIDC_REDIRECT_URI` e `SESSION_SECRET`; sem eles o painel não sobe). O provedor de identidade é o da empresa (qualquer OpenID Connect com PKCE); ainda não há provedor ligado, então não exponha o painel em rede com dados reais.
 
 ## Pacote instalável
 
@@ -84,6 +87,17 @@ cd ../backend && ./gradlew installDist                          # gera o pacote
 ```
 
 O pacote fica em `app/backend/build/install/painel/` (script `bin/painel`; no Windows, `bin/painel.bat`). Diferente de `iniciar.*` e de `./gradlew run`, o **pacote instalado** sobe em **modo produção** quando `DASHBOARD_DEV_MODE` não está definida: sem o arquivo de variáveis e os YAML reais ele falha na subida ("obrigatório em produção") em vez de abrir sem login. Quem quiser modo dev no pacote precisa escrever a linha explicitamente (e a faixa vermelha continua). O pacote não leva `.env`, YAML reais nem banco; informe-os por `PAINEL_ENV_FILE`, `PAINEL_CONFIG_DIR` e `DATABASE_PATH`.
+
+## Produção
+
+O pacote de produção (sem contêiner, com SQLite em arquivo) é montado e conferido por dois scripts, a partir de `app/`:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\montar-pacote.ps1
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\verificar-pacote.ps1
+```
+
+(`sh scripts/montar-pacote.sh` e `sh scripts/verificar-pacote.sh` no Linux/macOS.) O resultado fica em `app/pacote/painel/` (ignorado pelo git) e **nunca** leva configuração real, arquivo de variáveis real nem banco. Tudo sobre pastas e variáveis de produção, login SSO/OIDC, endereço de escuta (`PAINEL_HOST`, padrão `127.0.0.1`), ordem segura para ligar o Jira, serviço, backup e atualização está em [`docs/implantacao.md`](../docs/implantacao.md).
 
 ## Inicialização e configuração
 
@@ -106,6 +120,7 @@ Na subida o painel carrega o calendário e o diretório de papéis, abre o pool 
 - `equipes.yaml`, `ausencias.yaml`, `planejamento.yaml` ou `esforco.yaml` ausentes (em dev usam o `.exemplo` com aviso; em produção são obrigatórios). Copie de `config/equipes.exemplo.yaml`, `config/ausencias.exemplo.yaml`, `config/planejamento.exemplo.yaml` e `config/esforco.exemplo.yaml` (os pesos do esforço são proposta inicial e não levam dado pessoal). As competências de cada pessoa ficam no `equipes.yaml`. **`equipes.yaml` e `ausencias.yaml` têm dados pessoais: ficam fora do git**, só leitura (nenhuma tela grava), e os `id` precisam existir no `papeis.yaml`. A ausência não tem motivo (a chave `motivo` é recusada).
 - `checklist_review.yaml` ou `integridade.yaml` ausentes (em dev usam o `.exemplo` com aviso; em produção são obrigatórios). Copie de `config/checklist_review.exemplo.yaml` (tipos de checklist e de review, limites dos alertas) e `config/integridade.exemplo.yaml` (gravidade e limites de cada sinal, níveis por pessoa); sem dado pessoal. A Integridade é só do gerente, sempre auditada, e em produção fica desligada até o aceite do DPO.
 - Nenhum **GERENTE** com papel vigente hoje no `papeis.yaml`.
+- `OIDC_ISSUER`, `OIDC_CLIENT_ID`, `OIDC_REDIRECT_URI` ou `SESSION_SECRET` ausentes ou em branco (o login SSO/OIDC é obrigatório em produção); a mensagem cita só o nome da variável.
 - Arquivo de banco inacessível, já em uso por outro painel ou migração que falha.
 - Com a flag `JIRA_LIVE_ENABLED` ligada, instância do Jira mal configurada (a mensagem cita só o id e a regra).
 

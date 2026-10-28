@@ -38,7 +38,13 @@ class ModeloDeVariaveisTest {
 
     @Test
     fun modeloSobeEmProducaoNoPacote() {
-        val settings = Settings.fromEnv(PerfilDeExecucao.aplicar(PerfilDeExecucao.PRODUCAO, modeloAtivo()))
+        // O modelo copiado SEM preencher o login não sobe em produção (falha fechada, citando só o nome da variável)...
+        val erro = kotlin.test.assertFailsWith<IllegalArgumentException> {
+            Settings.fromEnv(PerfilDeExecucao.aplicar(PerfilDeExecucao.PRODUCAO, modeloAtivo()))
+        }
+        assertTrue(erro.message.orEmpty().startsWith("OIDC_ISSUER "), erro.message)
+        // ...e com o login preenchido sobe em produção, nunca em modo desenvolvimento.
+        val settings = Settings.fromEnv(PerfilDeExecucao.aplicar(PerfilDeExecucao.PRODUCAO, modeloAtivo() + br.sidia.painel.ENV_OIDC_DE_TESTE))
         assertEquals(false, settings.dashboardDevMode)
     }
 

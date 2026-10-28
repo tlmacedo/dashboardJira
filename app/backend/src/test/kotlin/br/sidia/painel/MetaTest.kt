@@ -22,7 +22,7 @@ class MetaTest {
     fun metaEmProducaoNaoTemBanner() {
         assertEquals(
             """{"devMode":false,"liveEnabled":false,"zone":"America/Manaus","banner":null}""",
-            meta(mapOf("DASHBOARD_DEV_MODE" to "false")),
+            meta(mapOf("DASHBOARD_DEV_MODE" to "false") + ENV_OIDC_DE_TESTE),
         )
     }
 

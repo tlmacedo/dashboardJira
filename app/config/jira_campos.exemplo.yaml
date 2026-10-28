@@ -165,22 +165,22 @@ campos:
   - nome: Story Points
     tipo: NUMBER
     instancia: samsung
-    finalidade: a confirmar
+    finalidade: Pontos da task (cards de trabalho); id e tipo a confirmar na 1ª conexão
   - nome: Epic Link
     tipo: TEXT
     instancia: samsung
-    finalidade: a confirmar
+    finalidade: Chave do épico da task (card Épicos); id e tipo a confirmar na 1ª conexão
   - nome: Flagged
     tipo: SELECT
     instancia: samsung
-    finalidade: a confirmar
+    finalidade: Marca de impedimento da task (cards de bloqueio); id e tipo a confirmar na 1ª conexão
 
   # Campos referidos só por número, ainda sem finalidade confirmada
   - nome: "cf[12416]"
     tipo: TEXT
     instancia: samsung
-    finalidade: a confirmar
+    finalidade: a confirmar (significado e tipo desconhecidos; descobrir na 1ª conexão)
   - nome: "cf[11412]"
     tipo: TEXT
     instancia: samsung
-    finalidade: a confirmar
+    finalidade: a confirmar (significado e tipo desconhecidos; descobrir na 1ª conexão)

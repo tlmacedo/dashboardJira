@@ -18,7 +18,17 @@ import io.ktor.util.AttributeKey
 private val chavePrincipal = AttributeKey<Principal>("painel.principal")
 
 /** Únicas rotas públicas, já normalizadas. Todo o resto exige principal (negar por padrão). */
-internal val rotasPublicas = setOf(listOf("api", "health"), listOf("api", "health", "pronto"), listOf("api", "meta"))
+internal val rotasPublicas = setOf(
+    listOf("api", "health"), listOf("api", "health", "pronto"), listOf("api", "meta"),
+    // Login SSO/OIDC: quem ainda não tem sessão precisa chegar até elas. O logout é público para limpar também sessão vencida.
+    listOf("auth", "login"), listOf("auth", "callback"), listOf("auth", "logout"),
+)
+
+/**
+ * As rotas públicas como caminhos (`/api/health`, `/auth/login`...). É o ponto de extensão do inventário de rotas
+ * (Plano 8, Tarefa 1): quem cria uma rota pública a põe em [rotasPublicas] e o inventário a enxerga aqui.
+ */
+val ROTAS_PUBLICAS: Set<String> = rotasPublicas.map { "/" + it.joinToString("/") }.toSortedSet()
 
 /**
  * Normaliza o caminho como o roteador do Ktor: divide por `/`, descarta segmentos vazios e
@@ -60,8 +70,8 @@ private const val MAX_SEGMENTOS_ESTATICOS = 8
  *
  * Todos os dados ficam atrás de `/api/`, que continua protegida; assim a SPA e a futura tela de login
  * carregam mesmo em produção com autenticador que nega. Variantes camufladas da API
- * (`/%61pi/x`, `//api/x`, `/API/x`, `/api/x/../health`) e tudo sob `/auth` exigem principal; os Planos 8 e 12
- * acrescentam suas rotas públicas (`/auth/login`, `/auth/callback`) em [rotasPublicas].
+ * (`/%61pi/x`, `//api/x`, `/API/x`, `/api/x/../health`) e tudo sob `/auth` exigem principal, exceto `/auth/login`,
+ * `/auth/callback` e `/auth/logout` (em [rotasPublicas]).
  */
 internal fun ehPublica(uri: String, publicas: Set<List<String>> = rotasPublicas): Boolean {
     // URI absoluta (`http://h/api/x`) ou relativa: o roteador pode normalizá-la para um caminho

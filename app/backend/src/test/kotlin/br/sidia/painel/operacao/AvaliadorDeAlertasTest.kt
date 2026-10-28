@@ -1,6 +1,7 @@
 package br.sidia.painel.operacao
 
 import br.sidia.painel.BancoEmArquivo
+import br.sidia.painel.ENV_OIDC_DE_TESTE
 import br.sidia.painel.TestPaths
 import br.sidia.painel.config.Settings
 import br.sidia.painel.db.Database
@@ -63,7 +64,8 @@ class AvaliadorDeAlertasTest {
         noArHa: Duration = Duration.ofMinutes(10),
         calendario: BusinessCalendar = BusinessCalendar.fromYaml(TestPaths.configDir.resolve("calendario.exemplo.yaml"), ZoneId.of("America/Manaus")),
     ): Cenario {
-        val settings = Settings.fromEnv(mapOf("DASHBOARD_DEV_MODE" to "true") + env)
+        // O login fictício vale também quando um teste passa `producao`/`live` (modo dev desligado): sem ele a leitura falha fechada.
+        val settings = Settings.fromEnv(mapOf("DASHBOARD_DEV_MODE" to "true") + ENV_OIDC_DE_TESTE + env)
         val ds = Database.connect(Database.urlDeArquivo(banco.novoArquivo()))
         Database.migrate(ds)
         aAbrir.add(ds)

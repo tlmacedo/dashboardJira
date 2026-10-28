@@ -97,6 +97,8 @@ O modelo é `app/.env.example` (copie para `app/.env`, que o git ignora, ou apon
 | `DATABASE_POOL_SIZE` | 4 | Conexões do pool (1 a 100) |
 | `PAINEL_CONFIG_DIR` | `config` | Pasta dos YAML de configuração |
 | `PAINEL_STATIC_DIR` | `frontend/dist` | Build do frontend servido em `/` |
+| `PAINEL_CACHE_SEG` | 60 | Segundos em que as telas reaproveitam a leitura bruta do banco (issues e histórico); `0` desliga. Fim de sincronização e de retenção invalidam na hora; o recorte por papel é feito depois, então o cache nunca mistura papéis |
+| `PAINEL_HOST` | `127.0.0.1` | Interface em que o painel escuta (porta 8080). O padrão só atende a própria máquina; outra interface exige firewall e gera `AVISO ESCUTA_FORA_DO_LOOPBACK` no `validar-config` |
 | `JIRA_SAMSUNG_URL`, `JIRA_SAMSUNG_TOKEN` | vazio | Instância `samsung` (Bearer); só ativa com as duas preenchidas |
 | `JIRA_SIDIA_URL`, `JIRA_SIDIA_USER`, `JIRA_SIDIA_TOKEN` | vazio | Instância `sidia` (Basic); só ativa com as três preenchidas |
 | `SYNC_INSTANCIAS`, `SYNC_INTERVALO_MIN`, `SYNC_HORA_RECONCILIACAO`, `SYNC_HORA_RETENCAO`, `SYNC_MAX_ITENS`, `SYNC_MAX_REQUISICOES`, `SYNC_SOBREPOSICAO_MIN`, `SYNC_FUSO_SERVIDOR`, `SYNC_TEMPO_MAX_MIN` | ver `app/README.md` | Intervalos e limites da sincronização (não ligam nada) |
@@ -106,7 +108,10 @@ O modelo é `app/.env.example` (copie para `app/.env`, que o git ignora, ou apon
 | `PAINEL_METRICAS_PORTA`, `PAINEL_METRICAS_HOST` | 9464, `127.0.0.1` | Porta interna das métricas; `0` desliga. Host fora do loopback gera `AVISO METRICAS_HOST_NAO_LOOPBACK` no `validar-config` (não muda o código de saída) |
 | `PAINEL_ALERTAS_ARQUIVO` | vazio | Arquivo de texto dos alertas |
 | `SYNC_PAT_VALIDADE_SAMSUNG`, `SYNC_PAT_VALIDADE_SIDIA` | vazio | Validade do token, `aaaa-mm-dd`, informada por você |
-| `SESSION_SECRET`, `SESSION_SECRET_ANTERIOR` | vazio | Assinatura do cookie de sessão ([rotação de segredos](rotacao-de-segredos.md)) |
+| `SESSION_SECRET`, `SESSION_SECRET_ANTERIOR` | vazio | Assinatura do cookie de sessão ([rotação de segredos](rotacao-de-segredos.md)). **Obrigatório em produção** (em branco = a subida falha); o início da rotação fica gravado ao lado do banco (`<banco>.rotacao`) para que reiniciar não reabra a janela do segredo anterior |
+| `OIDC_ISSUER`, `OIDC_CLIENT_ID`, `OIDC_REDIRECT_URI` | vazio | Login SSO/OIDC. **Obrigatórios em produção**: faltando um, o painel não sobe e a mensagem cita só o nome. `OIDC_ISSUER` e `OIDC_REDIRECT_URI` são `https`; a segunda termina em `/auth/callback` |
+| `OIDC_CLIENT_SECRET` | vazio | Segredo do cliente, se o provedor exigir (opcional com PKCE); nunca vai para log nem para `toString` |
+| `OIDC_CLAIM_USERNAME` | `preferred_username` | Claim do `id_token` com o username do Jira; o papel nunca vem do token, vem do `papeis.yaml` |
 | `BACKUP_DIR`, `BACKUP_HORA`, `BACKUP_RETENCAO_COPIAS` | vazio, `02:00`, 14 | Backup do banco ([backup e restauração](backup-e-restauracao.md)) |
 
 ## Depois da flag / com o usuário

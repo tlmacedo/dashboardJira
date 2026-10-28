@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
 import { Outlet } from 'react-router-dom'
-import { fetchMe, fetchMeta, type Me } from '../api/client'
+import { enviarJson, fetchMe, fetchMeta, type Me } from '../api/client'
 import { useLang } from '../i18n/LangProvider'
 import { ROLES, type Role } from '../nav/nav'
 import { gravarPreferencia, lerPreferencia } from '../storage'
@@ -55,6 +55,18 @@ export function Shell() {
     gravarPreferencia(CHAVE_PAPEL, r)
   }
 
+  // Sair (só em produção): o backend apaga o cookie de sessão; só depois a página volta à raiz. Se falhar, a sessão
+  // continua e o aviso fica na tela (nada de fingir que saiu).
+  const [erroSair, setErroSair] = useState(false)
+  async function sair() {
+    try {
+      await enviarJson<void>('POST', '/auth/logout')
+      window.location.assign('/')
+    } catch {
+      setErroSair(true)
+    }
+  }
+
   return (
     <RoleContext.Provider value={papel}>
       <div
@@ -67,9 +79,18 @@ export function Shell() {
         {meta.data?.banner && <DevBanner texto={meta.data.banner} />}
         <div className="frame" aria-hidden="true" />
         <div className="app">
-          <Menu role={papel} aoTrocarPapel={dev ? trocarPapel : undefined} />
+          <Menu
+            role={papel}
+            aoTrocarPapel={dev ? trocarPapel : undefined}
+            aoSair={meta.data !== undefined && !dev ? sair : undefined}
+          />
           <main id="conteudo" tabIndex={-1}>
             {meta.isError && <p className="notice">{t('shell.metaErro')}</p>}
+            {erroSair && (
+              <p className="notice" role="alert">
+                {t('shell.sairErro')}
+              </p>
+            )}
             <AvisoDeAlertas />
             <Outlet />
           </main>

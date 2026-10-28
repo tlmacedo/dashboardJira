@@ -137,6 +137,59 @@ describe('casca', () => {
     expect(screen.queryByRole('button', { name: 'Gerente' })).toBeNull()
   })
 
+  it('botaoSairSoForaDoModoDesenvolvimento', async () => {
+    simularMeta({ devMode: true, liveEnabled: false, zone: MANAUS, banner: 'MODO DESENVOLVIMENTO' })
+    const dev = renderizar()
+    await esperarMeta(dev.container)
+    expect(screen.queryByRole('button', { name: 'Sair' })).toBeNull()
+    cleanup()
+
+    simularMeta({ devMode: false, liveEnabled: false, zone: MANAUS, banner: null })
+    const producao = renderizar()
+    await esperarMeta(producao.container)
+    expect(screen.getByRole('button', { name: 'Sair' })).toBeInTheDocument()
+  })
+
+  it('sairEnviaLogoutComCsrfEVoltaParaARaiz', async () => {
+    const chamadas: { url: string; metodo: string; csrf: string | null }[] = []
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string, init?: RequestInit) => {
+        const cabecalhos = new Headers(init?.headers)
+        chamadas.push({ url, metodo: init?.method ?? 'GET', csrf: cabecalhos.get('X-Painel-CSRF') })
+        if (url === '/auth/logout') return new Response(null, { status: 204 })
+        return new Response(JSON.stringify({ devMode: false, liveEnabled: false, zone: MANAUS, banner: null }), { status: 200 })
+      }),
+    )
+    const assign = vi.fn()
+    vi.stubGlobal('location', { ...window.location, assign })
+    const { container } = renderizar()
+    await esperarMeta(container)
+    await userEvent.click(screen.getByRole('button', { name: 'Sair' }))
+    await vi.waitFor(() => expect(assign).toHaveBeenCalledWith('/'))
+    const logout = chamadas.find((c) => c.url === '/auth/logout')
+    expect(logout).toEqual({ url: '/auth/logout', metodo: 'POST', csrf: '1' })
+  })
+
+  it('sairQueFalhaNaoNavega', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string) =>
+        url === '/auth/logout'
+          ? new Response(null, { status: 503 })
+          : new Response(JSON.stringify({ devMode: false, liveEnabled: false, zone: MANAUS, banner: null }), { status: 200 }),
+      ),
+    )
+    const assign = vi.fn()
+    vi.stubGlobal('location', { ...window.location, assign })
+    const { container } = renderizar()
+    await esperarMeta(container)
+    await userEvent.click(screen.getByRole('button', { name: 'Sair' }))
+    // a falha vira aviso na tela e a sessão continua: nada de ir para a raiz fingindo que saiu
+    expect(await screen.findByText(/Não foi possível sair/)).toBeInTheDocument()
+    expect(assign).not.toHaveBeenCalled()
+  })
+
   it('temaEIdiomaInvalidosCaemNoPadrao', async () => {
     localStorage.setItem('painel.tema', 'neon')
     localStorage.setItem('painel.idioma', 'fr')

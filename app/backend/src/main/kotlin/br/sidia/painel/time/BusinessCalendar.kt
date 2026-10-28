@@ -58,16 +58,23 @@ class BusinessCalendar(
         var total = 0.0
         var dia = inicio.toLocalDate()
         val ultimo = fim.toLocalDate()
+        val primeiro = dia
         while (!dia.isAfter(ultimo)) {
             if (isBusinessDay(dia)) {
-                val iniDia = dia.atStartOfDay(zone).toInstant()
-                val fimDia = dia.plusDays(1).atStartOfDay(zone).toInstant()
-                val a = maxOf(iniDia, from)
-                val b = minOf(fimDia, to)
-                if (b.isAfter(a)) {
-                    // fração real do dia, robusta a dias que não tenham exatamente 24h
-                    total += Duration.between(a, b).toMillis().toDouble() /
-                        Duration.between(iniDia, fimDia).toMillis().toDouble()
+                if (dia != primeiro && dia != ultimo) {
+                    // Dia inteiro dentro do intervalo: a fração é exatamente 1,0 (duração do dia / duração do dia), então
+                    // não precisa converter o fuso. Mesmo resultado, bit a bit, e muito mais rápido em intervalos longos.
+                    total += 1.0
+                } else {
+                    val iniDia = dia.atStartOfDay(zone).toInstant()
+                    val fimDia = dia.plusDays(1).atStartOfDay(zone).toInstant()
+                    val a = maxOf(iniDia, from)
+                    val b = minOf(fimDia, to)
+                    if (b.isAfter(a)) {
+                        // fração real do dia, robusta a dias que não tenham exatamente 24h
+                        total += Duration.between(a, b).toMillis().toDouble() /
+                            Duration.between(iniDia, fimDia).toMillis().toDouble()
+                    }
                 }
             }
             dia = dia.plusDays(1)

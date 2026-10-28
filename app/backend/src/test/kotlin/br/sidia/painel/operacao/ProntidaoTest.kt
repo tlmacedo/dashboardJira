@@ -160,7 +160,7 @@ class ProntidaoTest {
     @Test
     fun respostaSemDetalhesEProntoEhPublico() = testApplication {
         // Produção (sem modo dev): a rota continua pública, sem principal.
-        val s = Settings.fromEnv(mapOf("DASHBOARD_DEV_MODE" to "false"))
+        val s = Settings.fromEnv(mapOf("DASHBOARD_DEV_MODE" to "false") + br.sidia.painel.ENV_OIDC_DE_TESTE)
         val ctx = testContextComBanco(s, banco)
         application { module(s, ctx, authenticator = object : br.sidia.painel.security.Authenticator {
             override suspend fun authenticate(call: io.ktor.server.application.ApplicationCall) = null

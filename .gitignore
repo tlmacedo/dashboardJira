@@ -3,6 +3,8 @@
 .claude/settings.local.json
 __pycache__/
 app/data/
+# Pacote de producao montado por app/scripts/montar-pacote.* (artefato de build; nunca versionar)
+app/pacote/
 app/.env
 app/config/equipes.yaml
 *.db

@@ -46,14 +46,3 @@ class DevAuthenticator(
         return Principal("dev", setOf(Role.GERENTE))
     }
 }
-
-/**
- * Stub do SSO/OIDC de produção: sempre não autenticado até o provedor real ser definido.
- *
- * Ao implementar o provedor real: o `userId` vem do token validado, mas os papéis NUNCA vêm de
- * claims do token. Eles devem ser derivados do `RoleDirectory` na data de hoje
- * (`rolesOf(userId, hoje)`), para que a autorização dependa só do diretório versionado.
- */
-class OidcAuthenticator : Authenticator {
-    override suspend fun authenticate(call: ApplicationCall): Principal? = null
-}
