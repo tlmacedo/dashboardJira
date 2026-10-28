@@ -11,6 +11,7 @@ import br.sidia.painel.domain.StatusCategory
 import br.sidia.painel.pessoas.Ocupacao
 import br.sidia.painel.pessoas.MotorDePessoas
 import br.sidia.painel.security.Principal
+import br.sidia.painel.security.Role
 import br.sidia.painel.security.Visibility
 import br.sidia.painel.sync.FiltroDeFicha
 import br.sidia.painel.trabalho.ConsultaDeTrabalho
@@ -81,8 +82,12 @@ class DistribuicaoServico(private val ctx: AppContext, private val store: WorkSt
         val pessoas = motor.pessoas().filter { it in visiveis }
 
         val distribuidor = Distribuidor(regras, motor.regras.tetoJain)
-        // Pendentes: as que ninguém executa. Sem responsável não é dado de ninguém; com o gerente só aparece para quem vê o gerente.
-        val pendentes = distribuidor.pendentes(abertas, map, ctx.roles, hoje).filter { it.assignee == null || it.assignee in visiveis }
+        // Pendentes: as que ninguém executa. Task SEM responsável só entra para a coordenação e o gerente (a mesma regra de
+        // `Escopo.veSemResponsavel`): o Squad Leader não vê nem decide task sem dono, de nenhum squad. Com o gerente só aparece
+        // para quem vê o gerente.
+        val veSemResponsavel = Role.COORDENADOR in principal.roles || Role.GERENTE in principal.roles
+        val pendentes = distribuidor.pendentes(abertas, map, ctx.roles, hoje)
+            .filter { if (it.assignee == null) veSemResponsavel else it.assignee in visiveis }
 
         val candidatos = pessoas.map { p ->
             val carga = motor.demanda.carga(p, naoConcluidas, hoje, SEMANAS)

@@ -169,7 +169,8 @@ class DistribuicaoRoutesTest {
         // O líder do Alfa não tem a carla (Beta) entre os candidatos nem as tasks do gerente entre as pendentes.
         val d = dist(c.get("lider.alfa", "/api/distribuicao"))
         assertEquals(listOf("ana", "bruno"), d.candidatos)
-        assertEquals(listOf("TG-301", "TG-303"), d.sugestoes.map { it.issueKey })
+        // Task sem responsável só é vista (e distribuída) pela coordenação e pelo gerente: o líder não vê nenhuma pendente.
+        assertEquals(emptyList(), d.sugestoes.map { it.issueKey })
         for (s in d.sugestoes) assertTrue(s.fatores.all { it.pessoa in setOf("ana", "bruno") }, "carla fora dos fatores")
         assertFalse("carla" in c.get("lider.alfa", "/api/distribuicao").corpo, "a carla (outro squad) não aparece")
         val antes = ctx!!.contarAccessLog()
@@ -184,9 +185,24 @@ class DistribuicaoRoutesTest {
         assertEquals(antes + 3, ctx!!.contarAccessLog(), "cada tentativa negada fica registrada")
         val ultimas = linhas("SELECT route, filters FROM access_log ORDER BY id DESC LIMIT 3")
         assertTrue(ultimas.all { it[0] == "/api/distribuicao/decisao" && "\"resultado\":\"403\"" in it[1]!! }, ultimas.toString())
-        // Dentro do squad ele decide normalmente.
-        val ok = c.post("lider.alfa", "/api/distribuicao/decisao", Di1.corpo(D, "TG-301", "TROCADA", sugerido = "ana", escolhido = "bruno", motivo = "ana está em outra frente"))
-        assertEquals(HttpStatusCode.OK, ok.status, ok.corpo)
+        // Nem as sem dono (TG-301, TG-303) se decidem pelo líder de nenhum squad: 403, nada gravado, e a coordenação segue podendo.
+        for (u in listOf("lider.alfa")) {
+            for (chave in listOf("TG-301", "TG-303")) {
+                assertEquals(HttpStatusCode.Forbidden, c.post(u, "/api/distribuicao/decisao", Di1.corpo(D, chave, "REJEITADA", sugerido = "ana")).status, "$u $chave")
+            }
+            assertEquals(emptyList(), dist(c.get(u, "/api/distribuicao")).sugestoes.map { it.issueKey }, u)
+            assertFalse("TG-301" in c.get(u, "/api/distribuicao").corpo, "$u não vê a TG-301")
+        }
+        assertEquals(0, linhas("SELECT 1 FROM decisao_distribuicao").size)
+        assertEquals(HttpStatusCode.OK, c.post("coord.um", "/api/distribuicao/decisao", Di1.corpo(D, "TG-301", "REJEITADA", sugerido = "ana")).status)
+    }
+
+    @Test
+    fun doisCoordenadoresNaoDecidemAMesmaTaskDuasVezes() = rodar { c ->
+        // Depois da restrição só quem vê tudo decide as pendentes, e todos veem o MESMO sugerido: a chave da sugestão é a mesma
+        // e a segunda decisão (do mesmo dia) é 409, nunca uma decisão contraditória.
+        assertEquals(HttpStatusCode.OK, c.post("coord.um", "/api/distribuicao/decisao", Di1.corpo(D, "TG-303", "APROVADA", sugerido = "carla")).status)
+        assertEquals(HttpStatusCode.Conflict, c.post("gerente.exemplo", "/api/distribuicao/decisao", Di1.corpo(D, "TG-303", "REJEITADA", sugerido = "carla")).status)
     }
 
     @Test
