@@ -92,6 +92,7 @@ class AppContextTest {
         Files.copy(TestPaths.configDir.resolve("risco.exemplo.yaml"), pasta.resolve("risco.yaml"))
         Files.copy(TestPaths.configDir.resolve("previsao.exemplo.yaml"), pasta.resolve("previsao.yaml"))
         Files.copy(TestPaths.configDir.resolve("planejamento.exemplo.yaml"), pasta.resolve("planejamento.yaml"))
+        Files.copy(TestPaths.configDir.resolve("esforco.exemplo.yaml"), pasta.resolve("esforco.yaml"))
         // Equipes e ausências reais (fictícias aqui) só podem citar ids que existam no papeis.yaml do teste.
         Files.writeString(pasta.resolve("equipes.yaml"), "membros:\n  - id: gerente.exemplo\n    horasSemanais: 40\n    alocacao: 1.0\n")
         Files.writeString(pasta.resolve("ausencias.yaml"), "ausencias: []\n")
@@ -100,7 +101,7 @@ class AppContextTest {
 
     @Test
     fun appContextCarregaComFallbackDeDev() {
-        listOf("papeis", "calendario", "status_map", "jira_campos", "vinculos", "labels_atraso", "auditoria", "metas", "risco", "previsao", "equipes", "ausencias", "planejamento").forEach {
+        listOf("papeis", "calendario", "status_map", "jira_campos", "vinculos", "labels_atraso", "auditoria", "metas", "risco", "previsao", "equipes", "ausencias", "planejamento", "esforco").forEach {
             Files.copy(TestPaths.configDir.resolve("$it.exemplo.yaml"), pasta.resolve("$it.exemplo.yaml"))
         }
         copiarFichas()
@@ -127,7 +128,7 @@ class AppContextTest {
 
     @Test
     fun producaoSemArquivoRealFalha() {
-        for (nome in listOf("labels_atraso", "auditoria", "metas", "risco", "previsao", "equipes", "ausencias", "planejamento")) {
+        for (nome in listOf("labels_atraso", "auditoria", "metas", "risco", "previsao", "equipes", "ausencias", "planejamento", "esforco")) {
             pasta.toFile().listFiles()?.forEach { it.deleteRecursively() }
             escreverArquivosReais()
             // o modelo existe, mas em produção só o arquivo real vale
@@ -144,6 +145,7 @@ class AppContextTest {
             "equipes" to "membros:\n  - id: gerente.exemplo\n    horasSemanais: SEGREDOABC\n    alocacao: 1.0\n",
             "ausencias" to "ausencias:\n  - pessoa: gerente.exemplo\n    de: 2031-07-02\n    ate: 2031-07-09\n    fracao: xpto7\n",
             "planejamento" to "versao: 1\nfocoPadrao: ZZ9\n",
+            "esforco" to "versao: 1\nfatorHora: ZZ9\n",
         )) {
             pasta.toFile().listFiles()?.forEach { it.deleteRecursively() }
             escreverArquivosReais()
@@ -166,7 +168,7 @@ class AppContextTest {
 
     @Test
     fun metasComFallbackDeDevEInvalidasFalhamSemVazarConteudo() {
-        listOf("papeis", "calendario", "status_map", "jira_campos", "vinculos", "labels_atraso", "auditoria", "metas", "risco", "previsao", "equipes", "ausencias", "planejamento").forEach {
+        listOf("papeis", "calendario", "status_map", "jira_campos", "vinculos", "labels_atraso", "auditoria", "metas", "risco", "previsao", "equipes", "ausencias", "planejamento", "esforco").forEach {
             Files.copy(TestPaths.configDir.resolve("$it.exemplo.yaml"), pasta.resolve("$it.exemplo.yaml"))
         }
         copiarFichas()
@@ -186,7 +188,7 @@ class AppContextTest {
 
     @Test
     fun appContextCarregaVinculosComFallbackDeDev() {
-        listOf("papeis", "calendario", "status_map", "jira_campos", "vinculos", "labels_atraso", "auditoria", "metas", "risco", "previsao", "equipes", "ausencias", "planejamento").forEach {
+        listOf("papeis", "calendario", "status_map", "jira_campos", "vinculos", "labels_atraso", "auditoria", "metas", "risco", "previsao", "equipes", "ausencias", "planejamento", "esforco").forEach {
             Files.copy(TestPaths.configDir.resolve("$it.exemplo.yaml"), pasta.resolve("$it.exemplo.yaml"))
         }
         copiarFichas()
@@ -232,7 +234,7 @@ class AppContextTest {
     @Test
     fun appContextCarregaDicionarioEFichas() {
         // dev sem arquivos reais: modelos de exemplo; as fichas versionadas vêm de cards/
-        listOf("papeis", "calendario", "status_map", "jira_campos", "vinculos", "labels_atraso", "auditoria", "metas", "risco", "previsao", "equipes", "ausencias", "planejamento").forEach {
+        listOf("papeis", "calendario", "status_map", "jira_campos", "vinculos", "labels_atraso", "auditoria", "metas", "risco", "previsao", "equipes", "ausencias", "planejamento", "esforco").forEach {
             Files.copy(TestPaths.configDir.resolve("$it.exemplo.yaml"), pasta.resolve("$it.exemplo.yaml"))
         }
         copiarFichas()
@@ -319,7 +321,7 @@ class AppContextTest {
         Files.copy(TestPaths.configDir.resolve("metas.exemplo.yaml"), pasta.resolve("metas.exemplo.yaml"))
         Files.copy(TestPaths.configDir.resolve("risco.exemplo.yaml"), pasta.resolve("risco.exemplo.yaml"))
         Files.copy(TestPaths.configDir.resolve("previsao.exemplo.yaml"), pasta.resolve("previsao.exemplo.yaml"))
-        for (nome in listOf("equipes", "ausencias", "planejamento")) {
+        for (nome in listOf("equipes", "ausencias", "planejamento", "esforco")) {
             Files.copy(TestPaths.configDir.resolve("$nome.exemplo.yaml"), pasta.resolve("$nome.exemplo.yaml"))
         }
         copiarFichas()
