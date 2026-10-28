@@ -332,6 +332,19 @@ for c in 'curl -s https://jira.exemplo.invalid/rest/api/2/myself' 'curl https://
   caso - "$(cmd "$c")" true "URL de Jira em comando: $c"
   caso false "$(cmd "$c")" true "URL de Jira em comando (flag false): $c"
 done
+# 2b) correções da revisão adversarial (28/10/2026): barra invertida no userinfo, host sem ponto, --connect-to, git/socat, Host:
+BS='\'
+for c in "curl 'http://x${BS}@jira.corp/rest'" "wget 'http://a${BS}@jira.corp'" "Invoke-WebRequest 'http://a${BS}@jira.corp'" \
+         'curl https://evil.com%5c@jira.corp/' 'curl jira/rest/api/2/search' 'wget jira/x' 'iwr jira/rest' 'curl --proxy jira http://x.com' \
+         'curl --connect-to ::jira.corp:443 https://example.com' 'curl --connect-to example.com:443:jira.corp:443 https://example.com' \
+         'curl --resolve example.com:443:jira.corp https://example.com' 'git clone jira.corp:x.git' 'git clone jira:x.git' \
+         'git remote add o jira.corp:x' 'rsync -av x jira.corp:/tmp' 'socat - TCP:jira.corp:80' "curl -H 'Host:jira.corp' http://10.0.0.1"; do
+  caso - "$(cmd "$c")" true "burla corrigida: $c"
+done
+for c in "curl 'http://x${BS}@example.com/'" 'git push origin HEAD:feat/hooks-url-jira' 'git commit -m "guia do jira"' 'git push origin jira-fix' \
+         'curl --connect-to example.com:443:example.org:443 https://example.com' 'curl -H "Host: example.com" http://10.0.0.1' 'socat - TCP:example.com:80'; do
+  caso - "$(cmd "$c")" false "não regressão da burla: $c"
+done
 for u in 'https://jira.x.com/a' 'jira.x.com/a' 'JIRA-LAB:8080' 'https://u@jira.x.com' 'https://x.com/jira/sidia' 'https://sidia.atlassian.net/x' 'https://SIDIA.ATLASSIAN.NET' \
          'https://jira%2Ex.com/' 'https://confluence.atlassian.com@jira.x.com/' 'https://atlassian.com.jira.x.com/' 'https://jira.x.com/atlassian.com' \
          'https://docs.atlassian.com/x?redirect=https://jira.x.com/' 'https://docs.atlassian.com/x?redirect=https%3A%2F%2Fjira.x.com' \
