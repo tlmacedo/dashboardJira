@@ -21,11 +21,11 @@ falhar() { echo "FALHA: $*" >&2; exit 1; }
 
 # ---------------------------------------------------------------- 1. conteúdo
 echo "== Conteúdo =="
-proibido="$(find "$PACOTE" \( -name '.env' -o -name '.env.*' \) ! -name '.env.example' -print -quit)"
+proibido="$(find "$PACOTE" \( -iname '.env' -o -iname '.env.*' -o -iname '*.env' \) ! -iname '.env.example' -print -quit)"
 [ -z "$proibido" ] || falhar "arquivo de variáveis dentro do pacote: ${proibido#"$PACOTE"/}"
 proibido="$(find "$PACOTE" \( -name '*.db' -o -name '*.db-wal' -o -name '*.db-shm' -o -name '*.lock' -o -name '*.rotacao' \) -print -quit)"
 [ -z "$proibido" ] || falhar "arquivo de banco ou de trava dentro do pacote: ${proibido#"$PACOTE"/}"
-proibido="$(find "$PACOTE" \( -name '*.pem' -o -name '*.key' -o -name '*.p12' -o -name '*.pfx' -o -name '*.jks' -o -name '*.keystore' \) -print -quit)"
+proibido="$(find "$PACOTE" \( -iname '*.pem' -o -iname '*.key' -o -iname '*.p12' -o -iname '*.pfx' -o -iname '*.jks' -o -iname '*.keystore' \) -print -quit)"
 [ -z "$proibido" ] || falhar "chave ou certificado dentro do pacote: ${proibido#"$PACOTE"/}"
 proibido="$(find "$PACOTE" -name legacy -print -quit)"
 [ -z "$proibido" ] || falhar "pasta legacy/ dentro do pacote"
