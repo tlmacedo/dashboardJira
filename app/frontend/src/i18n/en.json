@@ -2223,5 +2223,8 @@
   "meu.esforco.testes": "Tests",
   "meu.esforco.horas": "Hours",
   "meu.esforco.indice": "Index",
-  "meu.esforco.nota": "The three components side by side and the composite index ({versao}). A proposal to calibrate, never a grade."
+  "meu.esforco.nota": "The three components side by side and the composite index ({versao}). A proposal to calibrate, never a grade.",
+  "grafico.verTabela": "View data as a table",
+  "grafico.legenda": "Chart legend",
+  "grafico.resumo": "{nome}: series {series}; {n} categories; highest value {maximo}."
 }

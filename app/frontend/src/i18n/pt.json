@@ -2223,5 +2223,8 @@
   "meu.esforco.testes": "Testes",
   "meu.esforco.horas": "Horas",
   "meu.esforco.indice": "Índice",
-  "meu.esforco.nota": "Os três componentes lado a lado e o índice composto ({versao}). É uma proposta a calibrar, nunca uma nota."
+  "meu.esforco.nota": "Os três componentes lado a lado e o índice composto ({versao}). É uma proposta a calibrar, nunca uma nota.",
+  "grafico.verTabela": "Ver dados em tabela",
+  "grafico.legenda": "Legenda do gráfico",
+  "grafico.resumo": "{nome}: séries {series}; {n} categorias; maior valor {maximo}."
 }

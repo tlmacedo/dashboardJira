@@ -25,24 +25,24 @@
   gap: 6px;
 }
 .fluxo-barra--cheio {
-  fill: var(--s1);
-  stroke: var(--s1);
+  fill: var(--cat-1);
+  stroke: var(--cat-1);
   stroke-width: 1;
 }
 .fluxo-barra--vazado {
   fill: var(--surface);
-  stroke: var(--s2);
+  stroke: var(--cat-2);
   stroke-width: 2;
 }
 .fluxo-barra--hachurado {
-  stroke: var(--s3);
+  stroke: var(--cat-3);
   stroke-width: 1;
 }
 .fluxo-fundo {
   fill: var(--surface);
 }
 .fluxo-hachura {
-  stroke: var(--s3);
+  stroke: var(--cat-3);
   stroke-width: 2;
 }
 .fluxo-grade {

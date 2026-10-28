@@ -25,7 +25,7 @@
   gap: 6px;
 }
 .aging-ponto {
-  fill: var(--s1);
+  fill: var(--cat-1);
   stroke: var(--surface);
   stroke-width: 1;
 }
