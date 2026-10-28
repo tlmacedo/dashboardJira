@@ -508,6 +508,26 @@ class AuditoriaRoutesTest {
     // ---- Histórico campo a campo ----
 
     @Test
+    fun historicoSoAvaliaOQueTemRegraDeAutorizacao() = rodar { get ->
+        gravar(
+            issue("TG-80"),
+            listOf(
+                ev("TG-80", "labels", null, "login", "2026-10-02T12:00:00Z", "ana"),
+                ev("TG-80", "labels", "login LATE_SENT", "login", "2026-10-03T12:00:00Z", "ana"),
+                ev("TG-80", "duedate", null, "2026-10-15", "2026-10-04T12:00:00Z", "ana"),
+                ev("TG-80", "duedate", "15/10/2026", "2026-10-20", "2026-10-05T12:00:00Z", "ana"),
+                ev("TG-80", "duedate", "2026-10-20", null, "2026-10-06T12:00:00Z", "ana"),
+                ev("TG-80", "labels", "login", "login LATE_SENT", "2026-10-07T12:00:00Z", "ana"),
+                ev("TG-80", "duedate", "2026-10-15", "2026-10-20", "2026-10-08T12:00:00Z", "ana"),
+                ev("TG-80", "assignee", "ana", "bruno", "2026-10-09T12:00:00Z", "ana"),
+            ),
+        )
+        val h = json.decodeFromString<HistoricoDto>(get("coord.um", "/api/auditoria/historico/TG-80").corpo)
+        assertEquals(listOf(null, null, null, null, null, false, false, false), h.linhas.map { it.autorizado })
+        assertEquals(listOf(null, null, null, null, null), h.linhas.take(5).map { it.motivo })
+    }
+
+    @Test
     fun historicoCampoACampoSemTextoLivre() = rodar { get ->
         semearBase()
         val r = get("gerente.exemplo", "/api/auditoria/historico/TG-1")
@@ -548,7 +568,7 @@ class AuditoriaRoutesTest {
         assertEquals(HttpStatusCode.OK, get("coord.um", "/api/cartoes/AU-01/tasks?segmento=todos").status)
         val l = linhasDoAccessLog()
         assertEquals(5, l.size, l.toString())
-        assertEquals(listOf(sinais, sinais, sinais, "/api/auditoria/historico/TG-999", "/api/cartoes/AU-01/tasks"), l.map { it.second })
+        assertEquals(listOf(sinais, sinais, sinais, "/api/auditoria/historico/{key}", "/api/cartoes/AU-01/tasks"), l.map { it.second })
         assertEquals(listOf("coord.um", "coord.um", "ana", "coord.um", "coord.um"), l.map { it.first })
         assertTrue("200" in l[0].third && "\"sinal\":\"PASSA_BOLA\"" in l[0].third, l[0].third)
         // Filtros saneados: só os conhecidos vão para o registro.
@@ -558,7 +578,7 @@ class AuditoriaRoutesTest {
         assertTrue("404" in l[3].third, l[3].third)
         assertTrue("\"total\":\"7\"" in l[4].third, l[4].third)
         // A auditoria guarda quantidades, nunca chaves de issue.
-        assertFalse(l.any { "TG-1" in it.third })
+        assertFalse(l.any { "TG-" in it.second || "TG-" in it.third }, l.toString())
     }
 
     // ---- Alteração em lote (I-15) ----

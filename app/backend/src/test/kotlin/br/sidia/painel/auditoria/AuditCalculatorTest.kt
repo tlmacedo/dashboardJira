@@ -192,10 +192,14 @@ class AuditCalculatorTest {
 
     @Test
     fun emLoteNaoCriaSinalNemMudaOsExistentes() {
-        val sem = calcular(comEventos = lote(4)).sinais.map { it.copy(emLote = null) }
-        val com = calcular(comEventos = lote(5)).sinais.map { it.copy(emLote = null) }
-        assertEquals(4, sem.size)
-        assertEquals(5, com.size)
+        // Mesma entrada com mínimo 5 (marca) e 100 (não marca): só o emLote muda.
+        val entrada = lote(5)
+        val marcado = AuditCalculator(c.ctx.copy(regras = c.regras.copy(emLoteMinimo = 5))).let { calcular(comEventos = entrada, calculador = it) }.sinais
+        val limpo = AuditCalculator(c.ctx.copy(regras = c.regras.copy(emLoteMinimo = 100))).let { calcular(comEventos = entrada, calculador = it) }.sinais
+        assertEquals(5, marcado.size)
+        assertTrue(marcado.all { it.emLote == 5 } && limpo.all { it.emLote == null })
+        assertEquals(limpo, marcado.map { it.copy(emLote = null) })
+        assertEquals(limpo.map { it.gravidade to it.resultado }, marcado.map { it.gravidade to it.resultado })
     }
 
     // ---- Todos os códigos (critério de sucesso da spec 10) ----
