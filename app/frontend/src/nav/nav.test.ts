@@ -21,6 +21,19 @@ describe('menu por papel', () => {
     expect(ids(['USUARIO'])).not.toContain('integridade')
   })
 
+  it('itemDoMenuSoParaGerenteECoordenador', () => {
+    // Mapa de cartões fica em Governança e só coordenação e gerência o veem.
+    expect(ids(['GERENTE'])).toContain('mapaCartoes')
+    expect(ids(['COORDENADOR'])).toContain('mapaCartoes')
+    expect(ids(['SQUAD_LEADER'])).not.toContain('mapaCartoes')
+    expect(ids(['USUARIO'])).not.toContain('mapaCartoes')
+    const governanca = visibleNav(['COORDENADOR']).find((g) => g.id === 'governanca')
+    expect(governanca?.items.map((i) => i.id)).toEqual(['mapaCartoes'])
+    // Só o gerente continua vendo Qualidade, Sincronização e Configuração.
+    expect(ids(['GERENTE'])).toEqual(expect.arrayContaining(['qualidade', 'sincronizacao', 'configuracao']))
+    expect(ids(['COORDENADOR'])).not.toContain('sincronizacao')
+  })
+
   it('gruposVaziosOmitidos', () => {
     const grupos = visibleNav(['USUARIO']).map((g) => g.id)
     expect(grupos).not.toContain('auditoria')

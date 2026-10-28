@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { LangProvider } from './i18n/LangProvider'
 import { inicioDoPapel } from './nav/nav'
+import { MapaDeCartoes } from './screens/MapaDeCartoes/MapaDeCartoes'
 import { Sincronizacao } from './screens/Sincronizacao/Sincronizacao'
 import { TempoEmStatus } from './screens/TempoEmStatus/TempoEmStatus'
 import { Pagina } from './shell/Pagina'
@@ -26,6 +27,7 @@ export default function App() {
                 <Route index element={<Inicio />} />
                 <Route path="tempo" element={<TempoEmStatus />} />
                 <Route path="sincronizacao" element={<Sincronizacao />} />
+                <Route path="mapaCartoes" element={<MapaDeCartoes />} />
                 <Route path="*" element={<Pagina />} />
               </Route>
             </Routes>

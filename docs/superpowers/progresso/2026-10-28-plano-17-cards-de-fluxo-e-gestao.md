@@ -13,7 +13,7 @@ Branch: `feat/contrato-do-cartao` (bloco 17a = Tarefas 1 a 7). Executor: Claude 
 - [x] Tarefa 3: componente `Cartao` e ajuda (ⓘ) (frontend 86 totais, 0 falhas; +12 em `Cartao.test.tsx`; build ok)
 - [x] Tarefa 4: gaveta de tasks compartilhada e "Abrir no Jira" (backend 890 totais, 0 falhas; +8 em `LinkJiraTest`; frontend 104 totais, 0 falhas; +18 em `GavetaDeTasks.test.tsx`, +4 em `csv.test.ts`, −4 que saíram de `TempoEmStatus.test.tsx` sem mudança de asserção; build ok)
 - [x] Tarefa 5: migrar Tempo em status e Sincronização para o contrato (backend 890 totais, 0 falhas; frontend 104 totais, 0 falhas; build ok; `Sincronizacao.test.tsx` sem nenhuma alteração; `TempoEmStatus.test.tsx` só nas linhas listadas em "Asserções alteradas")
-- [ ] Tarefa 6: tela Mapa de cartões
+- [x] Tarefa 6: tela Mapa de cartões (frontend 114 totais, 0 falhas; +9 em `MapaDeCartoes.test.tsx`, +1 em `nav.test.ts`; build ok)
 - [ ] Tarefa 7: revisão visual, acessibilidade e fechamento do 17a
 
 ## Estado herdado (conferido no código)
@@ -53,6 +53,8 @@ Branch: `feat/contrato-do-cartao` (bloco 17a = Tarefas 1 a 7). Executor: Claude 
 - Ruling: `csv.ts` foi para `shared/csv.ts` e seus 4 testes para `shared/csv.test.ts`; as regras de tabela e de gaveta ganharam `shared/tabela.css` e `shared/gaveta.css` (as cópias em `tempo.css` saem na Tarefa 5, junto do `DrillDrawer`).
 - Ruling: na Tarefa 5 os três KPIs e as seções (TS-04, TS-06, TS-07) de Tempo em status usam `Cartao`; a Sincronização usa `Cartao` nos três blocos (SY-01 faixa do modo, SY-02 por instância, SY-03 retenção), pois a tela não tem KPIs numéricos. TS-05 não tem elemento próprio na tela (a seção de barras é TS-04). `Cartao` ganhou a prop `idDoTitulo` para as tabelas continuarem nomeadas pelo título (`aria-labelledby`).
 - Ruling: o `DrillDrawer`, a rota `/api/drill/tempo-em-status`, a função `fetchDrill`, o tipo `DrillRow` do frontend, as chaves `tempo.gaveta.*`, `tempo.fechar`, `tempo.verTasks` e as regras de KPI, bloco, tabela e gaveta de `tempo.css` foram removidos; o mock de desenvolvimento (`dev-mock/mockApi.ts`) serve o catálogo e o drill genérico.
+- Ruling: o Mapa de cartões é o item `mapaCartoes` (rota `/mapaCartoes`) em Governança, para COORDENADOR e GERENTE; a tela também recusa (aviso, sem chamar a API) quem não pode vê-la, como a `Pagina` provisória faz — é conveniência de interface, a autorização real continua no backend, que já filtra o catálogo por papel. Filtros de grupo, natureza e busca vivem na URL (`g`, `n`, `q`); a busca ignora acento e caixa.
+- Ruling: "tela onde vive" vem do campo `tela` do catálogo ligado ao item do menu por id; o único caso em que os dois ids diferem hoje (`tempo-em-status` do backend e `tempo` do menu) está numa tabela pequena da tela (`TELA_PARA_MENU`). Tela sem item no menu aparece pelo id, sem link.
 - Ruling: o papel que filtra o catálogo vem de `papeisVigentes` (diretório de hoje; exceção só do `dev`), a mesma regra de `/api/me`, e não do `principal.roles` bruto.
 
 ## Asserções alteradas (Tarefa 5)
