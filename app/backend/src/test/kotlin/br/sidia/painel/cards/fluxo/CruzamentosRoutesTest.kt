@@ -163,6 +163,20 @@ class CruzamentosRoutesTest {
     }
 
     @Test
+    fun accessLogNaoGravaEixoEMedidaInvalidos() = rodar { get ->
+        val r = get("gerente.exemplo", "$card?linhas=ana&colunas=TG-101&medida=xyz")
+        assertEquals(HttpStatusCode.BadRequest, r.status)
+        val linhas = requireNotNull(ctx!!.dataSource).connection.use { c ->
+            c.createStatement().executeQuery("SELECT route, filters FROM access_log ORDER BY id").use { rs ->
+                buildList { while (rs.next()) add(rs.getString(1) + " " + rs.getString(2).orEmpty()) }
+            }
+        }
+        assertEquals(1, linhas.size, linhas.toString())
+        for (cru in listOf("ana", "TG-101", "xyz")) assertTrue(cru !in linhas[0], "$cru cru no access_log: ${linhas[0]}")
+        assertTrue("\"linhas\":\"(invalido)\"" in linhas[0], linhas[0])
+    }
+
+    @Test
     fun statusNaoMapeadoPapelEUnidade() = rodar(Trb1.issues() + Trb1.issue("TG-199", "Checklist", "ana", "10-20T12", "Revisao Exotica")) { get ->
         val r = get("gerente.exemplo", card)
         assertEquals(HttpStatusCode.OK, r.status)
