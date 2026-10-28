@@ -106,6 +106,18 @@ describe('tela Bloqueios entre tasks', () => {
     expect(screen.getByText(/Sem ranking de bloqueadoras/)).toBeInTheDocument()
   })
 
+  it('duasBloqueadorasEscondidasDaMesmaTaskNaoDuplicamAChaveDaLinha', async () => {
+    const erro = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const escondida = { estado: 'OUTRO_SQUAD' as const, key: null, vence: null, conflito: false, semVencimento: true }
+    const linha = { bloqueada: 'TG-803', resumo: 'Corrigir exportação', tipo: 'Checklist', status: 'Open', vence: '2026-11-02' }
+    simular({ [CARD]: { status: 200, corpo: { ...DTO, linhas: [{ ...linha, bloqueadora: escondida }, { ...linha, bloqueadora: escondida }] } } })
+    renderizarTela(<Bloqueios />, '/bloqueios')
+    const tabela = await screen.findByRole('table', { name: 'Bloqueios entre tasks (lista)' })
+    expect(within(tabela).getAllByRole('row')).toHaveLength(3)
+    const duplicada = erro.mock.calls.some((c) => c.map(String).join(' ').includes('same key'))
+    expect(duplicada).toBe(false)
+  })
+
   it('cadaCartaoAbreSuasTasks', async () => {
     const rotas: Record<string, { status: number; corpo: unknown }> = {}
     rotas[CARD] = { status: 200, corpo: DTO }

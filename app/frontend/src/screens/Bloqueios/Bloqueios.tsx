@@ -124,10 +124,10 @@ export function Bloqueios() {
                       </tr>
                     </thead>
                     <tbody>
-                      {dto.linhas.map((l) => {
+                      {dto.linhas.map((l, i) => {
                         const s = sinal(l.bloqueadora)
                         return (
-                          <tr key={`${l.bloqueada}:${l.bloqueadora.key ?? l.bloqueadora.estado}`}>
+                          <tr key={`${i}:${l.bloqueada}:${l.bloqueadora.key ?? l.bloqueadora.estado}`}>
                             <td>
                               <span className="mono">{l.bloqueada}</span>
                               <span className="resumo-task"> {l.resumo}</span>
