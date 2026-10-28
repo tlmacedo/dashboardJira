@@ -64,6 +64,10 @@ Testes no último ponto verde conhecido: backend 745+, 0 falhas (SQLite real, de
 - Em produção, depender de `vinculos.yaml` real (Plano 4A, Tarefa 12) para o card Task × Review; sem vínculos o card fica vazio com o aviso `VINCULOS_INDISPONIVEIS`.
 - A Auditoria só tem dados reais depois da sincronização (Plano 4A) e do aceite do DPO antes do uso com dados reais (Plano 11).
 
+**Correções da revisão final independente (PR #32):** (1) `access_log.route` do histórico grava o padrão `/api/auditoria/historico/{key}`, nunca a chave (`rotaParaRegistro`); (2) o histórico só avalia autorização onde há regra (responsável; vencimento com `de` e `para` legíveis e diferentes; label adicionada que justifica), nos demais casos `autorizado = null`.
+
+**Adiados da revisão final (Minor):** a exclusão de canceladas (resoluções negativas) e de `Epic` do universo de "no prazo" fica para o Plano 5 (Tarefa 7, `NoPrazo.noUniverso`); os Minor 4, 5, 6, 8, 9, 10 e 11 do relatório da revisão também ficam adiados.
+
 ## Regras que valem aqui (resumo)
 
 - A flag de acesso ao Jira é a única trava; só o usuário a liga, à mão. Nenhum teste toca o Jira.

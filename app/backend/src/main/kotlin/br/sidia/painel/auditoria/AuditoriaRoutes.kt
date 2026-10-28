@@ -63,7 +63,19 @@ private fun historico(ctx: AppContext, chave: String): HistoricoDto {
     val linhas = issue.events.sortedBy { it.at }.map { e ->
         val campo = e.field.lowercase(Locale.ROOT)
         val guardado = campo in CAMPOS_COM_VALOR
-        val avaliacao = if (campo in CAMPOS_DE_AUTORIZACAO) {
+        // Só se avalia o que os detectores avaliariam: troca de responsável; vencimento com `de` e `para` legíveis e
+        // diferentes (primeira definição, remoção e valor ilegível não); label adicionada que justifica atraso.
+        val temRegra = when (campo) {
+            "assignee" -> true
+            "duedate" -> {
+                val de = Vencimentos.ler(e.from)
+                val para = Vencimentos.ler(e.to)
+                de != null && para != null && de != para
+            }
+            "labels" -> t.mudancasDeLabels.any { (ev, m) -> ev.changelogId == e.changelogId && m.adicionadas.any(ctx.labelsDeAtraso::justifica) }
+            else -> false
+        }
+        val avaliacao = if (campo in CAMPOS_DE_AUTORIZACAO && temRegra) {
             // Na troca de responsável a referência é o responsável anterior (ou o novo, se não havia); nos demais, o do instante.
             val referencia = if (campo == "assignee") {
                 e.from?.takeIf { it.isNotBlank() } ?: e.to?.takeIf { it.isNotBlank() }
