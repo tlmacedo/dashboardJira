@@ -86,7 +86,8 @@ internal fun montarEntrada(
 ): EntradaDeCard {
     val hoje = hoje(ctx)
     val filtros = FiltrosDeCard.ler(params, hoje, periodoPadraoDias)
-    val escopo = escopoDe(principal, ctx, hoje, filtros, store.pessoas(INSTANCIA_TRABALHO))
+    // A equipe cadastrada (equipes.yaml) também existe: quem não tem task ainda precisa aparecer nos cards de pessoas.
+    val escopo = escopoDe(principal, ctx, hoje, filtros, store.pessoas(INSTANCIA_TRABALHO) + ctx.equipes.todos.map { it.id })
     return EntradaDeCard(principal, filtros, escopo, ctx.clock.instant(), hoje, ctx, store, params)
 }
 

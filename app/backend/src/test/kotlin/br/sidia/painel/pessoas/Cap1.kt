@@ -26,7 +26,10 @@ object Cap1 {
     val agora: Instant = Trb1.agora
     val relogio = Trb1.relogio
     val hoje: LocalDate = LocalDate.of(2026, 10, 30)
-    val calendario = BusinessCalendar(zona, setOf(MonthDay.of(11, 2), MonthDay.of(11, 20)))
+    val calendario = BusinessCalendar(
+        zona, setOf(MonthDay.of(11, 2), MonthDay.of(11, 20)), emptySet(),
+        mapOf(MonthDay.of(11, 2) to "Finados", MonthDay.of(11, 20) to "Consciência Negra"),
+    )
     val statusMap = Trb1.statusMap
     val papeis = Trb1.papeis
     val regras = RegrasDePlanejamento.PADRAO
@@ -51,6 +54,7 @@ object Cap1 {
 
     val capacidade = Capacidade(equipes, ausencias, calendario, regras)
     val capacidadeSemAusencia = Capacidade(equipes, Ausencias(emptyList()), calendario, regras)
+    val motor = MotorDePessoas(equipes, ausencias, calendario, regras, statusMap)
 
     /** As quatro issues abertas do cenário, em dados simples (a mesma verdade para os testes de domínio e de rota). */
     data class Linha(

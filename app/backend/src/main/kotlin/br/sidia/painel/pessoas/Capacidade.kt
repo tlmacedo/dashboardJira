@@ -36,6 +36,17 @@ class Capacidade(
         return total
     }
 
+    /** Dias de ausência da pessoa em [de, ate] (inclusivos): soma da fração de cada DIA ÚTIL (0,5 = meio dia). */
+    fun diasDeAusencia(pessoa: String, de: LocalDate, ate: LocalDate): Double {
+        var total = 0.0
+        var d = de
+        while (!d.isAfter(ate)) {
+            if (cal.isBusinessDay(d)) total += ausencias.fracaoEm(pessoa, d)
+            d = d.plusDays(1)
+        }
+        return total
+    }
+
     /**
      * As [n] semanas a partir da de [hoje] (chave = segunda-feira). A semana ATUAL conta de hoje até domingo: o que já
      * passou não é tempo livre. As demais são inteiras (segunda a domingo).
