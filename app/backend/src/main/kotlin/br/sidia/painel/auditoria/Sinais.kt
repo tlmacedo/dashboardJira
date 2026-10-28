@@ -89,6 +89,23 @@ data class ContextoDeteccao(
         }
     }
 
+    /**
+     * O dia que fica [dias] antes de [vencimento] na unidade das regras: `CORRIDO` subtrai dias do calendário;
+     * `UTIL` volta [dias] dias úteis (o limite de [dias] é 30, então o laço é curto).
+     */
+    fun diaAntes(vencimento: LocalDate, dias: Int): LocalDate = when (regras.unidade) {
+        UnidadeDias.CORRIDO -> vencimento.minusDays(dias.toLong())
+        UnidadeDias.UTIL -> {
+            var d = vencimento
+            var faltam = dias
+            while (faltam > 0) {
+                d = d.minusDays(1)
+                if (calendario.isBusinessDay(d)) faltam--
+            }
+            d
+        }
+    }
+
     /** `|distância| <= pertoDoVencimentoDias`. */
     fun perto(dia: LocalDate, vencimento: LocalDate): Boolean =
         abs(distanciaDias(dia, vencimento)) <= regras.pertoDoVencimentoDias
