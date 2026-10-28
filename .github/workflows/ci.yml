@@ -114,8 +114,8 @@ jobs:
           Write-Output '--- ultimas linhas ---'
           Get-Content saida-ps51.txt -Tail 8
           if ($codigo -ne 0) { Write-Output "exit $codigo"; exit 1 }
-          if (Select-String -Path saida-ps51.txt -Pattern '^FALHA' -Quiet) { Write-Output 'ha casos com FALHA'; exit 1 }
-          if (-not (Select-String -Path saida-ps51.txt -Pattern '^falhas: 0$' -Quiet)) { Write-Output 'faltou "falhas: 0"'; exit 1 }
+          if (Select-String -Path saida-ps51.txt -Pattern '^FALHA ' -CaseSensitive -Quiet) { Write-Output 'ha casos com FALHA'; exit 1 }
+          if (-not (Select-String -Path saida-ps51.txt -Pattern '^falhas: 0$' -CaseSensitive -Quiet)) { Write-Output 'faltou "falhas: 0"'; exit 1 }
       - name: Testes do hook do Cline no PowerShell 7
         shell: pwsh
         run: |
@@ -124,8 +124,8 @@ jobs:
           Write-Output '--- ultimas linhas ---'
           Get-Content saida-ps7.txt -Tail 8
           if ($codigo -ne 0) { Write-Output "exit $codigo"; exit 1 }
-          if (Select-String -Path saida-ps7.txt -Pattern '^FALHA' -Quiet) { Write-Output 'ha casos com FALHA'; exit 1 }
-          if (-not (Select-String -Path saida-ps7.txt -Pattern '^falhas: 0$' -Quiet)) { Write-Output 'faltou "falhas: 0"'; exit 1 }
+          if (Select-String -Path saida-ps7.txt -Pattern '^FALHA ' -CaseSensitive -Quiet) { Write-Output 'ha casos com FALHA'; exit 1 }
+          if (-not (Select-String -Path saida-ps7.txt -Pattern '^falhas: 0$' -CaseSensitive -Quiet)) { Write-Output 'faltou "falhas: 0"'; exit 1 }
 
   varredura:
     name: varredura

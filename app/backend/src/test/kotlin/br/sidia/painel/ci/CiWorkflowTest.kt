@@ -56,6 +56,9 @@ class CiWorkflowTest {
             assertTrue(cmd.contains("-NoProfile -ExecutionPolicy Bypass -File .clinerules\\hooks\\test-PreToolUse.ps1"), cmd)
             assertTrue(cmd.contains("\$LASTEXITCODE"), "precisa checar o código de saída")
             assertTrue(cmd.contains("falhas: 0"), "precisa checar o resumo de falhas")
+            // Select-String ignora maiúsculas por padrão: sem -CaseSensitive, "falhas: 0" casaria com ^FALHA.
+            assertTrue(cmd.contains("-Pattern '^FALHA ' -CaseSensitive"), "padrão de caso falho sensível a maiúsculas: $cmd")
+            assertTrue(cmd.contains("-Pattern '^falhas: 0\$' -CaseSensitive"), "resumo sensível a maiúsculas: $cmd")
         }
         // CRLF/BOM dos .ps1 não podem ser alterados pelo checkout.
         assertTrue(comandos("guarda-windows").any { it.contains("core.autocrlf false") })
