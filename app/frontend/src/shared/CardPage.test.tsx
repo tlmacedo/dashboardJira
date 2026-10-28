@@ -193,11 +193,11 @@ describe('CardPage', () => {
 })
 
 describe('textoDoAviso', () => {
-  const t = (k: string) => ({ 'cardpage.aviso.X': 'valor {n} de {faltando}' })[k] ?? k
+  const t = (k: string) => ({ 'cardpage.aviso.X': 'valor {n} de {faltando}', 'cardpage.aviso.DESCONHECIDO': 'Aviso do servidor (código {codigo}).' })[k] ?? k
   it('preencheMarcadoresENuncaMostraMarcadorCru', () => {
     expect(textoDoAviso({ codigo: 'X', gravidade: 'informativo', mensagem: 'm', params: { n: '4' } }, t)).toBe('valor 4 de …')
   })
-  it('codigoDesconhecidoUsaAMensagemDoBackend', () => {
-    expect(textoDoAviso({ codigo: 'NOVO', gravidade: 'informativo', mensagem: 'msg do backend' }, t)).toBe('msg do backend')
+  it('codigoDesconhecidoNaoMostraMensagemPt', () => {
+    expect(textoDoAviso({ codigo: 'NOVO', gravidade: 'informativo', mensagem: 'msg do backend' }, t)).toBe('Aviso do servidor (código NOVO).')
   })
 })

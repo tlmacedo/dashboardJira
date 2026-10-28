@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom'
 import { ErroDaApi } from '../api/client'
 import { useLang } from '../i18n/LangProvider'
 import type { Aviso } from './useCard'
+import { textoDoErro } from './textoDoErro'
 import '../screens/TempoEmStatus/tempo.css'
 import './cardpage.css'
 
@@ -13,7 +14,7 @@ export type Estado =
   | { tipo: 'carregando' }
   | { tipo: 'vazio' }
   | { tipo: 'erro'; tentarDeNovo: () => void }
-  | { tipo: 'filtro-invalido' }
+  | { tipo: 'filtro-invalido'; erro?: unknown }
   | { tipo: 'sem-permissao' }
   | { tipo: 'sessao' }
   | { tipo: 'incompleto'; avisos: Aviso[] }
@@ -34,7 +35,7 @@ export function estadoDe(q: ConsultaParaEstado, vazio?: (dados: unknown) => bool
       const status = q.error instanceof ErroDaApi ? q.error.status : null
       if (status === 403) return { tipo: 'sem-permissao' }
       if (status === 401) return { tipo: 'sessao' }
-      if (status === 400) return { tipo: 'filtro-invalido' }
+      if (status === 400) return { tipo: 'filtro-invalido', erro: q.error }
       return { tipo: 'erro', tentarDeNovo: () => void q.refetch() }
     }
     return { tipo: 'carregando' }
@@ -96,7 +97,7 @@ export function EstadoDaTela(props: EstadoDaTelaProps) {
     case 'filtro-invalido':
       return (
         <div className="estado estado--erro" role="alert">
-          <p>{t('cardpage.filtroInvalido')}</p>
+          <p>{estado.erro instanceof ErroDaApi && estado.erro.codigo ? textoDoErro(estado.erro, t) : t('cardpage.filtroInvalido')}</p>
         </div>
       )
     case 'sem-permissao':

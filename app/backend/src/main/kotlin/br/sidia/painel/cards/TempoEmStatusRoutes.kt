@@ -324,7 +324,8 @@ internal suspend inline fun <reified T : Any> ApplicationCall.executar(
         corpo = withContext(Dispatchers.IO) { bloco() }
     } catch (e: ErroHttp) {
         status = e.status
-        codigoDoErro = e.codigo
+        // Todo 400 sai com um código (a tela monta o texto por ele): sem código próprio, é filtro inválido.
+        codigoDoErro = e.codigo ?: if (e.status == HttpStatusCode.BadRequest) CODIGO_FILTRO_INVALIDO else null
         paramsDoErro = e.params
     } catch (e: BloqueadoPeloDpoException) {
         // Módulo sensível fechado pela trava do DPO: 403 com o código estável, sem dado; a consulta fica no `access_log`.

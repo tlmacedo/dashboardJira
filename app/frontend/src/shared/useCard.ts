@@ -35,12 +35,13 @@ export function temBloqueio(avisos: Aviso[] | undefined): boolean {
 
 /**
  * Texto de um aviso pelo código (`cardpage.aviso.<CODIGO>`); os dados do aviso entram nos marcadores `{nome}` e marcador
- * sem dado nunca aparece cru. Código desconhecido cai na mensagem do backend (último recurso).
+ * sem dado nunca aparece cru. Código sem tradução mostra "Aviso do servidor (código X)": a mensagem em português do
+ * backend nunca é exibida (a tela em inglês não pode mostrar português).
  */
 export function textoDoAviso(a: Aviso, t: (k: string) => string): string {
   const chave = `cardpage.aviso.${a.codigo}`
   const base = t(chave)
-  if (base === chave) return a.mensagem
+  if (base === chave) return t('cardpage.aviso.DESCONHECIDO').replace('{codigo}', a.codigo)
   const preenchido = Object.entries(a.params ?? {}).reduce((texto, [nome, valor]) => texto.replaceAll(`{${nome}}`, () => valor), base)
   return preenchido.replace(/\{\w+\}/g, '…')
 }
