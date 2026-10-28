@@ -40,7 +40,6 @@ import org.junit.jupiter.api.MethodOrderer
 import org.junit.jupiter.api.Order
 import org.junit.jupiter.api.TestInstance
 import org.junit.jupiter.api.TestMethodOrder
-import org.junit.jupiter.api.Assumptions.assumeTrue
 import org.slf4j.LoggerFactory
 import java.nio.file.Files
 import java.nio.file.Path
@@ -87,7 +86,7 @@ abstract class CenarioDeCarga(
          * Telas do catálogo que não têm `/api/cards/<tela>` (Fase 7, bloco 7b) e as rotas próprias delas, medidas no lugar. O líder
          * de squad recebe 403 onde a rota é da coordenação (aceito pelo teste).
          */
-        val TELAS_COM_ROTA_PROPRIA = setOf("distribuicao", "rebalanceamento", "decisoes", "registroAcesso", "configuracao")
+        val TELAS_COM_ROTA_PROPRIA = setOf("distribuicao", "rebalanceamento", "decisoes", "registroAcesso", "configuracao", "central")
         val ROTAS_PROPRIAS = listOf(
             "/api/distribuicao", "/api/rebalanceamento", "/api/governanca/decisoes", "/api/governanca/acessos", "/api/governanca/configuracao",
         )
@@ -213,9 +212,8 @@ abstract class CenarioDeCarga(
     @Test
     @Order(2)
     fun centralDentroDoOrcamento() = runBlocking {
-        val primeira = chamar("/api/central")
-        // A Central (um painel com muitos cards numa chamada só) ainda não existe na `main`: o teste mede assim que a rota chegar.
-        assumeTrue(primeira.status != HttpStatusCode.NotFound, "rota /api/central ainda não existe")
+        // A Central junta ~15 cards numa chamada só: a primeira chamada aquece e as cinco seguintes são medidas (orçamento de 3 s).
+        chamar("/api/central")
         val medidas = (1..5).map { chamar("/api/central") }
         val p = p95(medidas.map { it.ms })
         registrar("central p95_ms=$p")

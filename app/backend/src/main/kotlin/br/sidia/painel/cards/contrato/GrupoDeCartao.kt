@@ -5,6 +5,7 @@ package br.sidia.painel.cards.contrato
  * `nav.ts` e a chave de tradução do nome é `grupo.<id>`.
  */
 enum class GrupoDeCartao(val id: String) {
+    INICIO("inicio"),
     TRABALHO_EM_CURSO("trabalho"),
     RESULTADOS("resultados"),
     PRAZOS("prazos"),

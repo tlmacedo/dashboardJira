@@ -19,6 +19,12 @@ class EntradaDeCartao(
     val store: IssueStore,
     val principal: Principal,
     val parametros: Parameters,
+    /**
+     * Cálculos já feitos NESTA requisição, por id de card: a Central chama vários cartões do mesmo card (o Negligenciadas
+     * serve cinco) e com isto o card é calculado uma vez. Só vale com os mesmos [parametros] e o mesmo [principal], que é o
+     * caso de uma requisição só; nulo = sem memória (o drill e a rota de cartões comuns).
+     */
+    val memo: MutableMap<String, Any>? = null,
 )
 
 /**

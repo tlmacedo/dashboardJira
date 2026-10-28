@@ -39,7 +39,7 @@ class ContratoBloco7bTest {
         @AfterAll
         fun apagar() = banco.apagar()
 
-        val PREFIXOS = listOf("DI", "RB", "QD")
+        val PREFIXOS = listOf("DI", "RB", "QD", "VG")
     }
 
     private val zona = ZoneId.of("America/Manaus")

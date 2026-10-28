@@ -4,6 +4,7 @@ import br.sidia.painel.auditoria.rotasDeAuditoria
 import br.sidia.painel.cards.checklist.rotasDeChecklistReview
 import br.sidia.painel.distribuicao.rotasDeDistribuicao
 import br.sidia.painel.governanca.rotasDeGovernanca
+import br.sidia.painel.inicio.rotasDeInicio
 import br.sidia.painel.integridade.rotasDeIntegridade
 import br.sidia.painel.cards.contrato.CatalogoDeCartoes
 import br.sidia.painel.cards.contrato.catalogoPadrao
@@ -235,6 +236,7 @@ fun Application.module(
             rotasDeIntegridade(context, AccessLog(ds))
             rotasDeDistribuicao(context, AccessLog(ds))
             rotasDeGovernanca(context, AccessLog(ds))
+            rotasDeInicio(context, catalogo, AccessLog(ds))
             rotasSyncStatus(context, SqliteSyncStateStore(ds), AccessLog(ds))
             avaliador?.let { rotasDeAlertas(context, it, AccessLog(ds)) { prontidao?.avaliar()?.codigo } }
         }
