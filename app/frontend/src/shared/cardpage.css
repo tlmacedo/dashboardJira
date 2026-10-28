@@ -1,0 +1,74 @@
+/* Moldura e filtros das telas de trabalho e prazos. Só tokens dos temas; o resto vem de tempo.css e cartao.css. */
+.cardpage .campo-grupo {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  align-items: center;
+  margin: 0;
+  padding: 4px 8px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+}
+.cardpage .campo-grupo legend {
+  padding: 0 4px;
+  font-size: 12px;
+  color: var(--text2);
+}
+.campo-grupo .campo--check {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+}
+.cardpage .aviso--bloqueante {
+  border-color: var(--bad);
+}
+
+/* Grade de cartões KPI: lado a lado a partir de 560 px, empilhados no celular. */
+.cardpage-kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 12px;
+  margin-block: 12px;
+}
+.cardpage-duas-colunas {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 12px;
+  margin-block: 12px;
+}
+.cardpage .num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.cardpage .pilula {
+  display: inline-flex;
+  gap: 4px;
+  align-items: baseline;
+  padding: 1px 8px;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  font-size: 12px;
+}
+.cardpage .pilula--ok {
+  color: var(--ok);
+}
+.cardpage .pilula--atencao {
+  color: var(--warn);
+}
+.cardpage .pilula--problema {
+  color: var(--bad);
+}
+.cardpage .contagem-botao {
+  font: inherit;
+  padding: 0 4px;
+  background: none;
+  border: 0;
+  border-bottom: 1px dotted currentColor;
+  color: inherit;
+  cursor: pointer;
+}
+.cardpage .contagem-botao:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}

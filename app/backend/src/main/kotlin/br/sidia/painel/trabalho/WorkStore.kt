@@ -26,6 +26,9 @@ interface WorkStore {
 
     /** Alguma issue da instância tem prioridade gravada? Falso na base sincronizada antes dos campos de trabalho. */
     fun temCamposDeTrabalho(instance: String): Boolean
+
+    /** Quem existe na base: responsáveis atuais e os de trocas anteriores (base do escopo de visibilidade). */
+    fun pessoas(instance: String): Set<String>
 }
 
 /** Implementação sobre SQLite (JDBC). Tudo parametrizado; listas entram como JSON em `json_each(?)`. */
@@ -67,6 +70,23 @@ class SqliteWorkStore(private val ds: DataSource) : WorkStore {
             ).use { ps ->
                 ps.setString(1, instance)
                 ps.executeQuery().use { rs -> rs.next() && rs.getBoolean(1) }
+            }
+        }
+
+    override fun pessoas(instance: String): Set<String> =
+        ds.connection.use { con ->
+            val sql = """
+                SELECT assignee_ref FROM issue WHERE instance = ? AND removida_em IS NULL AND assignee_ref IS NOT NULL
+                UNION SELECT e.from_value FROM change_event e JOIN issue i ON i.id = e.issue_id
+                    WHERE i.instance = ? AND i.removida_em IS NULL AND lower(e.field) = 'assignee' AND e.from_value IS NOT NULL
+                UNION SELECT e.to_value FROM change_event e JOIN issue i ON i.id = e.issue_id
+                    WHERE i.instance = ? AND i.removida_em IS NULL AND lower(e.field) = 'assignee' AND e.to_value IS NOT NULL
+            """.trimIndent()
+            con.prepareStatement(sql).use { ps ->
+                ps.setString(1, instance)
+                ps.setString(2, instance)
+                ps.setString(3, instance)
+                ps.executeQuery().use { rs -> buildSet { while (rs.next()) add(rs.getString(1)) } }
             }
         }
 

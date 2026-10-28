@@ -51,6 +51,9 @@ fun testContextComBanco(
     roles: RoleDirectory = RoleDirectory.fromYaml(TestPaths.configDir.resolve("papeis.exemplo.yaml")),
     clock: Clock = Clock.system(settings.zone),
     jira: JiraClientFactory = JiraClientFactory(settings),
+    /** Mapa de status e calendário próprios do cenário (padrão: os arquivos `.exemplo`). */
+    statusMap: StatusMap? = null,
+    calendar: BusinessCalendar? = null,
 ): AppContext {
     val campos = camposDeTeste()
     val vinculos = vinculosDeTeste()
@@ -58,11 +61,11 @@ fun testContextComBanco(
     Database.migrate(ds)
     return AppContext(
         settings = settings,
-        calendar = BusinessCalendar.fromYaml(TestPaths.configDir.resolve("calendario.exemplo.yaml"), settings.zone),
+        calendar = calendar ?: BusinessCalendar.fromYaml(TestPaths.configDir.resolve("calendario.exemplo.yaml"), settings.zone),
         roles = roles,
         dataSource = ds,
         jira = jira,
-        statusMap = StatusMap.fromYaml(TestPaths.configDir.resolve("status_map.exemplo.yaml")),
+        statusMap = statusMap ?: StatusMap.fromYaml(TestPaths.configDir.resolve("status_map.exemplo.yaml")),
         campos = campos,
         fichas = fichasDeTeste(campos),
         vinculos = vinculos,

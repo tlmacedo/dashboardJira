@@ -64,7 +64,11 @@ private const val MAX_FILTRO = 100
 private const val ID_DEV = "dev"
 
 /** Única lista de filtros que vai para a auditoria: o que não está aqui nunca é gravado. */
-private val FILTROS_AUDITADOS = setOf("squad", "pessoa", "tipo", "os", "de", "ate", "unit", "semOutliers", "segmento", "sinal", "resultado")
+private val FILTROS_AUDITADOS = setOf(
+    "squad", "pessoa", "tipo", "os", "de", "ate", "unit", "semOutliers", "segmento", "sinal", "resultado",
+    // Cards de trabalho e prazos (Plano 5).
+    "prioridade", "granularidade", "movimento",
+)
 
 private val FORMATO_USERNAME = Regex("[a-z0-9._-]{1,64}")
 
