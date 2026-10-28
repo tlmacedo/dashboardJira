@@ -4,7 +4,11 @@ import br.sidia.painel.pessoas.MotorDePessoas
 import br.sidia.painel.pessoas.Ocupacao
 import br.sidia.painel.pessoas.RegrasDePlanejamento
 import br.sidia.painel.trabalho.IssueSnapshot
+import io.ktor.http.HttpStatusCode
+import io.ktor.http.Parameters
 import kotlinx.serialization.Serializable
+import java.time.LocalDate
+import java.time.format.DateTimeParseException
 
 /**
  * Ocupação para a tela: [fracao] nula e [semCapacidade] verdadeiro quando a capacidade é zero (a tela escreve "sem
@@ -27,6 +31,24 @@ fun Ocupacao.paraDto(regras: RegrasDePlanejamento, demandaH: Double = 0.0): Ocup
         },
     )
     Ocupacao.SemCapacidade -> OcupacaoDto(fracao = null, semCapacidade = true, estado = if (demandaH > 0.0) "problema" else "ok")
+}
+
+/** Parâmetro inteiro de URL dentro de [valores]; ausente vale [padrao]; ilegível ou fora do intervalo é 400 (nunca eco do valor). */
+internal fun Parameters.inteiroEntre(nome: String, padrao: Int, valores: IntRange): Int {
+    val bruto = this[nome]?.trim()?.takeIf { it.isNotEmpty() } ?: return padrao
+    val n = bruto.toIntOrNull() ?: throw ErroHttp(HttpStatusCode.BadRequest)
+    if (n !in valores) throw ErroHttp(HttpStatusCode.BadRequest)
+    return n
+}
+
+/** Parâmetro de data `aaaa-mm-dd`; ausente é nulo; ilegível é 400. */
+internal fun Parameters.dataOuNulo(nome: String): LocalDate? {
+    val bruto = this[nome]?.trim()?.takeIf { it.isNotEmpty() } ?: return null
+    return try {
+        LocalDate.parse(bruto)
+    } catch (e: DateTimeParseException) {
+        throw ErroHttp(HttpStatusCode.BadRequest)
+    }
 }
 
 /** Códigos de aviso dos cards de pessoas e planejamento (o texto sai de `cardpage.aviso.<CODIGO>` no frontend). */

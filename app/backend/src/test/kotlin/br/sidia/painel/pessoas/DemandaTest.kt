@@ -123,6 +123,25 @@ class DemandaTest {
     }
 
     @Test
+    fun itensEHorasSemDataPorSemana() {
+        val semVenc = extra("TG-330", "bruno", null, 8.0)
+        val c = demanda.carga("bruno", abertas.filter { it.key == "TG-203" } + semVenc, hoje, 4)
+        // TG-203 (4 h, 05/11) ocupa as 2 primeiras semanas; a sem vencimento (8 h, não iniciada) ocupa as 4.
+        assertEquals(listOf(2, 2, 1, 1), c.semanas.map { it.itens })
+        assertEquals(listOf(2.0, 2.0, 2.0, 2.0), c.semanas.map { it.semDataH })
+        assertEquals(listOf(4.0, 4.0, 2.0, 2.0), c.semanas.map { it.demandaH })
+    }
+
+    @Test
+    fun semanasQueOcupaEhARegraUnica() {
+        val d = demanda
+        assertEquals(2, d.semanasQueOcupa(abertas.first { it.key == "TG-201" }, hoje))
+        assertNull(d.semanasQueOcupa(abertas.first { it.key == "TG-205" }, hoje), "vencida não ocupa semana")
+        assertEquals(4, d.semanasQueOcupa(extra("TG-331", "bruno", null, 1.0), hoje))
+        assertEquals(2, d.semanasQueOcupa(extra("TG-332", "bruno", null, 1.0, status = "In Progress"), hoje))
+    }
+
+    @Test
     fun jain() {
         assertEquals(0.9, assertNotNull(Jain.indice(listOf(Valor(0.5), Valor(1.0)), 3.0)), 1e-9)
         // SemCapacidade é ignorada: o índice não muda.
