@@ -149,6 +149,23 @@ class AlertasRoutesTest {
     }
 
     @Test
+    fun gerenteVeOMotivoDeNaoProntoQueOPublicoNaoVe() {
+        val c = contexto()
+        val arquivo = br.sidia.painel.db.Database.arquivoDe(requireNotNull(c.dataSource))!!
+        val url = br.sidia.painel.db.Database.urlDeArquivo(arquivo) + "?busy_timeout=1500&open_mode=1"
+        val prontidao = Prontidao(arquivo, url, { 0 }, { false }, 1, relogio)
+        testApplication {
+            application { module(c.settings, c, autenticador, prontidao = prontidao) }
+            val publico = client.get("/api/health/pronto")
+            assertEquals(HttpStatusCode.ServiceUnavailable, publico.status)
+            assertEquals("""{"pronto":false}""", publico.bodyAsText())
+            val gerente = client.get("/api/operacao/alertas") { header("X-Teste-Usuario", "gerente.exemplo") }
+            val corpo = Json.parseToJsonElement(gerente.bodyAsText()).jsonObject
+            assertEquals("\"TRAVA_PERDIDA\"", corpo.getValue("naoPronto").toString())
+        }
+    }
+
+    @Test
     fun semRegistroSemResposta() {
         val c = contexto()
         // O registro de acesso fica indisponível: sem registro não há resposta com dados.

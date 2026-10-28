@@ -20,7 +20,12 @@ import org.slf4j.LoggerFactory
 data class AlertaDto(val codigo: String, val gravidade: String, val instancia: String? = null, val desde: String)
 
 @Serializable
-data class AlertasDto(val alertas: List<AlertaDto>)
+@OptIn(kotlinx.serialization.ExperimentalSerializationApi::class)
+data class AlertasDto(
+    val alertas: List<AlertaDto>,
+    /** Só o gerente vê por que o painel não está pronto (o endpoint público devolve apenas pronto ou não). */
+    @kotlinx.serialization.EncodeDefault(kotlinx.serialization.EncodeDefault.Mode.NEVER) val naoPronto: String? = null,
+)
 
 private val log = LoggerFactory.getLogger("br.sidia.painel.operacao.AlertasRoutes")
 
@@ -32,15 +37,21 @@ private class Negado(val status: HttpStatusCode) : RuntimeException(status.toStr
  * papel é conferido aqui dentro, toda chamada (inclusive a negada) vai para o `access_log` e, sem registro, responde 503
  * sem dados. O corpo só leva código, gravidade, instância e início: nenhum username, chave, caminho ou texto livre.
  */
-fun Route.rotasDeAlertas(ctx: AppContext, avaliador: AvaliadorDeAlertas, auditoria: AccessLog) {
+fun Route.rotasDeAlertas(
+    ctx: AppContext,
+    avaliador: AvaliadorDeAlertas,
+    auditoria: AccessLog,
+    motivoDeNaoPronto: suspend () -> String? = { null },
+) {
     get("/api/operacao/alertas") {
         val principal = call.principal
         var status = HttpStatusCode.OK
         var corpo: AlertasDto? = null
+        val naoPronto = if (Role.GERENTE in principal.roles) runCatching { motivoDeNaoPronto() }.getOrNull() else null
         try {
             corpo = withContext(Dispatchers.IO) {
                 if (Role.GERENTE !in principal.roles) throw Negado(HttpStatusCode.Forbidden)
-                AlertasDto(avaliador.avaliar().map { AlertaDto(it.codigo.name, it.gravidade.name, it.instancia, it.desde.toString()) })
+                AlertasDto(avaliador.avaliar().map { AlertaDto(it.codigo.name, it.gravidade.name, it.instancia, it.desde.toString()) }, naoPronto)
             }
         } catch (e: Negado) {
             status = e.status

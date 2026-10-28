@@ -32,7 +32,7 @@ Aprendizado:    <o que muda para não repetir>
 
 ### INCIDENTE PAINEL_FORA_DO_AR
 
-O painel não responde, ou `GET /api/health/pronto` devolve 503 com um dos códigos `BANCO_INDISPONIVEL`, `MIGRACAO_PENDENTE`, `DISCO_BAIXO` ou `TRAVA_PERDIDA`.
+O painel não responde, ou `GET /api/health/pronto` devolve 503 (o motivo não vai na resposta pública: leia no log a linha `Prontidão: não pronto (<codigo>)`) com um dos códigos `BANCO_INDISPONIVEL`, `MIGRACAO_PENDENTE`, `DISCO_BAIXO` ou `TRAVA_PERDIDA`.
 
 **Conter:** confirme o código e o estado do serviço. Se for horário de uso, é S1: avise o gerente.
 

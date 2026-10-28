@@ -207,7 +207,7 @@ fun Application.module(
             rotasDeAuditoria(context, AccessLog(ds))
             rotasDosCardsDeTrabalho(context, AccessLog(ds))
             rotasSyncStatus(context, SqliteSyncStateStore(ds), AccessLog(ds))
-            avaliador?.let { rotasDeAlertas(context, it, AccessLog(ds)) }
+            avaliador?.let { rotasDeAlertas(context, it, AccessLog(ds)) { prontidao?.avaliar()?.codigo } }
         }
         get("/api/health") { call.respond(HealthResposta(ok = true)) }
         rotaProntidao(prontidao)

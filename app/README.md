@@ -51,7 +51,7 @@ Passo a passo para quem opera o painel: [`docs/operacao/`](../docs/operacao/) (r
 |---|---|---|
 | `PAINEL_LOG_FORMATO` | `JSON` | Formato dos logs: `JSON` (uma linha por evento, com máscara de segredos) ou `TEXTO` |
 | `PAINEL_LOG_DIR` | vazio | Pasta do `painel.log` (rotação de 20 MB, 14 dias, teto de 500 MB); vazio = só a saída do processo |
-| `PAINEL_DISCO_MIN_MB` | `500` | Espaço livre mínimo na pasta do banco; abaixo disso `/api/health/pronto` responde 503 `DISCO_BAIXO` |
+| `PAINEL_DISCO_MIN_MB` | `500` | Espaço livre mínimo na pasta do banco; abaixo disso `/api/health/pronto` responde 503 (motivo `DISCO_BAIXO` só no log e para o gerente) |
 | `PAINEL_METRICAS_PORTA`, `PAINEL_METRICAS_HOST` | `9464`, `127.0.0.1` | Porta interna do `/metrics` (nunca na 8080); `0` desliga |
 | `PAINEL_ALERTAS_ARQUIVO` | vazio | Arquivo de texto onde cada mudança de alerta vira uma linha |
 | `SYNC_PAT_VALIDADE_SAMSUNG`, `SYNC_PAT_VALIDADE_SIDIA` | vazio | Validade do token do Jira (`aaaa-mm-dd`), informada por você; alerta 14 dias antes |

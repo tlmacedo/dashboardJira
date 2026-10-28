@@ -177,7 +177,7 @@ class ProntidaoTest {
         application { module(s, testContext(s)) }
         val r = client.get("/api/health/pronto")
         assertEquals(HttpStatusCode.ServiceUnavailable, r.status)
-        assertEquals("""{"pronto":false,"codigo":"BANCO_INDISPONIVEL"}""", r.bodyAsText())
+        assertEquals("""{"pronto":false}""", r.bodyAsText())
     }
 
     @Test
@@ -191,7 +191,7 @@ class ProntidaoTest {
         assertEquals(HttpStatusCode.OK, client.get("/api/health").status)
         val pronto = client.get("/api/health/pronto")
         assertEquals(HttpStatusCode.ServiceUnavailable, pronto.status)
-        assertEquals("""{"pronto":false,"codigo":"BANCO_INDISPONIVEL"}""", pronto.bodyAsText())
+        assertEquals("""{"pronto":false}""", pronto.bodyAsText())
         assertFalse(arquivo.toString() in pronto.bodyAsText())
         ctx.close()
     }

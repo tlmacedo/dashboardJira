@@ -156,6 +156,7 @@ fun prontidaoPadrao(ctx: AppContext): Prontidao? {
 fun Route.rotaProntidao(prontidao: Prontidao?) {
     get("/api/health/pronto") {
         val r = prontidao?.avaliar() ?: ProntidaoDto(false, MotivoNaoPronto.BANCO_INDISPONIVEL.name)
-        call.respond(if (r.pronto) HttpStatusCode.OK else HttpStatusCode.ServiceUnavailable, r)
+        // Público: só pronto ou não. O motivo vai para o log (ao mudar) e para o gerente (/api/operacao/alertas).
+        call.respond(if (r.pronto) HttpStatusCode.OK else HttpStatusCode.ServiceUnavailable, ProntidaoDto(r.pronto))
     }
 }

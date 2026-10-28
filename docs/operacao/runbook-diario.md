@@ -83,7 +83,7 @@ sudo systemctl restart painel-squads
 
 ### COMANDO conferir a prontidão
 
-`/api/health` só diz que o processo responde. `/api/health/pronto` confere banco, migrações, disco e trava; responde 200 `{"pronto":true}` ou 503 com o código (`BANCO_INDISPONIVEL`, `MIGRACAO_PENDENTE`, `DISCO_BAIXO`, `TRAVA_PERDIDA`).
+`/api/health` só diz que o processo responde. `/api/health/pronto` confere banco, migrações, disco e trava; responde 200 `{"pronto":true}` ou 503 `{"pronto":false}` sem motivo; o motivo está no log (`Prontidão: não pronto (<codigo>)`) e no campo `naoPronto` de `/api/operacao/alertas` (gerente). Códigos: (`BANCO_INDISPONIVEL`, `MIGRACAO_PENDENTE`, `DISCO_BAIXO`, `TRAVA_PERDIDA`).
 
 PowerShell:
 

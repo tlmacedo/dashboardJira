@@ -40,7 +40,7 @@ grep '"requisicao":"abc-12345678"' "$PAINEL_LOG_DIR/painel.log"
 ## 2. Prontidão e vivacidade
 
 - `GET /api/health`: **vivacidade**, o processo responde (200 `{"ok":true}`).
-- `GET /api/health/pronto`: **prontidão**, pública e mínima. 200 `{"pronto":true}` ou 503 `{"pronto":false,"codigo":"..."}` com um destes códigos: `BANCO_INDISPONIVEL` (arquivo do banco ausente, sem permissão ou ilegível), `MIGRACAO_PENDENTE`, `DISCO_BAIXO` (abaixo de `PAINEL_DISCO_MIN_MB`) e `TRAVA_PERDIDA` (a trava de processo do banco não é mais do painel). Nunca revela versão, host nem caminho. Responde em até 3 s mesmo com o banco sumido ou o pool de conexões esgotado (a sonda usa conexão própria) e guarda o resultado por 5 s.
+- `GET /api/health/pronto`: **prontidão**, pública e mínima. 200 `{"pronto":true}` ou 503 `{"pronto":false}`, **sem o motivo** (o endpoint é público). O motivo é um destes códigos, que vão para o log (`Prontidão: não pronto (<codigo>)`) e para o campo `naoPronto` de `GET /api/operacao/alertas` (só gerente): `BANCO_INDISPONIVEL` (arquivo do banco ausente, sem permissão ou ilegível), `MIGRACAO_PENDENTE`, `DISCO_BAIXO` (abaixo de `PAINEL_DISCO_MIN_MB`) e `TRAVA_PERDIDA` (a trava de processo do banco não é mais do painel). Nunca revela versão, host nem caminho. Responde em até 3 s mesmo com o banco sumido ou o pool de conexões esgotado (a sonda usa conexão própria) e guarda o resultado por 5 s.
 
 ## 3. Métricas (porta interna)
 
