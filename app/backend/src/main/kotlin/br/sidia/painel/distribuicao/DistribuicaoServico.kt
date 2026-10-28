@@ -6,6 +6,7 @@ import br.sidia.painel.cards.DrillRow
 import br.sidia.painel.cards.INSTANCIA_TRABALHO
 import br.sidia.painel.cards.avisosDePessoas
 import br.sidia.painel.cards.competencias.competenciasPedidas
+import br.sidia.painel.domain.ORDEM_NATURAL_DE_CHAVES
 import br.sidia.painel.domain.StatusCategory
 import br.sidia.painel.pessoas.Ocupacao
 import br.sidia.painel.pessoas.MotorDePessoas
@@ -111,7 +112,10 @@ class DistribuicaoServico(private val ctx: AppContext, private val store: WorkSt
             Rebalanceador.naoIniciadas(naoConcluidas.filter { it.assignee == p }, map).map { it to motor.horas.de(it).valor }
         }
         val competencias = pessoas.associateWith { motor.equipes.de(it)?.competencias.orEmpty() }
+        // A ordem em que o motor aplica os movimentos segue a ocupação da origem (quem está mais carregado primeiro): quem consulta
+        // recebe a lista em ordem natural de chave, para a ordem nunca virar um ranking de pessoas.
         val movimentos = Rebalanceador(regras).calcular(cargas, naoIniciadas, competencias, ::competenciasPedidas)
+            .sortedWith { a, b -> ORDEM_NATURAL_DE_CHAVES.compare(a.issueKey, b.issueKey) }
 
         val tasks = (pendentes + naoIniciadas.values.flatten().map { it.first }).associateBy { it.key }
         val assumidas = (pendentes + naoIniciadas.values.flatten().map { it.first }).filter { motor.horas.de(it).assumidas }.map { it.key }.toSet()

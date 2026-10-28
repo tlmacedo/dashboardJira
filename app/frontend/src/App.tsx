@@ -31,6 +31,9 @@ import { Vencimentos } from './screens/Vencimentos/Vencimentos'
 import { Riscos } from './screens/Riscos/Riscos'
 import { Metas } from './screens/Metas/Metas'
 import { Negligenciadas } from './screens/Negligenciadas/Negligenciadas'
+import { Decisoes } from './screens/Decisoes/Decisoes'
+import { Distribuicao } from './screens/Distribuicao/Distribuicao'
+import { Rebalanceamento } from './screens/Rebalanceamento/Rebalanceamento'
 import { Divergencia } from './screens/Divergencia/Divergencia'
 import { MapaDeCartoes } from './screens/MapaDeCartoes/MapaDeCartoes'
 import { Sincronizacao } from './screens/Sincronizacao/Sincronizacao'
@@ -83,6 +86,9 @@ export default function App() {
                 <Route path="cruzamentos" element={<Cruzamentos />} />
                 <Route path="checklistReview" element={<ChecklistReview />} />
                 <Route path="integridade" element={<Integridade />} />
+                <Route path="distribuicao" element={<Distribuicao />} />
+                <Route path="rebalanceamento" element={<Rebalanceamento />} />
+                <Route path="decisoes" element={<Decisoes />} />
                 <Route path="tempo" element={<TempoEmStatus />} />
                 <Route path="auditoria" element={<Auditoria />} />
                 <Route path="divergencia" element={<Divergencia />} />

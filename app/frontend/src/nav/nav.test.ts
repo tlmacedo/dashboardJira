@@ -28,10 +28,24 @@ describe('menu por papel', () => {
     expect(ids(['SQUAD_LEADER'])).not.toContain('mapaCartoes')
     expect(ids(['USUARIO'])).not.toContain('mapaCartoes')
     const governanca = visibleNav(['COORDENADOR']).find((g) => g.id === 'governanca')
-    expect(governanca?.items.map((i) => i.id)).toEqual(['mapaCartoes'])
-    // Só o gerente continua vendo Qualidade, Sincronização e Configuração.
-    expect(ids(['GERENTE'])).toEqual(expect.arrayContaining(['qualidade', 'sincronizacao', 'configuracao']))
+    // Coordenação vê o Mapa, a Qualidade dos dados e as Decisões; Registro de acesso, Sincronização e Configuração são só do gerente.
+    expect(governanca?.items.map((i) => i.id)).toEqual(['mapaCartoes', 'qualidade', 'decisoes'])
+    expect(ids(['GERENTE'])).toEqual(expect.arrayContaining(['qualidade', 'decisoes', 'registroAcesso', 'sincronizacao', 'configuracao']))
     expect(ids(['COORDENADOR'])).not.toContain('sincronizacao')
+    expect(ids(['COORDENADOR'])).not.toContain('registroAcesso')
+    expect(ids(['COORDENADOR'])).not.toContain('configuracao')
+  })
+
+  it('menuDecisoesSoCoordenacaoEGerente', () => {
+    expect(ids(['GERENTE'])).toContain('decisoes')
+    expect(ids(['COORDENADOR'])).toContain('decisoes')
+    expect(ids(['SQUAD_LEADER'])).not.toContain('decisoes')
+    expect(ids(['USUARIO'])).not.toContain('decisoes')
+    // Distribuição e Rebalanceamento: a liderança (inclui o líder de squad), nunca o usuário comum.
+    for (const id of ['distribuicao', 'rebalanceamento']) {
+      expect(ids(['SQUAD_LEADER'])).toContain(id)
+      expect(ids(['USUARIO'])).not.toContain(id)
+    }
   })
 
   it('gruposVaziosOmitidos', () => {

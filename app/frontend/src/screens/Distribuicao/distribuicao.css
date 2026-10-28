@@ -1,0 +1,15 @@
+/* Distribuição, Rebalanceamento e Decisões: só layout; as cores vêm dos tokens do tema (cor nunca é o único sinal). */
+.sugestao { display: grid; gap: 0.5rem; }
+.sugestao-cabeca { display: flex; flex-wrap: wrap; gap: 0.5rem 1rem; align-items: baseline; }
+.sugestao-sugerido { font-weight: 600; }
+.decisao { display: grid; gap: 0.5rem; }
+.decisao-botoes { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.decisao-troca { display: grid; gap: 0.35rem; max-width: 32rem; }
+.decisao-troca textarea { width: 100%; font: inherit; }
+.decisao-erro { color: var(--bad); margin: 0; }
+.decisao-estado { font-weight: 600; white-space: nowrap; }
+.linha-sugerida th, .linha-sugerida td { font-weight: 600; }
+.mov-tabela td.decisao-cel { min-width: 14rem; }
+@media (max-width: 640px) {
+  .decisao-botoes .btn { flex: 1 1 auto; }
+}

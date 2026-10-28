@@ -104,6 +104,11 @@ class ContratoDistribuicaoTest {
             }
         }
         assertTrue(pares >= 8, "poucos pares conferidos: $pares")
+        // A lista de movimentos sai em ordem natural de chave, nunca pela ocupação de quem cede (seria um ranking de pessoas).
+        val e = entrada("gerente.exemplo")
+        val chaves = runBlocking { catalogo.porId("RB-01")!!.drill(e, "movimentos") }.map { it.key }
+        assertTrue(chaves.size >= 2, "a fixture precisa de mais de um movimento: $chaves")
+        assertEquals(chaves.sortedWith(br.sidia.painel.domain.ORDEM_NATURAL_DE_CHAVES), chaves)
         // O usuário comum não vê estes cartões.
         assertEquals(emptyList(), cartoes("dev.alfa1").map { it.meta.id })
     }
