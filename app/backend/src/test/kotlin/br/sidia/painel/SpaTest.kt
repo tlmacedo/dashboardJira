@@ -2,6 +2,7 @@ package br.sidia.painel
 
 import br.sidia.painel.config.Settings
 import io.ktor.client.request.get
+import io.ktor.client.request.head
 import io.ktor.client.request.post
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.HttpHeaders
@@ -33,7 +34,12 @@ class SpaTest {
         pai.resolve("secreto.txt").writeText(segredo)
         val dir = pai.resolve("dist").createDirectories()
         dir.resolve("index.html").writeText(html)
-        dir.resolve("assets").createDirectories().resolve("app.js").writeText("console.log('ok')")
+        val assets = dir.resolve("assets").createDirectories()
+        assets.resolve("app.js").writeText("console.log('ok')")
+        // Arquivos e pasta ocultos dentro do dist nunca são servidos.
+        dir.resolve(".oculto").writeText("OCULTO-DA-SPA")
+        assets.resolve(".oculto").writeText("OCULTO-DA-SPA")
+        dir.resolve(".pasta").createDirectories().resolve("arquivo").writeText("OCULTO-DA-SPA")
         return dir
     }
 
@@ -69,7 +75,9 @@ class SpaTest {
         assertFalse(resposta.bodyAsText().contains("painel-teste"))
         assertEquals(HttpStatusCode.NotFound, client.get("/api/inexistente/aninhada").status)
         assertEquals(HttpStatusCode.NotFound, client.get("/api").status)
-        assertEquals(HttpStatusCode.NotFound, client.post("/api/inexistente").status)
+        // Método mutante: com o cabeçalho anti-CSRF chega ao roteador (404); sem ele a proteção nega antes (403 JSON, nunca HTML).
+        assertEquals(HttpStatusCode.NotFound, client.post("/api/inexistente") { comCsrf() }.status)
+        assertEquals(HttpStatusCode.Forbidden, client.post("/api/inexistente").status)
         // Variantes camufladas da API também nunca recebem o HTML.
         // ("//api/x" não é testável pelo cliente de teste, que o lê como host; coberto em AccessControlTest.)
         listOf("/API/inexistente", "/%61pi/inexistente", "/api//inexistente").forEach {
@@ -102,8 +110,8 @@ class SpaTest {
         val asset = client.get("/assets/app.js")
         assertEquals("public, max-age=31536000, immutable", asset.headers[HttpHeaders.CacheControl])
         assertEquals("nosniff", asset.headers["X-Content-Type-Options"])
-        // A API não ganha cache de arquivo estático.
-        assertNull(client.get("/api/health").headers[HttpHeaders.CacheControl])
+        // A API não ganha cache de arquivo estático: leva no-store (cabeçalhos de segurança).
+        assertEquals("no-store", client.get("/api/health").headers[HttpHeaders.CacheControl])
     }
 
     @Test
@@ -138,6 +146,52 @@ class SpaTest {
     fun rotasDaApiContinuamFuncionando() = comDist {
         assertEquals("""{"ok":true}""", client.get("/api/health").bodyAsText())
         assertTrue(client.get("/api/meta").bodyAsText().contains("\"liveEnabled\":false"))
+    }
+
+    @Test
+    fun arquivoOcultoDaSpa404() = comDist {
+        assertEquals(HttpStatusCode.NotFound, client.get("/.oculto").status)
+        assertEquals(HttpStatusCode.NotFound, client.get("/assets/.oculto").status)
+        // Pasta oculta não cai no fallback da página inicial: também é 404.
+        assertEquals(HttpStatusCode.NotFound, client.get("/.pasta/arquivo").status)
+        listOf("/.oculto", "/assets/.oculto", "/.pasta/arquivo").forEach {
+            assertFalse(client.get(it).bodyAsText().contains("OCULTO-DA-SPA"), it)
+        }
+    }
+
+    @Test
+    fun headEmAssetResponde200SemCorpo() = comDist {
+        val get = client.get("/assets/app.js")
+        val head = client.head("/assets/app.js")
+        assertEquals(HttpStatusCode.OK, head.status)
+        assertEquals("", head.bodyAsText())
+        assertEquals(get.headers[HttpHeaders.CacheControl], head.headers[HttpHeaders.CacheControl])
+        assertEquals(get.headers[HttpHeaders.ContentType], head.headers[HttpHeaders.ContentType])
+        assertEquals(get.headers[HttpHeaders.ContentLength], head.headers[HttpHeaders.ContentLength])
+        assertEquals("nosniff", head.headers["X-Content-Type-Options"])
+        // Página da SPA e arquivo inexistente.
+        assertEquals(HttpStatusCode.OK, client.head("/squads/x").status)
+        assertEquals(HttpStatusCode.NotFound, client.head("/assets/sumido.js").status)
+        assertEquals(HttpStatusCode.NotFound, client.head("/.oculto").status)
+    }
+
+    @Test
+    fun moduleSemSettingsCompila() {
+        testApplication {
+            val s = Settings.fromEnv(mapOf("PAINEL_STATIC_DIR" to "/nao/existe/dist"))
+            val ctx = testContext(s)
+            application { module(context = ctx) }
+            assertEquals("""{"ok":true}""", client.get("/api/health").bodyAsText())
+        }
+    }
+
+    @Test
+    fun moduleComSettingsPosicionalCompila() {
+        testApplication {
+            val s = Settings.fromEnv(mapOf("PAINEL_STATIC_DIR" to "/nao/existe/dist"))
+            application { module(s, testContext(s)) }
+            assertEquals("""{"ok":true}""", client.get("/api/health").bodyAsText())
+        }
     }
 
     @Test

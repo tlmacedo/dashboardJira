@@ -19,6 +19,10 @@ class SomenteAFabricaCriaClientesJira {
             s.filter { Files.isRegularFile(it) && it.extension == "kt" }.toList()
         }
 
+    /** Texto de cada fonte de produção, pelo caminho relativo à raiz de `src/main` (com `/`). */
+    private fun textos(): Map<String, String> =
+        fontes().associate { TestPaths.mainSrcDir.relativize(it).joinToString("/") to Files.readString(it) }
+
     /** Arquivos (por nome) cujo texto casa o [padrao], fora dos [permitidos]. */
     private fun violacoes(padrao: Regex, permitidos: Set<String>): List<String> =
         fontes().filter { it.name !in permitidos }.filter { padrao.containsMatchIn(Files.readString(it)) }.map { it.name }
@@ -29,10 +33,14 @@ class SomenteAFabricaCriaClientesJira {
         assertTrue("JiraClientFactory.kt" in nomes && "AppContext.kt" in nomes, nomes.toString())
     }
 
+    /**
+     * Só a fábrica constrói `JiraClient` e `HttpClient` (`JiraClient.kt` define o `createJiraHttpClient`); alias,
+     * `typealias`, referência de construtor e `copy` de `Settings` (inclusive aninhado) também são barrados.
+     */
     @Test
     fun jiraClientSoEhConstruidoNaFabrica() {
-        // "JiraClient(" não casa "createJiraClient(" nem "FakeJiraClient(" graças ao limite de palavra.
-        assertEquals(emptyList(), violacoes(Regex("\\bJiraClient\\("), setOf("JiraClientFactory.kt")))
+        val violacoes = varrerFontes(textos(), setOf("JiraClientFactory.kt", "JiraClient.kt"))
+        assertEquals(emptyList(), violacoes)
     }
 
     @Test

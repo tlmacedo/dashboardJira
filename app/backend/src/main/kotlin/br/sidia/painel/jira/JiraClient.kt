@@ -153,28 +153,32 @@ class JiraClient internal constructor(
     }
 
     /** Busca uma página (até 100 itens) a partir de uma [JqlQuery]; a instância da consulta deve ser a do cliente. */
-    suspend fun search(query: JqlQuery): SearchPage = search(paraRequisicao(query))
+    suspend fun search(query: JqlQuery): SearchPage = search(SearchRequest(query))
 
     /**
      * Percorre todas as páginas de uma [JqlQuery] e emite cada issue. `pageSize` vai de 1 a 5000 e
      * `maxItens` de 1 a 200.000; fora disso falha na hora, antes de qualquer requisição.
      */
     fun searchAll(query: JqlQuery, pageSize: Int = 1000, maxItens: Int = MAX_ITENS_PADRAO): Flow<JsonObject> =
-        searchAll(paraRequisicao(query), pageSize, maxItens)
+        searchAll(SearchRequest(query), pageSize, maxItens)
 
     /** Conta as issues de uma [JqlQuery] sem baixá-las. */
-    suspend fun count(query: JqlQuery): Int = count(paraRequisicao(query).jql)
+    suspend fun count(query: JqlQuery): Int {
+        exigirMesmaInstancia(query)
+        return count(query.jql)
+    }
 
     /** Exige a mesma instância do cliente; a mensagem cita só os ids (nunca o JQL). */
-    private fun paraRequisicao(query: JqlQuery): SearchRequest {
+    private fun exigirMesmaInstancia(query: JqlQuery) {
         require(query.instance == config.id) {
             "A consulta é da instância '${query.instance}', mas o cliente é da instância '${config.id}'"
         }
-        return SearchRequest(jql = query.jql, fields = query.fields, expandChangelog = query.expandChangelog)
     }
 
     internal suspend fun search(req: SearchRequest): SearchPage {
         // Validação antes do guard: pedido inválido nunca chega nem a consultar a trava.
+        // A conferência da instância vale também para quem chega por SearchRequest (sem desvio).
+        exigirMesmaInstancia(req.query)
         require(req.fields.isNotEmpty()) { "fields não pode ser vazio" }
         val corpo = buildJsonObject {
             put("jql", req.jql)
@@ -211,6 +215,7 @@ class JiraClient internal constructor(
      * `fields` vazio falha já nesta chamada.
      */
     internal fun searchAll(req: SearchRequest, pageSize: Int = 1000, maxItens: Int = MAX_ITENS_PADRAO): Flow<JsonObject> {
+        exigirMesmaInstancia(req.query)
         require(pageSize in 1..PAGE_SIZE_MAX) { "pageSize deve ficar entre 1 e $PAGE_SIZE_MAX" }
         require(maxItens in 1..MAX_ITENS_LIMITE) { "maxItens deve ficar entre 1 e $MAX_ITENS_LIMITE" }
         require(req.fields.isNotEmpty()) { "fields não pode ser vazio" }
@@ -231,9 +236,12 @@ class JiraClient internal constructor(
         }
     }
 
-    /** Conta as issues de um JQL sem baixá-las: pede só 1 resultado e lê o `total`. */
+    /**
+     * Conta as issues de um JQL (já gerado pelo construtor) sem baixá-las: pede só 1 resultado e lê o `total`.
+     * A consulta nasce com a instância deste cliente, então a conferência de instância sempre passa.
+     */
     internal suspend fun count(jql: String): Int =
-        search(SearchRequest(jql = jql, fields = listOf("key"), maxResults = 1)).total
+        search(SearchRequest(JqlQuery(config.id, jql, listOf("key"), expandChangelog = false), maxResults = 1)).total
 
     /**
      * Histórico completo de uma issue via GET `/rest/api/2/issue/{key}/changelog`, paginado.

@@ -1,9 +1,9 @@
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { useMemo, useState, type FormEvent } from 'react'
 import { useSearchParams } from 'react-router-dom'
+import { ErroDaApi } from '../../api/client'
 import { useLang } from '../../i18n/LangProvider'
 import {
-  ApiError,
   fetchTempoEmStatus,
   type Aviso,
   type Categoria,
@@ -60,7 +60,7 @@ export function TempoEmStatus() {
     retry: false,
   })
   const dto = consulta.data
-  const status = consulta.error instanceof ApiError ? consulta.error.status : null
+  const status = consulta.error instanceof ErroDaApi ? consulta.error.status : null
   const unidadeTxt = t(filtros.unit === 'util' ? 'tempo.unidade.util' : 'tempo.unidade.corrido').toLowerCase()
 
   function aplicar(novo: Filtros) {

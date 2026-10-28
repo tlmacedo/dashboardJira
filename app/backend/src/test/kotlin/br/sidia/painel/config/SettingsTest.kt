@@ -349,4 +349,46 @@ class SettingsTest {
         val e = assertFailsWith<IllegalArgumentException> { Settings.fromEnv(mapOf("DASHBOARD_DEMO_DATA" to "sim")) }
         assertTrue(e.message!!.contains("DASHBOARD_DEMO_DATA"))
     }
+
+    @Test
+    fun origemPublicaInvalidaFalha() {
+        val invalidas = listOf(
+            "http://painel.exemplo.invalid", // fora do modo dev precisa ser https
+            "https://painel.exemplo.invalid/caminho",
+            "https://painel.exemplo.invalid?x=1",
+            "https://painel.exemplo.invalid#f",
+            "https://usuario:senha@painel.exemplo.invalid",
+            "painel.exemplo.invalid",
+            "ftp://painel.exemplo.invalid",
+        )
+        for (valor in invalidas) {
+            val e = assertFailsWith<IllegalArgumentException>(valor) {
+                Settings.fromEnv(mapOf("DASHBOARD_DEV_MODE" to "false", "DASHBOARD_ORIGEM_PUBLICA" to valor))
+            }
+            assertTrue(e.message!!.contains("DASHBOARD_ORIGEM_PUBLICA"), valor)
+            // Nunca ecoa o valor (pode trazer credencial).
+            assertFalse(e.message!!.contains("senha"), valor)
+        }
+    }
+
+    @Test
+    fun origemPublicaVazioUsaPadrao() {
+        assertEquals(null, Settings.fromEnv(emptyMap()).origemPublica)
+        assertEquals(null, Settings.fromEnv(mapOf("DASHBOARD_ORIGEM_PUBLICA" to "  ")).origemPublica)
+    }
+
+    @Test
+    fun origemPublicaNormalizada() {
+        val s = Settings.fromEnv(
+            mapOf("DASHBOARD_DEV_MODE" to "false", "DASHBOARD_ORIGEM_PUBLICA" to " HTTPS://Painel.Exemplo.Invalid:8443/ "),
+        )
+        assertEquals("https://painel.exemplo.invalid:8443", s.origemPublica)
+        assertTrue(s.toString().contains("origemPublica=https://painel.exemplo.invalid:8443"))
+    }
+
+    @Test
+    fun origemPublicaHttpValeEmModoDev() {
+        val s = Settings.fromEnv(mapOf("DASHBOARD_ORIGEM_PUBLICA" to "http://localhost:5173"))
+        assertEquals("http://localhost:5173", s.origemPublica)
+    }
 }

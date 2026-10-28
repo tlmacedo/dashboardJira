@@ -11,6 +11,8 @@
   "shell.semPermissao": "Not available for this role.",
   "shell.telaPrevista": "Screen planned in the navigation map; not implemented yet.",
   "shell.metaErro": "Could not reach the server. The menu shows the minimum only.",
+  "sessao.expirada": "Your session has expired. Sign in again to continue; the screen filters stay in the URL.",
+  "sessao.entrar": "Sign in again",
   "role.USUARIO": "User",
   "role.SQUAD_LEADER": "Squad Leader",
   "role.COORDENADOR": "Coordinator",

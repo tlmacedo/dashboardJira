@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { useLang } from '../../i18n/LangProvider'
-import { ApiError } from '../TempoEmStatus/api'
+import { ErroDaApi } from '../../api/client'
 import { fetchSyncStatus, type ExecucaoDto, type InstanciaStatusDto, type SyncStatusDto } from './api'
 import './sincronizacao.css'
 
@@ -32,7 +32,7 @@ export function Sincronizacao() {
   const { t, lang } = useLang()
   const consulta = useQuery({ queryKey: ['sync-status'], queryFn: fetchSyncStatus, retry: false })
   const dto = consulta.data
-  const status = consulta.error instanceof ApiError ? consulta.error.status : null
+  const status = consulta.error instanceof ErroDaApi ? consulta.error.status : null
 
   return (
     <div className="sinc">

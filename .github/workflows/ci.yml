@@ -1,0 +1,118 @@
+# CI do Painel de Squads. Quatro checks, nomes iguais aos ids dos jobs: são os nomes que a proteção da
+# `main` exige (ver docs/operacao/ci.md). Sem filtro de caminho, para o check nunca deixar de aparecer.
+# Só JDK 21 e Node 22/pnpm: o banco dos testes é um arquivo SQLite temporário. Sem serviços nem contêineres.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  # Nenhum job acessa o Jira. A flag fica desligada e o workflow não declara segredo do Jira.
+  JIRA_LIVE_ENABLED: "false"
+
+jobs:
+  backend:
+    name: backend
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: gradle
+          cache-dependency-path: |
+            app/backend/**/*.gradle*
+            app/backend/gradle/libs.versions.toml
+            app/backend/gradle/wrapper/gradle-wrapper.properties
+      - name: Testes do backend (SQLite em arquivo temporário)
+        working-directory: app/backend
+        run: ./gradlew --no-daemon test
+      - name: Relatório de testes (só em falha)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: relatorio-backend
+          path: app/backend/build/reports/tests/
+          retention-days: 7
+
+  frontend:
+    name: frontend
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Preparar o pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@9.12.3 --activate
+      - name: Instalar dependências
+        working-directory: app/frontend
+        run: pnpm install --frozen-lockfile
+      - name: Lint
+        working-directory: app/frontend
+        run: pnpm lint
+      - name: Testes do frontend
+        working-directory: app/frontend
+        run: pnpm vitest run
+      - name: Build
+        working-directory: app/frontend
+        run: pnpm build
+      - name: Build compatível com a CSP
+        working-directory: app/frontend
+        run: node scripts/verificar-csp.mjs
+
+  guarda:
+    name: guarda
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Garantir o jq
+        run: command -v jq >/dev/null 2>&1 || sudo apt-get install -y jq
+      - name: Testes do hook do Claude Code
+        run: sh .claude/hooks/test-guard.sh
+      - name: Testes do hook do Cline
+        run: sh .clinerules/hooks/test-PreToolUse.sh
+
+  varredura:
+    name: varredura
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Testes da varredura
+        run: sh scripts/ci/test-varredura.sh
+      - name: Varredura do pull request (só o que o PR acrescenta e as mensagens)
+        if: github.event_name == 'pull_request'
+        env:
+          VARREDURA_NOMES: ${{ secrets.VARREDURA_NOMES }}
+          BASE_REF: ${{ github.base_ref }}
+        run: sh scripts/ci/varrer-dados-pessoais.sh --base "origin/$BASE_REF"
+      - name: Varredura do push na main
+        if: github.event_name == 'push'
+        env:
+          VARREDURA_NOMES: ${{ secrets.VARREDURA_NOMES }}
+        run: sh scripts/ci/varrer-dados-pessoais.sh --base HEAD~1
