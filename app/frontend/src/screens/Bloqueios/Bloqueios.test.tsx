@@ -118,6 +118,19 @@ describe('tela Bloqueios entre tasks', () => {
     expect(duplicada).toBe(false)
   })
 
+  it('listaNaoRepeteOCartaoBQ01DoIndicador', async () => {
+    const cartoes = ['BQ-01', 'BQ-02', 'BQ-03', 'BQ-04', 'BQ-05'].map((id) => ({
+      id, grupo: 'trabalho', natureza: 'ESTOQUE', tela: 'bloqueios', tituloChave: 'nav.bloqueios', oQueMostraChave: 'nav.bloqueios',
+      comoCalculaChave: 'nav.bloqueios', fontes: [], papeis: [], temDrill: true, exigeChangelog: false, exigeWorklog: false,
+    }))
+    simular({ [CARD]: { status: 200, corpo: DTO }, '/api/cartoes/catalogo': { status: 200, corpo: { cartoes } } })
+    renderizarTela(<Bloqueios />, '/bloqueios')
+    await screen.findByRole('table', { name: 'Bloqueios entre tasks (lista)' })
+    // Um ⓘ por indicador (5); a lista de linhas não repete o cartão BQ-01.
+    await vi.waitFor(() => expect(screen.getAllByRole('button', { name: 'Sobre este cartão' }).length).toBeGreaterThan(0))
+    expect(screen.getAllByRole('button', { name: 'Sobre este cartão' })).toHaveLength(5)
+  })
+
   it('cadaCartaoAbreSuasTasks', async () => {
     const rotas: Record<string, { status: number; corpo: unknown }> = {}
     rotas[CARD] = { status: 200, corpo: DTO }

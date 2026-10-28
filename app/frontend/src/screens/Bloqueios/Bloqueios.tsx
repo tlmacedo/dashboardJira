@@ -109,7 +109,7 @@ export function Bloqueios() {
               />
             </div>
 
-            <Cartao id="BQ-01" variante="lista" nivelDoTitulo={2} idDoTitulo="h-bq-lista" titulo={t('bloqueios.lista')}>
+            <Cartao id="BQ-lista" variante="lista" nivelDoTitulo={2} idDoTitulo="h-bq-lista" titulo={t('bloqueios.lista')}>
               <p className="legenda-meta">{t('bloqueios.nota')}</p>
               {dto.linhas.length === 0 ? (
                 <p className="vazio">{t('bloqueios.vazio')}</p>
