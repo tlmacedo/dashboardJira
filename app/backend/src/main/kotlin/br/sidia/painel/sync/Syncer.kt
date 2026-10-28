@@ -63,6 +63,13 @@ class Syncer(
     private val osVersionCustomId: String? = campos?.forInstance(instance)
         ?.takeIf { it.has(CAMPO_OS_VERSION) }?.get(CAMPO_OS_VERSION)?.customId
 
+    /** CustomId de `Story Points`, `Epic Link` e `Flagged` na instância (campo fora do dicionário ou sem id fica nulo). */
+    private val idsDeTrabalho: Map<String, String?> = listOf(
+        CamposDeTrabalhoExtrator.STORY_POINTS, CamposDeTrabalhoExtrator.EPIC_LINK, CamposDeTrabalhoExtrator.FLAGGED,
+    ).associateWith { nome ->
+        campos?.forInstance(instance)?.takeIf { it.has(nome) }?.get(nome)?.customId
+    }
+
     /**
      * Processa em fluxo: cada issue é gravada na própria transação assim que chega, e só então [aoGravar] é chamado
      * (o chamador pode avançar o cursor com segurança). A próxima página só é pedida depois disso, então uma falha
@@ -105,7 +112,9 @@ class Syncer(
             val updated = try {
                 withContext(Dispatchers.IO) {
                     // Os vínculos saem do JSON recebido (nulo = sem o campo: não mexe nos gravados), na mesma transação da issue.
-                    store.upsert(issue, registros, instance, osVersionCustomId, IssueLinks.ler(chave, issue), clock.instant())
+                    store.upsert(
+                        issue, registros, instance, osVersionCustomId, IssueLinks.ler(chave, issue), clock.instant(), idsDeTrabalho,
+                    )
                     CamposDaIssue.de(issue).updated
                 }
             } catch (e: IllegalArgumentException) {

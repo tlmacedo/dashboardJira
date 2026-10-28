@@ -18,11 +18,14 @@ interface IssueStore {
     /**
      * Grava a issue (atualiza se já existir) e os eventos novos; repetir a chamada não duplica nada.
      * `os_version` sempre é regravado a partir de [osVersionCustomId]: ressincronizar sem customId (nulo)
-     * zera o valor existente, por desenho (o valor segue o dicionário atual).
+     * zera o valor existente, por desenho (o valor segue o dicionário atual). O mesmo vale para os campos de trabalho
+     * (prioridade, estimativa restante, pontos, épico, flag e componentes); [idsDeTrabalho] leva o customId de
+     * `Story Points`, `Epic Link` e `Flagged` (nome do dicionário -> id), e os demais saem de campos nativos.
      */
     fun upsert(
         issue: JsonObject, events: List<ChangeEventRecord>, instance: String, osVersionCustomId: String? = null,
         vinculos: List<VinculoRecord>? = null, vinculosEm: Instant = Instant.now(),
+        idsDeTrabalho: Map<String, String?> = emptyMap(),
     )
 
     /**
@@ -195,13 +198,15 @@ class SqliteIssueStore(private val ds: DataSource) : IssueStore, IssueIndex {
     fun upsertNaTransacao(
         con: Connection, issue: JsonObject, events: List<ChangeEventRecord>, instance: String, osVersionCustomId: String?,
         vinculos: List<VinculoRecord>? = null, vinculosEm: Instant = Instant.now(),
+        idsDeTrabalho: Map<String, String?> = emptyMap(),
     ) {
         val c = CamposDaIssue.de(issue)
         val osVersion = OsVersionExtrator.extrair(issue, osVersionCustomId)
+        val trabalho = CamposDeTrabalhoExtrator.extrair(issue, idsDeTrabalho)
         // O changelog fica nas linhas de change_event e os vínculos em issue_link; o raw guarda só a issue, sem
         // dados pessoais e sem o que o Jira traz da outra ponta de cada link (resumo, status, prioridade).
         val raw = SanitizadorRaw.sanitizar(semChangelogNemVinculos(issue)).toString()
-        val issueId = gravarIssue(con, c, instance, raw, osVersion)
+        val issueId = gravarIssue(con, c, instance, raw, osVersion, trabalho)
         gravarEventos(con, issueId, events)
         if (vinculos != null) links.substituir(con, instance, c.key, vinculos, vinculosEm)
     }
@@ -215,13 +220,13 @@ class SqliteIssueStore(private val ds: DataSource) : IssueStore, IssueIndex {
 
     override fun upsert(
         issue: JsonObject, events: List<ChangeEventRecord>, instance: String, osVersionCustomId: String?,
-        vinculos: List<VinculoRecord>?, vinculosEm: Instant,
+        vinculos: List<VinculoRecord>?, vinculosEm: Instant, idsDeTrabalho: Map<String, String?>,
     ) {
         ds.connection.use { con ->
             val autoCommit = con.autoCommit
             con.autoCommit = false
             try {
-                upsertNaTransacao(con, issue, events, instance, osVersionCustomId, vinculos, vinculosEm)
+                upsertNaTransacao(con, issue, events, instance, osVersionCustomId, vinculos, vinculosEm, idsDeTrabalho)
                 con.commit()
             } catch (e: Throwable) {
                 con.rollback()
@@ -251,13 +256,15 @@ class SqliteIssueStore(private val ds: DataSource) : IssueStore, IssueIndex {
         }
     }
 
-    private fun gravarIssue(con: Connection, c: CamposDaIssue, instance: String, raw: String, osVersion: String?): Long {
+    private fun gravarIssue(
+        con: Connection, c: CamposDaIssue, instance: String, raw: String, osVersion: String?, trabalho: CamposDeTrabalho,
+    ): Long {
         liberarJiraIdDaChaveAntiga(con, c, instance)
         val sql = """
             INSERT INTO issue (key, instance, project, issue_type, status, resolution, assignee_ref, reporter_ref,
                                created, updated, resolved, duedate, labels, parent_key, estimate_s, spent_s, raw,
-                               os_version, jira_id)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                               os_version, jira_id, priority, remaining_s, story_points, epic_key, flagged, components)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT (instance, key) DO UPDATE SET
                 project = EXCLUDED.project, issue_type = EXCLUDED.issue_type,
                 status = EXCLUDED.status, resolution = EXCLUDED.resolution, assignee_ref = EXCLUDED.assignee_ref,
@@ -265,7 +272,9 @@ class SqliteIssueStore(private val ds: DataSource) : IssueStore, IssueIndex {
                 resolved = EXCLUDED.resolved, duedate = EXCLUDED.duedate, labels = EXCLUDED.labels,
                 parent_key = EXCLUDED.parent_key, estimate_s = EXCLUDED.estimate_s, spent_s = EXCLUDED.spent_s,
                 raw = EXCLUDED.raw, os_version = EXCLUDED.os_version,
-                jira_id = COALESCE(EXCLUDED.jira_id, issue.jira_id), removida_em = NULL
+                jira_id = COALESCE(EXCLUDED.jira_id, issue.jira_id), removida_em = NULL,
+                priority = EXCLUDED.priority, remaining_s = EXCLUDED.remaining_s, story_points = EXCLUDED.story_points,
+                epic_key = EXCLUDED.epic_key, flagged = EXCLUDED.flagged, components = EXCLUDED.components
             RETURNING id
         """.trimIndent()
         con.prepareStatement(sql).use { ps ->
@@ -289,6 +298,12 @@ class SqliteIssueStore(private val ds: DataSource) : IssueStore, IssueIndex {
             ps.setString(18, osVersion)
             // Id numérico do Jira (estável mesmo se a chave mudar); ausente ou não numérico fica nulo.
             if (c.jiraId != null) ps.setLong(19, c.jiraId) else ps.setNull(19, java.sql.Types.BIGINT)
+            ps.setString(20, trabalho.priority)
+            if (trabalho.remainingS != null) ps.setLong(21, trabalho.remainingS) else ps.setNull(21, java.sql.Types.BIGINT)
+            if (trabalho.storyPoints != null) ps.setDouble(22, trabalho.storyPoints) else ps.setNull(22, java.sql.Types.REAL)
+            ps.setString(23, trabalho.epicKey)
+            ps.setInt(24, if (trabalho.flagged) 1 else 0)
+            ps.setString(25, trabalho.components.emJson())
             ps.executeQuery().use { rs ->
                 check(rs.next()) { "upsert da issue não devolveu o id" }
                 return rs.getLong(1)

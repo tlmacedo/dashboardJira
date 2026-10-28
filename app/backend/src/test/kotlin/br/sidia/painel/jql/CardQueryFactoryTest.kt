@@ -111,6 +111,14 @@ class CardQueryFactoryTest {
     }
 
     @Test
+    fun fichaDeSincronizacaoPedeCamposNovos() {
+        val fields = fabrica.build(fichaSync, mapOf("desde" to desde)).fields
+        for (campo in listOf("priority", "timeestimate", "timespent", "timeoriginalestimate", "components")) {
+            assertEquals(1, fields.count { it == campo }, "$campo ausente em $fields")
+        }
+    }
+
+    @Test
     fun fichaSincronizacaoPedeCustomfieldQuandoHaId() {
         val d = FieldDictionary(
             listOf(
@@ -124,6 +132,15 @@ class CardQueryFactoryTest {
                 FieldDef("OS Version", FieldType.SELECT, "samsung", "x", customId = "cf[12416]"),
                 FieldDef("SKU Type", FieldType.SELECT, "samsung", "x"),
                 FieldDef("Checklist Type", FieldType.SELECT, "samsung", "x"),
+                // Campos de trabalho que a ficha de sincronização também pede.
+                FieldDef("priority", FieldType.SELECT, "samsung", "x"),
+                FieldDef("timeoriginalestimate", FieldType.NUMBER, "samsung", "x"),
+                FieldDef("timeestimate", FieldType.NUMBER, "samsung", "x"),
+                FieldDef("timespent", FieldType.NUMBER, "samsung", "x"),
+                FieldDef("components", FieldType.SELECT, "samsung", "x"),
+                FieldDef("Story Points", FieldType.NUMBER, "samsung", "x"),
+                FieldDef("Epic Link", FieldType.TEXT, "samsung", "x"),
+                FieldDef("Flagged", FieldType.SELECT, "samsung", "x"),
             ),
         )
         val s = CardSpecs.fromYaml(TestPaths.configDir.resolve("cards/sincronizacao.card.yaml"), d)

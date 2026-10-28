@@ -14,3 +14,11 @@ status_map:
   "Blocked": blocked
   "Done": done
   "Closed": done
+
+# Sequência natural do fluxo (opcional): voltar a um status de índice menor é uma "devolução" (card Negativas).
+# Todo status daqui precisa constar no mapa acima. Sem esta lista, "devolvidas" fica em 0 com aviso.
+ordem: ["To Do", "In Progress", "In Review", "Done"]
+
+# Resoluções que significam cancelamento (opcional; sem diferenciar maiúsculas): a task fecha, mas não conta
+# como entrega nem entra em "no prazo". Ajuste ao vocabulário real do Jira na primeira conexão.
+resolucoesNegativas: ["Won't Do", "Duplicate"]

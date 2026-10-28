@@ -13,6 +13,15 @@ campos:
   - OS Version
   - SKU Type
   - Checklist Type
+  # Campos de trabalho (Plano 5): prioridade, estimativas, tempo gasto, componentes, pontos, épico e flag.
+  - priority
+  - timeoriginalestimate
+  - timeestimate
+  - timespent
+  - components
+  - Story Points
+  - Epic Link
+  - Flagged
 
 # Tipos espelhados. Epic fica de fora (decisão do usuário em 25/10).
 filtrosFixos:
