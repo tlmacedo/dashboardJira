@@ -40,8 +40,25 @@ function decisoesMock() {
   }
 }
 
+function qualidadeMock() {
+  const l = (verificacao: string, n: number, universo: number, estado: string, nomes: string[] = []) => ({
+    verificacao, n, universo, fracao: universo > 0 ? n / universo : null, estado, nomes,
+  })
+  return {
+    versaoRegras: 'qualidade v1', janelaDias: 90, avisos: [],
+    linhas: [
+      l('SEM_ESTIMATIVA', 12, 90, 'ok'), l('SEM_RESPONSAVEL', 9, 90, 'ok'), l('SEM_VENCIMENTO', 28, 90, 'atencao'), l('SEM_EPICO', 0, 0, 'indisponivel', ['Epic Link']),
+      l('EM_ANDAMENTO_SEM_HORAS', 14, 30, 'problema'), l('SEM_SQUAD', 3, 80, 'ok'), l('PRIORIDADE_PADRAO', 40, 90, 'problema'),
+      l('DONE_SEM_RESOLUTION', 2, 60, 'ok'), l('RESOLUTION_SEM_DONE', 1, 58, 'ok'), l('STATUS_SEM_MAPEAMENTO', 0, 150, 'ok'),
+      l('CAMPO_INDISPONIVEL', 1, 4, 'atencao', ['Epic Link']), l('LABEL_SEM_CLASSIFICACAO', 6, 40, 'neutro', ['REVISAR', 'SPRINT-9']), l('BLOQUEADA_SEM_CAUSA', 2, 5, 'problema'),
+    ],
+    labels: [{ label: 'REVISAR', n: 4 }, { label: 'SPRINT-9', n: 2 }],
+  }
+}
+
 /** Resposta do mock para as telas do bloco 7b; `undefined` quando a rota não é deste bloco. */
 export function mockFase7b(pathname: string): unknown | undefined {
+  if (pathname === '/api/cards/qualidade') return qualidadeMock()
   if (pathname === '/api/distribuicao') return distribuicaoMock()
   if (pathname === '/api/rebalanceamento') return rebalanceamentoMock()
   if (pathname === '/api/governanca/decisoes') return decisoesMock()

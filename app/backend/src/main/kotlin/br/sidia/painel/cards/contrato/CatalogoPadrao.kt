@@ -6,6 +6,7 @@ import br.sidia.painel.cards.cartoesDeTempoEmStatus
 import br.sidia.painel.cards.cartoesDeTrabalho
 import br.sidia.painel.cards.checklist.cartoesDeChecklistReview
 import br.sidia.painel.distribuicao.cartoesDeDistribuicao
+import br.sidia.painel.governanca.cartoesDeGovernanca
 import br.sidia.painel.integridade.cartoesDeIntegridade
 
 /**
@@ -15,5 +16,5 @@ import br.sidia.painel.integridade.cartoesDeIntegridade
 fun catalogoPadrao(): CatalogoDeCartoes =
     CatalogoDeCartoes(
         cartoesDeTempoEmStatus() + cartoesDeSincronizacao() + cartoesDeAuditoria() + cartoesDeTrabalho() +
-            cartoesDeChecklistReview() + cartoesDeIntegridade() + cartoesDeDistribuicao(),
+            cartoesDeChecklistReview() + cartoesDeIntegridade() + cartoesDeDistribuicao() + cartoesDeGovernanca(),
     )

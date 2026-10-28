@@ -285,6 +285,8 @@ private fun valorAuditado(parametro: String, valor: String, sensivel: Boolean): 
         sensivel -> segmentoSensivelParaRegistro(valor)
         // Segmento de gaveta que cita uma chave de issue (pedido malformado ou plantado; qualquer caixa): a chave nunca vai para a auditoria.
         CHAVE_DE_ISSUE_NO_TEXTO.containsMatchIn(valor) -> VALOR_INVALIDO
+        // Label é texto livre do Jira (pode nomear alguém): a auditoria guarda que a consulta foi por label, não qual.
+        valor.startsWith("label:", ignoreCase = true) -> "label:*"
         else -> valor
     }
     else -> valor

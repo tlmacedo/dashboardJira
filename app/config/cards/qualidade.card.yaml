@@ -1,0 +1,44 @@
+# Ficha do card "Qualidade dos dados" (Plano 7b). Estrita: chave desconhecida falha ao carregar.
+# Mesmos tipos e exclusão de Abertas e do Bloqueios (a verificação de bloqueadas sem causa usa a mesma lista de tasks).
+# Só leitura: o painel aponta o que está faltando no Jira; quem corrige é o time, no Jira, e o vocabulário é dos YAML.
+
+id: qualidade
+titulo: Qualidade dos dados
+instancia: samsung
+
+campos:
+  - OS Version
+  - priority
+  - timeoriginalestimate
+  - timespent
+  - Epic Link
+
+filtrosFixos:
+  project: ["TG-Basic"]
+  issuetype: ["Checklist", "Checklist TG", "Checklist Review"]
+
+filtrosExcluidos:
+  status: ["Cancelled", "Canceled", "Dropped"]
+
+parametros:
+  - nome: squad
+    tipo: squad
+    obrigatorio: false
+
+formula: >-
+  Sobre as abertas: sem estimativa, sem responsável, sem vencimento, sem épico, em andamento sem horas registradas, com
+  responsável fora do papeis.yaml e ainda com a prioridade padrão. Sobre as concluídas ou resolvidas nos últimos 90 dias:
+  status concluído sem resolution e resolution sem status concluído. Vocabulário: status fora do status_map.yaml (com o
+  nome), campos sem valor em nenhuma issue e labels que não estão em labels_atraso.yaml (nem na lista de ignoradas).
+  Bloqueadas sem causa vêm do card Bloqueios. Cada linha é n de um universo; verde até 10%, laranja até 30%, vermelho acima.
+
+exemplo: >-
+  squad=[dev.alfa].
+
+aceite:
+  - Status fora do mapa não derruba a tela, aparece com o nome do status e a issue sai das demais contas.
+  - Cada número abre as mesmas tasks que o formam.
+  - Campo sem valor em nenhuma issue vira "indisponível", não 100% de problema.
+  - Só coordenação e gerente; o vocabulário (labels, status, campos) é editado nos YAML pelo gestor.
+
+expandChangelog: true

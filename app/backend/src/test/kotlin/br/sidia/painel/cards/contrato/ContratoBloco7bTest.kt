@@ -27,11 +27,11 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 /**
- * Contrato dos cartões da Distribuição e do Rebalanceamento (bloco 7b) sobre os dados de demonstração: o número de cada cartão é o
+ * Contrato dos cartões do bloco 7b (Distribuição, Rebalanceamento e Qualidade dos dados) sobre os dados de demonstração: o número de cada cartão é o
  * total do seu drill, para todos os papéis que o veem, e cada prefixo novo tem ao menos um par positivo (sem isso "número == drill"
  * seria 0 == 0). SQLite real; nenhuma rede.
  */
-class ContratoDistribuicaoTest {
+class ContratoBloco7bTest {
     companion object {
         private val banco = BancoEmArquivo()
 
@@ -39,7 +39,7 @@ class ContratoDistribuicaoTest {
         @AfterAll
         fun apagar() = banco.apagar()
 
-        val PREFIXOS = listOf("DI", "RB")
+        val PREFIXOS = listOf("DI", "RB", "QD")
     }
 
     private val zona = ZoneId.of("America/Manaus")

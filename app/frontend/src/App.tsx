@@ -35,6 +35,7 @@ import { Decisoes } from './screens/Decisoes/Decisoes'
 import { Distribuicao } from './screens/Distribuicao/Distribuicao'
 import { Rebalanceamento } from './screens/Rebalanceamento/Rebalanceamento'
 import { Divergencia } from './screens/Divergencia/Divergencia'
+import { Qualidade } from './screens/Qualidade/Qualidade'
 import { MapaDeCartoes } from './screens/MapaDeCartoes/MapaDeCartoes'
 import { Sincronizacao } from './screens/Sincronizacao/Sincronizacao'
 import { TempoEmStatus } from './screens/TempoEmStatus/TempoEmStatus'
@@ -89,6 +90,7 @@ export default function App() {
                 <Route path="distribuicao" element={<Distribuicao />} />
                 <Route path="rebalanceamento" element={<Rebalanceamento />} />
                 <Route path="decisoes" element={<Decisoes />} />
+                <Route path="qualidade" element={<Qualidade />} />
                 <Route path="tempo" element={<TempoEmStatus />} />
                 <Route path="auditoria" element={<Auditoria />} />
                 <Route path="divergencia" element={<Divergencia />} />
