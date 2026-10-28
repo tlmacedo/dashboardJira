@@ -83,6 +83,20 @@ class SerieSemanalTest {
     }
 
     @Test
+    fun reabertaNaoContaComoNovaEntrada() {
+        // Criada em 01/09, fechada em 10/09 e REABERTA em 20/10: a entrada é só a criação; a reabertura não gera outra.
+        val reaberta = Trb1.issue(
+            "TG-181", "Checklist", "ana", "09-01T12", "In Progress",
+            eventos = Trb1.trilha("TG-181", "Open", "09-02T12" to "In Progress", "09-10T12" to "Closed", "10-20T12" to "In Progress"),
+        )
+        Trb1.carregar(ds, listOf(reaberta))
+        val s = SerieSemanal.calcular(todas(), Trb1.statusMap, ultima, 10, Trb1.zona)
+        val semanasComEntrada = s.filter { w -> w.entradas.any { it.key == "TG-181" } }.map { it.semana.toString() }
+        assertEquals(listOf("2026-08-31"), semanasComEntrada)
+        assertTrue(s.none { w -> w.saidas.any { it.key == "TG-181" } }, "reaberta e aberta não é saída")
+    }
+
+    @Test
     fun ultimaSemanaFechada() {
         assertEquals(LocalDate.parse("2026-10-19"), SerieSemanal.ultimaSemanaFechada(LocalDate.parse("2026-10-30"))) // sexta
         assertEquals(LocalDate.parse("2026-10-19"), SerieSemanal.ultimaSemanaFechada(LocalDate.parse("2026-10-26"))) // segunda

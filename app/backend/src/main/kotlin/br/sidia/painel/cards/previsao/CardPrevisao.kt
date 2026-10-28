@@ -48,7 +48,7 @@ object CardPrevisao : CardDeLeitura<PrevisaoDto> {
         Fluxo.exigirStatusMapeados(ctx.statusMap, abertas, historico)
 
         val analise = PrevisaoCalculator(ctx.calendar, ctx.statusMap, regras)
-            .analisar(abertas, historico, e.agora, sementeDoDia(e.hoje, e.filtros), e.filtros.unit)
+            .analisar(abertas, historico, e.agora, semente(e.hoje, e.filtros), e.filtros.unit)
         val unidade = if (e.filtros.unit == TimeUnitMode.UTIL) "dias úteis" else "dias corridos"
         val porIssue = analise.dto.porIssue.associateBy { it.key }
         fun n(v: Double) = String.format(Locale.ROOT, "%.1f", v)
@@ -72,6 +72,9 @@ object CardPrevisao : CardDeLeitura<PrevisaoDto> {
             }
         }
     }
+
+    /** Semente só com os filtros que o card aplica: o período (`de`/`ate`) é ignorado. */
+    fun semente(dia: java.time.LocalDate, f: br.sidia.painel.cards.FiltrosDeCard): Long = sementeDoDia(dia, f.copy(de = null, ate = null))
 
     override fun vazio(avisos: List<AvisoDto>) = PrevisaoDto(
         versaoRegras = "", backlog = 0, termina = QuandoDto(null, null, null, null, null, null), confianca = "baixa", semanasComDado = 0,

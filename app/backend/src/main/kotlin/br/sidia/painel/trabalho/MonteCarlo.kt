@@ -77,8 +77,10 @@ class MonteCarlo(private val random: Random) {
  */
 fun sementeDoDia(dia: LocalDate, filtros: FiltrosDeCard): Long {
     val texto = listOf(
-        dia.toString(), filtros.squad.orEmpty(), filtros.pessoa.orEmpty(), filtros.tipos.sorted().joinToString(","),
-        filtros.prioridades.sorted().joinToString(","), filtros.os.orEmpty(), filtros.de?.toString().orEmpty(),
+        dia.toString(), filtros.squad?.trim().orEmpty(), filtros.pessoa?.trim().orEmpty(),
+        filtros.tipos.map { it.trim().lowercase() }.sorted().joinToString(","),
+        filtros.prioridades.map { it.trim().lowercase() }.sorted().joinToString(","), filtros.os?.trim()?.lowercase().orEmpty(),
+        filtros.de?.toString().orEmpty(),
         filtros.ate?.toString().orEmpty(), filtros.unit.name,
     ).joinToString("|")
     var h = -0x340d631b7bdddcdbL // 0xcbf29ce484222325 (base do FNV-1a de 64 bits)

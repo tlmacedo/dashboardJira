@@ -33,7 +33,7 @@ object CardEpicos : CardDeLeitura<EpicosDto> {
             .filter { e.escopo.permiteAtual(it) }
         Fluxo.exigirStatusMapeados(ctx.statusMap, todas)
         val analise = EpicosCalculator(ctx.calendar, ctx.statusMap, ctx.regrasDePrevisao, ctx.regrasAuditoria.tiposReview)
-            .analisar(todas, e.agora, sementeDoDia(e.hoje, e.filtros))
+            .analisar(todas, e.agora, semente(e.hoje, e.filtros))
         return ResultadoDeCard(analise.dto) { segmento ->
             analise.segmentos[segmento]?.map { s ->
                 val detalhe = when {
@@ -45,6 +45,10 @@ object CardEpicos : CardDeLeitura<EpicosDto> {
             }
         }
     }
+
+    /** Semente só com os filtros que o card aplica (squad, pessoa e OS): tipo, prioridade, período e unidade são ignorados. */
+    fun semente(dia: java.time.LocalDate, f: br.sidia.painel.cards.FiltrosDeCard): Long =
+        sementeDoDia(dia, f.copy(tipos = emptyList(), prioridades = emptyList(), de = null, ate = null, unit = br.sidia.painel.domain.TimeUnitMode.UTIL))
 
     override fun vazio(avisos: List<AvisoDto>) = EpicosDto(emptyList(), 0, avisos)
 }

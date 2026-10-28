@@ -81,6 +81,33 @@ class MonteCarloTest {
     }
 
     @Test
+    fun sementeNormalizaCaixaEEspacos() {
+        val f = FiltrosDeCard(
+            squad = "Alfa", pessoa = null, tipos = listOf("Checklist"), prioridades = listOf("High"),
+            os = null, de = null, ate = null, unit = TimeUnitMode.UTIL,
+        )
+        val dia = LocalDate.parse("2026-10-30")
+        assertEquals(sementeDoDia(dia, f), sementeDoDia(dia, f.copy(tipos = listOf("  checklist "), prioridades = listOf("HIGH"), squad = " Alfa ")))
+    }
+
+    @Test
+    fun sementeDosCardsSoUsaOsFiltrosAplicados() {
+        val f = FiltrosDeCard(
+            squad = "Alfa", pessoa = null, tipos = listOf("Checklist"), prioridades = listOf("High"),
+            os = null, de = null, ate = null, unit = TimeUnitMode.UTIL,
+        )
+        val dia = LocalDate.parse("2026-10-30")
+        val inertes = f.copy(tipos = listOf("Task"), prioridades = emptyList(), de = LocalDate.parse("2026-01-01"), ate = LocalDate.parse("2026-02-01"), unit = TimeUnitMode.CORRIDO)
+        // Épicos ignora tipo, prioridade, período e unidade: mudá-los não muda a semente; o squad muda.
+        assertEquals(br.sidia.painel.cards.epicos.CardEpicos.semente(dia, f), br.sidia.painel.cards.epicos.CardEpicos.semente(dia, inertes))
+        assertNotEquals(br.sidia.painel.cards.epicos.CardEpicos.semente(dia, f), br.sidia.painel.cards.epicos.CardEpicos.semente(dia, f.copy(squad = "Beta")))
+        // Previsão ignora só o período; tipo, prioridade e unidade (idade por task) entram.
+        val periodo = f.copy(de = LocalDate.parse("2026-01-01"), ate = LocalDate.parse("2026-02-01"))
+        assertEquals(br.sidia.painel.cards.previsao.CardPrevisao.semente(dia, f), br.sidia.painel.cards.previsao.CardPrevisao.semente(dia, periodo))
+        assertNotEquals(br.sidia.painel.cards.previsao.CardPrevisao.semente(dia, f), br.sidia.painel.cards.previsao.CardPrevisao.semente(dia, f.copy(tipos = listOf("Task"))))
+    }
+
+    @Test
     fun quantosConservador() {
         // 4 semanas a 5 por semana: sempre 20, em qualquer percentil.
         assertEquals(Triple(20, 20, 20), mc().quantos(listOf(5), 4, 5_000))
