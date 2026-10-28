@@ -68,10 +68,11 @@ export const NAV_ITEMS: NavItem[] = [
   item('plano', 'pessoas', LIDERANCA),
   item('cobertura', 'pessoas', LIDERANCA),
   item('simulador', 'pessoas', LIDERANCA),
-  item('competencias', 'pessoas', LIDERANCA),
-  item('revisoes', 'pessoas', LIDERANCA),
-  item('posse', 'pessoas', LIDERANCA),
-  item('cargaTipo', 'pessoas', LIDERANCA),
+  // Posse, competências, revisões e carga por tipo: o backend dá a cada papel só a sua visão (o usuário vê o que é dele).
+  item('competencias', 'pessoas', 'all'),
+  item('revisoes', 'pessoas', 'all'),
+  item('posse', 'pessoas', 'all'),
+  item('cargaTipo', 'pessoas', 'all'),
   item('tendencia', 'pessoas', LIDERANCA),
   item('gargalos', 'pessoas', LIDERANCA),
 
