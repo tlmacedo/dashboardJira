@@ -4,6 +4,7 @@ import br.sidia.painel.AppContext
 import br.sidia.painel.cards.CODIGO_SEGMENTO_INVALIDO
 import br.sidia.painel.cards.EXTRAS_DE_AUDITORIA
 import br.sidia.painel.cards.ErroHttp
+import br.sidia.painel.cards.ROTA_SENSIVEL
 import br.sidia.painel.cards.executar
 import br.sidia.painel.cards.papeisVigentes
 import br.sidia.painel.db.AccessLog
@@ -34,6 +35,8 @@ fun Route.rotasDeDrillGenerico(ctx: AppContext, catalogo: CatalogoDeCartoes, sto
             val papeis = papeisVigentes(ctx, principal)
             if (papeis.isEmpty()) throw ErroHttp(HttpStatusCode.Forbidden)
             val cartao = catalogo.porId(call.parameters["id"].orEmpty()) ?: throw ErroHttp(HttpStatusCode.NotFound)
+            // Cartão resolvido de módulo sensível: o registro mascara o achado, qualquer que seja a forma do caminho.
+            if (cartao.moduloSensivel != null) call.attributes.put(ROTA_SENSIVEL, true)
             if (cartao.meta.papeis.none { it in papeis }) throw ErroHttp(HttpStatusCode.Forbidden)
             if (!cartao.meta.temDrill) throw ErroHttp(HttpStatusCode.NotFound)
             // Cartão de módulo sensível: só com a trava do DPO aberta (depois do papel, para quem não vê o cartão não saber do módulo).

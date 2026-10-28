@@ -175,6 +175,41 @@ class IntegridadeRoutesTest {
     }
 
     @Test
+    fun caminhoCodificadoNaoContornaOAccessLog() = rodar { get ->
+        val pessoas = listOf("bruno", "ana", "carla")
+        val caminhos = listOf(
+            "/api/cartoes/IN%2D02/tasks?segmento=pessoa:bruno",
+            "/api/cartoes/%49N-02/tasks?segmento=pessoa:bruno",
+            "/api/cartoes/%49%4E%2D02/tasks?segmento=pessoa:bruno",
+            "/api/%69ntegridade?pessoa=bruno&sinal=FECHAMENTO_EM_LOTE",
+            "/api/%49NTEGRIDADE?pessoa=ana&sinal=FECHAMENTO_EM_LOTE",
+            "/api/integridade/%2e%2e/integridade?pessoa=carla&sinal=FECHAMENTO_EM_LOTE",
+            "/api//integridade?pessoa=bruno&sinal=FECHAMENTO_EM_LOTE",
+            "/api/integridade;x=1?pessoa=bruno&sinal=FECHAMENTO_EM_LOTE",
+            "/api/cartoes/IN%252D02/tasks?segmento=pessoa:bruno",
+            "/api/%252569ntegridade?pessoa=bruno&sinal=FECHAMENTO_EM_LOTE",
+            "/api/cartoes/in-02/tasks?segmento=pessoa:bruno",
+        )
+        for (c in caminhos) get(gerente, c)
+        val linhas = linhasDoAccessLog()
+        // Caminho que o roteador não casa (dupla codificação, `//`, `;x`) dá 404 sem passar pela rota: não é registrado, e também não vaza.
+        assertTrue(linhas.size in 4..caminhos.size, linhas.toString())
+        for ((_, rota, filtros) in linhas) {
+            val tudo = "$rota $filtros".lowercase()
+            for (p in pessoas) assertFalse(p in tudo, "pessoa no access_log: $p em $tudo")
+            assertFalse("fechamento_em_lote" in tudo || "total" in tudo, "sinal/contagem no access_log: $tudo")
+            assertFalse('%' in rota, "rota codificada no access_log: $rota")
+        }
+        // O roteador não trata a dupla codificação como outra rota: é 404, sem dado.
+        val dupla = get(gerente, "/api/cartoes/IN%252D02/tasks?segmento=pessoa:bruno")
+        assertEquals(HttpStatusCode.NotFound, dupla.status)
+        assertFalse("TG-" in dupla.corpo)
+        // A consulta de auditoria por /api/integridade acha os acessos de verdade a ela (nenhum some do rastro).
+        assertTrue(linhas.count { it.second == "/api/integridade" } >= 2, linhas.map { it.second }.toString())
+        assertTrue(linhas.count { it.second == "/api/cartoes/IN-02/tasks" } >= 2, linhas.map { it.second }.toString())
+    }
+
+    @Test
     fun chaveDeIssueEmMinusculasTambemNaoVaiParaOAccessLog() = rodar { get ->
         // Rota não sensível (Checklist × Review): a máscara vale para qualquer caixa (M7).
         get(gerente, "/api/cartoes/CR-01/tasks?segmento=${enc("tg-701")}")

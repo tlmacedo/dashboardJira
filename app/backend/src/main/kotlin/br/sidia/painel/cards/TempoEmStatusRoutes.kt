@@ -208,26 +208,64 @@ suspend fun registrarNegacaoSemPapel(auditoria: AccessLog, ctx: AppContext, call
  * Rota como vai para o `access_log`: o PADRÃO, sem a chave de issue do caminho (a auditoria guarda rota e quantidade,
  * nunca chaves). Hoje só o histórico da auditoria leva a chave no caminho.
  */
-internal fun rotaParaRegistro(caminho: String): String =
-    if (caminho.startsWith("/api/auditoria/historico/")) "/api/auditoria/historico/{key}" else caminho
+internal fun rotaParaRegistro(caminho: String): String {
+    val normal = normalizarCaminho(caminho)
+    return if (normal.startsWith("/api/auditoria/historico/", ignoreCase = true)) "/api/auditoria/historico/{key}" else normal
+}
+
+/**
+ * Caminho como o roteador o enxerga e como a auditoria deve guardá-lo: percent-decode repetido (até 3 vezes, para `%252D`),
+ * sem `;parametros`, sem barras duplas, `.` nem `..`. Um caminho codificado (`/api/%69ntegridade`) vira o mesmo texto do normal
+ * e nunca escapa da máscara nem do rastro de quem consultou. Caixa preservada (a comparação ignora caixa onde importa).
+ */
+internal fun normalizarCaminho(caminho: String): String {
+    var atual = caminho.substringBefore('?')
+    repeat(3) {
+        val decodificado = try {
+            java.net.URLDecoder.decode(atual.replace("+", "%2B"), Charsets.UTF_8)
+        } catch (e: IllegalArgumentException) {
+            return@repeat
+        }
+        if (decodificado == atual) return@repeat
+        atual = decodificado
+    }
+    val segmentos = ArrayDeque<String>()
+    for (bruto in atual.replace('\\', '/').split('/')) {
+        val s = bruto.substringBefore(';').filter { !it.isISOControl() }
+        when (s) {
+            "", "." -> Unit
+            ".." -> segmentos.removeLastOrNull()
+            else -> segmentos.addLast(s)
+        }
+    }
+    return "/" + segmentos.joinToString("/")
+}
+
+/** Posta pela rota que atende um módulo sensível, mesmo antes de o caminho dizer: o registro mascara o achado. */
+internal val ROTA_SENSIVEL = AttributeKey<Boolean>("painel.auditoria.sensivel")
 
 internal fun hoje(ctx: AppContext): LocalDate = LocalDate.now(ctx.clock.withZone(ctx.settings.zone))
 
 private fun filtrosAuditados(call: ApplicationCall): Map<String, String> {
-    val sensivel = rotaSensivel(call.request.path())
+    val sensivel = rotaSensivel(call.request.path()) || call.attributes.getOrNull(ROTA_SENSIVEL) == true
     return call.request.queryParameters.entries()
         .filter { it.key in FILTROS_AUDITADOS && !(sensivel && it.key in FILTROS_QUE_NOMEIAM_O_ACHADO) }
         .associate { it.key to valorAuditado(it.key, it.value.firstOrNull().orEmpty(), sensivel) }
 }
 
 /**
- * Rotas dos módulos sensíveis ([br.sidia.painel.lgpd.ModuloSensivel]): a Integridade e os cartões `IN-nn`. O `access_log` guarda
- * ali QUEM consultou o módulo, nunca o achado: sem id de pessoa, sem nome de sinal e sem contagem. Um módulo sensível novo
- * acrescenta o seu prefixo aqui.
+ * Rotas dos módulos sensíveis ([br.sidia.painel.lgpd.ModuloSensivel]) que HOJE passam pela `TravaDpo`: a Integridade e os
+ * cartões `IN-nn`. O `access_log` guarda ali QUEM consultou o módulo, nunca o achado: sem id de pessoa, sem nome de sinal e sem
+ * contagem. A decisão usa o caminho NORMALIZADO e sem diferenciar caixa, mais o atributo [ROTA_SENSIVEL] posto pela própria
+ * rota/cartão resolvido. A Auditoria (`ModuloSensivel.AUDITORIA`) NÃO está aqui nem passa pela `TravaDpo` ainda: é do Plano 11;
+ * um módulo novo que passe pela trava acrescenta o seu prefixo aqui.
  */
-private val PREFIXOS_SENSIVEIS = listOf("/api/integridade", "/api/cartoes/IN-")
+private val PREFIXOS_SENSIVEIS = listOf("/api/integridade", "/api/cartoes/in-")
 
-internal fun rotaSensivel(caminho: String): Boolean = PREFIXOS_SENSIVEIS.any { caminho.startsWith(it) }
+internal fun rotaSensivel(caminho: String): Boolean {
+    val normal = normalizarCaminho(caminho).lowercase(java.util.Locale.ROOT)
+    return PREFIXOS_SENSIVEIS.any { normal.startsWith(it) }
+}
 
 /** Filtros que, numa rota sensível, apontariam para a pessoa ou o sinal consultado: não são gravados. */
 private val FILTROS_QUE_NOMEIAM_O_ACHADO = setOf("pessoa", "sinal")

@@ -1,6 +1,7 @@
 package br.sidia.painel.integridade
 
 import br.sidia.painel.AppContext
+import br.sidia.painel.cards.ROTA_SENSIVEL
 import br.sidia.painel.cards.executarAuditado
 import br.sidia.painel.cards.hoje
 import br.sidia.painel.db.AccessLog
@@ -23,6 +24,7 @@ fun Route.rotasDeIntegridade(ctx: AppContext, auditoria: AccessLog) {
     val store = SqliteWorkStore(requireNotNull(ctx.dataSource))
 
     get("/api/integridade") {
+        call.attributes.put(ROTA_SENSIVEL, true)
         call.executarAuditado(auditoria, ctx) { principal ->
             exigirGerente(ctx, principal)
             TravaDpo(ctx.settings, ctx.dataSource).exigir(ModuloSensivel.INTEGRIDADE)
@@ -32,6 +34,7 @@ fun Route.rotasDeIntegridade(ctx: AppContext, auditoria: AccessLog) {
     }
 
     get("/api/integridade/catalogo") {
+        call.attributes.put(ROTA_SENSIVEL, true)
         call.executarAuditado(auditoria, ctx) { principal ->
             exigirGerente(ctx, principal)
             TravaDpo(ctx.settings, ctx.dataSource).exigir(ModuloSensivel.INTEGRIDADE)
