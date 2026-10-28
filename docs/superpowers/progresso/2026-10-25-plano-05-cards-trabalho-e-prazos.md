@@ -19,6 +19,19 @@ Ponto de partida (main `fa8493c`): backend 986 testes, frontend 143 (números do
 | 5 Abertas e Negligenciadas (domínio e API) | Concluída (backend 1066, 0 falhas) | `ca51f9f` | Cartões `AB-01/02/04 a 09` e `NG-01 a 06` no `catalogoPadrao()`; coluna e filtro de "último movimento real" (I-06) |
 | 4 Filtros, escopo, rota genérica de card e kit de tela | Concluída (backend 1039, frontend 156; 0 falhas) | `c05cd6e` | `FiltrosDeCard`, `Escopo`, `CardDeLeitura`/`CartaoDeLeitura`/`rotaDeCard` (adaptação ao 17a); `shared/{CardPage,Filtros,useCard}` |
 
+## Correções da revisão final do 5a
+
+- I1 corrigido: `Fluxo.exigirStatusMapeados` é a checagem comum de Fechadas e Metas (candidatas por vencimento + resolvidas); status fora do mapa numa candidata resolvida antes do período agora vira o aviso bloqueante nas duas telas (testes em `FechadasRoutesTest` e `ConsistenciaEntreTelasTest`).
+- M2 corrigido: `faixaDeIdade` com limite superior inclusivo (`<= 7`, `<= 14`, `<= 30`), com testes de borda.
+- M4 corrigido: `ContratoDeCartoesTest.cadaTelaDeTrabalhoTemParPositivoNaDemonstracao`. Ruling: a demonstração NÃO foi ampliada; FE e MT vinham zerados porque `config/status_map.exemplo.yaml` não mapeava `Cancelled` (status da fixture) e o aviso bloqueante zerava os cartões; o modelo agora mapeia `Cancelled: done`. Custo se errado: remover a linha e ampliar a demonstração.
+- Minor ADIADOS (registrados, sem correção neste PR):
+  - M1: a `V2` não é retroativa (issues já gravadas ficam com `priority` NULL até atualizar; `temCamposDeTrabalho` vira verdadeiro com UMA issue com prioridade e o aviso some; AB-06/MT-12 mostram "(sem)" inflado). Em banco novo não ocorre; a recarga completa do Plano 14b, Tarefa 7, é obrigatória se houver dados anteriores (registrado também em `docs/jira/checklist-primeira-conexao.md` e no plano 14).
+  - M3: a coluna "prazo" de FE-12 classifica também concluídas com vencimento fora do período; a linha pode divergir do numerador de FE-05.
+  - M5: squad inexistente dá 400 e squad de outro líder dá 200 vazio (permite enumerar nomes de squad).
+  - M6: issue com `updated` nulo nunca entra em NG-01, sem aviso.
+  - M7: a tabela por squad de Metas usa o squad da posse na resolução.
+  - M8: capturas visuais das telas pendentes (sem navegador no ambiente).
+
 ## Rulings
 
 - Ruling: na Tarefa 9 a TG-120 é resolvida às 03h UTC (não 03h30), porque o helper de fixtures `Trb1.t` só aceita hora cheia; o efeito (23h de 15/10 em Manaus) é o mesmo. Os testes de consistência e de compatibilidade com o legado passaram na primeira execução (conferem comportamento já implementado nas Tarefas 5 a 7); só os testes do documento falharam antes de escrevê-lo. A "mesma semana" de Tempo em status é checada pelo drill `TS-01` com a semana como período, pois aquele card não tem série semanal.

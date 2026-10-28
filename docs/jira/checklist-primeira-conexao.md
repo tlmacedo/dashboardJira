@@ -27,7 +27,7 @@ Lista **mínima e ordenada** das chamadas da primeira conexão. É um procedimen
 
 - **O que conferir:** casar cada campo de `app/config/jira_campos.exemplo.yaml` pelo nome com o `id` real (`customfield_NNNNN`), o `schema.type` e o nome exato. Procurar, em especial:
   - `OS Version`, `SKU Type`, `Checklist Type`, `Model Name`;
-  - os campos de trabalho dos cards (Plano 5): `Story Points`, `Epic Link` e `Flagged` (nomes e tipos "a confirmar"; sem o id certo o painel grava pontos, épico e flag como ausentes e os cards avisam, não mostram zero) e os nativos `priority`, `timeoriginalestimate`, `timeestimate`, `timespent` e `components`;
+  - os campos de trabalho dos cards (Plano 5): `Story Points`, `Epic Link` e `Flagged` (nomes e tipos "a confirmar"; sem o id certo o painel grava pontos, épico e flag como ausentes e os cards avisam, não mostram zero) e os nativos `priority`, `timeoriginalestimate`, `timeestimate`, `timespent` e `components`. **Atenção (migração `V2` não é retroativa):** se o banco já tiver issues gravadas antes do bloco 5a, elas ficam com esses campos nulos até serem atualizadas, o aviso de campos indisponíveis some com UMA issue com prioridade e AB-06/MT-12 mostram "(sem)" inflado; faça a recarga completa (Plano 14b, Tarefa 7). Em banco novo a carga inicial não tem o problema;
   - em `status_map.yaml`, conferir `ordem` (sequência do fluxo, base da "devolvida") e `resolucoesNegativas` (por exemplo `Won't Do`, `Duplicate`) contra os status e as resoluções reais do Jira;
   - `cf[12416]` (`customfield_12416`) e `cf[11412]` (`customfield_11412`): registrar nome e tipo, pois nenhum dos dois consta do bscbi-web;
   - nomes duplicados, que tornariam o JQL por nome ambíguo.
