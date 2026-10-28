@@ -280,5 +280,17 @@
   "card.sy02.oQueMostra": "As últimas execuções do sincronizador em cada instância, com contagens e resultado.",
   "card.sy02.comoCalcula": "Lido do registro de execuções do banco local (até 10 por instância): tipo, status, início, fim, issues, eventos, requisições e código de erro.",
   "card.sy03.oQueMostra": "A última limpeza local de dados antigos.",
-  "card.sy03.comoCalcula": "Lido do registro de execuções do tipo retenção. A limpeza apaga só dados locais e não fala com o Jira."
+  "card.sy03.comoCalcula": "Lido do registro de execuções do tipo retenção. A limpeza apaga só dados locais e não fala com o Jira.",
+  "card.au01.titulo": "Sinais para conferir",
+  "card.au01.oQueMostra": "Quantas alterações de vencimento, responsável e labels de atraso merecem conferência no período. É indício, não prova.",
+  "card.au01.comoCalcula": "Cada alteração do histórico (changelog) é comparada com quem podia fazê-la na data civil de Manaus: o Reporter, a coordenação, o gerente ou o Squad Leader do responsável, com os papéis vigentes naquele dia. Conta os sinais do período depois dos filtros; abrir o cartão lista as tasks por trás.",
+  "card.au02.titulo": "Sinais por tipo",
+  "card.au02.oQueMostra": "A contagem de sinais de cada tipo (vencimento, troca de responsável, passa-bola, labels de atraso, cancelamento), na ordem do catálogo. Não há contagem por pessoa.",
+  "card.au02.comoCalcula": "Mesmo universo do cartão Sinais para conferir, separado por tipo de sinal. Limites e gravidades (dias, trocas) vêm do arquivo auditoria.yaml.",
+  "card.au03.titulo": "No prazo e no prazo ajustado",
+  "card.au03.oQueMostra": "Das tasks concluídas com vencimento no período, quantas saíram até o vencimento (no prazo) e quantas contando também as que têm label que justifica o atraso (no prazo ajustado).",
+  "card.au03.comoCalcula": "Concluída = categoria concluído e resolução preenchida. No prazo: dia da resolução (fuso de Manaus) até o vencimento. Ajustado: no prazo ou com label de atraso justificado (labels_atraso.yaml). Label sob auditoria continua contando e aparece no contador à parte.",
+  "card.dv01.titulo": "Divergência Task × Review",
+  "card.dv01.oQueMostra": "Pares de task e Review com vencimentos diferentes.",
+  "card.dv01.comoCalcula": "Par = task e Review ligadas pelo link de issue Blocks / is blocked by, nas duas direções (o campo parent não conta). Divergente: vencimentos diferentes, ou só um deles preenchido. Percentual = divergentes ÷ pares."
 }

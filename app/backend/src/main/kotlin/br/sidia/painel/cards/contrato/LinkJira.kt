@@ -2,7 +2,9 @@ package br.sidia.painel.cards.contrato
 
 import br.sidia.painel.config.Settings
 import br.sidia.painel.jql.FieldDictionary
+import br.sidia.painel.jql.InvalidJqlValueException
 import br.sidia.painel.jql.JqlBuilder
+import br.sidia.painel.jql.JqlValues
 import java.net.URI
 import java.net.URISyntaxException
 import java.net.URLEncoder
@@ -31,6 +33,22 @@ object LinkJira {
             return null
         }
         return "$base/issues/?jql=${URLEncoder.encode(jql, Charsets.UTF_8).replace("+", "%20")}"
+    }
+
+    /**
+     * Link direto para UMA issue (`<base>/browse/CHAVE`), com as mesmas condições de [paraChaves]: só com a flag ligada,
+     * instância configurada, https e base sem credencial, consulta ou fragmento. A chave passa por `JqlValues.issueKey`
+     * (formato fora do padrão: nenhum link). Texto de URL apenas: nada é pedido ao Jira.
+     */
+    fun paraIssue(settings: Settings, instancia: String?, chave: String): String? {
+        if (!settings.jiraLiveEnabled || instancia == null) return null
+        val base = settings.jiraInstances[instancia]?.baseUrl?.let(::baseSegura) ?: return null
+        val valida = try {
+            JqlValues.issueKey(chave)
+        } catch (e: InvalidJqlValueException) {
+            return null
+        }
+        return "$base/browse/$valida"
     }
 
     /** `https://host[:porta][/contexto]` sem barra final; nulo se não for https, tiver credencial, consulta ou fragmento. */

@@ -64,7 +64,7 @@ private const val MAX_FILTRO = 100
 private const val ID_DEV = "dev"
 
 /** Única lista de filtros que vai para a auditoria: o que não está aqui nunca é gravado. */
-private val FILTROS_AUDITADOS = setOf("squad", "pessoa", "tipo", "os", "de", "ate", "unit", "semOutliers", "segmento")
+private val FILTROS_AUDITADOS = setOf("squad", "pessoa", "tipo", "os", "de", "ate", "unit", "semOutliers", "segmento", "sinal", "resultado")
 
 private val FORMATO_USERNAME = Regex("[a-z0-9._-]{1,64}")
 
@@ -252,13 +252,13 @@ internal suspend inline fun <reified T : Any> ApplicationCall.executar(
 
 // ---- Leitura e validação dos parâmetros ----
 
-private fun texto(params: Parameters, nome: String): String? {
+internal fun texto(params: Parameters, nome: String): String? {
     val valor = params[nome]?.trim()?.takeIf { it.isNotEmpty() } ?: return null
     if (valor.length > MAX_FILTRO || valor.any { it.isISOControl() }) throw ErroHttp(HttpStatusCode.BadRequest)
     return valor
 }
 
-private fun data(params: Parameters, nome: String): LocalDate? =
+internal fun data(params: Parameters, nome: String): LocalDate? =
     texto(params, nome)?.let {
         val d = try {
             LocalDate.parse(it)
@@ -297,7 +297,7 @@ internal fun lerFiltros(params: Parameters, hoje: LocalDate): Filtros {
     )
 }
 
-private fun usernameValido(bruto: String): String {
+internal fun usernameValido(bruto: String): String {
     val id = try {
         normalizarUsername(bruto)
     } catch (e: IllegalArgumentException) {

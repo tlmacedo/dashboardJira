@@ -1,5 +1,6 @@
 package br.sidia.painel
 
+import br.sidia.painel.auditoria.rotasDeAuditoria
 import br.sidia.painel.cards.contrato.CatalogoDeCartoes
 import br.sidia.painel.cards.contrato.catalogoPadrao
 import br.sidia.painel.cards.contrato.rotasDeDrillGenerico
@@ -151,6 +152,7 @@ fun Application.module(
             rotasTempoEmStatus(context, SqliteIssueStore(ds), AccessLog(ds))
             rotasDoCatalogo(context, catalogo, AccessLog(ds))
             rotasDeDrillGenerico(context, catalogo, SqliteIssueStore(ds), AccessLog(ds))
+            rotasDeAuditoria(context, AccessLog(ds))
             rotasSyncStatus(context, SqliteSyncStateStore(ds), AccessLog(ds))
         }
         get("/api/health") { call.respond(HealthResposta(ok = true)) }
