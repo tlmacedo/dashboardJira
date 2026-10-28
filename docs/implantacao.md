@@ -99,6 +99,7 @@ Em produção o painel só sobe com o login configurado. Qualquer provedor OpenI
 | `OIDC_CLIENT_SECRET` | Opcional (cliente público com PKCE); nunca vai para log nem para a tela |
 | `OIDC_REDIRECT_URI` | Endereço público do painel terminado em `/auth/callback` (por exemplo `https://painel.exemplo.invalid/auth/callback`, com o endereço real), exatamente como cadastrada no provedor |
 | `OIDC_CLAIM_USERNAME` | Claim do `id_token` com o username do Jira (padrão `preferred_username`); a escolha é da implantação |
+| `OIDC_HOSTS_PERMITIDOS` | Opcional: hosts aceitos nos endereços da descoberta (`authorization_endpoint`, `token_endpoint`, `jwks_uri`), separados por vírgula, só o nome do host. Com a lista, qualquer endereço fora dela é recusado; sem a lista, são recusados IP literal, `localhost`, `*.local` e rede interna. O erro cita só o código `DESCOBERTA_ENDPOINT_NAO_PERMITIDO`, nunca o valor |
 | `SESSION_SECRET` | Segredo que assina o cookie de sessão: base64, no mínimo 32 bytes (veja `docs/operacao/rotacao-de-segredos.md`) |
 
 - Ausente **ou em branco**, qualquer uma das quatro obrigatórias derruba a subida; a mensagem cita só o nome da variável.

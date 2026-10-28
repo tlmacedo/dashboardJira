@@ -108,6 +108,8 @@ internal class ProvedorOidc(
     private fun JsonObject.url(nome: String, codigo: String): String {
         val valor = (this[nome] as? JsonPrimitive)?.takeIf { it.isString }?.content
         if (valor == null || !valor.startsWith("https://")) throw FalhaNoProvedor(codigo)
+        // O valor nunca vai para a mensagem: só o código.
+        if (!OidcSettings.endpointPermitido(valor, cfg.hostsPermitidos)) throw FalhaNoProvedor("DESCOBERTA_ENDPOINT_NAO_PERMITIDO")
         return valor
     }
 
