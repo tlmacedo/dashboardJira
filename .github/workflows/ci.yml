@@ -75,6 +75,9 @@ jobs:
       - name: Build
         working-directory: app/frontend
         run: pnpm build
+      - name: Build compatível com a CSP
+        working-directory: app/frontend
+        run: node scripts/verificar-csp.mjs
 
   guarda:
     name: guarda

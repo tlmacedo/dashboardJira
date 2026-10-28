@@ -35,7 +35,7 @@ fun Route.spaEstatica(raiz: Path) {
             call.respond(HttpStatusCode.NotFound)
             return@get
         }
-        call.response.header("X-Content-Type-Options", "nosniff")
+        // O `X-Content-Type-Options: nosniff` é escrito em toda resposta por cabecalhosDeSeguranca.
         val arquivo = resolverDentro(raizAbsoluta, segmentos)
         when {
             arquivo != null -> {

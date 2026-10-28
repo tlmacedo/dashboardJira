@@ -6,6 +6,7 @@ import br.sidia.painel.config.ArquivoEnv
 import br.sidia.painel.config.Settings
 import br.sidia.painel.db.AccessLog
 import br.sidia.painel.demo.prepararDemonstracao
+import br.sidia.painel.http.cabecalhosDeSeguranca
 import br.sidia.painel.security.Authenticator
 import br.sidia.painel.security.DevAuthenticator
 import br.sidia.painel.security.OidcAuthenticator
@@ -102,6 +103,8 @@ fun Application.module(
     }
     monitor.subscribe(ApplicationStopping) { runBlocking { agendador?.parar() } }
     install(ContentNegotiation) { json() }
+    // CSP e demais cabeçalhos de segurança em toda resposta (ver CabecalhosDeSeguranca.kt).
+    install(cabecalhosDeSeguranca(settings.dashboardDevMode))
     // Sem banco (só em testes) não há auditoria nem rotas de dados.
     val auditoria = context.dataSource?.let { AccessLog(it) }
     installAccessControl(settings, authenticator, aoNegarSemPapel = { call, principal ->

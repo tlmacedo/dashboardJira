@@ -102,8 +102,8 @@ class SpaTest {
         val asset = client.get("/assets/app.js")
         assertEquals("public, max-age=31536000, immutable", asset.headers[HttpHeaders.CacheControl])
         assertEquals("nosniff", asset.headers["X-Content-Type-Options"])
-        // A API não ganha cache de arquivo estático.
-        assertNull(client.get("/api/health").headers[HttpHeaders.CacheControl])
+        // A API não ganha cache de arquivo estático: leva no-store (cabeçalhos de segurança).
+        assertEquals("no-store", client.get("/api/health").headers[HttpHeaders.CacheControl])
     }
 
     @Test

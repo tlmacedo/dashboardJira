@@ -157,6 +157,15 @@ class CiWorkflowTest {
     }
 
     @Test
+    fun frontendVerificaCsp() {
+        val cmds = comandos("frontend")
+        val build = cmds.indexOfFirst { it.contains("pnpm build") }
+        val csp = cmds.indexOfFirst { it.contains("node scripts/verificar-csp.mjs") }
+        assertTrue(csp >= 0, "O job frontend precisa rodar verificar-csp.mjs")
+        assertTrue(csp > build, "A verificação de CSP vem depois do build")
+    }
+
+    @Test
     fun guardaRodaOsDoisTestesDeHook() {
         val cmds = comandos("guarda").joinToString("\n")
         assertTrue(cmds.contains("sh .claude/hooks/test-guard.sh"))
