@@ -99,6 +99,6 @@ object MascaraDeLog {
             "(?i)((?:[A-Za-z0-9_.-]{0,$PREFIXO_MAXIMO}(?:password|senha|secret|token|apikey|api_key)|\\bpat)[\"']?\\s*[=:]\\s*[\"']?)[^\\s\"'&,;]+",
         ) to { m -> m.groupValues[1] + "***" },
         // `//usuario:senha@host` (tudo até o último `@` do trecho vira credencial: seguro por excesso)
-        Regex("(?<=://)[^\\s]*@") to { _ -> "***@" },
+        Regex("(?<=://)[^\\s]{0,1024}@") to { _ -> "***@" },
     )
 }
