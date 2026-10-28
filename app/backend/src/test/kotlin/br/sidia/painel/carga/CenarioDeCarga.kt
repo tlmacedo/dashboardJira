@@ -86,9 +86,10 @@ abstract class CenarioDeCarga(
          * Telas do catálogo que não têm `/api/cards/<tela>` (Fase 7, bloco 7b) e as rotas próprias delas, medidas no lugar. O líder
          * de squad recebe 403 onde a rota é da coordenação (aceito pelo teste).
          */
-        val TELAS_COM_ROTA_PROPRIA = setOf("distribuicao", "rebalanceamento", "decisoes", "registroAcesso", "configuracao", "central")
+        val TELAS_COM_ROTA_PROPRIA = setOf("distribuicao", "rebalanceamento", "decisoes", "registroAcesso", "configuracao", "central", "meu")
         val ROTAS_PROPRIAS = listOf(
             "/api/distribuicao", "/api/rebalanceamento", "/api/governanca/decisoes", "/api/governanca/acessos", "/api/governanca/configuracao",
+            "/api/squad", "/api/meu-painel",
         )
     }
 

@@ -1983,5 +1983,20 @@
   "card.vg12.comoCalcula": "Average occupancy (4-week demand divided by capacity) of the squad members who have capacity. Green up to 85%, orange up to 110%, red above.",
   "card.vg13.titulo": "People with a high indication",
   "card.vg13.oQueMostra": "The integrity evidence of people with a high indication. It is an indication to check, never proof. Only the manager sees it, and only with the DPO lock open.",
-  "card.vg13.comoCalcula": "It is the number of the high indication card of Integrity; the query is recorded in the access log."
+  "card.vg13.comoCalcula": "It is the number of the high indication card of Integrity; the query is recorded in the access log.",
+  "card.mp01.titulo": "My open tasks",
+  "card.mp01.oQueMostra": "How many open tasks are with you and how many of them are due in the next 7 days. Each number opens your tasks.",
+  "card.mp01.comoCalcula": "They are the numbers of the Load per person (queue) and Due this week (7 days) cards for you. A Squad Leader sees the panel of a person in their own squad.",
+  "card.mp02.titulo": "My occupancy over 4 weeks",
+  "card.mp02.oQueMostra": "How much of your capacity over the next 4 weeks your queue takes, after absences and holidays.",
+  "card.mp02.comoCalcula": "Hours in your queue divided by your net capacity over 4 weeks. Green up to 85%, orange up to 110%, red above. It is a planning indicator, not a grade.",
+  "card.mp03.titulo": "At risk",
+  "card.mp03.oQueMostra": "How many of your open tasks are at medium or high risk by the explainable score. It opens those tasks.",
+  "card.mp03.comoCalcula": "It is the at-risk task count of the Risks card for you, with the limits of risco.yaml (from 30 points).",
+  "card.mp04.titulo": "My upcoming absences",
+  "card.mp04.oQueMostra": "The absence periods registered for you from today on. The dashboard neither stores nor shows the reason.",
+  "card.mp04.comoCalcula": "Reads the absences in ausencias.yaml that end today or later. Read-only: the manager edits it.",
+  "card.mp05.titulo": "My queue",
+  "card.mp05.oQueMostra": "Your open tasks in the order the schedule would run them, with the finish date predicted by your capacity and a warning when they pass the due date.",
+  "card.mp05.comoCalcula": "Started ones first; then priority, due date and creation. The finish consumes your net capacity day by day, with absences and holidays."
 }

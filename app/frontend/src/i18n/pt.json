@@ -1983,5 +1983,20 @@
   "card.vg12.comoCalcula": "Média da ocupação (demanda de 4 semanas dividida pela capacidade) das pessoas do squad que têm capacidade. Verde até 85%, laranja até 110%, vermelho acima.",
   "card.vg13.titulo": "Pessoas com indício alto",
   "card.vg13.oQueMostra": "As evidências de integridade das pessoas com indício alto. É um indício para conferir, nunca uma prova. Só o gerente vê, e só com a trava do DPO aberta.",
-  "card.vg13.comoCalcula": "É o número do cartão de indício alto da Integridade; a consulta fica registrada no registro de acesso."
+  "card.vg13.comoCalcula": "É o número do cartão de indício alto da Integridade; a consulta fica registrada no registro de acesso.",
+  "card.mp01.titulo": "Minhas abertas",
+  "card.mp01.oQueMostra": "Quantas tasks abertas estão com você e quantas delas vencem nos próximos 7 dias. Cada número abre as suas tasks.",
+  "card.mp01.comoCalcula": "São os números dos cards Carga por pessoa (fila) e Vencimentos da semana (7 dias) para você. O Squad Leader vê o painel de uma pessoa do próprio squad.",
+  "card.mp02.titulo": "Minha ocupação em 4 semanas",
+  "card.mp02.oQueMostra": "Quanto da sua capacidade das próximas 4 semanas a sua fila ocupa, já descontadas ausências e feriados.",
+  "card.mp02.comoCalcula": "Horas da sua fila divididas pela sua capacidade líquida em 4 semanas. Verde até 85%, laranja até 110%, vermelho acima. É um indicador de planejamento, não uma nota.",
+  "card.mp03.titulo": "Em risco",
+  "card.mp03.oQueMostra": "Quantas das suas tasks abertas estão em risco médio ou alto pelo score explicável. Abre essas tasks.",
+  "card.mp03.comoCalcula": "É o número de tasks em risco do card Riscos para você, com os limites de risco.yaml (a partir de 30 pontos).",
+  "card.mp04.titulo": "Minhas ausências futuras",
+  "card.mp04.oQueMostra": "Os períodos de ausência cadastrados para você a partir de hoje. O painel não guarda nem mostra o motivo.",
+  "card.mp04.comoCalcula": "Lê as ausências de ausencias.yaml cujo fim é hoje ou depois. É só leitura: quem edita é o gestor.",
+  "card.mp05.titulo": "Minha fila",
+  "card.mp05.oQueMostra": "Suas tasks abertas na ordem em que a agenda as executaria, com o término previsto pela sua capacidade e o aviso de quando passam do vencimento.",
+  "card.mp05.comoCalcula": "As já iniciadas primeiro; depois prioridade, vencimento e criação. O término consome a sua capacidade líquida dia a dia, com ausências e feriados."
 }
