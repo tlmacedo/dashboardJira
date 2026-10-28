@@ -94,6 +94,18 @@ class VerificadorDeRestauracaoTest {
     }
 
     @Test
+    fun copiaAlteradaDetectadaMesmoSemOBancoVivo() {
+        val o = origem()
+        val copia = o.fazerBackup()
+        // desastre: sem banco vivo não há backup_run; o .sha256 ao lado da cópia ainda confere
+        val bytes = Files.readAllBytes(copia)
+        bytes[bytes.size / 2] = (bytes[bytes.size / 2] + 1).toByte()
+        Files.write(copia, bytes)
+        val r = VerificadorDeRestauracao(SemRegistroDeBackup, null, o.relogio).verificar(copia)
+        assertEquals("COPIA_ALTERADA", r.codigoErro)
+    }
+
+    @Test
     fun copiaTruncadaFalha() {
         val o = origem()
         val copia = o.fazerBackup()

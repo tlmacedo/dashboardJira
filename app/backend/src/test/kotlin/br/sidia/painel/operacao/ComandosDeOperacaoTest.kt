@@ -115,7 +115,7 @@ class ComandosDeOperacaoTest {
         val linha = saida.single()
         assertTrue(Regex("^BACKUP OK painel-\\d{4}-\\d{2}-\\d{2}-\\d{6}\\.db \\d+$").matches(linha), linha)
         assertFalse(copias.toString() in linha, "a saída não mostra o caminho")
-        assertEquals(1, copias.listDirectoryEntries().size)
+        assertEquals(1, copias.listDirectoryEntries("*.db").size)
     }
 
     @Test
@@ -127,7 +127,7 @@ class ComandosDeOperacaoTest {
         try {
             val (codigo, saida) = executar(listOf("backup-agora"), dev + mapOf("DATABASE_PATH" to banco.toString(), "BACKUP_DIR" to copias.toString()))
             assertEquals(0, codigo, saida.toString())
-            assertEquals(1, copias.listDirectoryEntries().size)
+            assertEquals(1, copias.listDirectoryEntries("*.db").size)
         } finally {
             trava.close()
         }
@@ -154,7 +154,7 @@ class ComandosDeOperacaoTest {
         val copias = nova()
         val env = dev + mapOf("DATABASE_PATH" to banco.toString(), "BACKUP_DIR" to copias.toString())
         executar(listOf("backup-agora"), env)
-        val copia = copias.listDirectoryEntries().single()
+        val copia = copias.listDirectoryEntries("*.db").single()
         // recuperação de desastre: o banco vivo foi para a quarentena
         val semBanco = dev + ("DATABASE_PATH" to nova().resolve("nao-existe.db").toString())
         val (codigo, saida) = executar(listOf("verificar-restauracao", copia.toString()), semBanco)

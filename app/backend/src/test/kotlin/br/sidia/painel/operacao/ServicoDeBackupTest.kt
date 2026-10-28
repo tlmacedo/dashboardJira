@@ -83,7 +83,7 @@ class ServicoDeBackupTest {
             c.createStatement().executeQuery("SELECT count(*) FROM issue").use { it.next(); it.getInt(1) }
         }
 
-    private fun nomes(dir: Path) = dir.listDirectoryEntries().map { it.fileName.toString() }.sorted()
+    private fun nomes(dir: Path) = dir.listDirectoryEntries().map { it.fileName.toString() }.filterNot { it.endsWith(".sha256") }.sorted()
 
     @Test
     fun copiaLegivelEIgualAoOriginal() {
@@ -138,6 +138,30 @@ class ServicoDeBackupTest {
         val r = assertIs<ResultadoDoBackup.Ok>(servico(c).executar())
         assumeTrue(Files.getFileStore(r.arquivo).supportsFileAttributeView("posix"), "sem POSIX neste sistema")
         assertEquals(PosixFilePermissions.fromString("rw-------"), Files.getPosixFilePermissions(r.arquivo))
+    }
+
+    @Test
+    fun parcialNasceComPermissaoRestrita() {
+        val c = cenario()
+        var permissoes: Set<java.nio.file.attribute.PosixFilePermission>? = null
+        servico(c, aposCopiar = { p ->
+            permissoes = runCatching { Files.getPosixFilePermissions(p) }.getOrNull()
+        }).executar()
+        assumeTrue(permissoes != null, "sem POSIX neste sistema")
+        assertEquals(PosixFilePermissions.fromString("rw-------"), permissoes, "o .parcial já nasce 600, não só a cópia final")
+    }
+
+    @Test
+    fun sha256FicaAoLadoDaCopiaEAcompanhaARetencao() {
+        val c = cenario()
+        val r = assertIs<ResultadoDoBackup.Ok>(servico(c).executar())
+        val lado = r.arquivo.resolveSibling(r.arquivo.fileName.toString() + ".sha256")
+        assertEquals("${r.sha256}  ${r.arquivo.fileName}\n", Files.readString(lado))
+        // retenção 1: ao sair a cópia antiga, sai o .sha256 dela
+        c.relogio.avancar(java.time.Duration.ofDays(1))
+        val segunda = assertIs<ResultadoDoBackup.Ok>(servico(c, retencao = 1).executar())
+        assertFalse(Files.exists(r.arquivo) || Files.exists(lado))
+        assertTrue(Files.exists(segunda.arquivo.resolveSibling(segunda.arquivo.fileName.toString() + ".sha256")))
     }
 
     @Test

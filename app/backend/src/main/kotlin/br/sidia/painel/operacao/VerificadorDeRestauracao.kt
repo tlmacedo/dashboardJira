@@ -68,7 +68,12 @@ class VerificadorDeRestauracao(
     private fun conferir(backup: Path): ResultadoDaVerificacao {
         if (!Files.isRegularFile(backup)) return falha("ERRO_INTERNO")
         // 1. O arquivo é o mesmo que foi registrado?
+        // Do registro (backup_run) ou, sem banco vivo, do .sha256 ao lado da cópia ("<sha>  <nome>").
         val registrado = runs.porArquivo(backup.fileName.toString())?.sha256
+            ?: runCatching {
+                Files.readString(backup.resolveSibling(backup.fileName.toString() + ".sha256")).trim().substringBefore(' ')
+                    .takeIf { it.length == 64 }
+            }.getOrNull()
         if (registrado != null && sha256(backup) != registrado) return falha("COPIA_ALTERADA")
 
         // 2. Restaura num temporário, sem migrar.

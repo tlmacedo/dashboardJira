@@ -94,6 +94,13 @@ class ServicoDeBackup(
         if (Files.exists(destino)) return Falha("COPIA_FALHOU") // já existe uma cópia deste mesmo segundo
         Files.deleteIfExists(temp)
         aoCriarParcial(temp)
+        // O arquivo nasce com permissão restrita (600 onde há POSIX): o VACUUM INTO escreve num arquivo vazio já existente,
+        // então o conteúdo nunca fica legível por outros nem por um instante.
+        try {
+            Files.createFile(temp, PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString("rw-------")))
+        } catch (e: UnsupportedOperationException) {
+            Files.createFile(temp) // Windows: a proteção é da pasta (icacls)
+        }
 
         try {
             ds.connection.use { c ->
@@ -117,6 +124,8 @@ class ServicoDeBackup(
         } catch (e: UnsupportedOperationException) {
             // Windows: a proteção é da pasta (icacls), documentada no runbook.
         }
+        // O SHA-256 também fica ao lado da cópia: com o banco vivo perdido (desastre) ainda há como conferi-la.
+        escreverSha256(dir.resolve("$nome.sha256"), "$sha  $nome\n")
         Files.move(temp, destino, StandardCopyOption.ATOMIC_MOVE)
         log.info("Backup OK ({} bytes) {}", Files.size(destino), nome)
         return ResultadoDoBackup.Ok(destino, Files.size(destino), sha)
@@ -174,7 +183,18 @@ class ServicoDeBackup(
         for (nome in copias.drop(cfg.retencaoCopias)) {
             if (nome == ultimoOk) continue
             Files.deleteIfExists(dir.resolve(nome))
+            Files.deleteIfExists(dir.resolve("$nome.sha256"))
         }
+    }
+
+    private fun escreverSha256(arquivo: Path, texto: String) {
+        Files.deleteIfExists(arquivo)
+        try {
+            Files.createFile(arquivo, PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString("rw-------")))
+        } catch (e: UnsupportedOperationException) {
+            Files.createFile(arquivo)
+        }
+        Files.writeString(arquivo, texto)
     }
 
     private fun tamanho(arquivo: Path): Long = if (Files.exists(arquivo)) Files.size(arquivo) else 0

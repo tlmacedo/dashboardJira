@@ -75,20 +75,20 @@ class AgendadorDeBackupTest {
         val relogio = RelogioDeTeste(Instant.parse("2026-10-30T05:00:00Z"))
         val agendador = requireNotNull(montarAgendador(ctx, relogio, metricas = null))
         agendador.ciclo()
-        assertEquals(emptyList(), dir.listDirectoryEntries(), "antes de 02:00 não faz backup")
+        assertEquals(emptyList(), dir.listDirectoryEntries("*.db"), "antes de 02:00 não faz backup")
 
         relogio.avancar(Duration.ofHours(1)) // 02:00 em Manaus
         agendador.ciclo()
-        val copias = dir.listDirectoryEntries().map { it.fileName.toString() }
+        val copias = dir.listDirectoryEntries("*.db").map { it.fileName.toString() }
         assertEquals(listOf("painel-2026-10-30-020000.db"), copias)
 
         relogio.avancar(Duration.ofHours(3)) // 05:00 do mesmo dia: já feito, não repete
         agendador.ciclo()
-        assertEquals(1, dir.listDirectoryEntries().size)
+        assertEquals(1, dir.listDirectoryEntries("*.db").size)
 
         relogio.avancar(Duration.ofHours(24)) // dia seguinte, depois da hora
         agendador.ciclo()
-        assertEquals(2, dir.listDirectoryEntries().size)
+        assertEquals(2, dir.listDirectoryEntries("*.db").size)
     }
 
     @Test
