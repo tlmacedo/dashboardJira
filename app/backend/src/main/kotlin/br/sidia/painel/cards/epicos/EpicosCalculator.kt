@@ -10,7 +10,6 @@ import br.sidia.painel.trabalho.Fluxo
 import br.sidia.painel.trabalho.IssueSnapshot
 import br.sidia.painel.trabalho.MonteCarlo
 import br.sidia.painel.trabalho.SerieSemanal
-import java.security.MessageDigest
 import java.time.Instant
 import java.util.Locale
 import kotlin.random.Random
@@ -31,12 +30,6 @@ class EpicosCalculator(
 ) {
     private val review = tiposReview.map { it.trim().lowercase(Locale.ROOT) }.toSet()
 
-    companion object {
-        /** Código curto e estável do épico para os segmentos do drill (a chave do épico não vai para o `access_log`). */
-        fun idDoEpico(chave: String): String =
-            MessageDigest.getInstance("SHA-256").digest(chave.toByteArray(Charsets.UTF_8)).take(6).joinToString("") { "%02x".format(it) }
-    }
-
     /** [todas]: as tasks do escopo, abertas e resolvidas de qualquer data. [semente]: `sementeDoDia(...)`. */
     fun analisar(todas: List<IssueSnapshot>, agora: Instant, semente: Long): EpicosAnalise {
         val hoje = cal.localDate(agora)
@@ -52,8 +45,9 @@ class EpicosCalculator(
 
         val linhas = itens.groupBy { requireNotNull(it.epicKey) }.entries
             .sortedWith(compareBy(ORDEM_NATURAL_DE_CHAVES) { it.key })
-            .map { (epico, lista) ->
-                val id = idDoEpico(epico)
+            .mapIndexed { posicao, (epico, lista) ->
+                // Id POSICIONAL (1, 2, 3...) na ordem natural das chaves: nada derivado da chave vai para o `access_log`.
+                val id = (posicao + 1).toString()
                 val concluidos = lista.filter { Fluxo.concluidaPositiva(it, map) }
                 val abertos = lista.filter { it.resolved == null && map.category(it.status) != StatusCategory.DONE }
                 val vencidos = abertos.filter { it.duedate?.isBefore(hoje) == true }

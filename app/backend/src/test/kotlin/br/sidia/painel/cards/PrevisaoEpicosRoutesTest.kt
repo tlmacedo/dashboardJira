@@ -162,6 +162,31 @@ class PrevisaoEpicosRoutesTest {
             }
         }
         assertTrue(registros.isNotEmpty() && registros.none { "TG-900" in it }, registros.toString())
+        assertTrue(registros.any { "epico:1:itens" in it }, registros.toString())
+        // Enumera o espaço de chaves: nenhum valor gravado reproduz a chave nem um hash dela (sha-256 em hex, prefixos de 12 a 16).
+        val gravado = registros.joinToString("\n")
+        val sha = java.security.MessageDigest.getInstance("SHA-256")
+        for (n in 1..3000) {
+            val chave = "TG-$n"
+            assertTrue(chave !in gravado.replace("TG-900x", ""), "o registro contém $chave")
+            val hex = sha.digest(chave.toByteArray()).joinToString("") { "%02x".format(it) }
+            assertTrue(hex.take(12) !in gravado, "o registro contém um hash de $chave")
+        }
+    }
+
+    @Test
+    fun indiceDeEpicoForaDoIntervaloDa400ComCodigoEMesmaOrdemDoCard() = rodar(comEpico() + Trb1.issue("TG-705", "Checklist", "ana", "10-01T12", "Open", epico = "TG-100")) { get ->
+        val d = epicos(get("gerente.exemplo", "/api/cards/epicos"))
+        assertEquals(listOf("TG-100", "TG-900"), d.linhas.map { it.epico })
+        assertEquals(listOf("1", "2"), d.linhas.map { it.id })
+        // O drill usa a mesma ordem do card: o 1 é o TG-100 (1 task), o 2 é o TG-900 (3 itens).
+        assertEquals(1, gaveta(get("gerente.exemplo", "/api/cartoes/EP-01/tasks?segmento=${enc("epico:1:itens")}")).total)
+        assertEquals(3, gaveta(get("gerente.exemplo", "/api/cartoes/EP-01/tasks?segmento=${enc("epico:2:itens")}")).total)
+        for (ruim in listOf("epico:3:itens", "epico:0:itens", "epico:-1:itens", "epico:abc:itens")) {
+            val r = get("gerente.exemplo", "/api/cartoes/EP-01/tasks?segmento=${enc(ruim)}")
+            assertEquals(HttpStatusCode.BadRequest, r.status, ruim)
+            assertTrue("SEGMENTO_INVALIDO" in r.corpo, r.corpo)
+        }
     }
 
     @Test

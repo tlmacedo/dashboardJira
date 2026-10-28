@@ -5,7 +5,7 @@ import kotlinx.serialization.Serializable
 
 /**
  * Resposta do card Épicos (EP-01). Segmentos do drill: `epico:<id>:itens`, `epico:<id>:concluidos` e
- * `epico:<id>:vencidos`, em que `<id>` é o [LinhaEpicoDto.id] (um código derivado da chave do épico, para a chave nunca
+ * `epico:<id>:vencidos`, em que `<id>` é o [LinhaEpicoDto.id] (a POSIÇÃO do épico na lista ordenada por chave, sem nada derivado da chave, para a chave nunca
  * ir para o `access_log`). Itens = tasks do épico (sem os tipos de review e sem as canceladas); [minItens] é o mínimo de
  * entregas do PRÓPRIO épico no histórico para ele ter previsão.
  */

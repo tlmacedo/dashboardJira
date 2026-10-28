@@ -115,15 +115,18 @@ class EpicosCalculatorTest {
     }
 
     @Test
-    fun linhasEmOrdemDeChaveEIdOpacoDaChave() {
-        Trb1.carregar(ds, listOf(aberta("TG-994", "TG-910"), aberta("TG-995", "TG-902"), aberta("TG-996", "TG-910")))
+    fun linhasEmOrdemDeChaveEIdPosicional() {
+        Trb1.carregar(ds, listOf(aberta("TG-994", "TG-910"), aberta("TG-995", "TG-902"), aberta("TG-996", "TG-2000")))
         val a = analise()
-        assertEquals(listOf("TG-902", "TG-910"), a.dto.linhas.map { it.epico })
-        // O id do segmento não carrega a chave (a chave nunca vai para o access_log).
-        assertTrue(a.dto.linhas.all { "TG-" !in it.id && it.id.length >= 8 }, a.dto.linhas.toString())
+        // Ordem natural das chaves (TG-910 antes de TG-2000), a mesma do card e do drill.
+        assertEquals(listOf("TG-902", "TG-910", "TG-2000"), a.dto.linhas.map { it.epico })
+        // O id do segmento é a posição (1, 2, 3...): nada derivado da chave vai para o access_log.
+        assertEquals(listOf("1", "2", "3"), a.dto.linhas.map { it.id })
+        assertEquals(listOf("TG-995"), a.segmentos.getValue("epico:1:itens").map { it.key })
+        assertEquals(listOf("TG-994"), a.segmentos.getValue("epico:2:itens").map { it.key })
+        assertEquals(listOf("TG-996"), a.segmentos.getValue("epico:3:itens").map { it.key })
+        assertTrue("epico:4:itens" !in a.segmentos)
         assertNotEquals(a.dto.linhas[0].id, a.dto.linhas[1].id)
-        val id = a.dto.linhas[1].id
-        assertEquals(listOf("TG-994", "TG-996"), a.segmentos.getValue("epico:$id:itens").map { it.key })
     }
 
     @Test
