@@ -53,6 +53,8 @@ data class Sinal(
     val motivo: MotivoAutorizacao,
     val responsavel: String?,
     val changelogId: String,
+    /** Alteração em lote (I-15): quantas issues a mesma pessoa mexeu, no mesmo campo e minuto; nulo abaixo do mínimo. Contexto, não prova. */
+    val emLote: Int? = null,
 )
 
 /** Tudo o que um [Detector] precisa além da linha do tempo da issue. */
@@ -86,6 +88,23 @@ data class ContextoDeteccao(
                 d = d.plusDays(1)
             }
             if (dia <= vencimento) uteis else -uteis
+        }
+    }
+
+    /**
+     * O dia que fica [dias] antes de [vencimento] na unidade das regras: `CORRIDO` subtrai dias do calendário;
+     * `UTIL` volta [dias] dias úteis (o limite de [dias] é 30, então o laço é curto).
+     */
+    fun diaAntes(vencimento: LocalDate, dias: Int): LocalDate = when (regras.unidade) {
+        UnidadeDias.CORRIDO -> vencimento.minusDays(dias.toLong())
+        UnidadeDias.UTIL -> {
+            var d = vencimento
+            var faltam = dias
+            while (faltam > 0) {
+                d = d.minusDays(1)
+                if (calendario.isBusinessDay(d)) faltam--
+            }
+            d
         }
     }
 

@@ -47,6 +47,18 @@ data class AvisoDto(
         const val OS_INDISPONIVEL = "OS_INDISPONIVEL"
         const val BLOQUEANTE = "bloqueante"
         const val INFORMATIVO = "informativo"
+
+        // Auditoria (Plano 4): todos informativos; os dados vão em `params`.
+        /** Há evento do campo `reporter` (o changelog só guarda o nome do campo): a autorização usa o reporter atual. */
+        const val REPORTER_ALTERADO = "REPORTER_ALTERADO"
+        /** Valores de vencimento no changelog que não são data legível. */
+        const val VENCIMENTO_ILEGIVEL = "VENCIMENTO_ILEGIVEL"
+        /** Issues ignoradas por status fora do mapa (`status` e `n`). */
+        const val ISSUES_IGNORADAS_STATUS = "ISSUES_IGNORADAS_STATUS"
+        /** Review ligada a mais de uma task (ou task com mais de uma Review): ficou o par de menor chave. */
+        const val VINCULO_AMBIGUO = "VINCULO_AMBIGUO"
+        /** Nenhum vínculo do tipo configurado na base: o card Task × Review fica vazio. */
+        const val VINCULOS_INDISPONIVEIS = "VINCULOS_INDISPONIVEIS"
     }
 }
 

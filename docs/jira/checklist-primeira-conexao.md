@@ -50,7 +50,10 @@ Lista **mínima e ordenada** das chamadas da primeira conexão. É um procedimen
 
 - **O que conferir:**
   - Formato de `from`/`to` (e `fromString`/`toString`) nos itens com `field = assignee`: é usuário, chave ou nome de exibição?
-  - Itens de `duedate` e `labels`, base da regra de auditoria.
+  - Itens de `duedate` e `labels`, base da regra de auditoria:
+    - `duedate`: comparar `from` com `fromString` (e `to` com `toString`). O painel aceita `aaaa-mm-dd` e `aaaa-mm-dd 00:00:00.0`; qualquer outro formato vira o aviso `VENCIMENTO_ILEGIVEL` na tela de Auditoria. Registrar o formato visto.
+    - `labels`: o separador dos labels em `fromString`/`toString`. O painel assume texto separado por espaço; se for vírgula ou outro, registrar e ajustar o leitor com teste.
+    - `reporter`: confirmar que a troca de reporter aparece como item `reporter`. O painel guarda só o nome do campo, sem valor (a autorização usa o reporter atual e a tela avisa com `REPORTER_ALTERADO`); não esperar o valor antigo.
   - Changelog truncado: comparar `changelog.total` com `maxResults` e o número de `histories`. Se o histórico vier cortado, o plano B é `expand=changelog` paginado.
   - 4b: se o endpoint `/changelog` existe e pagina. Não verificado; não depender dele antes de testar.
   - Vínculos (a issue com changelog já traz `fields.issuelinks`): conferir em `fields.issuelinks` o nome exato do tipo (`type.name`, esperado `Blocks`), os textos `inward`/`outward` (esperados `is blocked by`/`blocks`) e em que direção a Review aparece em relação à task; se criar ou remover um link altera o `updated` das **duas** issues (se não alterar, o incremental não percebe a mudança: registrar e tratar como divergência na matriz); se o nome diferir, ajustar o `vinculos.yaml` real; registrar só o tipo e a direção na matriz, sem chaves nem resumo de issues reais.

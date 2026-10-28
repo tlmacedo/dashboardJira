@@ -108,6 +108,20 @@ class RegrasDeAuditoriaTest {
     }
 
     @Test
+    fun emLoteMinimoTemPadraoCincoEFaixaValida() {
+        assertEquals(5, carregar(modelo).emLoteMinimo)
+        assertEquals(3, carregar(comAlteracao("emLoteMinimo: 5", "emLoteMinimo: 3")).emLoteMinimo)
+        // sem a chave vale o padrão
+        assertEquals(5, carregar(comAlteracao("emLoteMinimo: 5\n", "")).emLoteMinimo)
+        for (ruim in listOf("1", "0", "-2", "101")) {
+            val e = assertFailsWith<IllegalArgumentException> { carregar(comAlteracao("emLoteMinimo: 5", "emLoteMinimo: $ruim")) }
+            assertTrue("emLoteMinimo" in e.message.orEmpty(), e.message)
+        }
+        carregar(comAlteracao("emLoteMinimo: 5", "emLoteMinimo: 2"))
+        carregar(comAlteracao("emLoteMinimo: 5", "emLoteMinimo: 100"))
+    }
+
+    @Test
     fun statusDeCancelamentoNaoPodeSerVazio() {
         assertFailsWith<IllegalArgumentException> {
             carregar(comAlteracao("statusCancelamento: [Cancelled, Canceled, Dropped]", "statusCancelamento: []"))

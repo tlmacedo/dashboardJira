@@ -17,7 +17,7 @@ Cada linha é um PR a partir da `main` atualizada; a seguinte só começa depois
 | # | Entrega | Plano / tarefas | Pontos de parada tratados | Estado |
 |---|---|---|---|---|
 | A1 | Contrato do cartão (registro, `Cartao`, gaveta compartilhada, Mapa de cartões) | Plano 17a (T1 a T7) | — | a fazer |
-| A2 | Auditoria (continuação) | Plano 4, T4 a T9 | — | a fazer |
+| A2 | Auditoria (continuação) | Plano 4, T4 a T9 | — | executada na branch `feat/auditoria-tarefas-4-a-9` (PR pendente) |
 | A3 | Cards de trabalho e prazos | Plano 5a (9 tarefas); regra I-06 (coluna "último movimento") | — | a fazer |
 | A4 | Negativas, Riscos, Previsão, Épicos | Plano 5b (5 tarefas) | — | a fazer |
 | A5 | Capacidade e planejamento | Plano 6a (9 tarefas) | local dos YAML reais: o documento recomenda a opção padrão; o código não depende | a fazer |
