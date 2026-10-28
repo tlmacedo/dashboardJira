@@ -4,17 +4,10 @@ import { useLang } from '../../i18n/LangProvider'
 import { CardPage } from '../../shared/CardPage'
 import { Cartao } from '../../shared/Cartao'
 import { baixarCsv } from '../../shared/csv'
-import { dataCurta } from '../../shared/format'
+import { dataCurta, instanteCurto } from '../../shared/format'
 import { Filtros, useFiltrosDaUrl } from '../../shared/Filtros'
 import '../../shared/tabela.css'
 import { fetchAcessos } from './api'
-
-/** Data e hora curtas do instante ISO (UTC) no idioma da tela. */
-function quando(iso: string, lang: 'pt' | 'en'): string {
-  const d = new Date(iso)
-  if (Number.isNaN(d.getTime())) return iso
-  return d.toLocaleString(lang === 'pt' ? 'pt-BR' : 'en-US', { dateStyle: 'short', timeStyle: 'short' })
-}
 
 /** Resultado em símbolo e texto: nunca só cor. */
 function resultado(codigo: number | null): string {
@@ -111,7 +104,7 @@ export function RegistroDeAcesso() {
                 <tbody>
                   {dto.acessos.map((a, i) => (
                     <tr key={`${a.quando}:${i}`}>
-                      <td>{quando(a.quando, lang)}</td>
+                      <td>{instanteCurto(a.quando, lang)}</td>
                       <td>{a.usuario}</td>
                       <td><code>{a.rota}</code></td>
                       <td>{resultado(a.resultado)}</td>

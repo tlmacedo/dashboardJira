@@ -3,18 +3,11 @@ import { useLang } from '../../i18n/LangProvider'
 import { CardPage } from '../../shared/CardPage'
 import { Cartao } from '../../shared/Cartao'
 import { baixarCsv } from '../../shared/csv'
-import { dataCurta } from '../../shared/format'
+import { dataCurta, instanteCurto } from '../../shared/format'
 import { Filtros, useFiltrosDaUrl } from '../../shared/Filtros'
 import '../../shared/tabela.css'
 import { fetchDecisoes, type DecisoesDto } from '../Distribuicao/api'
 import { rotuloDaDecisao } from '../Distribuicao/rotulos'
-
-/** Data e hora curtas do instante ISO (UTC) no idioma da tela; a hora vem do navegador, o dia de Manaus fica no filtro. */
-function quando(iso: string, lang: 'pt' | 'en'): string {
-  const d = new Date(iso)
-  if (Number.isNaN(d.getTime())) return iso
-  return d.toLocaleString(lang === 'pt' ? 'pt-BR' : 'en-US', { dateStyle: 'short', timeStyle: 'short' })
-}
 
 /**
  * Decisões de distribuição (AU-01 do inventário; cartão DC-01): o que foi aprovado, trocado ou rejeitado, do mais recente ao
@@ -73,7 +66,7 @@ export function Decisoes() {
                 <tbody>
                   {dto.decisoes.map((d, i) => (
                     <tr key={`${d.issueKey}:${d.decididoEm}:${i}`}>
-                      <td>{quando(d.decididoEm, lang)}</td>
+                      <td>{instanteCurto(d.decididoEm, lang)}</td>
                       <td>{t(`decisoes.tipo.${d.tipo}`)}</td>
                       <th scope="row">{d.issueKey}</th>
                       <td>{d.sugerido ?? '—'}</td>
