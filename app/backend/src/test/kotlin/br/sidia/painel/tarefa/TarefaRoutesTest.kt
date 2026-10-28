@@ -141,6 +141,18 @@ class TarefaRoutesTest {
     }
 
     @Test
+    fun chaveCodificadaComBarraNaoFalsificaARotaDoLog() = rodar { get ->
+        val r = get("gerente.exemplo", "/api/tarefa/..%2Fx%2FTG-1")
+        assertEquals(HttpStatusCode.BadRequest, r.status)
+        val rotas = requireNotNull(ctx!!.dataSource).connection.use { c ->
+            c.createStatement().executeQuery("SELECT route FROM access_log").use { rs ->
+                buildList { while (rs.next()) add(rs.getString(1)) }
+            }
+        }
+        assertEquals(listOf("/api/tarefa/{key}"), rotas)
+    }
+
+    @Test
     fun chaveInvalida400ComCodigo() = rodar { get ->
         val r = get("gerente.exemplo", "/api/tarefa/TG-1%3Bdrop")
         assertEquals(HttpStatusCode.BadRequest, r.status)

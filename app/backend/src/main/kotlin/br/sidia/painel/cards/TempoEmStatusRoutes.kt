@@ -209,9 +209,14 @@ suspend fun registrarNegacaoSemPapel(auditoria: AccessLog, ctx: AppContext, call
  * nunca chaves). Hoje só o histórico da auditoria leva a chave no caminho.
  */
 internal fun rotaParaRegistro(caminho: String): String {
-    val normal = normalizarCaminho(caminho)
-    if (normal.startsWith("/api/tarefa/", ignoreCase = true)) return "/api/tarefa/{key}"
-    return if (normal.startsWith("/api/auditoria/historico/", ignoreCase = true)) "/api/auditoria/historico/{key}" else normal
+    // Segmentos decodificados UM A UM (como o Ktor separa antes de decodificar): `..%2Fx%2FTG-1` é a chave, não três segmentos.
+    val s = segmentosNormalizados(caminho)
+    fun prefixo(vararg p: String) = s.size > p.size && p.indices.all { s[it].equals(p[it], ignoreCase = true) }
+    return when {
+        prefixo("api", "tarefa") -> "/api/tarefa/{key}"
+        prefixo("api", "auditoria", "historico") -> "/api/auditoria/historico/{key}"
+        else -> "/" + s.joinToString("/")
+    }
 }
 
 /**
@@ -219,27 +224,33 @@ internal fun rotaParaRegistro(caminho: String): String {
  * sem `;parametros`, sem barras duplas, `.` nem `..`. Um caminho codificado (`/api/%69ntegridade`) vira o mesmo texto do normal
  * e nunca escapa da máscara nem do rastro de quem consultou. Caixa preservada (a comparação ignora caixa onde importa).
  */
-internal fun normalizarCaminho(caminho: String): String {
-    var atual = caminho.substringBefore('?')
-    repeat(3) {
-        val decodificado = try {
-            java.net.URLDecoder.decode(atual.replace("+", "%2B"), Charsets.UTF_8)
-        } catch (e: IllegalArgumentException) {
-            return@repeat
-        }
-        if (decodificado == atual) return@repeat
-        atual = decodificado
-    }
+internal fun normalizarCaminho(caminho: String): String = "/" + segmentosNormalizados(caminho).joinToString("/")
+
+/**
+ * Separa o caminho em segmentos ANTES de decodificar e decodifica cada um (até 3 vezes). Uma barra que só aparece depois de
+ * decodificar (`%2F`) não separa segmentos: vira `_` dentro do mesmo segmento, que continua sendo um só.
+ */
+internal fun segmentosNormalizados(caminho: String): List<String> {
     val segmentos = ArrayDeque<String>()
-    for (bruto in atual.replace('\\', '/').split('/')) {
-        val s = bruto.substringBefore(';').filter { !it.isISOControl() }
+    for (bruto in caminho.substringBefore('?').replace('\\', '/').split('/')) {
+        var atual = bruto.substringBefore(';')
+        repeat(3) {
+            val decodificado = try {
+                java.net.URLDecoder.decode(atual.replace("+", "%2B"), Charsets.UTF_8)
+            } catch (e: IllegalArgumentException) {
+                return@repeat
+            }
+            if (decodificado == atual) return@repeat
+            atual = decodificado
+        }
+        val s = atual.replace('/', '_').replace('\\', '_').substringBefore(';').filter { !it.isISOControl() }
         when (s) {
             "", "." -> Unit
             ".." -> segmentos.removeLastOrNull()
             else -> segmentos.addLast(s)
         }
     }
-    return "/" + segmentos.joinToString("/")
+    return segmentos.toList()
 }
 
 /** Posta pela rota que atende um módulo sensível, mesmo antes de o caminho dizer: o registro mascara o achado. */
