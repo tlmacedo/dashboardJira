@@ -42,7 +42,7 @@ A 14a (bloco de sincronização) começa logo depois do 9, quando o usuário lig
 | 12 (12 tarefas) | `2026-10-25-plano-12-operacao-em-producao.md` | `../specs/2026-10-25-spec-fase-12-operacao-em-producao.md` | Escrito, aguardando execução |
 | 13 (13 tarefas) | `2026-10-25-plano-13-implantacao-real.md` | `../specs/2026-10-25-spec-fase-13-implantacao-real.md` | Escrito, aguardando execução |
 | 14 (15 tarefas: Tarefa 0 dos hooks, 14a e 14b) | `2026-10-25-plano-14-primeira-conexao-validacao-e-calibracao.md` | `../specs/2026-10-25-spec-fase-14-primeira-conexao-validacao-e-calibracao.md` | Escrito, aguardando execução |
-| 17 (13 tarefas: 17a antes do 5a, 17b depois do 14b) | `2026-10-28-plano-17-cards-de-fluxo-e-gestao.md` | `../specs/2026-10-28-spec-fase-17-cards-de-fluxo-e-gestao.md` | Escrito, aguardando execução (17b depende do ponto de parada PP5) |
+| 17 (13 tarefas: 17a antes do 5a, 17b depois do 14b) | `2026-10-28-plano-17-cards-de-fluxo-e-gestao.md` | `../specs/2026-10-28-spec-fase-17-cards-de-fluxo-e-gestao.md` | **17a executado** na branch `feat/contrato-do-cartao` (PR pendente; progresso em `../progresso/2026-10-28-plano-17-cards-de-fluxo-e-gestao.md`); 17b aguardando (depende do ponto de parada PP5) |
 | 15 (11 tarefas) | `2026-10-25-plano-15-identidade-final-ingles-e-entrega.md` | `../specs/2026-10-25-spec-fase-15-identidade-final-ingles-e-entrega.md` | Escrito, aguardando execução |
 
 ## Fase 4A — Sincronização periódica (depende das Fases 1 a 3)

@@ -178,12 +178,13 @@
   background: var(--soft);
   border-color: var(--primary);
 }
-.cartao:has(.cartao-acao:focus-visible) {
-  outline: 2px solid var(--focus);
-  outline-offset: 2px;
-}
+/* O anel de foco contorna o cartão inteiro (o ::after da ação cobre o cartão): contraste do --focus ≥ 6:1 nos três temas. */
 .cartao-acao:focus-visible {
   outline: none;
+}
+.cartao-acao:focus-visible::after {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
 }
 
 /* Corpo das outras variantes: acima do ::after para os elementos clicáveis (linhas, barras, células) funcionarem. */

@@ -21,6 +21,7 @@ Quase sempre é o clone ou a tarefa antigos mandando usar contêiner/banco de se
 - **Na `main`:** Planos 1, 2, 3A, 3, **3B (banco SQLite embutido, PRs #18 e #19)**, **4A** (sincronização periódica, PR #14) e as **Tarefas 1 a 3 do Plano 4** (Auditoria, PR #15). Backend: 745+ testes, 0 falhas, com SQLite real. Frontend: 48 testes.
 - **Nenhum acesso ao Jira foi feito** em todo o projeto. O primeiro ciclo real é do usuário (Plano 14a).
 - **Plano 4 (Auditoria)** continua pela **Tarefa 4**: estado e passo a passo em `docs/superpowers/progresso/2026-10-25-plano-04-auditoria.md`. Os planos 5 a 16 e suas specs estão escritos e ajustados à nova plataforma (SQLite, sem Docker); os Planos 8, 9, 12 e 13 foram reescritos.
+- **Plano 17a (contrato do cartão) executado** na branch `feat/contrato-do-cartao` (PR pendente; estado e rulings em `docs/superpowers/progresso/2026-10-28-plano-17-cards-de-fluxo-e-gestao.md`): catálogo de cartões, drill genérico `GET /api/cartoes/{id}/tasks`, teste de contrato, componentes `Cartao` e `GavetaDeTasks`, Tempo em status e Sincronização migrados e tela Mapa de cartões. **Todo cartão novo dos próximos planos se registra no `catalogoPadrao()` e usa esses componentes** (regras abaixo). O 17b (cards novos de fluxo e gestão) espera o ponto de parada PP5 (depois do 14b).
 - O repositório `tlmacedo/dashboardJira` é **PÚBLICO desde 26/10** (decisão do usuário). O histórico antigo tem 3 usernames reais (aceito e documentado); nada novo com dado real pode entrar, então a varredura antes do push é ainda mais importante.
 - Alerta do GitGuardian em `SettingsTest.kt` (3 "Generic Password"): falso positivo (valores fictícios de teste de mascaramento). O usuário pode marcá-lo como tal no painel do GitGuardian.
 
@@ -37,9 +38,17 @@ Quase sempre é o clone ou a tarefa antigos mandando usar contêiner/banco de se
 
 ## Próximos passos, em ordem
 
-1. **Fase 0** (PC da empresa) → **Plano 9** (CI e endurecimento; cria o `.github/` que ainda não existe) → **Plano 14a** (primeira conexão real, quando o usuário ligar a flag) → **Plano 4, Tarefas 4 a 9** → 5a → 5b → 6a → 6b → 7a → 7b → 10 → 11 → 14b → 8 → 12 → 13 → 15. O **Plano 16** (escrita no Jira pelo painel) é futuro e só com decisão do usuário. Justificativa e dependências: índice dos planos.
+1. **Fase 0** (PC da empresa) → **Plano 9** (CI e endurecimento; cria o `.github/` que ainda não existe) → **17a** (contrato do cartão; feito, falta o PR) → **Plano 14a** (primeira conexão real, quando o usuário ligar a flag) → **Plano 4, Tarefas 4 a 9** → 5a → 5b → 6a → 6b → 7a → 7b → 10 → 11 → 14b → **17b** (PP5) → 8 → 12 → 13 → 15. O **Plano 16** (escrita no Jira pelo painel) é futuro e só com decisão do usuário. Justificativa e dependências: índice dos planos.
 2. Cada plano/bloco = uma branch `feat/<nome>` a partir da `main` atualizada = um PR, mesclado ao fim conforme `docs/superpowers/fluxo-de-entrega.md`; só então o próximo começa.
 3. Migrações: hoje só existe a `V1`; a próxima é a `V2` (confirmar com `ls app/backend/src/main/resources/db/migration`); nunca editar migração já mesclada.
+
+## Regras do contrato do cartão (spec do Plano 17, seção 6; valem para os Planos 4, 5, 6, 7 e 10 sem reescrevê-los)
+
+- **Planos 5, 6 e 7 (todas as telas):** cada cartão se registra no `CatalogoDeCartoes` (`cards/contrato/CatalogoPadrao.kt`), usa o componente `Cartao` (`shared/Cartao.tsx`) e a `GavetaDeTasks`; os textos "título", "o que mostra" e "como calcula" entram junto, em pt e en. O teste `drillTemOMesmoTamanhoDoCard` do 5a passa a ser o `ContratoDeCartoesTest`, e `todaRotaDeCardEstaNoRegistro` acusa rota `/api/cards/**` sem cartão registrado.
+- **Plano 5a, Negligenciadas:** acrescentar a coluna "último movimento" (status, responsável, vencimento, labels, resolução; I-06) e o filtro "sem movimento real"; não substitui NG-01.
+- **Plano 4, Tarefas 4 a 9:** modificador informativo "em lote (N)" nos sinais (I-15): mesma pessoa, mesmo campo, mesmo minuto, a partir de N issues (N em `auditoria.yaml`, padrão 5); indício, não prova; só coordenação e gerente.
+- **Plano 7b, Qualidade dos dados:** verificação informativa `LABEL_SEM_CLASSIFICACAO` (I-12); `PAI_CONCLUIDO_COM_FILHAS_ABERTAS` (I-14) só se a 1ª conexão confirmar o uso de sub-tarefas.
+- **Plano 10, Tarefas 4 e 6:** filtros rápidos nomeados em `filtros_rapidos.yaml` (I-27) e busca por chave na gaveta universal (I-26; chave fora da visão responde 404). A gaveta do Plano 10 **reutiliza** a `GavetaDeTasks` e estende o `LinkJira` (`cards/contrato/LinkJira.kt`) em vez de criar outros.
 
 ## Regras que não podem ser esquecidas
 

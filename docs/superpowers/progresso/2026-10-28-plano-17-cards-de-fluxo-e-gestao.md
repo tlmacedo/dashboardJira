@@ -8,13 +8,54 @@ Branch: `feat/contrato-do-cartao` (bloco 17a = Tarefas 1 a 7). Executor: Claude 
 
 ## Checklist (17a)
 
-- [x] Tarefa 1: registro de cartões e catálogo por papel (testes: backend 869 totais, 0 falhas; +8 em `CatalogoDeCartoesTest`)
-- [x] Tarefa 2: drill genérico e teste de contrato (testes: ver contagem final no fechamento; +13 em `ContratoDeCartoesTest`)
-- [x] Tarefa 3: componente `Cartao` e ajuda (ⓘ) (frontend 86 totais, 0 falhas; +12 em `Cartao.test.tsx`; build ok)
-- [x] Tarefa 4: gaveta de tasks compartilhada e "Abrir no Jira" (backend 890 totais, 0 falhas; +8 em `LinkJiraTest`; frontend 104 totais, 0 falhas; +18 em `GavetaDeTasks.test.tsx`, +4 em `csv.test.ts`, −4 que saíram de `TempoEmStatus.test.tsx` sem mudança de asserção; build ok)
-- [x] Tarefa 5: migrar Tempo em status e Sincronização para o contrato (backend 890 totais, 0 falhas; frontend 104 totais, 0 falhas; build ok; `Sincronizacao.test.tsx` sem nenhuma alteração; `TempoEmStatus.test.tsx` só nas linhas listadas em "Asserções alteradas")
-- [x] Tarefa 6: tela Mapa de cartões (frontend 114 totais, 0 falhas; +9 em `MapaDeCartoes.test.tsx`, +1 em `nav.test.ts`; build ok)
-- [ ] Tarefa 7: revisão visual, acessibilidade e fechamento do 17a
+- [x] Tarefa 1: registro de cartões e catálogo por papel (commit 1d146f1; backend 869 totais, 0 falhas; +8 em `CatalogoDeCartoesTest`)
+- [x] Tarefa 2: drill genérico e teste de contrato (commit e295e83; backend 882 totais, 0 falhas; +13 em `ContratoDeCartoesTest`)
+- [x] Tarefa 3: componente `Cartao` e ajuda (ⓘ) (commit 2b959d1; frontend 86 totais, 0 falhas; +12 em `Cartao.test.tsx`; build ok)
+- [x] Tarefa 4: gaveta de tasks compartilhada e "Abrir no Jira" (commit d7137b5; backend 890 totais, 0 falhas; +8 em `LinkJiraTest`; frontend 104 totais, 0 falhas; +18 em `GavetaDeTasks.test.tsx`, +4 em `csv.test.ts`, −4 que saíram de `TempoEmStatus.test.tsx` sem mudança de asserção; build ok)
+- [x] Tarefa 5: migrar Tempo em status e Sincronização para o contrato (commit 3745dd8; backend 890 totais, 0 falhas; frontend 104 totais, 0 falhas; build ok; `Sincronizacao.test.tsx` sem nenhuma alteração; `TempoEmStatus.test.tsx` só nas linhas listadas em "Asserções alteradas")
+- [x] Tarefa 6: tela Mapa de cartões (commit 7dd8418; frontend 114 totais, 0 falhas; +9 em `MapaDeCartoes.test.tsx`, +1 em `nav.test.ts`; build ok)
+- [x] Tarefa 7: revisão visual, acessibilidade e fechamento do 17a (passos 1 e 2 feitos; capturas de tela NÃO feitas, ver "Revisão visual"; o passo 3 além do push — revisão por outro contexto, PR, CI e merge — fica com quem abrir a PR)
+
+## Números finais do 17a (sem cache)
+
+- Backend `./gradlew test --rerun-tasks` (JDK 21): **890 testes, 0 falhas, 0 ignorados** (861 + 29 novos: 8 `CatalogoDeCartoesTest`, 13 `ContratoDeCartoesTest`, 8 `LinkJiraTest`).
+- Frontend `pnpm install --frozen-lockfile && pnpm test && pnpm build`: **114 testes (11 arquivos), 0 falhas; build ok** (74 + 40 novos: 12 `Cartao`, 18 `GavetaDeTasks`, 4 `csv` movidos, 9 `MapaDeCartoes`, 1 `nav`; −4 de CSV que saíram de `TempoEmStatus.test.tsx`). `pnpm lint`: só os 3 avisos antigos de `only-export-components`.
+- `sh scripts/ci/varrer-dados-pessoais.sh`: `VARREDURA OK`.
+- Nenhuma migração, nenhuma dependência npm nova, nenhuma chamada ao Jira (a flag ficou desligada; `LinkJiraTest` usa `Settings` com a flag ligada só para provar o texto da URL, sem criar cliente nem requisição).
+
+## Revisão visual, acessibilidade e fechamento (Tarefa 7)
+
+Critérios da seção 7 de `docs/design/cartoes-gramatica-e-wireframes.md`:
+
+1. **Elementos do cartão e unidade:** `Cartao.test.tsx` cobre título, natureza, valor, estado, variação, procedência e ação; o valor chega formatado e com unidade pela tela.
+2. **Contraste calculado dos tokens** (`node app/frontend/scripts/contraste-dos-tokens.mjs`, sobre `theme/tokens.css`, razão WCAG; mínimos 4,5:1 texto e 3:1 foco e componente; o script sai com código 1 enquanto o par `--line` falhar, por isso não está ligado à CI). Resultados:
+
+| Par (uso) | Claro | Escuro | Sidia |
+|---|---|---|---|
+| texto em superfície (título, valor) | 17,76 | 14,72 | 17,53 |
+| texto2 em superfície (rótulo, legenda, ⓘ) | 7,00 | 8,75 | 7,82 |
+| texto2 em soft (cartão em hover) | 6,15 | 7,77 | 6,71 |
+| primário em superfície ("Ver tasks", links) | 11,34 | 7,30 | 11,34 |
+| primário em soft (hover) | 9,95 | 6,49 | 9,73 |
+| estado ✓ (ok) em superfície | 5,44 | 13,09 | 5,44 |
+| estado ● (warn) em superfície | 5,43 | 9,62 | 5,43 |
+| estado ▲ (bad) em superfície | 6,54 | 7,29 | 6,54 |
+| foco em superfície / em fundo | 6,87 / 6,41 | 7,30 / 8,00 | 6,87 / 6,37 |
+| texto do botão primário | 11,34 | 8,15 | 11,34 |
+| `--line` como borda de componente (mín. 3:1) | **1,36** | **1,34** | **1,37** |
+
+   Todos passam, exceto `--line` como borda de **controle**. Correção feita no que esta fase criou: os campos do Mapa de cartões usam `--text2` na borda (≥ 7:1). A borda do cartão em si é divisória decorativa (o cartão é identificado por título e texto, não pela moldura) e o ⓘ não tem moldura. Os campos antigos da tela Tempo em status (`.campo input`) ainda usam `--line`: registrado em "Minor adiados".
+3. **Estado nunca só por cor:** símbolo + texto em todo estado (`estadoTemSimboloETexto`); natureza com glifo + texto; aviso de incompleto com ● e texto; teste do Mapa e do cartão sem chave crua.
+4. **Teclado:** ⓘ antes da ação na ordem de Tab (`cartaoTemUmaAcaoPrincipalEIconeDeAjudaAlcancavel`); Enter abre e Esc fecha o balão devolvendo o foco; gaveta com foco no Fechar, Tab preso, Esc fecha e devolve o foco, resto inerte. O anel de foco do cartão é o `::after` da ação (contorna o cartão todo, ≥ 6:1).
+5. **Leitor de tela:** `<article>` rotulado pelo título; o botão da ação principal leva título + valor + "Ver tasks" por `aria-labelledby`; balão com `role="group"` e rótulo; tabelas rotuladas pelo título do cartão; esqueleto com texto só para leitor.
+6. **Sem salto de layout e sem rolagem horizontal a 360 px:** altura mínima fixa por variante em linha (`semSaltoDeLayoutNoEsqueleto`); grade de KPIs vira 1 coluna abaixo de 640 px; tabelas rolam dentro do cartão (`overflow-x: auto`); Mapa e gaveta empilham abaixo de 640 px; balão do ⓘ com largura `min(320px, 80vw)` ancorado à direita. Conferido por leitura do CSS e dos testes, **não** em navegador.
+7. **Texto do ⓘ em pt e en:** `todoCartaoTemTextoPtEEn` (backend) lê `pt.json` e `en.json` e exige título, "o que mostra", "como calcula", grupo, natureza e fontes nos dois idiomas, com "o que mostra" e "como calcula" diferentes entre os idiomas. `prefers-reduced-motion` desliga o esqueleto pulsante e a animação da gaveta.
+
+**Capturas de tela não foram feitas:** o ambiente desta execução não tem navegador (nem Chrome, nem Playwright), e o usuário não estava presente. Pendente para quem rodar o painel (`PAINEL_MOCK=1 pnpm dev` serve o catálogo e o drill fictícios, ou a demonstração do backend): olhar Tempo em status, Sincronização, Mapa de cartões e a gaveta nos temas Claro, Escuro e Sidia, a 360, 768 e 1280 px, e passar uma simulação de daltonismo. Nada nesta execução usou dado real.
+
+**Passo 2:** `docs/superpowers/plans/2026-10-24-indice-dos-planos.md` marca o 17a como executado (PR pendente); a seção 6 da spec foi levada ao `HANDOFF.md` (nova seção "Regras do contrato do cartão") e a skill `.cline/skills/novo-card-painel/SKILL.md` aponta para o contrato.
+
+**Passo 3 (entrega):** feito aqui apenas o `git push -u origin feat/contrato-do-cartao`. Não foram abertos PR nem merge (fora do pedido). Autorrevisão pelo checklist do guia (seção 5) feita sobre o diff inteiro: visão por papel no catálogo e no drill (testes de vazamento), `access_log` em toda chamada inclusive 400/403/404 e sem chaves de issue, sem dado pessoal, SQL só parametrizado (nada novo), relógio e fuso injetados, sem ranking de pessoas, símbolos e pt/en, nenhum teste vazio (mutação feita em TS-03 e em uma chave de tradução). Falta a revisão independente em contexto limpo, as 7 condições do fluxo de entrega, o CI e o merge.
 
 ## Estado herdado (conferido no código)
 
@@ -67,4 +108,8 @@ Nenhuma asserção de comportamento foi alterada. Mudaram apenas as entradas dos
 
 ## Minor adiados
 
-(nenhum até agora)
+- Campos de filtro de Tempo em status (`tempo.css`, `.campo input`) e demais controles antigos usam `--line` na borda (1,3:1, abaixo de 3:1 para componente). Cenário: usuário com baixa visão não distingue o campo vazio. Sugestão: token de borda de controle (ex.: `--control-line`) nos três temas, em PR próprio de design (o plano pede "sem cor nova" no 17a).
+- A procedência "atualizado há X" do `Cartao` existe e é testada, mas nenhuma tela a alimenta: o instante da última sincronização só está em `/api/sync/status` (gerente). Cenário: o cartão mostra `n`/atualização só quando o Plano 5a expuser um instante por cartão para todos os papéis.
+- `DrillRow.responsavel` nulo não distingue "fora da visão" de "sem responsável"; a gaveta mostra `—` nos dois. Cenário: wireframe pede "outra pessoa" para fora da visão. Sugestão: campo `foraDaVisao` no DTO quando o 5a mexer no drill.
+- TS-05 ("Onde o tempo é gasto") está no registro e no Mapa de cartões, mas a tela de Tempo em status mostra TS-04 e TS-05 numa seção só (barras de mediana e P85). Cenário: o Mapa lista um cartão que não tem bloco próprio na tela. Sugestão: separar na revisão de design do 14b.
+- Capturas de tela nos três temas e três larguras (ver "Revisão visual").
