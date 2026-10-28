@@ -217,6 +217,25 @@ class ProtecaoCsrfTest {
     }
 
     @Test
+    fun negacaoNaoGravaChaveDeIssueNaRota() {
+        testApplication {
+            val s = Settings.fromEnv(emptyMap())
+            val ctx = testContextComBanco(s, banco)
+            application { module(s, ctx) }
+            // POST sem cabeçalho CSRF no histórico da auditoria: o caminho leva a chave de issue.
+            client.post("/api/auditoria/historico/TG-1") { header(HttpHeaders.ContentType, "application/json") }
+            ctx.dataSource!!.connection.use { c ->
+                c.createStatement().executeQuery("SELECT route FROM access_log").use { rs ->
+                    assertTrue(rs.next())
+                    assertEquals("/api/auditoria/historico/{key}", rs.getString("route"))
+                    assertTrue(!rs.next())
+                }
+            }
+            ctx.close()
+        }
+    }
+
+    @Test
     fun negacaoSemPrincipalGravaAnonymous() {
         testApplication {
             val s = Settings.fromEnv(emptyMap())
