@@ -50,6 +50,19 @@ class RegrasDeAuditoriaTest {
     }
 
     @Test
+    fun limiteDaReducaoNoYaml() {
+        assertEquals(0.2, carregar(modelo).estimativaReducaoMinima)
+        assertEquals(2, carregar(modelo).sinais.getValue(CodigoSinal.ESTIMATIVA_REDUZIDA).gravidade)
+        for (ruim in listOf("0.04", "0.91", "-1", "1")) {
+            val e = assertFailsWith<IllegalArgumentException> { carregar(comAlteracao("estimativaReducaoMinima: 0.2", "estimativaReducaoMinima: $ruim")) }
+            assertTrue("estimativaReducaoMinima" in e.message.orEmpty(), e.message)
+        }
+        // Limites inclusivos passam.
+        assertEquals(0.05, carregar(comAlteracao("estimativaReducaoMinima: 0.2", "estimativaReducaoMinima: 0.05")).estimativaReducaoMinima)
+        assertEquals(0.9, carregar(comAlteracao("estimativaReducaoMinima: 0.2", "estimativaReducaoMinima: 0.9")).estimativaReducaoMinima)
+    }
+
+    @Test
     fun unidadeUtilEhAceita() {
         assertEquals(UnidadeDias.UTIL, carregar(comAlteracao("unidade: corrido", "unidade: util")).unidade)
     }

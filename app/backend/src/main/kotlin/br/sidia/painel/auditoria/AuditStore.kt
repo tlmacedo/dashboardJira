@@ -16,7 +16,7 @@ import java.time.LocalDate
 import javax.sql.DataSource
 
 /** Campos do changelog que a auditoria lê para decidir quais issues entram no período. */
-val CAMPOS_AUDITADOS: Set<String> = setOf("assignee", "duedate", "labels", "status", "resolution", "reporter")
+val CAMPOS_AUDITADOS: Set<String> = setOf("assignee", "duedate", "labels", "status", "resolution", "reporter", "timeoriginalestimate")
 
 /**
  * Leitura do banco para a auditoria. Sempre por instância (nunca só pela chave) e sem as issues removidas

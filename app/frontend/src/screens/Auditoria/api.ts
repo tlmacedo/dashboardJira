@@ -16,6 +16,7 @@ export const CODIGOS_DE_SINAL = [
   'LABEL_TARDIA_COM_POSSE_ANTECIPADA',
   'LABEL_APOS_VENCIMENTO',
   'CANCELAMENTO_SUSPEITO',
+  'ESTIMATIVA_REDUZIDA',
 ] as const
 
 export type Resultado = 'auditoria' | 'alerta'

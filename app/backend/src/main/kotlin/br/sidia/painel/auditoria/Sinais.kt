@@ -10,7 +10,7 @@ import java.time.temporal.ChronoUnit
 import kotlin.math.abs
 
 /**
- * Os 11 sinais de auditoria da spec 7.2 (a Fase 4 detecta todos; Integridade é da Fase 7). O código é o
+ * Os sinais de auditoria da spec 7.2 (11 da Fase 4 e os do Plano 11; Integridade é da Fase 7). O código é o
  * identificador estável: aparece no YAML de regras, nas respostas da API e no documento de diferenças.
  */
 enum class CodigoSinal {
@@ -25,6 +25,8 @@ enum class CodigoSinal {
     LABEL_TARDIA_COM_POSSE_ANTECIPADA,
     LABEL_APOS_VENCIMENTO,
     CANCELAMENTO_SUSPEITO,
+    /** Estimativa original reduzida de forma relevante depois de o trabalho começar (spec 7.2; Plano 11). */
+    ESTIMATIVA_REDUZIDA,
 }
 
 private const val MAX_CORRIDOS = 1_000_000L

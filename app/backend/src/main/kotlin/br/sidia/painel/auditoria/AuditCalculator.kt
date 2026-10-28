@@ -32,7 +32,7 @@ data class ResultadoAuditoria(
  */
 class AuditCalculator(
     private val ctx: ContextoDeteccao,
-    private val detectores: List<Detector> = DetectoresDeVencimento.todos + DetectoresDeResponsavel.todos + DetectoresDeLabels.todos,
+    private val detectores: List<Detector> = DetectoresDeVencimento.todos + DetectoresDeResponsavel.todos + DetectoresDeLabels.todos + DetectoresDeEstimativa.todos,
 ) {
     private val ordem = Comparator<Sinal> { a, b ->
         b.at.compareTo(a.at).takeIf { it != 0 }
@@ -120,6 +120,13 @@ class AuditCalculator(
         val ilegiveis = timelines.sumOf { it.vencimentosIlegiveis }
         if (ilegiveis > 0) {
             informativo(AvisoDto.VENCIMENTO_ILEGIVEL, "$ilegiveis valor(es) de vencimento ilegíveis no histórico", mapOf("n" to ilegiveis.toString()))
+        }
+        val semValorDeEstimativa = timelines.sumOf { DetectoresDeEstimativa.eventosSemValor(it) }
+        if (semValorDeEstimativa > 0 && ctx.regras.sinais[CodigoSinal.ESTIMATIVA_REDUZIDA]?.ativo == true) {
+            informativo(
+                AvisoDto.HISTORICO_DE_ESTIMATIVA_INCOMPLETO, "$semValorDeEstimativa evento(s) de estimativa sem valor: a nova carga os preenche",
+                mapOf("n" to semValorDeEstimativa.toString()),
+            )
         }
         for ((status, chaves) in ignoradas) {
             informativo(

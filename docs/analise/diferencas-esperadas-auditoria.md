@@ -6,7 +6,7 @@ Compara o que o app Python (`legacy/`) faz hoje com a auditoria nova do painel (
 
 O app atual **não tem** os sinais de auditoria de alteração de vencimento, responsável e labels de atraso. O mais perto é a **Integridade** (relatório `docs/analise/relatorio-cards-app-atual.md`, seção 4.13): 12 sinais por pessoa, entre eles "vencimento prorrogado" e "troca de responsável ≤ 2 h antes de fechar", todos pensados como pontuação de integridade, sem avaliar **quem** podia fazer a alteração. O registro de consulta ("AU-02" do relatório) é auditoria de **acesso**, não de alteração. A Integridade continua na Fase 7 e só para o gerente; a auditoria nova é outra coisa: mostra alterações para conferir (indício, não prova), para coordenação e gerente.
 
-## Os 11 sinais
+## Os sinais (11 da Fase 4 e os do Plano 11)
 
 Limites em `app/config/auditoria.exemplo.yaml` (copie para `auditoria.yaml`); gravidade de 1 a 3 por código; qualquer sinal pode ser desligado (`ativo: false`).
 
@@ -23,6 +23,7 @@ Limites em `app/config/auditoria.exemplo.yaml` (copie para `auditoria.yaml`); gr
 | `LABEL_TARDIA_COM_POSSE_ANTECIPADA` | `LATE_SENT`/`LATE_REVIEW` em task cujo responsável a tinha desde N dias antes do vencimento ou mais | `posseAntesDoVencimentoDias` (2), `unidade`, gravidade (2) | novo |
 | `LABEL_APOS_VENCIMENTO` | label que justifica atraso adicionada depois do dia do vencimento, por qualquer autor | gravidade (3) | novo |
 | `CANCELAMENTO_SUSPEITO` | transição para status de cancelamento depois do vencimento, ou por quem não podia | `statusCancelamento` (Cancelled, Canceled, Dropped), gravidade (2) | novo |
+| `ESTIMATIVA_REDUZIDA` | `timeoriginalestimate` caiu pelo menos `estimativaReducaoMinima` do valor anterior DEPOIS da primeira entrada em andamento (antes é replanejamento); autor autorizado vira alerta, os demais auditoria; usa os segundos guardados no `change_event` (de/para em horas) | `estimativaReducaoMinima` (0.2), gravidade (2) | novo (o app atual tem só "estimativa aumentada", na Integridade) |
 
 Quem **podia** alterar (spec 7.1): o Reporter da task (o PL), coordenadores e gerente, ou o Squad Leader do squad do responsável, **com os papéis vigentes na data civil de Manaus da alteração**. O próprio responsável não conta como autorizado por ser Squad Leader do próprio squad (decisão do usuário). Papel encerrado na véspera não autoriza; autor ausente, de automação ou chave `JIRAUSER*` não resolvida nunca vira "autorizado" e aparece na lista como autor desconhecido ou não autorizado, sem derrubar a tela.
 
@@ -47,7 +48,7 @@ Quando a **mesma pessoa** mexe no **mesmo campo**, no **mesmo minuto**, em `emLo
 
 ## O que fica de fora
 
-- **Estimativa reduzida** e **Worklog retroativo** (spec 7.2): o changelog guarda o nome do campo de estimativa sem valor e não há worklog sincronizado.
+- **Worklog retroativo** (spec 7.2): entra no Plano 11 (tarefa 5). **Estimativa reduzida** entrou com o `change_event` guardando os segundos da estimativa (Plano 11, tarefa 3).
 - Os 12 sinais de **Integridade** (Fase 7, só gerente).
 - Histórico de reporter, e conteúdo de descrição e título (o changelog só guarda o nome desses campos; o histórico mostra "valor não guardado (privacidade)").
 - Corrigir a divergência pelo painel: a Divergência mostra e leva ao Jira por link (só com a flag ligada); escrita no Jira é o Plano 16, futuro.

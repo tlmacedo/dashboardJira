@@ -17,7 +17,7 @@ import io.ktor.server.routing.get
 import java.util.Locale
 
 /** Campos do changelog cujo valor (de/para) o painel guarda e pode mostrar; os demais só têm o nome do campo. */
-private val CAMPOS_COM_VALOR = setOf("status", "assignee", "resolution", "duedate", "labels", "os version")
+private val CAMPOS_COM_VALOR = setOf("status", "assignee", "resolution", "duedate", "labels", "os version", "timeoriginalestimate")
 
 /** Campos cuja alteração tem regra de quem pode fazer (spec 7.1). */
 private val CAMPOS_DE_AUTORIZACAO = setOf("assignee", "duedate", "labels")
@@ -59,6 +59,10 @@ fun Route.rotasDeAuditoria(ctx: AppContext, auditoria: AccessLog) {
     }
 }
 
+/** A estimativa é guardada em segundos e mostrada em horas com uma casa ("36000" vira "10.0"); os demais campos saem como estão. */
+private fun valorParaOHistorico(campo: String, valor: String): String =
+    if (campo == "timeoriginalestimate") valor.toLongOrNull()?.let { String.format(Locale.ROOT, "%.1f", it / 3600.0) } ?: valor else valor
+
 /** Histórico campo a campo; chave fora do padrão é 400 e issue inexistente (ou removida) é 404. */
 private fun historico(ctx: AppContext, chave: String): HistoricoDto {
     try {
@@ -97,8 +101,8 @@ private fun historico(ctx: AppContext, chave: String): HistoricoDto {
         }
         LinhaHistoricoDto(
             at = e.at.toString(), campo = e.field,
-            de = e.from?.takeIf { guardado }?.take(LIMITE_VALOR_HISTORICO),
-            para = e.to?.takeIf { guardado }?.take(LIMITE_VALOR_HISTORICO),
+            de = e.from?.takeIf { guardado }?.let { valorParaOHistorico(campo, it) }?.take(LIMITE_VALOR_HISTORICO),
+            para = e.to?.takeIf { guardado }?.let { valorParaOHistorico(campo, it) }?.take(LIMITE_VALOR_HISTORICO),
             autor = e.authorRef, autorizado = avaliacao?.autorizado, motivo = avaliacao?.motivo?.name, valorGuardado = guardado,
         )
     }

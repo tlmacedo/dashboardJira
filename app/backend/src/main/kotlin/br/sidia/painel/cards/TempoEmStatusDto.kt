@@ -63,6 +63,10 @@ data class AvisoDto(
         const val ITENS_AGUARDANDO_ACEITE_DPO = "ITENS_AGUARDANDO_ACEITE_DPO"
         /** O histórico da gaveta fica fora enquanto a Auditoria aguarda o aceite do DPO. Informativo. */
         const val HISTORICO_AGUARDANDO_ACEITE_DPO = "HISTORICO_AGUARDANDO_ACEITE_DPO"
+        /** Eventos de estimativa gravados sem valor (antes da carga que traz os segundos): não geram sinal (`n`). Informativo. */
+        const val HISTORICO_DE_ESTIMATIVA_INCOMPLETO = "HISTORICO_DE_ESTIMATIVA_INCOMPLETO"
+        /** Worklogs gravados sem a data de criação (antes da nova carga): não geram sinal (`n`). Informativo. */
+        const val HISTORICO_DE_WORKLOG_INCOMPLETO = "HISTORICO_DE_WORKLOG_INCOMPLETO"
         const val BLOQUEANTE = "bloqueante"
         const val INFORMATIVO = "informativo"
 
