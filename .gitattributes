@@ -7,6 +7,10 @@
 .claude/hooks/* text eol=lf
 gradlew text eol=lf
 
+# workflow do CI e listas lidas pelo sh (um \r no fim de linha quebraria a leitura)
+.github/** text eol=lf
+scripts/ci/*.txt text eol=lf
+
 # regras, workflows e skills lidos pelas IAs: iguais em todos os sistemas
 CLAUDE.md text eol=lf
 HANDOFF.md text eol=lf

@@ -2,7 +2,8 @@ import { useQuery } from '@tanstack/react-query'
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react'
 import { createPortal } from 'react-dom'
 import { useLang } from '../../i18n/LangProvider'
-import { ApiError, fetchDrill, type Filtros } from './api'
+import { ErroDaApi } from '../../api/client'
+import { fetchDrill, type Filtros } from './api'
 import { baixarCsv } from './csv'
 import { inteiro, linhaFiltrosCsv } from './format'
 
@@ -66,7 +67,7 @@ export function DrillDrawer(props: {
   }
 
   const linhas = consulta.data ?? []
-  const semPermissao = consulta.error instanceof ApiError && consulta.error.status === 403
+  const semPermissao = consulta.error instanceof ErroDaApi && consulta.error.status === 403
 
   function exportar() {
     baixarCsv('tempo-em-status-detalhe.csv', [

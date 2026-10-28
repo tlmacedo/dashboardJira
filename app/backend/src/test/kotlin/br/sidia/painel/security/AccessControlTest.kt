@@ -274,6 +274,38 @@ class AccessControlTest {
     }
 
     @Test
+    fun formasNaoPrevistasExigemLogin() {
+        listOf(
+            "/.env", "/assets/.oculto", "/a/b/c/d/e/f/g/h/i", "/x%2Fy", "/auth/qualquer", "/AUTH/qualquer", "/auth",
+            "/a%5Cb", "/a b", "/p%00", "/.git/config", "/a//..", "/segmento-" + "x".repeat(200),
+        ).forEach {
+            assertFalse(ehPublica(it), "deveria exigir login: '$it'")
+            assertTrue(exigeAutenticacao(it), it)
+        }
+    }
+
+    @Test
+    fun casaDaSpaContinuaPublica() {
+        listOf(
+            "/", "/auditoria", "/assets/index-abc123.js", "/favicon.svg", "/squads/alpha/pessoas",
+            "/api/health", "/api/meta", "/auditoria?de=2026-10-01", "/a/b/c/d/e/f/g/h",
+        ).forEach { assertTrue(ehPublica(it), "deveria ser pública: '$it'") }
+    }
+
+    @Test
+    fun rotaPublicaDoPlano8PodeSerAcrescentada() {
+        assertFalse(ehPublica("/auth/login"))
+        assertTrue(ehPublica("/auth/login", rotasPublicas + setOf(listOf("auth", "login"))))
+        // O acréscimo vale só para o caminho exato.
+        assertFalse(ehPublica("/auth/login/x", rotasPublicas + setOf(listOf("auth", "login"))))
+    }
+
+    @Test
+    fun authQualquerRetorna401EmProducao() {
+        assertEquals(HttpStatusCode.Unauthorized, status(producao, OidcAuthenticator(), "/auth/qualquer"))
+    }
+
+    @Test
     fun navegacaoViaClienteRetorna401() {
         listOf("/api/x/../health", "/api/x/%2e%2e/meta", "/api/%2e/health").forEach {
             assertEquals(HttpStatusCode.Unauthorized, status(producao, OidcAuthenticator(), it), it)

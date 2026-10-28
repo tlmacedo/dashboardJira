@@ -1,59 +1,88 @@
 package br.sidia.painel
 
 import br.sidia.painel.security.segmentosNormalizados
+import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
+import io.ktor.http.defaultForFile
+import io.ktor.http.content.OutgoingContent
+import io.ktor.server.application.ApplicationCall
 import io.ktor.server.application.call
 import io.ktor.server.http.content.LocalFileContent
 import io.ktor.server.response.header
 import io.ktor.server.response.respond
 import io.ktor.server.routing.Route
 import io.ktor.server.routing.get
+import io.ktor.server.routing.head
 import java.nio.file.Files
 import java.nio.file.Path
 
 private const val CACHE_ASSETS = "public, max-age=31536000, immutable"
 private const val SEM_CACHE = "no-cache"
 
+/** O que a rota estática vai responder: um arquivo (com seu `Cache-Control`) ou 404. */
+private sealed interface Alvo {
+    data object NaoEncontrado : Alvo
+    class Arquivo(val caminho: Path, val cache: String) : Alvo
+}
+
 /**
- * Serve o build do frontend em [raiz] (rotas GET fora de `/api`).
+ * Serve o build do frontend em [raiz] (rotas GET e HEAD fora de `/api`).
  *
- * Proteção contra travessia de diretório (path traversal), em três camadas:
+ * Proteção contra travessia de diretório (path traversal), em quatro camadas:
  * 1. cada segmento do caminho é decodificado e recusado se for `.`, `..` ou contiver `/`, `\` ou NUL
  *    (cobre `..%2f`, `%2e%2e`, `..%5c`, `%00`);
- * 2. o arquivo resolvido é normalizado e precisa estar dentro da raiz;
- * 3. o caminho REAL (seguindo links simbólicos) também precisa estar dentro da raiz real.
+ * 2. segmento que começa com `.` (arquivo ou pasta oculta, como `.env` e `.git`) é sempre 404;
+ * 3. o arquivo resolvido é normalizado e precisa estar dentro da raiz;
+ * 4. o caminho REAL (seguindo links simbólicos) também precisa estar dentro da raiz real.
  *
  * Fallback para `index.html` apenas para caminhos de página: sem extensão de arquivo e fora de `/api`.
  * Arquivo com extensão que não existe devolve 404. Rotas de API desconhecidas nunca chegam aqui.
+ *
+ * `HEAD` responde 200 com os mesmos cabeçalhos do `GET` e sem corpo (rota própria; sem o plugin
+ * `AutoHeadResponse`, que exigiria dependência nova).
  */
 fun Route.spaEstatica(raiz: Path) {
     val raizAbsoluta = raiz.toAbsolutePath().normalize()
     get("/{...}") {
-        val segmentos = segmentosNormalizados(call.request.local.uri)
-        if (segmentos == null || segmentos.any { perigoso(it) } || segmentos.firstOrNull()?.equals("api", true) == true) {
-            call.respond(HttpStatusCode.NotFound)
-            return@get
-        }
-        call.response.header("X-Content-Type-Options", "nosniff")
-        val arquivo = resolverDentro(raizAbsoluta, segmentos)
-        when {
-            arquivo != null -> {
-                val cache = if (segmentos.firstOrNull() == "assets") CACHE_ASSETS else SEM_CACHE
-                call.response.header(HttpHeaders.CacheControl, cache)
-                call.respond(LocalFileContent(arquivo.toFile()))
+        when (val alvo = alvoDe(raizAbsoluta, call)) {
+            is Alvo.Arquivo -> {
+                call.response.header(HttpHeaders.CacheControl, alvo.cache)
+                call.respond(LocalFileContent(alvo.caminho.toFile()))
             }
-            segmentos.isNotEmpty() && temExtensao(segmentos.last()) -> call.respond(HttpStatusCode.NotFound)
-            else -> {
-                val index = resolverDentro(raizAbsoluta, listOf("index.html"))
-                if (index == null) {
-                    call.respond(HttpStatusCode.NotFound)
-                } else {
-                    call.response.header(HttpHeaders.CacheControl, SEM_CACHE)
-                    call.respond(LocalFileContent(index.toFile()))
-                }
-            }
+            Alvo.NaoEncontrado -> call.respond(HttpStatusCode.NotFound)
         }
+    }
+    head("/{...}") {
+        when (val alvo = alvoDe(raizAbsoluta, call)) {
+            is Alvo.Arquivo -> {
+                call.response.header(HttpHeaders.CacheControl, alvo.cache)
+                call.respond(SemCorpo(alvo.caminho))
+            }
+            Alvo.NaoEncontrado -> call.respond(HttpStatusCode.NotFound)
+        }
+    }
+}
+
+/** Resposta de `HEAD`: só tipo e tamanho do arquivo, nunca o conteúdo. */
+private class SemCorpo(arquivo: Path) : OutgoingContent.NoContent() {
+    override val contentType: ContentType = ContentType.defaultForFile(arquivo.toFile())
+    override val contentLength: Long? = Files.size(arquivo)
+}
+
+private fun alvoDe(raizAbsoluta: Path, call: ApplicationCall): Alvo {
+    val segmentos = segmentosNormalizados(call.request.local.uri)
+    if (segmentos == null || segmentos.any { perigoso(it) } || segmentos.firstOrNull()?.equals("api", true) == true) {
+        return Alvo.NaoEncontrado
+    }
+    // Arquivo ou pasta oculta em qualquer nível: nunca servido, nem pelo fallback da página inicial.
+    if (segmentos.any { it.startsWith('.') }) return Alvo.NaoEncontrado
+    // O `X-Content-Type-Options: nosniff` é escrito em toda resposta por cabecalhosDeSeguranca.
+    val arquivo = resolverDentro(raizAbsoluta, segmentos)
+    return when {
+        arquivo != null -> Alvo.Arquivo(arquivo, if (segmentos.firstOrNull() == "assets") CACHE_ASSETS else SEM_CACHE)
+        segmentos.isNotEmpty() && temExtensao(segmentos.last()) -> Alvo.NaoEncontrado
+        else -> resolverDentro(raizAbsoluta, listOf("index.html"))?.let { Alvo.Arquivo(it, SEM_CACHE) } ?: Alvo.NaoEncontrado
     }
 }
 
@@ -62,8 +91,12 @@ private fun perigoso(segmento: String) =
 
 private fun temExtensao(segmento: String) = segmento.lastIndexOf('.') > 0 || segmento.startsWith('.') && segmento.length > 1
 
-/** Resolve [segmentos] sob [raiz]; `null` se não for um arquivo regular dentro da raiz (inclusive via links). */
-private fun resolverDentro(raiz: Path, segmentos: List<String>): Path? {
+/**
+ * Resolve [segmentos] sob [raiz]; `null` se não for um arquivo regular dentro da raiz (inclusive via links)
+ * ou se algum segmento começar com `.` (oculto).
+ */
+internal fun resolverDentro(raiz: Path, segmentos: List<String>): Path? {
+    if (segmentos.any { it.startsWith('.') }) return null
     return try {
         val alvo = if (segmentos.isEmpty()) raiz.resolve("index.html") else segmentos.fold(raiz) { p, s -> p.resolve(s) }
         val normalizado = alvo.normalize()

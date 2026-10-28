@@ -51,6 +51,11 @@ data class Settings(
     val jiraInstances: Map<String, JiraInstanceSettings> = emptyMap(),
     /** Ajustes da sincronização (`SYNC_*`). Só intervalos e limites: o modo vem da flag do Jira. */
     val sync: SyncSettings = SyncSettings(),
+    /**
+     * `DASHBOARD_ORIGEM_PUBLICA`: origem pela qual o navegador acessa o painel (`esquema://host[:porta]`, minúsculas, sem
+     * barra final). Usada pela proteção CSRF; nula = compara com o `Host` da requisição. Não é segredo.
+     */
+    val origemPublica: String? = null,
 ) {
     /** Sem segredos: o painel não guarda senha de banco; as credenciais do Jira nunca entram aqui. */
     override fun toString(): String =
@@ -58,7 +63,7 @@ data class Settings(
             "dashboardDemoData=$dashboardDemoData, " +
             "retentionMonths=$retentionMonths, accessLogRetentionMonths=$accessLogRetentionMonths, zone=$zone, configDir=$configDir, " +
             "databasePath=$databasePath, staticDir=$staticDir, " +
-            "databasePoolSize=$databasePoolSize, jiraInstances=$jiraInstances)"
+            "databasePoolSize=$databasePoolSize, jiraInstances=$jiraInstances, origemPublica=$origemPublica)"
 
     companion object {
         /**
@@ -103,7 +108,32 @@ data class Settings(
                     instancia(env, "sidia", "JIRA_SIDIA", JiraAuthKind.BASIC),
                 ).toMap(),
                 sync = lerSync(env),
+                origemPublica = origemPublica(env, dashboardDevMode),
             )
+        }
+
+        /**
+         * `DASHBOARD_ORIGEM_PUBLICA`: normaliza para `esquema://host[:porta]` em minúsculas, sem barra final. Fora do modo dev
+         * exige `https`. Sem caminho, consulta, fragmento nem credencial. A mensagem cita só o NOME (a URL pode ter credencial).
+         */
+        private fun origemPublica(env: Map<String, String>, devMode: Boolean): String? {
+            val bruto = texto(env, "DASHBOARD_ORIGEM_PUBLICA") ?: return null
+            val nome = "DASHBOARD_ORIGEM_PUBLICA"
+            val uri = try {
+                java.net.URI(bruto)
+            } catch (e: java.net.URISyntaxException) {
+                throw IllegalArgumentException("$nome inválida (esperado esquema://host[:porta])")
+            }
+            val esquema = uri.scheme?.lowercase()
+            require(esquema == "http" || esquema == "https") { "$nome inválida (esquema deve ser http ou https)" }
+            require(devMode || esquema == "https") { "$nome inválida (fora do modo dev precisa ser https)" }
+            val host = uri.host?.lowercase()
+            require(!host.isNullOrEmpty()) { "$nome inválida (host ausente)" }
+            require(uri.rawUserInfo == null) { "$nome inválida (sem credencial)" }
+            require(uri.rawQuery == null && uri.rawFragment == null) { "$nome inválida (sem consulta nem fragmento)" }
+            require(uri.rawPath.isNullOrEmpty() || uri.rawPath == "/") { "$nome inválida (sem caminho)" }
+            val porta = if (uri.port == -1) "" else ":${uri.port}"
+            return "$esquema://$host$porta"
         }
 
         private const val MAX_MESES_DE_RETENCAO = 600

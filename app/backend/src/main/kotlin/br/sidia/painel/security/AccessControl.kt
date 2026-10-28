@@ -18,7 +18,7 @@ import io.ktor.util.AttributeKey
 private val chavePrincipal = AttributeKey<Principal>("painel.principal")
 
 /** Únicas rotas públicas, já normalizadas. Todo o resto exige principal (negar por padrão). */
-private val rotasPublicas = setOf(listOf("api", "health"), listOf("api", "meta"))
+internal val rotasPublicas =setOf(listOf("api", "health"), listOf("api", "meta"))
 
 /**
  * Normaliza o caminho como o roteador do Ktor: divide por `/`, descarta segmentos vazios e
@@ -41,30 +41,45 @@ internal fun segmentosNormalizados(uri: String): List<String>? {
     return saida
 }
 
+/** Segmento aceito na casca estática: começa com letra ou dígito (nada oculto) e só usa caracteres simples. */
+private val segmentoEstatico = Regex("^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$")
+
+/** Máximo de segmentos de uma URL da casca estática (as telas da SPA têm no máximo 3 ou 4). */
+private const val MAX_SEGMENTOS_ESTATICOS = 8
+
 /**
- * Decide se o caminho exige autenticação. Negar por padrão DENTRO da API.
+ * Decide se o caminho é PÚBLICO. Lista de permissão: tudo o que não for reconhecido exige login
+ * (negar por padrão em todo o servidor, não só na API).
  *
  * É público somente se:
- * 1. normaliza exatamente para `/api/health` ou `/api/meta`; ou
- * 2. é a casca estática da SPA (HTML, JS e CSS sem dados): o primeiro segmento decodificado NÃO é
- *    `api` (sem diferenciar maiúsculas), nenhum segmento é `.` ou `..` e a decodificação não falhou.
+ * 1. normaliza exatamente para um item de [publicas] (hoje `/api/health` e `/api/meta`); ou
+ * 2. é a raiz `/`; ou
+ * 3. é a casca estática da SPA (HTML, JS e CSS sem dados): o primeiro segmento NÃO é `api` nem `auth`
+ *    (sem diferenciar maiúsculas), todo segmento casa [segmentoEstatico] (nada oculto, vazio, com `%`, `\`, NUL
+ *    ou `..`), há no máximo [MAX_SEGMENTOS_ESTATICOS] segmentos e a URI começa com `/` e não com `//`.
  *
- * Todos os dados ficam atrás de `/api/` (qualquer subcaminho), que continua protegida; assim a SPA e a futura tela de
- * login carregam mesmo em produção com autenticador que nega. Variantes camufladas da API
- * (`/%61pi/x`, `//api/x`, `/API/x`, `/api/x/../health`) continuam exigindo principal.
+ * Todos os dados ficam atrás de `/api/`, que continua protegida; assim a SPA e a futura tela de login
+ * carregam mesmo em produção com autenticador que nega. Variantes camufladas da API
+ * (`/%61pi/x`, `//api/x`, `/API/x`, `/api/x/../health`) e tudo sob `/auth` exigem principal; os Planos 8 e 12
+ * acrescentam suas rotas públicas (`/auth/login`, `/auth/callback`) em [rotasPublicas].
  */
-internal fun exigeAutenticacao(uri: String): Boolean {
+internal fun ehPublica(uri: String, publicas: Set<List<String>> = rotasPublicas): Boolean {
     // URI absoluta (`http://h/api/x`) ou relativa: o roteador pode normalizá-la para um caminho
-    // diferente do que se analisa aqui, então exige login antes de qualquer outra regra.
-    // Também cobre `//h/api/x` (autoridade sem esquema).
-    if (!uri.startsWith("/") || uri.startsWith("//")) return true
-    val segmentos = segmentosNormalizados(uri) ?: return true
-    if (segmentos.any { it == "." || it == ".." }) return true
-    if (segmentos in rotasPublicas) return false
-    // Casca estática: fora da API e sem NUL em nenhum segmento.
-    val primeiro = segmentos.firstOrNull() ?: return false // "/" é a página inicial da SPA
-    return primeiro.equals("api", ignoreCase = true) || segmentos.any { '\u0000' in it }
+    // diferente do que se analisa aqui, então nunca é pública. Também cobre `//h/api/x`.
+    if (!uri.startsWith("/") || uri.startsWith("//")) return false
+    val segmentos = segmentosNormalizados(uri) ?: return false
+    if (segmentos in publicas) return true
+    if (segmentos.isEmpty()) return true // "/" é a página inicial da SPA
+    if (segmentos.size > MAX_SEGMENTOS_ESTATICOS) return false
+    val primeiro = segmentos.first()
+    if (primeiro.equals("api", ignoreCase = true) || primeiro.equals("auth", ignoreCase = true)) return false
+    // Os segmentos já vêm decodificados: um "%2F" decodificado vira "/" e não casa a expressão.
+    return segmentos.all { segmentoEstatico.matches(it) }
 }
+
+/** Contrário de [ehPublica]: o caminho exige principal autenticado. */
+internal fun exigeAutenticacao(uri: String): Boolean = !ehPublica(uri)
+
 
 /**
  * Principal da chamada. Fora de rota protegida ela lança: isso é erro de programação,
@@ -73,6 +88,9 @@ internal fun exigeAutenticacao(uri: String): Boolean {
 val ApplicationCall.principal: Principal
     get() = attributes.getOrNull(chavePrincipal)
         ?: throw IllegalStateException("Chamada sem principal autenticado")
+
+/** Principal da chamada se já foi resolvido; `null` em rota pública ou antes da autenticação. Nunca lança. */
+internal fun ApplicationCall.principalOuNulo(): Principal? = attributes.getOrNull(chavePrincipal)
 
 /**
  * Resolve o principal uma vez por chamada para toda rota sob `/api/` (exceto health e meta).

@@ -8,6 +8,7 @@ import { gravarPreferencia, lerPreferencia } from '../storage'
 import { DevBanner } from './DevBanner'
 import { Menu } from './Menu'
 import { RoleContext } from './RoleContext'
+import { SessaoExpirada } from './SessaoExpirada'
 
 const CHAVE_PAPEL = 'painel.papelSimulado'
 
@@ -71,6 +72,7 @@ export function Shell() {
             <Outlet />
           </main>
         </div>
+        <SessaoExpirada devMode={dev} />
       </div>
     </RoleContext.Provider>
   )
