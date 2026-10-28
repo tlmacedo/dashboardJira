@@ -354,9 +354,9 @@ class IntegridadeRoutesTest {
     }
 
     @Test
-    fun producaoSemLoginRetorna401() = testApplication {
-        val c = novoContextoTrb1(banco, Int2.issues(), PRODUCAO).also { ctx = it }
-        application { module(c.settings, c) }
-        assertEquals(HttpStatusCode.Unauthorized, client.get("/api/integridade").status)
+    fun producaoSemLoginRetorna401() = rodar(PRODUCAO) { get ->
+        for (rota in listOf("/api/integridade", "/api/integridade/catalogo", "/api/cartoes/IN-01/tasks?segmento=todas")) {
+            assertEquals(HttpStatusCode.Unauthorized, get(null, rota).status, rota)
+        }
     }
 }
