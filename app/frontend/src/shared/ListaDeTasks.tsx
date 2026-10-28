@@ -1,5 +1,6 @@
 import { useLang } from '../i18n/LangProvider'
 import { baixarCsv } from './csv'
+import { TabelaVirtual, type Coluna } from './TabelaVirtual'
 import type { LinhaDeTask, TasksDoCartao } from './tasksApi'
 import './tabela.css'
 
@@ -46,50 +47,39 @@ export type ListaDeTasksProps = {
   aoAbrirTask?: (chave: string) => void
 }
 
-/** Tabela das tasks do drill, igual na gaveta e na página de detalhe. Todo valor entra como texto. */
+/**
+ * Tabela das tasks do drill, igual na gaveta e na página de detalhe. Ordenável por coluna e VIRTUAL acima de 200 linhas (um
+ * drill pode ter dezenas de milhares): só a janela visível é desenhada, o CSV usa a lista inteira. Todo valor entra como texto.
+ */
 export function ListaDeTasks(props: ListaDeTasksProps) {
   const { t } = useLang()
-  const colunas = colunasDe(props.dados)
+  const colunas: Coluna<LinhaDeTask>[] = colunasDe(props.dados).map((c) => ({
+    id: c,
+    cabecalho: t(`gaveta.col.${c}`),
+    valor: (r) => (c === 'responsavel' ? (r.responsavel ?? null) : VALOR_DA_COLUNA[c](r)),
+    render:
+      c === 'chave'
+        ? (r) =>
+            props.aoAbrirTask ? (
+              <button type="button" className="contagem-botao mono" title={t('gaveta.abrirTask').replace('{key}', r.key)} onClick={() => props.aoAbrirTask?.(r.key)}>
+                {r.key}
+              </button>
+            ) : (
+              r.key
+            )
+        : c === 'responsavel'
+          ? (r) => r.responsavel ?? '—'
+          : undefined,
+  }))
   return (
-    <div className="tabela-rolagem" tabIndex={0} role="region" aria-label={props.titulo}>
-      <table className="tabela">
-        <thead>
-          <tr>
-            {colunas.map((c) => (
-              <th scope="col" key={c}>
-                {t(`gaveta.col.${c}`)}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {/* Uma task pode aparecer mais de uma vez (ex.: dois sinais da auditoria na mesma issue): a posição entra na chave. */}
-          {props.dados.linhas.map((r, i) => (
-            <tr key={`${r.key}:${i}`}>
-              {colunas.map((c) =>
-                c === 'chave' ? (
-                  <th scope="row" className="mono" key={c}>
-                    {props.aoAbrirTask ? (
-                      <button
-                        type="button"
-                        className="contagem-botao mono"
-                        title={t('gaveta.abrirTask').replace('{key}', r.key)}
-                        onClick={() => props.aoAbrirTask?.(r.key)}
-                      >
-                        {r.key}
-                      </button>
-                    ) : (
-                      r.key
-                    )}
-                  </th>
-                ) : (
-                  <td key={c}>{c === 'responsavel' ? (r.responsavel ?? '—') : VALOR_DA_COLUNA[c](r)}</td>
-                ),
-              )}
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+    <TabelaVirtual
+      colunas={colunas}
+      linhas={props.dados.linhas}
+      // Uma task pode aparecer mais de uma vez (ex.: dois sinais da auditoria na mesma issue): a posição entra na chave.
+      chave={(r, i) => `${r.key}:${i}`}
+      rotulo={props.titulo}
+      primeiraEhCabecalhoDeLinha={colunas[0]?.id === 'chave'}
+      aoAbrir={props.aoAbrirTask ? (r) => props.aoAbrirTask?.(r.key) : undefined}
+    />
   )
 }
