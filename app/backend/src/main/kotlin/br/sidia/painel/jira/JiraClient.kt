@@ -241,6 +241,8 @@ class JiraClient internal constructor(
      */
     suspend fun fullChangelog(issueKey: String): List<JsonObject> {
         require(CHAVE_ISSUE.matches(issueKey)) { "Chave de issue inválida" }
+        // O endpoint paginado é do Jira Cloud e pode não existir no Data Center: uma vez visto ausente, nem se tenta de novo.
+        if (changelogPaginadoAusente) return changelogPorExpand(issueKey)
         val segmento = issueKey.encodeURLPathPart()
         val historicos = mutableListOf<JsonObject>()
         var inicio = 0
@@ -249,10 +251,18 @@ class JiraClient internal constructor(
         val maxPaginas = maxOf(1, (MAX_ITENS + CHANGELOG_PAGINA - 1) / CHANGELOG_PAGINA)
         while (true) {
             val url = "$baseUrl/rest/api/2/issue/$segmento/changelog?startAt=$inicio&maxResults=$CHANGELOG_PAGINA"
-            val resposta = requisitarJson(HttpMethod.Get, url, null)
+            val resposta = try {
+                requisitarJson(HttpMethod.Get, url, null)
+            } catch (e: JiraException) {
+                // Só a PRIMEIRA página decide: 404/400/405 = o endpoint não existe neste servidor.
+                if (inicio == 0 && e.status in STATUS_ENDPOINT_AUSENTE) {
+                    changelogPaginadoAusente = true
+                    return changelogPorExpand(issueKey)
+                }
+                throw e
+            }
             val total = exigirTotal(resposta)
-            val valores = (resposta.raiz["values"] as? JsonArray)
-                ?.map { it as? JsonObject ?: throw respostaInesperada(resposta.status) }.orEmpty()
+            val valores = historicosDe(resposta.raiz, resposta.status)
             historicos += valores
             if (valores.isEmpty()) break
             inicio += valores.size
@@ -264,6 +274,27 @@ class JiraClient internal constructor(
         }
         return historicos
     }
+
+    /** Lembra, por instância e em memória, que o endpoint paginado de changelog não existe neste servidor. */
+    @Volatile
+    private var changelogPaginadoAusente = false
+
+    /**
+     * Histórico via GET `/rest/api/2/issue/{key}?expand=changelog&fields=key` (rota do Data Center), lendo
+     * `changelog.histories` (ou `values`). Uma issue sem a chave `changelog` na resposta devolve lista vazia.
+     */
+    suspend fun changelogPorExpand(issueKey: String): List<JsonObject> {
+        require(CHAVE_ISSUE.matches(issueKey)) { "Chave de issue inválida" }
+        val url = "$baseUrl/rest/api/2/issue/${issueKey.encodeURLPathPart()}?expand=changelog&fields=key"
+        val resposta = requisitarJson(HttpMethod.Get, url, null)
+        val changelog = resposta.raiz["changelog"] as? JsonObject ?: return emptyList()
+        return historicosDe(changelog, resposta.status)
+    }
+
+    /** Lê a lista de históricos nos dois formatos: `values` (Cloud, paginado) ou `histories` (Data Center, embutido). */
+    private fun historicosDe(objeto: JsonObject, status: Int): List<JsonObject> =
+        ((objeto["values"] ?: objeto["histories"]) as? JsonArray)
+            ?.map { it as? JsonObject ?: throw respostaInesperada(status) }.orEmpty()
 
     /** Único caminho HTTP do cliente: guard + retry antes de cada requisição, erro mascarado, corpo em JSON. */
     private suspend fun requisitarJson(metodo: HttpMethod, url: String, corpo: String?): RespostaJson {
@@ -420,5 +451,7 @@ class JiraClient internal constructor(
         // Teto para Retry-After: um valor absurdo do servidor não pode travar o job.
         const val RETRY_AFTER_MAX_SEGUNDOS = 120L
         val STATUS_REPETIVEIS = setOf(429, 502, 503, 504)
+        // Respostas que indicam que o endpoint paginado de changelog não existe neste servidor.
+        val STATUS_ENDPOINT_AUSENTE = setOf(400, 404, 405)
     }
 }
