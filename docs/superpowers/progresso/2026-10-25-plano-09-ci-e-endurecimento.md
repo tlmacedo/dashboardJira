@@ -22,11 +22,16 @@ Branch: `feat/ci-e-endurecimento` (lote 9a = tarefas 1 a 3; os lotes seguintes c
 - Ruling (T4): origem esperada sem `DASHBOARD_ORIGEM_PUBLICA` = `<esquema local>://<cabeçalho Host>` (fallback para o host/porta locais se o `Host` faltar, que é o caso do motor de teste); `:80`/`:443` padrão são removidos na comparação; o painel não confia em `X-Forwarded-*`. Atrás de proxy a variável é obrigatória (documentado no `.env.example`).
 - Ruling (T4): `todoMetodoMutanteExigeCsrf` percorre `RoutingRoot` como `RoutingNode` (a interface `Route` não expõe `selector` nem `children` no Ktor 3.3.1) e usa `RoutingNode.parent.toString()` como caminho acumulado.
 
+- Ruling (T6): ponto de parada 5 (como o pacote decide o modo): opção 1, perfil de produção só nos scripts do pacote (`-Dpainel.perfil=producao` via `tasks.startScripts.defaultJvmOpts`); `run` e `iniciar.*` seguem em modo dev. Reversível: remover a propriedade do script. O padrão global de `DASHBOARD_DEV_MODE` não mudou.
+- Ruling (T6): os dois testes de processo do plano (`pacoteSemVariaveisSobeEmModoProducao` e `pacoteSemConfiguracaoFalhaFechado`) viraram um só (`pacoteSemVariaveisSobeEmModoProducaoEFalhaFechado`), como o próprio plano descreve ("um só teste de processo"). A conferência da mensagem "obrigatório em produção" ignora a acentuação (`obrigat\S+ em produ\S+`) porque, com o ambiente limpo, a JVM escreve em ASCII e os acentos saem como `?`.
+
 ## Minor adiados
 
 (nenhum até aqui)
 
 ## Tarefas
+
+- Tarefa 6 (lote 9b): pacote `installDist` em modo produção por padrão. `PerfilDeExecucaoTest` (7) e `PacoteInstalavelTest` (5, com um teste de processo de ~2 s, ambiente limpo, porta 8080 nunca aberta). Falharam antes pelo motivo certo: o rascunho do perfil devolvia o mapa igual (asserções), e o processo falhou sem a mensagem de produção (a falha de configuração era a de modo dev: "Nem ... nem o modelo ..."). A tarefa `test` agora depende de `installDist` e recebe `painel.installDir`. Números ao fim da tarefa: backend 804 testes, 0 falhas. Conferência manual de `/api/meta` em modo dev (iniciar.sh) não feita (o hook barra subir o painel e consultar por `curl`); o padrão de desenvolvimento é coberto por `semPerfilNaoMudaNada`.
 
 - Tarefa 5 (lote 9b): sessão expirada na tela. `client.test.ts` (+7: `nenhumFetchForaDoCliente`, `respostas401DisparamSessaoExpirada`, `respostas403NaoDisparam`, `voltaSoAceitaCaminhoInterno`, `getJson`, `urlDeLogin`) e `SessaoExpirada.test.tsx` (5: pt, en, `focoNoBotaoEEscNaoFecha`, `devModeNaoMostra`, ausência antes do 401). Falharam antes (funções inexistentes; `nenhumFetchForaDoCliente` achou 2 arquivos com `fetch`). As suítes das telas continuam sem mudar asserções. Divergência de código (sem mudar comportamento): as três telas que testavam `instanceof ApiError` passaram a testar `instanceof ErroDaApi`, pois `getJson` lança `ErroDaApi` (`ApiError` continua existindo, subclasse). `fetchMe`/`fetchMeta` agora lançam `ErroDaApi` em vez de `Error` genérico. Teste de `?volta=` com host externo não cobre o componente (o jsdom proíbe `pushState` para outra origem); a regra fica em `voltaSoAceitaCaminhoInterno`. Números: frontend 74 testes, 0 falhas, lint 0 (só avisos), build ok, `verificar-csp.mjs` ok. Conferência no navegador não feita.
 

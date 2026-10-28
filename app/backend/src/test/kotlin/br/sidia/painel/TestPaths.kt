@@ -16,6 +16,12 @@ object TestPaths {
             ?: error("Propriedade painel.repoDir ausente: rode os testes pelo Gradle"),
     )
 
+    /** Pacote gerado por `installDist` (`build/install/painel`), definido em `build.gradle.kts` pela propriedade `painel.installDir`. */
+    val installDir: Path = Path.of(
+        System.getProperty("painel.installDir")
+            ?: error("Propriedade painel.installDir ausente: rode os testes pelo Gradle"),
+    )
+
     /** Pasta `app/backend/src/main`, definida em `build.gradle.kts` pela propriedade `painel.mainSrcDir`. */
     val mainSrcDir: Path = Path.of(
         System.getProperty("painel.mainSrcDir")

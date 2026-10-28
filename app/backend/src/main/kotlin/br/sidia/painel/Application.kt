@@ -3,6 +3,7 @@ package br.sidia.painel
 import br.sidia.painel.cards.registrarNegacaoSemPapel
 import br.sidia.painel.cards.rotasTempoEmStatus
 import br.sidia.painel.config.ArquivoEnv
+import br.sidia.painel.config.PerfilDeExecucao
 import br.sidia.painel.config.Settings
 import br.sidia.painel.db.AccessLog
 import br.sidia.painel.demo.prepararDemonstracao
@@ -52,7 +53,12 @@ fun main() {
     val arquivoEnv = System.getenv("PAINEL_ENV_FILE")?.takeIf { it.isNotBlank() }?.let { java.nio.file.Path.of(it) }
         ?: java.nio.file.Path.of(".env")
     // A flag de acesso ao Jira vem SÓ desse arquivo (true liga; false ou ausente desliga).
-    val settings = Settings.fromEnv(ArquivoEnv.combinarComFlagSoDoArquivo(ArquivoEnv.ler(arquivoEnv), System.getenv()))
+    // No pacote instalado (perfil de produção) a ausência de DASHBOARD_DEV_MODE vale false; ver PerfilDeExecucao.
+    val env = PerfilDeExecucao.aplicar(
+        System.getProperty(PerfilDeExecucao.PROPRIEDADE),
+        ArquivoEnv.combinarComFlagSoDoArquivo(ArquivoEnv.ler(arquivoEnv), System.getenv()),
+    )
+    val settings = Settings.fromEnv(env)
     // Falhas de configuração, papéis ou banco acontecem aqui, na subida, e não na primeira requisição.
     val context = AppContext.load(settings)
     // Dados fictícios (só em desenvolvimento, Jira desligado) ou recusa de banco misturado; ver DadosDeDemonstracao.

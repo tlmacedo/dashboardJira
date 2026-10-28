@@ -42,8 +42,18 @@ tasks.named<JavaExec>("run") {
     workingDir = rootProject.layout.projectDirectory.dir("..").asFile
 }
 
+// Só os scripts do pacote instalado (bin/painel e bin/painel.bat) fixam o perfil de produção: o pacote sem arquivo de
+// variáveis sobe com o modo de desenvolvimento DESLIGADO. `./gradlew run` e `iniciar.*` seguem em modo dev
+// (o `run` usa applicationDefaultJvmArgs, que não recebe esta propriedade).
+tasks.startScripts {
+    defaultJvmOpts = listOf("-Dpainel.perfil=producao")
+}
+
 tasks.test {
     useJUnitPlatform()
+    // O teste do pacote instalado precisa do resultado de installDist.
+    dependsOn(tasks.installDist)
+    systemProperty("painel.installDir", layout.buildDirectory.dir("install/painel").get().asFile.absolutePath)
     // Isolamento: a suíte nunca herda a flag do Jira ligada no terminal (testes usam MockEngine, sem rede).
     environment("JIRA_LIVE_ENABLED", "false")
     // Pasta dos YAML de exemplo, por caminho absoluto (não depende do diretório de trabalho).
