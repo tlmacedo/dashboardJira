@@ -89,7 +89,7 @@ private fun autenticadorPadrao(settings: Settings): Authenticator =
  * compatibilidade de assinatura (posicional) e é ignorado, para que os dois nunca divirjam em silêncio.
  */
 fun Application.module(
-    @Suppress("UNUSED_PARAMETER") settingsIgnorado: Settings,
+    @Suppress("UNUSED_PARAMETER") settingsIgnorado: Settings? = null,
     context: AppContext,
     authenticator: Authenticator = autenticadorPadrao(context.settings),
     agendador: Agendador? = null,

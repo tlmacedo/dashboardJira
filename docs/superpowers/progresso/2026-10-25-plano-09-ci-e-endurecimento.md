@@ -27,6 +27,8 @@ Branch: `feat/ci-e-endurecimento` (lote 9a = tarefas 1 a 3; os lotes seguintes c
 
 - Ruling (T7): o `.env.example` já tinha `DASHBOARD_DEV_MODE` e `DASHBOARD_DEMO_DATA` comentadas e `DASHBOARD_ORIGEM_PUBLICA` documentada (T4); só acrescentei o texto sobre o pacote instalado e a garantia de que o modelo não liga o modo dev. Quatro dos seis testes de `ModeloDeVariaveisTest` já passavam de primeira (o modelo já estava conforme); falharam pela asserção só `modeloDocumentaOrigemPublicaEPacote` e `readmeDiferenciaOModoDevDoPacote`. O poder dos demais fica garantido pela leitura do mapa ativo (qualquer linha ativa ligada derruba o teste).
 
+- Ruling (T8): `ehPublica(uri, publicas = rotasPublicas)` ganhou o segundo parâmetro opcional para o teste `rotaPublicaDoPlano8PodeSerAcrescentada` provar o acréscimo sem mutar um conjunto global (`rotasPublicas` continua um `Set` imutável e `internal`; os Planos 8 e 12 editam a lista no código). Custo se errado: nenhum. `/auth` (sem sufixo) também exige login. Antes de implementar, a falha foi vista com um rascunho de `ehPublica` igual à regra antiga e `module`/`resolverDentro` já com a assinatura nova: 6 testes novos falharam pela asserção. Números: backend 20 s, 0 falhas. Diferença visível: caminho de página da SPA com acento, espaço ou mais de 8 segmentos passa a responder 401 em produção (as telas atuais têm no máximo 3 segmentos, ASCII).
+
 ## Minor adiados
 
 (nenhum até aqui)
