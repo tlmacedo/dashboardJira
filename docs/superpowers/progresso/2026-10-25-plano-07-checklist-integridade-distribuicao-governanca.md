@@ -16,6 +16,11 @@ Ponto de partida (main `6c83d61`): backend `./gradlew test --rerun-tasks` 1856 t
 
 Estado final do 7a: backend `./gradlew test --rerun-tasks` 1964 testes, 0 falhas, 1 ignorado; frontend 441 testes, `pnpm build` verde; varredura de dados pessoais limpa. Pendências: captura visual (sem navegador); `TravaDpo` ligada só à Integridade (Auditoria no Plano 11); demonstração sem pares Checklist × Review; sinais "estimativa reduzida" e "worklog retroativo" sem dono; labels de criticidade a confirmar na 1ª conexão. Minor adiados: `paresTaskReview` carrega eventos de mais; leitura `TODAS` dos três tipos; conflito provável no fim de `pt.json`/`en.json` e em `AppContextTest` ao mesclar com o Plano 8.
 
+### Correções da revisão final (7a)
+
+- Ruling: I2 — um fechamento rápido gera um sinal só (como o `if/elif` do legado): `PULOU_O_FLUXO` não dispara na task que já gerou `CRIADA_E_FECHADA_RAPIDO` (com o sinal rápido desligado, o pulo volta a valer). Motivo: Open → Done em 5 min somava 5 pontos e mudava o nível das pessoas. Reversão: tirar o `if` no detector `puloOFluxo`.
+- Ruling: I3 — a `TravaDpo` agora recebe também o banco e só abre se `devMode && !jiraLive` E o banco não tem dado sincronizado de verdade: nenhuma linha em `sync_run` e nenhuma `sync_state.watermark` (a retenção pode apagar o histórico de execuções, a marca d'água fica). Erro ao consultar fecha. Critério escolhido por ser o mais simples e robusto: a demonstração nunca grava `sync_run`/`watermark`, a sincronização real sempre grava. `DASHBOARD_DEMO_DATA` NÃO foi usada como alternativa "OU" que reabriria a porta (flag ligada sobre banco com sincronização real); a demonstração já passa pelo critério do banco. Reversão: voltar a `devMode && !jiraLive`. O Plano 11 só acrescenta o `aceiteDpo`.
+
 Ruling: T8 — as seis regras de alerta do par e os limiares de nível foram conferidos em `legacy/backend/jiradash/reports.py` (`pair_row` e `integrity_view`), e não em `analytics.py` como diz o plano, onde essa lógica não existe. `CompatLegadoChecklistTest` confere o texto do legado e o comportamento do painel, e é pulado se `legacy/` sair. CR-09 (tabela de pares, lado a lado) é a tabela e a comparação da tela, sem cartão numerado próprio; os 13 cartões registrados são CR-01 a CR-08 e CR-10 a CR-14.
 
 ## Estado herdado (conferido no código)

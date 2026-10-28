@@ -25,7 +25,7 @@ fun Route.rotasDeIntegridade(ctx: AppContext, auditoria: AccessLog) {
     get("/api/integridade") {
         call.executarAuditado(auditoria, ctx) { principal ->
             exigirGerente(ctx, principal)
-            TravaDpo(ctx.settings).exigir(ModuloSensivel.INTEGRIDADE)
+            TravaDpo(ctx.settings, ctx.dataSource).exigir(ModuloSensivel.INTEGRIDADE)
             val filtros = lerFiltrosIntegridade(call.request.queryParameters, hoje(ctx))
             paraDto(calcularIntegridade(ctx, principal, filtros, store), ctx)
         }
@@ -34,7 +34,7 @@ fun Route.rotasDeIntegridade(ctx: AppContext, auditoria: AccessLog) {
     get("/api/integridade/catalogo") {
         call.executarAuditado(auditoria, ctx) { principal ->
             exigirGerente(ctx, principal)
-            TravaDpo(ctx.settings).exigir(ModuloSensivel.INTEGRIDADE)
+            TravaDpo(ctx.settings, ctx.dataSource).exigir(ModuloSensivel.INTEGRIDADE)
             catalogoDto(ctx)
         }
     }

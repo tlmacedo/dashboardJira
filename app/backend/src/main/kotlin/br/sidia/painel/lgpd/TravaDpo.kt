@@ -1,6 +1,7 @@
 package br.sidia.painel.lgpd
 
 import br.sidia.painel.config.Settings
+import javax.sql.DataSource
 
 /** Os módulos que tratam dados pessoais sensíveis e ficam atrás da trava do DPO. */
 enum class ModuloSensivel { AUDITORIA, INTEGRIDADE }
@@ -14,11 +15,31 @@ class BloqueadoPeloDpoException(val modulo: ModuloSensivel) : RuntimeException(T
  * desligado (dados fictícios). Em produção, e em desenvolvimento com Jira ligado, ela fica FECHADA (fail-closed).
  *
  * Ponto de extensão do Plano 11 (Tarefa 1): o aceite entra como `LgpdSettings.aceiteDpo` (configuração `DASHBOARD_DPO_ACEITE`,
- * com a referência do parecer) e [liberada] passa a ser `aceiteDpo || (devMode && !jiraLive)`. Esta classe é decidida SÓ por
- * configuração, nunca pelo conteúdo do banco.
+ * com a referência do parecer) e [liberada] passa a ser `aceiteDpo || (devMode && !jiraLive)`. A classe olha a configuração e se o
+ * banco já guarda dado sincronizado de verdade (ver [liberada]).
  */
-class TravaDpo(private val settings: Settings) {
-    val liberada: Boolean get() = settings.dashboardDevMode && !settings.jiraLiveEnabled
+class TravaDpo(private val settings: Settings, private val dataSource: DataSource?) {
+    /**
+     * Aberta só em desenvolvimento com o Jira desligado E sobre banco SEM dado sincronizado de verdade: se o painel já sincronizou
+     * (mesmo que a flag tenha sido desligada depois), o banco tem dado real e a porta continua fechada. Qualquer erro ao consultar o
+     * banco fecha a porta. A flag `DASHBOARD_DEMO_DATA` não reabre nada: a demonstração nunca grava execução de sincronização, então
+     * um banco só de demonstração já passa; ligar a flag sobre banco com sincronização real não pode abrir a porta.
+     */
+    val liberada: Boolean get() = settings.dashboardDevMode && !settings.jiraLiveEnabled && semDadoSincronizado()
+
+    private fun semDadoSincronizado(): Boolean {
+        val ds = dataSource ?: return true
+        return try {
+            ds.connection.use { c ->
+                c.createStatement().use { st ->
+                    // Execução de sincronização registrada, ou marca d'água de sincronização (a retenção pode apagar o histórico de execuções).
+                    st.executeQuery("SELECT 1 FROM sync_run UNION ALL SELECT 1 FROM sync_state WHERE watermark IS NOT NULL LIMIT 1").use { !it.next() }
+                }
+            }
+        } catch (e: Exception) {
+            false
+        }
+    }
 
     /** Lança [BloqueadoPeloDpoException] se a porta está fechada. A rota a transforma em 403 com [CODIGO] (e grava o `access_log`). */
     fun exigir(modulo: ModuloSensivel) {

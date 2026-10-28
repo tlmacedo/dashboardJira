@@ -267,7 +267,22 @@ class IntegridadeRoutesTest {
     // ---- A porta do DPO ----
 
     @Test
-    fun producaoSemAceiteBloqueiaMesmoOGerente() = rodar(PRODUCAO) { get ->
+    fun desenvolvimentoSobreBancoComSincronizacaoRealFicaFechado() = rodar { get ->
+        // Aberto sobre a demonstração...
+        assertEquals(HttpStatusCode.OK, get(gerente, "/api/integridade").status)
+        // ...e fechado assim que o banco registra uma sincronização real (a flag do Jira pode ter sido desligada depois).
+        requireNotNull(ctx!!.dataSource).connection.use {
+            it.createStatement().execute("INSERT INTO sync_run(instance, kind, started_at, finished_at, status) VALUES ('samsung', 'INCREMENTAL', 1, 2, 'OK')")
+        }
+        for (rota in listOf("/api/integridade", "/api/integridade/catalogo", "/api/cartoes/IN-01/tasks?segmento=todas")) {
+            val r = get(gerente, rota)
+            assertEquals(HttpStatusCode.Forbidden, r.status, rota)
+            assertEquals("AGUARDANDO_ACEITE_DPO", Json.decodeFromString<ErroDto>(r.corpo).codigo, rota)
+        }
+    }
+
+    @Test
+    fun producaoSemAceiteBloqueiaMesmoOGerente()= rodar(PRODUCAO) { get ->
         for (rota in listOf("/api/integridade", "/api/integridade/catalogo", "/api/cartoes/IN-01/tasks?segmento=todas", "/api/integridade?de=lixo")) {
             val r = get(gerente, rota)
             assertEquals(HttpStatusCode.Forbidden, r.status, rota)
