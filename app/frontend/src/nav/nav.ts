@@ -12,12 +12,16 @@ export type GroupId =
   | 'auditoria'
   | 'governanca'
 
+export type Modulo = 'AUDITORIA' | 'INTEGRIDADE'
+
 export type NavItem = {
   id: string
   group: GroupId
   labelKey: string
   roles: Role[] | 'all'
   route: string
+  /** Módulo sensível atrás da trava do DPO (o menu marca o item enquanto o módulo está fechado). */
+  modulo?: Modulo
 }
 
 export type NavGroup = { id: GroupId; labelKey: string; items: NavItem[] }
@@ -37,8 +41,8 @@ export const GROUPS: GroupId[] = [
 const LIDERANCA: Role[] = ['SQUAD_LEADER', 'COORDENADOR', 'GERENTE']
 const ALTA: Role[] = ['COORDENADOR', 'GERENTE']
 
-function item(id: string, group: GroupId, roles: Role[] | 'all', labelKey = `nav.${id}`): NavItem {
-  return { id, group, labelKey, roles, route: `/${id}` }
+function item(id: string, group: GroupId, roles: Role[] | 'all', labelKey = `nav.${id}`, modulo?: Modulo): NavItem {
+  return { id, group, labelKey, roles, route: `/${id}`, ...(modulo ? { modulo } : {}) }
 }
 
 export const NAV_ITEMS: NavItem[] = [
@@ -83,9 +87,9 @@ export const NAV_ITEMS: NavItem[] = [
   item('distribuicao', 'acao', LIDERANCA),
   item('rebalanceamento', 'acao', LIDERANCA),
 
-  item('auditoria', 'auditoria', ALTA),
-  item('divergencia', 'auditoria', ALTA),
-  item('integridade', 'auditoria', ['GERENTE']),
+  item('auditoria', 'auditoria', ALTA, undefined, 'AUDITORIA'),
+  item('divergencia', 'auditoria', ALTA, undefined, 'AUDITORIA'),
+  item('integridade', 'auditoria', ['GERENTE'], undefined, 'INTEGRIDADE'),
 
   // Gerado do catálogo de cartões do backend; só coordenação e gerência.
   item('mapaCartoes', 'governanca', ALTA),

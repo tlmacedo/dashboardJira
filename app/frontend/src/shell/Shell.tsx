@@ -81,6 +81,7 @@ export function Shell() {
         <div className="app">
           <Menu
             role={papel}
+            modulosBloqueados={me.data?.modulosBloqueados}
             aoTrocarPapel={dev ? trocarPapel : undefined}
             aoSair={meta.data !== undefined && !dev ? sair : undefined}
           />

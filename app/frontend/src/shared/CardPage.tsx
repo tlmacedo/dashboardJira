@@ -1,3 +1,4 @@
+import { AguardandoDpo, ehAguardandoDpo } from './AguardandoDpo'
 import type { ReactNode } from 'react'
 import { ErroDaApi } from '../api/client'
 import { useLang } from '../i18n/LangProvider'
@@ -67,7 +68,9 @@ export function CardPage(props: CardPageProps) {
         </p>
       )}
 
-      {consulta.isError && !temDados && (
+      {consulta.isError && !temDados && ehAguardandoDpo(consulta.error) && <AguardandoDpo />}
+
+      {consulta.isError && !temDados && !ehAguardandoDpo(consulta.error) && (
         <div className="estado estado--erro" role="alert">
           {status === 403 && <p>{t('cardpage.semPermissao')}</p>}
           {status === 400 && <p>{t('cardpage.filtroInvalido')}</p>}

@@ -75,6 +75,19 @@ describe('tela Central de atenção', () => {
     expect(itens.find((li) => li.textContent?.includes('Tasks vencidas'))).toHaveTextContent('▲')
   })
 
+  it('centralMostraAvisoSemItens', async () => {
+    const fechada: CentralDto = {
+      ...DTO,
+      avisos: [{ codigo: 'ITENS_AGUARDANDO_ACEITE_DPO', gravidade: 'informativo', mensagem: 'x', params: { modulos: 'AUDITORIA,INTEGRIDADE' } }],
+    }
+    simular({ [API]: { status: 200, corpo: fechada } })
+    renderizarTela(<Central />, '/central')
+    expect(await screen.findByText(/ficam fora desta lista até o encarregado de dados \(DPO\)/)).toBeInTheDocument()
+    // Nenhum item da Auditoria nem da Integridade, e o aviso não repete o código cru nem os módulos.
+    expect(screen.queryByText(/ALTERACOES_SEM_AUTORIZACAO|AUDITORIA,INTEGRIDADE/)).toBeNull()
+    expect(screen.queryByRole('link', { name: /indício alto|autorização/i })).toBeNull()
+  })
+
   it('centralCoordenadorSemItemIntegridade', async () => {
     simular({ [API]: { status: 200, corpo: DTO } })
     renderizarTela(<Central />, '/central')
