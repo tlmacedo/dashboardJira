@@ -149,6 +149,20 @@ Ponto de partida (main `b8d203b`, 5b mesclado): backend `./gradlew test --rerun-
 - O DTO do Cruzamentos de `squad` usa o diretório de HOJE (não o squad da posse no instante).
 - Flake observado uma vez no frontend sob carga (Gradle em paralelo), passou na rerodada; não reproduzido com a máquina livre.
 
+## Correções da revisão final independente do 17b (PR #36)
+
+A revisão reprovou por 1 Important; corrigido na mesma branch, um commit por correção, cada um com teste vermelho antes.
+
+- I1 (Important): Cruzamentos mostrava "faixa mais alta" (hachurado, `data-faixa`, texto no `aria-label` e legenda) também com pessoa em linhas ou colunas, um ranking visual de pessoas. Agora, com pessoa em qualquer eixo, não há destaque nem legenda; com `tipo` o destaque continua.
+- M1: task com flag de impedimento em A fazer virava a etapa "A fazer" no Aging WIP, contra o Ruling. Fica fora do cartão e do drill.
+- M2: chave de linha do React repetida com duas bloqueadoras escondidas da mesma task; a chave agora leva o índice.
+- M3: o desempate das linhas do Bloqueios usava a chave escondida; agora usa o vencimento da bloqueadora e só a chave que a linha mostra.
+- M4: ponta removida logicamente (`removida_em`) de pessoa fora da visão mostrava a chave em "verificar no Jira"; `LeitorDePontas` passou a marcar `removida` e a linha diz "task fora da base (verificar no Jira)", sem chave (DTO, detalhe da gaveta e ordenação).
+- M5: `linhas`, `colunas` e `medida` iam crus ao `access_log`; fora da lista fechada vira o marcador `(invalido)`.
+- M7: com pessoa nas linhas o total geral sumia e o segmento `total` ficava inalcançável; o total geral (que não é por pessoa) aparece abaixo da tabela.
+- M8: a lista do Bloqueios repetia o cartão `BQ-01` (e o botão de ajuda); usa o id próprio `BQ-lista`, fora do catálogo.
+- M6 e M9: já documentados (seção "Minor adiados do 17b" acima); sem mudança de código.
+
 ## Estado herdado do 17b (conferido no código)
 
 | Nome do plano | Nome real | Observação |
