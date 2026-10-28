@@ -59,6 +59,10 @@ data class AvisoDto(
         const val SEM_VAZAO_HISTORICA = "SEM_VAZAO_HISTORICA"
         /** Nenhum issue da base tem o campo de épico (`Epic Link`): a tabela de épicos fica vazia (informativo). */
         const val EPICO_INDISPONIVEL = "EPICO_INDISPONIVEL"
+        /** Itens da Central de um módulo atrás da trava do DPO ficam fora da lista (`modulos`: nomes separados por vírgula). Informativo. */
+        const val ITENS_AGUARDANDO_ACEITE_DPO = "ITENS_AGUARDANDO_ACEITE_DPO"
+        /** O histórico da gaveta fica fora enquanto a Auditoria aguarda o aceite do DPO. Informativo. */
+        const val HISTORICO_AGUARDANDO_ACEITE_DPO = "HISTORICO_AGUARDANDO_ACEITE_DPO"
         const val BLOQUEANTE = "bloqueante"
         const val INFORMATIVO = "informativo"
 
@@ -88,4 +92,4 @@ data class DrillRow(
 
 /** Quem está logado, com os papéis do diretório na data de hoje (nunca de claims). */
 @Serializable
-data class MeDto(val userId: String, val roles: List<String>)
+data class MeDto(val userId: String, val roles: List<String>, val modulosBloqueados: List<String> = emptyList())

@@ -10,6 +10,7 @@ import br.sidia.painel.cards.contrato.GrupoDeCartao
 import br.sidia.painel.cards.contrato.LinhaDeDrill
 import br.sidia.painel.cards.contrato.Natureza
 import br.sidia.painel.cards.hoje
+import br.sidia.painel.lgpd.ModuloSensivel
 import br.sidia.painel.security.Role
 import io.ktor.http.HttpStatusCode
 
@@ -28,6 +29,7 @@ internal class CartaoDeAuditoria(
     private val linhas: (AuditoriaCalculada, String) -> List<LinhaDeDrill>?,
 ) : CartaoRegistrado {
     override val instancia: String = INSTANCIA_AUDITORIA
+    override val moduloSensivel: ModuloSensivel = ModuloSensivel.AUDITORIA
 
     private fun calcular(e: EntradaDeCartao) = calcularAuditoria(e.ctx, e.principal, lerFiltrosAuditoria(e.parametros, hoje(e.ctx)))
 
@@ -40,6 +42,7 @@ internal class CartaoDeAuditoria(
 /** Cartão Task × Review no contrato (pares e divergentes). */
 internal class CartaoTaskReview(override val meta: CartaoMeta) : CartaoRegistrado {
     override val instancia: String = INSTANCIA_AUDITORIA
+    override val moduloSensivel: ModuloSensivel = ModuloSensivel.AUDITORIA
 
     private fun calcular(e: EntradaDeCartao) = calcularTaskReview(e.ctx, e.principal, lerFiltrosTaskReview(e.parametros))
 

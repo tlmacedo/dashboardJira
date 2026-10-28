@@ -23,6 +23,8 @@ import br.sidia.painel.cards.paraDto
 import br.sidia.painel.cards.previsao.CardPrevisao
 import br.sidia.painel.cards.previsao.PrevisaoDto
 import br.sidia.painel.db.AccessLog
+import br.sidia.painel.lgpd.ModuloSensivel
+import br.sidia.painel.lgpd.TravaDpo
 import br.sidia.painel.domain.UnmappedStatusException
 import br.sidia.painel.pessoas.Jain
 import br.sidia.painel.pessoas.Ocupacao
@@ -95,6 +97,13 @@ internal class FontesDoPainel(
                 CartaoSquadDto(squad, media.paraDto(regras), Jain.indice(ocupacoes, regras.tetoJain), linhas.size)
             }
             .sortedBy { it.squad }
+    }
+
+    /** A Auditoria fica fora para coordenação e gerente; a Integridade, só para o gerente (o coordenador nem sabe dela). */
+    override suspend fun modulosBloqueados(): List<String> {
+        val fechados = TravaDpo(ctx.settings, ctx.dataSource).modulosBloqueados()
+        val papeis = papeisVigentes(ctx, principal)
+        return fechados.filter { it != ModuloSensivel.INTEGRIDADE || Role.GERENTE in papeis }.map { it.name }
     }
 
     override suspend fun avisos(): List<AvisoDto> {
@@ -249,7 +258,7 @@ fun Route.rotasDeInicio(ctx: AppContext, catalogo: CatalogoDeCartoes, auditoria:
         call.executarAuditado(auditoria, ctx) { principal ->
             exigirPapel(ctx, principal, ALTA)
             val dto = CentralCalculator(FontesDoPainel(ctx, catalogo, principal)).calcular()
-            if (dto.itens.any { it.item == ItemCentral.INDICIO_ALTO.name }) call.attributes.put(ROTA_SENSIVEL, true)
+            if (dto.itens.any { it.item == ItemCentral.INDICIO_ALTO.name || it.item in ITENS_DA_AUDITORIA }) call.attributes.put(ROTA_SENSIVEL, true)
             dto
         }
     }

@@ -2,6 +2,7 @@ package br.sidia.painel.config
 
 import br.sidia.painel.jira.INSTANCIAS_CONHECIDAS
 import br.sidia.painel.jira.JiraAuthKind
+import br.sidia.painel.lgpd.LgpdSettings
 import br.sidia.painel.operacao.OperacaoSettings
 import br.sidia.painel.security.OidcSettings
 import br.sidia.painel.sync.SyncSettings
@@ -77,6 +78,8 @@ data class Settings(
     val outrosSegredos: List<String> = emptyList(),
     /** SSO/OIDC (`OIDC_*` e `SESSION_SECRET`). Obrigatório em produção; nulo só em desenvolvimento (sem login). Sem segredos no `toString`. */
     val oidc: OidcSettings? = null,
+    /** Aceite do DPO (`DASHBOARD_DPO_ACEITE` e `_REF`): sem ele, Auditoria e Integridade só abrem no modo dev offline. */
+    val lgpd: LgpdSettings = LgpdSettings(),
 ) {
     /** Valores que nunca podem aparecer em log (tokens das instâncias); registrados na máscara de log na subida. */
     fun valoresSecretos(): List<String> = jiraInstances.values.flatMap {
@@ -91,7 +94,7 @@ data class Settings(
             "retentionMonths=$retentionMonths, accessLogRetentionMonths=$accessLogRetentionMonths, zone=$zone, configDir=$configDir, " +
             "databasePath=$databasePath, host=$host, cacheDeLeituraSeg=$cacheDeLeituraSeg, staticDir=$staticDir, " +
             "databasePoolSize=$databasePoolSize, jiraInstances=$jiraInstances, origemPublica=$origemPublica, " +
-            "oidc=${if (oidc != null) "configurado" else "ausente"})"
+            "oidc=${if (oidc != null) "configurado" else "ausente"}, aceiteDpo=${lgpd.referenciaDoAceite ?: "ausente"})"
 
     companion object {
         /**
@@ -146,6 +149,7 @@ data class Settings(
                 outrosSegredos = listOfNotNull(texto(env, "OIDC_CLIENT_SECRET")),
                 // Falha fechada: em produção sem OIDC (ou sem SESSION_SECRET) o painel não sobe.
                 oidc = OidcSettings.fromEnv(env, dashboardDevMode),
+                lgpd = LgpdSettings.fromEnv(env),
             )
         }
 

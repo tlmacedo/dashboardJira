@@ -50,10 +50,14 @@ internal class CartaoDeCentral(
     override val instancia: String = INSTANCIA_TRABALHO
 
     /**
-     * Os alvos que apontam para a Auditoria (AU-01) são sensíveis: o registro de acesso da gaveta não guarda o segmento, a
-     * pessoa pedida nem a quantidade (seria o próprio achado), como já é na Integridade. Pendência do Plano 11: cartão próprio.
+     * Os alvos que apontam para um cartão de módulo sensível (Auditoria, Integridade) são sensíveis mesmo que este cartão da
+     * Central seja comum: o registro de acesso da gaveta não guarda o segmento, a pessoa pedida nem a quantidade (seria o
+     * próprio achado). Desde o Plano 11 os itens da Auditoria moram no VG-14, que é o próprio módulo sensível.
      */
-    override fun segmentoSensivel(segmento: String): Boolean = destinos[segmento]?.cartao == "AU-01"
+    override fun segmentoSensivel(segmento: String): Boolean {
+        val alvo = destinos[segmento]?.cartao ?: return false
+        return catalogo().porId(alvo)?.moduloSensivel != null
+    }
 
     /** O cartão de destino, só se quem pergunta pode vê-lo (papel e trava do DPO); senão nulo. */
     private fun visivel(e: EntradaDeCartao, id: String): CartaoRegistrado? {
@@ -149,7 +153,8 @@ private class CartaoDeCentralSemGaveta(override val meta: CartaoMeta) : CartaoRe
 
 /**
  * Os indicadores da Central de atenção (VG-09), na ordem em que a tela os mostra. A chave é o nome do item (`ItemCentral`) e o
- * valor, o cartão e o segmento de destino. `AUSENCIAS_14D` não está aqui (não tem tasks) e `INDICIO_ALTO` mora no VG-13.
+ * valor, o cartão e o segmento de destino. `AUSENCIAS_14D` não está aqui (não tem tasks); `INDICIO_ALTO` mora no VG-13 (Integridade)
+ * e os dois itens da Auditoria moram no VG-14 ([DESTINOS_DE_AUDITORIA_NA_CENTRAL]): cada módulo sensível tem o seu cartão.
  */
 internal val DESTINOS_DA_CENTRAL: Map<String, Destino> = linkedMapOf(
     "VENCIDAS" to Destino("NG-03", "vencidas"),
@@ -163,9 +168,16 @@ internal val DESTINOS_DA_CENTRAL: Map<String, Destino> = linkedMapOf(
     "COM_FOLGA" to Destino("CP-02", "comFolga"),
     "META_DE_PRAZO" to Destino("MT-01", "noPrazo"),
     "PARES_CR_COM_ALERTA" to Destino("CR-08", "comAlerta"),
+    "SEM_ESTIMATIVA" to Destino("QD-01", "SEM_ESTIMATIVA"),
+)
+
+/** Nomes dos itens da Central que vêm da Auditoria. */
+internal val ITENS_DA_AUDITORIA: Set<String> get() = DESTINOS_DE_AUDITORIA_NA_CENTRAL.keys
+
+/** Os itens da Central que vêm da Auditoria (VG-14, atrás da trava do DPO): na ordem em que a tela os mostra. */
+internal val DESTINOS_DE_AUDITORIA_NA_CENTRAL: Map<String, Destino> = linkedMapOf(
     "TASK_REVIEW_DIVERGENTE" to Destino("DV-01", "divergentes"),
     "ALTERACOES_SEM_AUTORIZACAO" to Destino("AU-01", "resultado:auditoria"),
-    "SEM_ESTIMATIVA" to Destino("QD-01", "SEM_ESTIMATIVA"),
 )
 
 /**
@@ -197,6 +209,12 @@ internal fun cartoesDeInicio(catalogo: () -> CatalogoDeCartoes): List<CartaoRegi
         CartaoDeCentral(
             meta("VG-13", Natureza.PESSOAS, comChangelog, papeis = setOf(Role.GERENTE)),
             mapOf("INDICIO_ALTO" to Destino("IN-02", "nivel:ALTO")), catalogo, moduloSensivel = ModuloSensivel.INTEGRIDADE,
+        ),
+        // Os itens da Auditoria (alterações sem autorização, Task × Review) saíram do VG-09, que não é sensível: aqui a gaveta
+        // exige a trava do DPO e o registro de acesso não guarda o achado.
+        CartaoDeCentral(
+            meta("VG-14", Natureza.QUALIDADE, comChangelog), DESTINOS_DE_AUDITORIA_NA_CENTRAL, catalogo,
+            moduloSensivel = ModuloSensivel.AUDITORIA,
         ),
     ) + cartoesDoMeuPainel(catalogo)
 }

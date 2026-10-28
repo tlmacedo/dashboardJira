@@ -137,7 +137,14 @@ fun Route.rotasTempoEmStatus(ctx: AppContext, store: IssueStore, auditoria: Acce
             val principal = call.principal
             val papeis = papeisVigentes(ctx, principal)
             if (papeis.isEmpty()) throw ErroHttp(HttpStatusCode.Forbidden)
-            MeDto(principal.userId, papeis.sorted().map { it.name })
+            // Só os módulos que o papel enxerga (quem não vê o módulo não fica sabendo que ele existe).
+            val bloqueados = TravaDpo(ctx.settings, ctx.dataSource).modulosBloqueados().filter { m ->
+                when (m) {
+                    br.sidia.painel.lgpd.ModuloSensivel.AUDITORIA -> Role.COORDENADOR in papeis || Role.GERENTE in papeis
+                    br.sidia.painel.lgpd.ModuloSensivel.INTEGRIDADE -> Role.GERENTE in papeis
+                }
+            }
+            MeDto(principal.userId, papeis.sorted().map { it.name }, bloqueados.map { it.name })
         }
     }
 
@@ -254,13 +261,16 @@ private fun filtrosAuditados(call: ApplicationCall): Map<String, String> {
 }
 
 /**
- * Rotas dos módulos sensíveis ([br.sidia.painel.lgpd.ModuloSensivel]) que HOJE passam pela `TravaDpo`: a Integridade e os
- * cartões `IN-nn`. O `access_log` guarda ali QUEM consultou o módulo, nunca o achado: sem id de pessoa, sem nome de sinal e sem
- * contagem. A decisão usa o caminho NORMALIZADO e sem diferenciar caixa, mais o atributo [ROTA_SENSIVEL] posto pela própria
- * rota/cartão resolvido. A Auditoria (`ModuloSensivel.AUDITORIA`) NÃO está aqui nem passa pela `TravaDpo` ainda: é do Plano 11;
- * um módulo novo que passe pela trava acrescenta o seu prefixo aqui.
+ * Rotas dos módulos sensíveis ([br.sidia.painel.lgpd.ModuloSensivel]), que passam pela `TravaDpo`: a Integridade (`IN-nn`) e a
+ * Auditoria (`AU-nn`, `DV-01`, `/api/auditoria`, task-review) e a Central da Auditoria (`VG-14`). O `access_log` guarda ali SÓ
+ * QUEM consultou o módulo, nunca o achado nem o alvo: sem id de pessoa, sem squad, sem nome de sinal e sem contagem (decisão do
+ * Plano 11: "quem consultou quem" não se guarda). A decisão usa o caminho NORMALIZADO e sem diferenciar caixa, mais o atributo
+ * [ROTA_SENSIVEL] posto pela própria rota/cartão resolvido. Um módulo novo que passe pela trava acrescenta o seu prefixo aqui.
  */
-private val PREFIXOS_SENSIVEIS = listOf("/api/integridade", "/api/cartoes/in-", "/api/governanca/acessos")
+private val PREFIXOS_SENSIVEIS = listOf(
+    "/api/integridade", "/api/cartoes/in-", "/api/governanca/acessos", "/api/auditoria", "/api/cards/task-review", "/api/cartoes/au-",
+    "/api/cartoes/dv-", "/api/cartoes/vg-14", "/api/drill/auditoria", "/api/drill/integridade", "/api/drill/task-review",
+)
 
 internal fun rotaSensivel(caminho: String): Boolean {
     val normal = normalizarCaminho(caminho).lowercase(java.util.Locale.ROOT)
@@ -268,7 +278,7 @@ internal fun rotaSensivel(caminho: String): Boolean {
 }
 
 /** Filtros que, numa rota sensível, apontariam para a pessoa ou o sinal consultado: não são gravados. */
-private val FILTROS_QUE_NOMEIAM_O_ACHADO = setOf("pessoa", "sinal")
+private val FILTROS_QUE_NOMEIAM_O_ACHADO = setOf("pessoa", "sinal", "squad")
 
 /** Segmentos sem pessoa nem sinal que podem ir inteiros para a auditoria de uma rota sensível. */
 private val SEGMENTOS_NEUTROS = setOf("todas", "afetadas")
@@ -318,6 +328,8 @@ internal suspend inline fun <reified T : Any> ApplicationCall.executar(
     var status = HttpStatusCode.OK
     var corpo: T? = null
     var codigoDoErro: String? = null
+    var paramsDoErro: Map<String, String> = emptyMap()
+    var motivoDoBloqueio: String? = null
     try {
         corpo = withContext(Dispatchers.IO) { bloco() }
     } catch (e: ErroHttp) {
@@ -327,6 +339,8 @@ internal suspend inline fun <reified T : Any> ApplicationCall.executar(
         // Módulo sensível fechado pela trava do DPO: 403 com o código estável, sem dado; a consulta fica no `access_log`.
         status = HttpStatusCode.Forbidden
         codigoDoErro = TravaDpo.CODIGO
+        paramsDoErro = mapOf("modulo" to e.modulo.name)
+        motivoDoBloqueio = TravaDpo.CODIGO
     } catch (e: CancellationException) {
         throw e
     } catch (e: Exception) {
@@ -338,7 +352,7 @@ internal suspend inline fun <reified T : Any> ApplicationCall.executar(
             auditoria.record(
                 principal.userId, rotaParaRegistro(request.path()),
                 filtrosAuditados(this@executar) + (attributes.getOrNull(EXTRAS_DE_AUDITORIA).orEmpty()) +
-                    ("resultado" to status.value.toString()),
+                    listOfNotNull(motivoDoBloqueio?.let { "motivo" to it }) + ("resultado" to status.value.toString()),
                 ctx.clock.instant(),
             )
         }
@@ -352,7 +366,7 @@ internal suspend inline fun <reified T : Any> ApplicationCall.executar(
     }
     when {
         corpo != null -> respond(corpo)
-        codigoDoErro != null -> respond(status, ErroDto(codigoDoErro))
+        codigoDoErro != null -> respond(status, ErroDto(codigoDoErro, paramsDoErro))
         else -> respond(status)
     }
 }

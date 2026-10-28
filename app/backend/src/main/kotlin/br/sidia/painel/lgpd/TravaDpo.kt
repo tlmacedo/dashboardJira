@@ -4,8 +4,8 @@ import br.sidia.painel.config.Settings
 import javax.sql.DataSource
 
 /**
- * Os módulos que tratam dados pessoais sensíveis e ficam (ou ficarão) atrás da trava do DPO. HOJE só a INTEGRIDADE passa pela
- * [TravaDpo]; a AUDITORIA está listada para o Plano 11 ligar e ainda NÃO é barrada nem tem o registro de acesso mascarado.
+ * Os módulos que tratam dados pessoais sensíveis e ficam atrás da trava do DPO. Os dois passam pela [TravaDpo]; o registro de
+ * acesso (`access_log`) das rotas deles guarda só QUEM consultou o módulo, nunca o achado nem o alvo.
  */
 enum class ModuloSensivel { AUDITORIA, INTEGRIDADE }
 
@@ -13,22 +13,18 @@ enum class ModuloSensivel { AUDITORIA, INTEGRIDADE }
 class BloqueadoPeloDpoException(val modulo: ModuloSensivel) : RuntimeException(TravaDpo.CODIGO, null, false, false)
 
 /**
- * A PORTA do DPO: Integridade (e, depois, Auditoria) só servem dados reais quando o encarregado de dados (DPO) aceitar o uso.
- * Sem o aceite, só valem fixtures e a demonstração: [liberada] é verdadeira SÓ no modo de desenvolvimento com o acesso ao Jira
- * desligado (dados fictícios). Em produção, e em desenvolvimento com Jira ligado, ela fica FECHADA (fail-closed).
+ * A PORTA do DPO: Auditoria e Integridade só servem dados reais quando o encarregado de dados (DPO) aceitar o uso. A decisão sai
+ * da configuração: [liberada] é verdadeira com o aceite (`DASHBOARD_DPO_ACEITE=true` com a referência do parecer, ligado só pelo
+ * usuário) OU no modo de desenvolvimento offline (`DASHBOARD_DEV_MODE=true` e `JIRA_LIVE_ENABLED=false`), sobre um banco que
+ * ainda não recebeu dado sincronizado de verdade (ver [semDadoSincronizado]). Em produção sem aceite, e em desenvolvimento com
+ * o Jira ligado sem aceite, ela fica FECHADA (fail-closed).
  *
- * Ponto de extensão do Plano 11 (Tarefa 1): o aceite entra como `LgpdSettings.aceiteDpo` (configuração `DASHBOARD_DPO_ACEITE`,
- * com a referência do parecer) e [liberada] passa a ser `aceiteDpo || (devMode && !jiraLive)`. A classe olha a configuração e se o
- * banco já guarda dado sincronizado de verdade (ver [liberada]).
+ * O aceite NÃO consulta o banco. A condição de desenvolvimento consulta o banco só para FECHAR mais (nunca para abrir): é a
+ * defesa de quem desligou a flag do Jira depois de sincronizar de verdade (decisão do Plano 7a, mantida no Plano 11).
  */
 class TravaDpo(private val settings: Settings, private val dataSource: DataSource?) {
-    /**
-     * Aberta só em desenvolvimento com o Jira desligado E sobre banco SEM dado sincronizado de verdade: se o painel já sincronizou
-     * (mesmo que a flag tenha sido desligada depois), o banco tem dado real e a porta continua fechada. Qualquer erro ao consultar o
-     * banco fecha a porta. A flag `DASHBOARD_DEMO_DATA` não reabre nada: a demonstração nunca grava execução de sincronização, então
-     * um banco só de demonstração já passa; ligar a flag sobre banco com sincronização real não pode abrir a porta.
-     */
-    val liberada: Boolean get() = settings.dashboardDevMode && !settings.jiraLiveEnabled && semDadoSincronizado()
+    val liberada: Boolean
+        get() = settings.lgpd.aceiteDpo || (settings.dashboardDevMode && !settings.jiraLiveEnabled && semDadoSincronizado())
 
     private fun semDadoSincronizado(): Boolean {
         // Sem banco não há como provar que é demonstração: fecha.
@@ -56,6 +52,9 @@ class TravaDpo(private val settings: Settings, private val dataSource: DataSourc
 
     /** Nulo se liberada; senão o código estável do bloqueio. */
     fun motivo(): String? = if (liberada) null else CODIGO
+
+    /** Os módulos fechados agora, em ordem estável (vazio com a porta aberta); é o que `/api/me` entrega à tela. */
+    fun modulosBloqueados(): List<ModuloSensivel> = if (liberada) emptyList() else ModuloSensivel.entries.toList()
 
     companion object {
         const val CODIGO = "AGUARDANDO_ACEITE_DPO"

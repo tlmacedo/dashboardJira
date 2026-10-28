@@ -114,6 +114,69 @@ class TravaDpoTest {
         assertFailsWith<BloqueadoPeloDpoException> { trava.exigir(ModuloSensivel.INTEGRIDADE) }
     }
 
+    private val prod = mapOf("DASHBOARD_DEV_MODE" to "false") + br.sidia.painel.ENV_OIDC_DE_TESTE
+    private fun comAceite(ref: String = "DPO-2026-11") = prod + mapOf("DASHBOARD_DPO_ACEITE" to "true", "DASHBOARD_DPO_ACEITE_REF" to ref)
+
+    @Test
+    fun padraoDoAmbienteVazioEhLiberadaSoPorqueEhDevOffline() {
+        val s = Settings.fromEnv(emptyMap())
+        assertFalse(s.lgpd.aceiteDpo)
+        assertTrue(TravaDpo(s, bancoNovo()).liberada)
+    }
+
+    @Test
+    fun aceiteLiberaEmProducaoMesmoComSincronizacaoReal() {
+        val ds = bancoNovo()
+        comSyncReal(ds)
+        val trava = TravaDpo(Settings.fromEnv(comAceite()), ds)
+        assertTrue(trava.liberada)
+        assertNull(trava.motivo())
+        for (m in ModuloSensivel.entries) trava.exigir(m)
+    }
+
+    @Test
+    fun semAceiteProducaoFecha() {
+        assertFalse(TravaDpo(Settings.fromEnv(prod), bancoNovo()).liberada)
+        // aceite explicitamente falso e vazio também
+        assertFalse(TravaDpo(Settings.fromEnv(prod + ("DASHBOARD_DPO_ACEITE" to "false")), bancoNovo()).liberada)
+        assertFalse(TravaDpo(Settings.fromEnv(prod + ("DASHBOARD_DPO_ACEITE" to "  ")), bancoNovo()).liberada)
+    }
+
+    @Test
+    fun valorInvalidoFalhaNaSubida() {
+        val e = assertFailsWith<IllegalArgumentException> { Settings.fromEnv(prod + ("DASHBOARD_DPO_ACEITE" to "sim")) }
+        assertTrue("DASHBOARD_DPO_ACEITE" in e.message.orEmpty())
+    }
+
+    @Test
+    fun aceiteSemReferenciaFalha() {
+        for (env in listOf(prod + ("DASHBOARD_DPO_ACEITE" to "true"), comAceite("  "))) {
+            val e = assertFailsWith<IllegalArgumentException> { Settings.fromEnv(env) }
+            assertEquals("DASHBOARD_DPO_ACEITE_REF obrigatória com DASHBOARD_DPO_ACEITE=true", e.message)
+        }
+    }
+
+    @Test
+    fun referenciaInvalidaFalhaCitandoSoONome() {
+        for (ref in listOf("a b", "x".repeat(81), "DPO;rm", "ção")) {
+            val e = assertFailsWith<IllegalArgumentException> { Settings.fromEnv(comAceite(ref)) }
+            assertTrue("DASHBOARD_DPO_ACEITE_REF" in e.message.orEmpty())
+            assertFalse(ref in e.message.orEmpty(), "o valor não aparece na mensagem")
+        }
+        // 80 caracteres e os símbolos permitidos passam
+        assertEquals("a".repeat(80), Settings.fromEnv(comAceite("a".repeat(80))).lgpd.aceiteRef)
+        assertEquals("DPO-2026/11_a.b", Settings.fromEnv(comAceite("DPO-2026/11_a.b")).lgpd.aceiteRef)
+    }
+
+    @Test
+    fun referenciaSemAceiteEhIgnoradaEAceiteNaoVazaNoToString() {
+        val s = Settings.fromEnv(prod + ("DASHBOARD_DPO_ACEITE_REF" to "DPO-1"))
+        assertFalse(s.lgpd.aceiteDpo)
+        // o objeto montado à mão com aceite e sem referência válida nem existe
+        assertFailsWith<IllegalArgumentException> { LgpdSettings(aceiteDpo = true, aceiteRef = null) }
+        assertFailsWith<IllegalArgumentException> { LgpdSettings(aceiteDpo = true, aceiteRef = "a b") }
+    }
+
     @Test
     fun erroAoConsultarOBancoFecha() {
         // Banco sem as tabelas (ou inacessível): não dá para provar que é demonstração, então fecha.

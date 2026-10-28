@@ -3,9 +3,12 @@ package br.sidia.painel.auditoria
 import br.sidia.painel.AppContext
 import br.sidia.painel.cards.AvisoDto
 import br.sidia.painel.cards.ErroHttp
+import br.sidia.painel.cards.ROTA_SENSIVEL
 import br.sidia.painel.cards.executarAuditado
 import br.sidia.painel.cards.hoje
 import br.sidia.painel.db.AccessLog
+import br.sidia.painel.lgpd.ModuloSensivel
+import br.sidia.painel.lgpd.TravaDpo
 import br.sidia.painel.jql.InvalidJqlValueException
 import br.sidia.painel.jql.JqlValues
 import io.ktor.http.HttpStatusCode
@@ -28,23 +31,29 @@ private val CAMPOS_DE_AUTORIZACAO = setOf("assignee", "duedate", "labels")
  */
 fun Route.rotasDeAuditoria(ctx: AppContext, auditoria: AccessLog) {
     get("/api/auditoria/sinais") {
+        call.attributes.put(ROTA_SENSIVEL, true)
         call.executarAuditado(auditoria, ctx) { principal ->
             exigirCoordenacao(ctx, principal)
+            TravaDpo(ctx.settings, ctx.dataSource).exigir(ModuloSensivel.AUDITORIA)
             val calculada = calcularAuditoria(ctx, principal, lerFiltrosAuditoria(call.request.queryParameters, hoje(ctx)))
             paraDto(calculada, ctx)
         }
     }
 
     get("/api/auditoria/historico/{key}") {
+        call.attributes.put(ROTA_SENSIVEL, true)
         call.executarAuditado(auditoria, ctx) { principal ->
             exigirCoordenacao(ctx, principal)
+            TravaDpo(ctx.settings, ctx.dataSource).exigir(ModuloSensivel.AUDITORIA)
             historico(ctx, call.parameters["key"].orEmpty())
         }
     }
 
     get("/api/cards/task-review") {
+        call.attributes.put(ROTA_SENSIVEL, true)
         call.executarAuditado(auditoria, ctx) { principal ->
             exigirCoordenacao(ctx, principal)
+            TravaDpo(ctx.settings, ctx.dataSource).exigir(ModuloSensivel.AUDITORIA)
             paraDto(calcularTaskReview(ctx, principal, lerFiltrosTaskReview(call.request.queryParameters)), ctx)
         }
     }
