@@ -124,6 +124,9 @@ class SyncService(
                 log.warn("Sincronização falhou ({}): exceção {}", codigo, e::class.simpleName)
             }
             return fechar(runId, instance, kind, RunStatus.FALHA, progresso.resumo(orcamento), codigo, http)
+        } finally {
+            // Qualquer saída (cancelamento, Error, falha ao fechar) deixa o cache de leituras sem o dado anterior à gravação.
+            CacheDeLeituras.invalidar()
         }
     }
 
