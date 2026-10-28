@@ -49,6 +49,8 @@ export const NAV_ITEMS: NavItem[] = [
   item('central', 'inicio', ALTA),
   item('squad', 'inicio', ['SQUAD_LEADER']),
   item('meu', 'inicio', 'all'),
+  // Direito de acesso do titular (LGPD): todos os papéis veem os PRÓPRIOS dados.
+  item('meusDados', 'inicio', 'all'),
 
   item('abertas', 'trabalho', 'all'),
   item('epicos', 'trabalho', 'all'),
