@@ -18,6 +18,8 @@ data class OpcoesDeFiltroDto(
     val avisos: List<AvisoDto> = emptyList(),
     /** Filtros rápidos nomeados de `filtros_rapidos.yaml` (I-27); vazio quando o arquivo não existe. */
     val rapidos: List<FiltroRapidoDto> = emptyList(),
+    /** Prefixos de chave (`TG`) das issues da visão: a busca por número usa o único prefixo quando só há um. */
+    val prefixosDeChave: List<String> = emptyList(),
 )
 
 /** Valores de um campo do dicionário (`slug` é o que vai em `campo.<slug>` na URL). */

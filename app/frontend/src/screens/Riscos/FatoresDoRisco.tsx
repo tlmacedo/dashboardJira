@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState, type KeyboardEvent } from 'react'
 import { createPortal } from 'react-dom'
 import { useLang } from '../../i18n/LangProvider'
+import { useModalAcessivel } from '../../shared/useModalAcessivel'
 import type { LinhaRisco } from './api'
 import '../../shared/gaveta.css'
 import '../../shared/tabela.css'
@@ -12,42 +12,7 @@ import '../../shared/tabela.css'
 export function FatoresDoRisco(props: { linha: LinhaRisco; aoFechar: () => void }) {
   const { t, lang } = useLang()
   const { linha, aoFechar } = props
-  const raiz = useRef<HTMLDivElement>(null)
-  const fechar = useRef<HTMLButtonElement>(null)
-  const [portal] = useState(() => document.createElement('div'))
-
-  useEffect(() => {
-    const anterior = document.activeElement as HTMLElement | null
-    document.body.appendChild(portal)
-    const inertes = [...document.body.children].filter((el) => el !== portal && !el.hasAttribute('inert'))
-    inertes.forEach((el) => el.setAttribute('inert', ''))
-    fechar.current?.focus()
-    return () => {
-      inertes.forEach((el) => el.removeAttribute('inert'))
-      portal.remove()
-      anterior?.focus()
-    }
-  }, [portal])
-
-  function aoTeclar(e: KeyboardEvent) {
-    if (e.key === 'Escape') {
-      e.stopPropagation()
-      aoFechar()
-      return
-    }
-    if (e.key !== 'Tab' || !raiz.current) return
-    const focaveis = raiz.current.querySelectorAll<HTMLElement>('button:not([disabled]), [href], [tabindex="0"]')
-    if (focaveis.length === 0) return
-    const primeiro = focaveis[0]
-    const ultimo = focaveis[focaveis.length - 1]
-    if (e.shiftKey && document.activeElement === primeiro) {
-      e.preventDefault()
-      ultimo.focus()
-    } else if (!e.shiftKey && document.activeElement === ultimo) {
-      e.preventDefault()
-      primeiro.focus()
-    }
-  }
+  const { portal, raiz, fechar, aoTeclar } = useModalAcessivel(aoFechar)
 
   const titulo = t('riscos.fatores.titulo').replace('{key}', linha.key)
   const soma = linha.fatores.reduce((s, f) => s + f.pontos, 0)

@@ -87,6 +87,7 @@ private fun opcoesDe(ctx: AppContext, store: SqliteWorkStore, principal: Princip
         campos = campos,
         avisos = avisos,
         rapidos = FiltrosRapidos.ler(ctx.settings.configDir),
+        prefixosDeChave = lista("prefixo", noEscopo.asSequence().map { it.key.substringBefore('-') }),
     )
 }
 

@@ -15,6 +15,13 @@ export function percentual(fracao: number, lang: Lang): string {
   return `${Math.round(fracao * 100).toLocaleString(locale(lang))}%`
 }
 
+/** Data e hora de um instante ISO no fuso do painel (America/Manaus), no formato do idioma; texto ilegível volta como veio. */
+export function dataHora(iso: string, lang: Lang): string {
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return iso
+  return new Intl.DateTimeFormat(locale(lang), { timeZone: 'America/Manaus', dateStyle: 'short', timeStyle: 'short' }).format(d)
+}
+
 /** yyyy-mm-dd (valor do input date) para dd/mm/aaaa (pt) ou mm/dd/yyyy (en). */
 export function dataCurta(iso: string, lang: Lang): string {
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso)

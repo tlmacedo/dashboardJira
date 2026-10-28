@@ -8,6 +8,7 @@ import { Auditoria } from './screens/Auditoria/Auditoria'
 import { Bloqueios } from './screens/Bloqueios/Bloqueios'
 import { ChecklistReview } from './screens/ChecklistReview/ChecklistReview'
 import { Cruzamentos } from './screens/Cruzamentos/Cruzamentos'
+import { Detalhe } from './screens/Detalhe/Detalhe'
 import { Epicos } from './screens/Epicos/Epicos'
 import { Integridade } from './screens/Integridade/Integridade'
 import { Fechadas } from './screens/Fechadas/Fechadas'
@@ -88,6 +89,7 @@ export default function App() {
                 <Route path="divergencia" element={<Divergencia />} />
                 <Route path="sincronizacao" element={<Sincronizacao />} />
                 <Route path="mapaCartoes" element={<MapaDeCartoes />} />
+                <Route path="detalhe" element={<Detalhe />} />
                 <Route path="*" element={<Pagina />} />
               </Route>
             </Routes>

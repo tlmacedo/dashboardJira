@@ -6,6 +6,7 @@ import { useLang } from '../i18n/LangProvider'
 import { ROLES, type Role } from '../nav/nav'
 import { gravarPreferencia, lerPreferencia } from '../storage'
 import { AvisoDeAlertas } from './AvisoDeAlertas'
+import { BuscaPorChave } from './BuscaPorChave'
 import { DevBanner } from './DevBanner'
 import { Menu } from './Menu'
 import { RoleContext } from './RoleContext'
@@ -91,6 +92,7 @@ export function Shell() {
                 {t('shell.sairErro')}
               </p>
             )}
+            <BuscaPorChave />
             <AvisoDeAlertas />
             <Outlet />
           </main>

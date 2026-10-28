@@ -68,6 +68,7 @@ class OpcoesDeFiltroRoutesTest {
         val ana = opcoes(get("ana", "/api/filtros/opcoes"))
         assertEquals(listOf("ana"), ana.pessoas)
         assertEquals(listOf("Alfa"), ana.squads)
+        assertEquals(listOf("TG"), ana.prefixosDeChave)
         assertEquals(listOf("MR"), ana.valores("sku-type"))
         assertEquals(listOf("MODELO-A"), ana.valores("model-name"))
         assertEquals(listOf("Checklist"), ana.tipos)

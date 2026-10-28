@@ -125,10 +125,49 @@ export type OpcoesDeFiltro = {
   campos: CampoOpcoes[]
   avisos: { codigo: string; gravidade: string; mensagem: string; params?: Record<string, string> }[]
   rapidos: FiltroRapido[]
+  /** Prefixos de chave (`TG`) das issues da visão; a busca por número usa o único prefixo, se houver só um. */
+  prefixosDeChave?: string[]
 }
 
 export function fetchOpcoesDeFiltro(): Promise<OpcoesDeFiltro> {
   return getJson<OpcoesDeFiltro>('/api/filtros/opcoes')
+}
+
+/** Dias úteis que a task ficou num status. */
+export type TempoStatus = { status: string; dias: number }
+
+/** Fatia da posse: `pessoa` nula com `semResponsavel` falso = "outra pessoa" (fora da visão). */
+export type FracaoPosse = { pessoa: string | null; semResponsavel: boolean; dias: number; fracao: number }
+
+/** A gaveta universal da task (`GET /api/tarefa/{key}`); `historico` é nulo para quem não é coordenação nem gerente. */
+export type Tarefa = {
+  key: string
+  resumo: string
+  tipo: string
+  status: string
+  categoria: string
+  resolucao: string | null
+  responsavel: string | null
+  prioridade: string | null
+  criada: string
+  atualizada: string | null
+  resolvida: string | null
+  vencimento: string | null
+  vencimentoOriginal: string | null
+  labels: string[]
+  campos: Record<string, string>
+  tempoPorStatus: TempoStatus[]
+  posse: FracaoPosse[]
+  fatoresDeRisco: string[]
+  historico: import('../screens/Auditoria/api').LinhaHistorico[] | null
+  linkJira: string | null
+  avisos: { codigo: string; gravidade: string; mensagem: string; params?: Record<string, string> }[]
+}
+
+/** Uma task pela chave. Chave fora da visão ou inexistente é 404 (`ErroDaApi`). */
+export function fetchTarefa(chave: string, instancia?: string): Promise<Tarefa> {
+  const q = instancia ? `?instancia=${encodeURIComponent(instancia)}` : ''
+  return getJson<Tarefa>(`/api/tarefa/${encodeURIComponent(chave)}${q}`)
 }
 
 /** Um alerta operacional ativo (`GET /api/operacao/alertas`, só gerente). Só códigos e instantes: nenhum dado pessoal. */
