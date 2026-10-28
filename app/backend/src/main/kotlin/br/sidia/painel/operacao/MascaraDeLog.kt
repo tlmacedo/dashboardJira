@@ -45,6 +45,8 @@ object MascaraDeLog {
         // Segredos registrados são literais (busca linear): valem no texto inteiro, ANTES do corte, para que um segredo
         // que cruze o limite não deixe pedaço para trás.
         for (registro in registrados) r = registro.padrao.replace(r, "***")
+        // O corte pode cair no meio de um valor sensível entre aspas (com espaços): as regras de aspas aceitam o FIM DO TEXTO
+        // como fechamento, então o pedaço mantido sai inteiro mascarado. Mascarar tudo antes de cortar seria quadrático.
         // Os padrões genéricos têm custo que cresce com o tamanho da linha: o texto é cortado antes (e o prefixo das
         // regras é limitado a PREFIXO_MAXIMO caracteres). Linha de log com mais de 8 KB não é útil e vira um vetor de DoS.
         val cortado = r.length > LIMITE_DA_LINHA
@@ -57,7 +59,8 @@ object MascaraDeLog {
     private fun cortar(texto: String): String {
         var fim = LIMITE_DA_LINHA
         val inicioDaPalavra = texto.lastIndexOfAny(charArrayOf(' ', '\n', '\r', '\t'), fim - 1)
-        if (inicioDaPalavra > fim - 256) fim = inicioDaPalavra
+        // Sem espaço por perto o corte cairia no meio de uma palavra longa (um pedaço de token): recua mais um pouco.
+        fim = if (inicioDaPalavra > fim - 256) inicioDaPalavra else fim - 16
         return texto.substring(0, fim)
     }
 
@@ -95,7 +98,7 @@ object MascaraDeLog {
         // `password=x`, `senha: x`, `SESSION_SECRET=x`, `"token":"x"`
         // Valor entre aspas (simples ou duplas): vai até a aspa de fechamento, com espaços e aspas escapadas dentro.
         Regex(
-            "(?i)((?:[A-Za-z0-9_.-]{0,$PREFIXO_MAXIMO}(?:password|senha|secret|token|apikey|api_key)|\\bpat)[\"']?\\s*[=:]\\s*)([\"'])(?:\\\\.|(?!\\2)[^\\\\])*\\2",
+            "(?i)((?:[A-Za-z0-9_.-]{0,$PREFIXO_MAXIMO}(?:password|senha|secret|token|apikey|api_key)|\\bpat)[\"']?\\s*[=:]\\s*)([\"'])(?:\\\\.|(?!\\2)[^\\\\])*+(?:\\2|\\z)",
         ) to { m -> m.groupValues[1] + m.groupValues[2] + "***" + m.groupValues[2] },
         // Sem aspas: até o próximo espaço ou separador.
         Regex(
