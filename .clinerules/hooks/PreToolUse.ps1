@@ -32,7 +32,9 @@
 # repositório, texto) NÃO bloqueia. Bloqueia URL/host com "jira" em algum rótulo, "jira"+"sidia" em
 # host+caminho ou *.atlassian.net com "sidia" (com ou sem esquema, porta, userinfo, maiúsculas, escapes %,
 # ponto final). Documentação pública (atlassian.com e subdomínios) é liberada; vale o host REAL (depois do
-# userinfo) e a URL aninhada em query é avaliada à parte. Espelho de AWK_URL do guard.sh.
+# userinfo) e a URL aninhada em query é avaliada à parte. Barra invertida no userinfo (x\@jira.corp) examina
+# os dois hosts; host sem ponto (curl jira/rest) conta junto de ferramenta de rede; --connect-to, --resolve,
+# --proxy, Host:valor, git/rsync/socat entram. Espelho de AWK_URL do guard.sh.
 # Valem SEMPRE, com qualquer valor da flag: escrever, versionar ou LER `.env` e `config/{equipes,ausencias,
 # papeis,squads}.yaml` (os modelos `.env.example`, `.env.sample` e `*.exemplo.yaml` ficam liberados),
 # `git add -f` e listar todas as variáveis de ambiente (expõe tokens). As configs reais e o
@@ -81,6 +83,12 @@ function Casa([string]$texto, [string]$padrao) {
     return [regex]::IsMatch($texto, $padrao, $OPC_I)
 }
 
+# Comparações de texto ORDINAIS: StartsWith/EndsWith/IndexOf(string) comparam por cultura, e por cultura o
+# caractere U+FEFF (BOM) é "ignorável" (StartsWith(BOM) seria verdadeiro para QUALQUER texto). Use sempre estes.
+function Comeca-Com([string]$s, [string]$p) { return $s.StartsWith($p, [System.StringComparison]::Ordinal) }
+function Termina-Com([string]$s, [string]$p) { return $s.EndsWith($p, [System.StringComparison]::Ordinal) }
+function Indice-De([string]$s, [string]$p) { return $s.IndexOf($p, [System.StringComparison]::Ordinal) }
+
 function Ler-Prop($obj, [string]$nome) {
     # lê uma propriedade sem quebrar quando ela não existe
     if ($null -eq $obj) { return $null }
@@ -95,7 +103,7 @@ function Desfazer-Json($valor) {
     # valores que vieram como texto JSON ('{"command":"..."}') viram objeto; o resto fica como está
     if ($valor -is [string]) {
         $t = $valor.Trim()
-        if ($t.StartsWith('{') -or $t.StartsWith('[')) {
+        if ((Comeca-Com $t '{') -or (Comeca-Com $t '[')) {
             try { return ($t | ConvertFrom-Json) } catch { return $valor }
         }
     }
@@ -131,17 +139,18 @@ function Ler-Flag-Do-Arquivo {
         $valor = $null
         foreach ($bruta in $linhas) {
             $l = ([string]$bruta).Trim()
-            if ($l.StartsWith([string][char]0xFEFF)) { $l = $l.Substring(1) }
-            if ($l -eq '' -or $l.StartsWith('#')) { continue }
-            if ($l.StartsWith('export ')) { $l = $l.Substring(7).Trim() }
-            $i = $l.IndexOf('=')
+            # BOM: compara o primeiro CARACTERE (nunca StartsWith por cultura, que casaria com qualquer linha)
+            if ($l.Length -gt 0 -and $l[0] -eq [char]0xFEFF) { $l = $l.Substring(1) }
+            if ($l -eq '' -or (Comeca-Com $l '#')) { continue }
+            if (Comeca-Com $l 'export ') { $l = $l.Substring(7).Trim() }
+            $i = Indice-De $l '='
             if ($i -le 0) { continue }
             if ($l.Substring(0, $i).Trim() -cne 'JIRA_LIVE_ENABLED') { continue }
             $v = $l.Substring($i + 1).Trim()
             $aspa = ($v.Length -ge 2) -and (($v[0] -eq [char]34) -or ($v[0] -eq [char]39)) -and ($v[$v.Length - 1] -eq $v[0])
             if ($aspa) { $v = $v.Substring(1, $v.Length - 2) }
             else {
-                $j = $v.IndexOf(' #')
+                $j = Indice-De $v ' #'
                 if ($j -ge 0) { $v = $v.Substring(0, $j) }
                 $v = $v.Trim()
             }
@@ -158,6 +167,9 @@ $REDE_FERRAMENTAS = @{}
 foreach ($x in 'curl wget http https httpie xh nc ncat telnet ssh scp sftp ftp openssl socat aria2c lynx w3m rsync invoke-webrequest invoke-restmethod iwr irm start-bitstransfer bitsadmin certutil test-netconnection tnc resolve-dnsname nslookup ping dig'.Split(' ')) { $REDE_FERRAMENTAS[$x] = $true }
 $ALVO_FERRAMENTAS = @{}
 foreach ($x in 'ssh scp sftp nc ncat telnet ftp socat ping dig nslookup tnc test-netconnection resolve-dnsname'.Split(' ')) { $ALVO_FERRAMENTAS[$x] = $true }
+# subcomandos do git que falam com um servidor (git entra como ferramenta de rede só com eles)
+$GIT_SUBCOMANDOS = @{}
+foreach ($x in 'clone fetch pull push remote ls-remote submodule'.Split(' ')) { $GIT_SUBCOMANDOS[$x] = $true }
 # valor de opção que é arquivo ou corpo (curl -o jira-saida.txt, -d, -OutFile...) não é host
 $PADRAO_OPCAO_COM_ARQUIVO = '^(-o|--output|--output-document|--upload-file|-d|--data|--data-raw|--data-binary|--cacert|--cert|--key|--config|-outfile|-infile|-body|-path|-filepath)$'
 
@@ -185,21 +197,66 @@ function Host-Termina([string]$h, [string]$sufixo) {
     return ($h.Length -gt $sufixo.Length) -and $h.EndsWith($sufixo, [System.StringComparison]::Ordinal)
 }
 
-function Separa-Endereco([string]$u) {
-    # "usuario@host:porta/caminho" -> Hospedeiro, Resto, TemPorta, TemUser (o host real vem depois do último @)
-    $m = [regex]::Match($u, '[/?#\\]')
-    if ($m.Success) { $auth = $u.Substring(0, $m.Index); $resto = $u.Substring($m.Index) } else { $auth = $u; $resto = '' }
+function Host-De([string]$a) {
+    # um candidato a host de uma autoridade: tira o userinfo (até o ÚLTIMO @), corta na barra invertida e na porta
+    # ("" se for IPv6 entre colchetes). Espelho de host_de do guard.sh.
     $temUser = $false
-    $i = $auth.LastIndexOf('@')
-    if ($i -ge 0) { $auth = $auth.Substring($i + 1); $temUser = $true }
+    $i = $a.LastIndexOf([char]64)
+    if ($i -ge 0) { $a = $a.Substring($i + 1); $temUser = $true }
+    $b = $a.IndexOf([char]92)
+    if ($b -ge 0) { $a = $a.Substring(0, $b) }
     $temPorta = $false
     $hosp = ''
-    if (-not $auth.StartsWith('[')) {
-        $j = $auth.IndexOf(':')
-        if ($j -ge 0) { $temPorta = $true; $auth = $auth.Substring(0, $j) }
-        $hosp = $auth.TrimEnd('.')
+    if (-not (Comeca-Com $a '[')) {
+        $j = $a.IndexOf([char]58)
+        if ($j -ge 0) { $temPorta = $true; $a = $a.Substring(0, $j) }
+        $hosp = $a.TrimEnd('.')
     }
-    return [pscustomobject]@{ Hospedeiro = $hosp; Resto = $resto; TemPorta = $temPorta; TemUser = $temUser }
+    return [pscustomobject]@{ Hospedeiro = $hosp; TemPorta = $temPorta; TemUser = $temUser }
+}
+
+function Separa-Endereco([string]$u) {
+    # "usuario@host:porta/caminho" -> Hosts (candidatos), Resto, TemPorta, TemUser. A autoridade termina só em / ? #;
+    # a barra invertida fica DENTRO dela (curl trata "x\@jira.corp" como host jira.corp; navegadores tratam "\" como
+    # "/"). Havendo "\", os DOIS hosts (o do curl e o de antes da barra) são candidatos e o texto depois da primeira
+    # barra invertida entra no Resto. Espelho de separa do guard.sh.
+    $m = [regex]::Match($u, '[/?#]')
+    if ($m.Success) { $auth = $u.Substring(0, $m.Index); $resto = $u.Substring($m.Index) } else { $auth = $u; $resto = '' }
+    $hosts = New-Object System.Collections.ArrayList
+    $c1 = Host-De $auth
+    [void]$hosts.Add($c1.Hospedeiro)
+    $temPorta = $c1.TemPorta
+    $temUser = $c1.TemUser
+    $b = $auth.IndexOf([char]92)
+    if ($b -ge 0) {
+        $c2 = Host-De ($auth.Substring(0, $b))
+        [void]$hosts.Add($c2.Hospedeiro)
+        $temPorta = ($temPorta -or $c2.TemPorta)
+        $temUser = ($temUser -or $c2.TemUser)
+        $resto = $auth.Substring($b) + $resto
+    }
+    return [pscustomobject]@{ Hosts = @($hosts); Resto = $resto; TemPorta = $temPorta; TemUser = $temUser }
+}
+
+function Rotulo-Jira-Estrito([string]$h) {
+    # host sem ponto/porta/usuario: só vale se um rótulo (separado por . ou -) for exatamente "jira"
+    # (jira, jira-lab, meu-jira); "dashboardjira" não conta. Espelho de estrito do guard.sh.
+    foreach ($rotulo in $h.Split('.')) {
+        foreach ($parte in $rotulo.Split('-')) { if ($parte -eq 'jira') { return $true } }
+    }
+    return $false
+}
+
+function Campos-Jira([string]$w) {
+    # valor "a:b:c:d" de --connect-to / --resolve: examina o 1o e o 3o campo como hosts. Espelho de campos do guard.sh.
+    $f = $w.Split(':')
+    foreach ($k in 0, 2) {
+        if ($k -lt $f.Length) {
+            $h = $f[$k].TrimStart('+').TrimEnd('.')
+            if ($h -ne '' -and (Endereco-DeJira $h '')) { return $true }
+        }
+    }
+    return $false
 }
 
 function Endereco-DeJira([string]$hosp, [string]$resto) {
@@ -238,9 +295,9 @@ function Texto-Cita-Jira([string]$texto, [string]$rede) {
     while ($true) {
         $m = $rx.Match($s)
         if (-not $m.Success) { break }
-        $k = $m.Value.IndexOf('://')
+        $k = Indice-De $m.Value '://'
         $e = Separa-Endereco ($m.Value.Substring($k + 3))
-        if ($e.Hospedeiro -ne '' -and (Endereco-DeJira $e.Hospedeiro $e.Resto)) { return $true }
+        foreach ($h in $e.Hosts) { if ($h -ne '' -and (Endereco-DeJira $h $e.Resto)) { return $true } }
         $s = $s.Substring($m.Index + $k + 3)
     }
     # B) host sem esquema
@@ -249,25 +306,53 @@ function Texto-Cita-Jira([string]$texto, [string]$rede) {
     if ($rede -eq 'auto') {
         foreach ($w in $palavras) { if ($REDE_FERRAMENTAS.ContainsKey((Base-Palavra $w))) { $r = $true; break } }
         if ($t -match 'webclient|httpclient|xmlhttp|winhttp') { $r = $true }
+        # git só conta com subcomando que fala com servidor (clone, fetch, pull, push, remote, ls-remote, submodule)
+        for ($gi = 0; $gi -lt $palavras.Length; $gi++) {
+            if ((Base-Palavra $palavras[$gi]) -eq 'git') {
+                $fim = [Math]::Min($gi + 6, $palavras.Length - 1)
+                for ($gk = $gi + 1; $gk -le $fim; $gk++) { if ($GIT_SUBCOMANDOS.ContainsKey($palavras[$gk])) { $r = $true } }
+            }
+        }
     }
     $janela = 0
     $ant = ''
-    foreach ($w in $palavras) {
+    $ult = 0    # posição (a partir de 1) da última ferramenta de comando (curl, wget...); no modo '1' (texto de URL) vale sempre
+    for ($i = 0; $i -lt $palavras.Length; $i++) {
+        $w = $palavras[$i]
         if ($w -eq '') { continue }
+        if ($REDE_FERRAMENTAS.ContainsKey((Base-Palavra $w)) -and $w -ne 'http' -and $w -ne 'https') { $ult = $i + 1 }
         # com ferramenta de rede, todas as palavras; sem ela, só as de forma usuario@host (git clone git@host:repo)
         if (-not $r -and -not $w.Contains('@')) { continue }
         $salta = ($ant -match $PADRAO_OPCAO_COM_ARQUIVO)
+        $prev = $ant
         $ant = $w
         if ($salta) { continue }
         if ($ALVO_FERRAMENTAS.ContainsKey((Base-Palavra $w))) { $janela = 4; continue }
+        # --connect-to a:b:c:d e --resolve host:porta:endereço: campos separados por ":"
+        if ($prev -match '^(--connect-to|--resolve)$') {
+            if (Campos-Jira $w) { return $true }
+            continue
+        }
+        # valor de opção que é um host (proxy), "-xHOST" colado e cabeçalho Host:valor sem espaço
+        $forca = ($prev -match '^(-x|--proxy|--preproxy|--socks4a?|--socks5(-hostname)?|--haproxy-[a-z-]+)$')
+        if ($w -match '^-x[^-]') { $w = $w.Substring(2); $forca = $true }
+        if ($w -match '^(host|x-forwarded-host|x-original-host|forwarded-host):') { $w = $w.Substring((Indice-De $w ':') + 1); $forca = $true }
+        # socat: TCP:host:porta, SSL:host:porta...
+        if ($w -match '^(tcp|tcp4|tcp6|tcp-connect|udp|udp4|udp6|ssl|openssl|openssl-connect|socks4a?):') { $w = $w.Substring((Indice-De $w ':') + 1) }
+        if ($w -eq '') { continue }
         if ($w.Contains('://')) { continue }
         if ($w -match '^-' -or $w -match '^[/.~$]' -or $w.Contains('\') -or $w -match '^[a-z]:[/\\]' -or $w -match '^[0-9]+$') { continue }
         $e = Separa-Endereco $w
-        $alvo = ($janela -gt 0)
+        $alvo = (($janela -gt 0) -or $forca)
         if ($janela -gt 0) { $janela-- }
-        if ($e.Hospedeiro -eq '') { continue }
-        if ($alvo -or $e.Hospedeiro.Contains('.') -or $e.TemPorta -or $e.TemUser) {
-            if (Endereco-DeJira $e.Hospedeiro $e.Resto) { return $true }
+        foreach ($h in $e.Hosts) {
+            if ($h -eq '') { continue }
+            # host sem ponto, porta nem usuario (curl jira/rest, wget jira, iwr jira): só com ferramenta de comando
+            # nas 10 palavras anteriores (git não entra: evita bloquear nome de ramo como jira-fix)
+            $perto = ($rede -eq '1') -or (($ult -gt 0) -and (($i + 1 - $ult) -le 10))
+            if ($alvo -or $h.Contains('.') -or $e.TemPorta -or $e.TemUser) {
+                if (Endereco-DeJira $h $e.Resto) { return $true }
+            } elseif ($perto -and (Rotulo-Jira-Estrito $h)) { return $true }
         }
     }
     return $false
@@ -429,11 +514,11 @@ function Padrao-Seguro([string]$padrao) {
     # file_pattern de busca seguro? Aceita: nome exato não protegido, ou glob terminado numa extensão
     # segura ($PADRAO_EXT_SEGURA), com no máximo um grupo {a,b}. Negação (!), ':' e o resto: inseguros.
     $p = $padrao.Replace('\', '/').ToLowerInvariant()
-    if ($p -eq '' -or $p.StartsWith('!') -or $p.Contains(':')) { return $false }
+    if ($p -eq '' -or (Comeca-Com $p '!') -or $p.Contains(':')) { return $false }
     $alts = New-Object System.Collections.ArrayList
     if ($p -match '[{}]') {
-        $i = $p.IndexOf('{')
-        $j = $p.IndexOf('}')
+        $i = Indice-De $p '{'
+        $j = Indice-De $p '}'
         if ($i -lt 0 -or $j -lt $i) { return $false }
         $pre = $p.Substring(0, $i)
         $meio = $p.Substring($i + 1, $j - $i - 1)
@@ -443,7 +528,7 @@ function Padrao-Seguro([string]$padrao) {
         # alternativa vazia expande para o resto do glob (*{.kt,} = *.kt OU *, que casa .env): bloqueia.
         # O Split do .NET preserva vazios (o "*" cairia na checagem de extensão), mas a regra explícita
         # mantém o mesmo comportamento do PreToolUse do bash, cujo `read` descarta vazios.
-        if ($meio -eq '' -or $meio.StartsWith(',') -or $meio.EndsWith(',') -or $meio.Contains(',,')) { return $false }
+        if ($meio -eq '' -or (Comeca-Com $meio ',') -or (Termina-Com $meio ',') -or $meio.Contains(',,')) { return $false }
         foreach ($a in $meio.Split(',')) { [void]$alts.Add($pre + $a + $pos) }
     }
     else { [void]$alts.Add($p) }
@@ -548,7 +633,7 @@ function Regra-SoUsuario([string]$cmd) {
         $w = ($g -split '\s+')[0]
         $w = $w.Trim('"', "'").TrimStart('\')
         $w = ($w -split '/')[-1]
-        if ($w.EndsWith('.exe')) { $w = $w.Substring(0, $w.Length - 4) }
+        if (Termina-Com $w '.exe') { $w = $w.Substring(0, $w.Length - 4) }
         if ($w -eq '' -or $w -eq '$') { continue }
         if ($LEITORES -contains $w) { continue }
         if ($w -eq 'less') {

@@ -479,6 +479,24 @@ foreach ($c in @('curl -s https://jira.exemplo.invalid/rest/api/2/myself', 'curl
     Caso '-' (Cmd $c) $true "URL de Jira em comando: $c"
     Caso 'false' (Cmd $c) $true "URL de Jira em comando (flag false): $c"
 }
+# 2b) correções da revisão adversarial (28/10/2026): barra invertida no userinfo, host sem ponto, --connect-to, git/socat, Host:
+foreach ($c in @("curl 'http://x\@jira.corp/rest'", "wget 'http://a\@jira.corp'", "Invoke-WebRequest 'http://a\@jira.corp'",
+        'curl https://evil.com%5c@jira.corp/', 'curl http://jira.x.com\@evil.com/', 'curl http://docs.atlassian.com\jira.x.com/',
+        'curl jira/rest/api/2/search', 'wget jira/x', 'iwr jira/rest', 'curl --proxy jira http://x.com', 'curl -x jira http://x.com',
+        'curl -xjira.corp:3128 http://x.com', 'curl jira-lab/x',
+        'curl --connect-to ::jira.corp:443 https://example.com', 'curl --connect-to example.com:443:jira.corp:443 https://example.com',
+        'curl --connect-to=::jira.corp:443 https://example.com', 'curl --resolve example.com:443:jira.corp https://example.com',
+        'git clone jira.corp:x.git', 'git clone jira:x.git', 'git remote add o jira.corp:x', 'git ls-remote jira.corp:x',
+        'rsync -av x jira.corp:/tmp', 'scp x jira:/tmp', 'socat - TCP:jira.corp:80', 'socat TCP4:jira:80 -',
+        "curl -H 'Host:jira.corp' http://10.0.0.1", 'curl -H Host:jira.corp http://10.0.0.1')) {
+    Caso '-' (Cmd $c) $true "burla corrigida: $c"
+}
+foreach ($c in @("curl 'http://x\@docs.atlassian.com/x'", "curl http://example.com\@x.com/", 'git push origin HEAD:feat/hooks-url-jira',
+        'git commit -m "guia do jira"', 'git push origin jira-fix', 'git clone https://github.com/dono/dashboardJira.git',
+        'curl --connect-to example.com:443:example.org:443 https://example.com', 'curl -H "Host: example.com" http://10.0.0.1',
+        'curl -H Host:localhost http://10.0.0.1', 'socat - TCP:example.com:80', 'curl --proxy proxy.exemplo.com:3128 http://x.com')) {
+    Caso '-' (Cmd $c) $false "não regressão da burla: $c"
+}
 foreach ($u in @('https://jira.x.com/a', 'jira.x.com/a', 'JIRA-LAB:8080', 'https://u@jira.x.com', 'https://x.com/jira/sidia', 'https://sidia.atlassian.net/x',
         'https://SIDIA.ATLASSIAN.NET', 'https://jira%2Ex.com/', 'https://confluence.atlassian.com@jira.x.com/', 'https://atlassian.com.jira.x.com/',
         'https://jira.x.com/atlassian.com', 'https://docs.atlassian.com/x?redirect=https://jira.x.com/',
@@ -527,6 +545,8 @@ CasoArq "JIRA_LIVE_ENABLED=$T`r`n" (Cmd $CurlJ) $false 'arquivo: CRLF liga'
 CasoArq ([string][char]0xFEFF + "JIRA_LIVE_ENABLED=$T`n") (Cmd $CurlJ) $false 'arquivo: BOM liga'
 CasoArq "A=1`n`nB=2`nJIRA_LIVE_ENABLED=$T`nC=3`n" (Cmd $CurlJ) $false 'arquivo: linha da flag entre outras liga'
 CasoArq "JIRA_LIVE_ENABLED=$T" (Cmd $CurlJ) $false 'arquivo: sem quebra de linha final liga'
+# StartsWith(BOM) por cultura casa com qualquer texto e comeria o 1o caractere de toda linha: sem BOM, a 1a linha tem de valer
+CasoArq "JIRA_LIVE_ENABLED=$T`nOUTRA=1`n" (Cmd $CurlJ) $false 'arquivo: sem BOM, o 1o caractere da linha da flag não é comido'
 foreach ($v in @('sim', 'yes', '1', '0', 'tr ue', "$T;", "$T#x", "${T}x", "x$T", '', "`"$T", "$T`"", "`"$T`" # c", "$T,")) {
     CasoArq "JIRA_LIVE_ENABLED=$v`n" (Cmd $CurlJ) $true "arquivo: valor inválido [$v] bloqueia"
 }
