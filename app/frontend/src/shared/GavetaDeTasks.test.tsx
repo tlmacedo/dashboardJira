@@ -380,7 +380,7 @@ describe('GavetaDeTasks: task e nova aba', () => {
     const [url, alvo, recursos] = abrirJanela.mock.calls[0] as [string, string, string]
     expect(alvo).toBe('_blank')
     expect(recursos).toContain('noopener')
-    const u = new URL(url, 'http://painel.local')
+    const u = new URL(url, 'http://localhost')
     expect(u.pathname).toBe('/detalhe')
     expect(u.searchParams.get('cartao')).toBe('TS-03')
     expect(u.searchParams.get('segmento')).toBe('paradas')
