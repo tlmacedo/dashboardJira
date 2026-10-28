@@ -111,7 +111,16 @@ class CabecalhosDeSegurancaTest {
     }
 
     @Test
-    fun frameAncestorsNone() = comApp(dev = true) {
+    fun cspContinuaComFontSelf() = comApp(dev = true) {
+        val csp = assertNotNull(client.pega("/").headers["Content-Security-Policy"])
+        // Fontes (inclusive a da marca, se vier) só do próprio domínio: nada de host externo na CSP.
+        assertTrue(csp.contains("font-src 'self';"), csp)
+        assertFalse(Regex("https?:|//").containsMatchIn(csp), "a CSP não pode citar domínio externo: $csp")
+        assertEquals(cspEsperada, csp)
+    }
+
+    @Test
+    fun frameAncestorsNone()= comApp(dev = true) {
         assertTrue(assertNotNull(client.pega("/").headers["Content-Security-Policy"]).contains("frame-ancestors 'none'"))
         assertEquals("DENY", client.pega("/").headers["X-Frame-Options"])
     }
