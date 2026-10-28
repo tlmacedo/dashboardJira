@@ -145,7 +145,9 @@ function Ler-Flag-Do-Arquivo {
             if (Comeca-Com $l 'export ') { $l = $l.Substring(7).Trim() }
             $i = Indice-De $l '='
             if ($i -le 0) { continue }
-            if ($l.Substring(0, $i).Trim() -cne 'JIRA_LIVE_ENABLED') { continue }
+            # comparação ORDINAL: -cne/-ceq usam a cultura invariante, onde caracteres "ignoráveis" (U+FFFD, U+200B...)
+            # somem da comparação e "<lixo>JIRA_LIVE_ENABLED" ficaria igual ao nome da flag
+            if (-not [string]::Equals($l.Substring(0, $i).Trim(), 'JIRA_LIVE_ENABLED', [System.StringComparison]::Ordinal)) { continue }
             $v = $l.Substring($i + 1).Trim()
             $aspa = ($v.Length -ge 2) -and (($v[0] -eq [char]34) -or ($v[0] -eq [char]39)) -and ($v[$v.Length - 1] -eq $v[0])
             if ($aspa) { $v = $v.Substring(1, $v.Length - 2) }

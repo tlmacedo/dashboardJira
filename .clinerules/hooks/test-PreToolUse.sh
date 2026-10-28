@@ -396,6 +396,15 @@ for v in sim 1 0 "tr ue" "${T};" "${T}#x" "" "\"$T" "\"$T\" # c"; do
 done
 casoa "# JIRA_LIVE_ENABLED=$T\n" "$(cmd "$CURL_J")" true "arquivo: linha comentada não liga"
 casoa "JIRA_LIVE_ENABLED_X=$T\n" "$(cmd "$CURL_J")" true "arquivo: nome parecido não liga"
+casoa "xx JIRA_LIVE_ENABLED=$T\n" "$(cmd "$CURL_J")" true "arquivo: texto antes do nome (com espaço) não liga"
+casoa "FOO_JIRA_LIVE_ENABLED=$T\n" "$(cmd "$CURL_J")" true "arquivo: nome com prefixo e sublinhado não liga"
+casoa "\342\200\213JIRA_LIVE_ENABLED=$T\n" "$(cmd "$CURL_J")" true "arquivo: espaço de largura zero antes do nome não liga"
+casoa "\357\277\275JIRA_LIVE_ENABLED=$T\n" "$(cmd "$CURL_J")" true "arquivo: lixo (U+FFFD) antes do nome não liga"
+casoa "export JIRA_LIVE_ENABLED_X=$T\n" "$(cmd "$CURL_J")" true "arquivo: export com nome parecido não liga"
+casoa "JIRA_LIVE_ENABLED = $T\n" "$(cmd "$CURL_J")" false "arquivo: espaços em volta do = ligam"
+casoa "\tJIRA_LIVE_ENABLED=$T\n" "$(cmd "$CURL_J")" false "arquivo: tabulação antes do nome liga"
+casoa "export JIRA_LIVE_ENABLED=$T\r\n" "$(cmd "$CURL_J")" false "arquivo: export com CRLF liga"
+casoa "\357\273\277export JIRA_LIVE_ENABLED=$T\r\n" "$(cmd "$CURL_J")" false "arquivo: BOM com export e CRLF liga"
 casoa "JIRA_LIVE_ENABLED=$T\nJIRA_LIVE_ENABLED=false\n" "$(cmd "$CURL_J")" true "arquivo: a última ocorrência vale (desliga)"
 casoa "JIRA_LIVE_ENABLED=false\nJIRA_LIVE_ENABLED=$T\n" "$(cmd "$CURL_J")" false "arquivo: a última ocorrência vale (liga)"
 # ambienteDoProcessoNaoLiga / ambienteDoProcessoNaoDesliga (em todas as ferramentas que olham a flag)
