@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { useLang } from '../../i18n/LangProvider'
 import { ErroDaApi } from '../../api/client'
 import { Cartao } from '../../shared/Cartao'
+import { ListaDeAlertas } from '../../shell/AvisoDeAlertas'
 import { fetchSyncStatus, type ExecucaoDto, type InstanciaStatusDto, type SyncStatusDto } from './api'
 import './sincronizacao.css'
 
@@ -48,6 +49,9 @@ export function Sincronizacao() {
           </button>
         </div>
       </div>
+
+      {/* Alertas operacionais (Plano 12): a faixa do topo da tela aponta para esta lista (#alertas). */}
+      <ListaDeAlertas />
 
       {consulta.isPending && <p className="sinc-carregando">{t('app.carregando')}</p>}
 

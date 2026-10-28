@@ -37,6 +37,7 @@ Branch: `feat/operacao-em-producao` (Tarefas 1 a 12 num só bloco). Executor: Cl
 - Ruling (T5): `painel_alerta_ativo{codigo}` tem um valor por CÓDIGO (1 se qualquer instância tem o alerta), publicado para os 14 códigos a cada ciclo (0 quando resolvido). A gravidade exata fica na rota/arquivo; o `alertas.yml` opcional agrupa os códigos pela gravidade usual.
 - Ruling (T5): `SYNC_ATRASADA` não dispara enquanto a instância está suspensa (a suspensão já é o alerta); "nunca rodou" (sem OK) só alerta depois do tempo no ar da regra (1 h incremental, 26 h reconciliação/retenção/backup, 3 dias restauração). `ACCESS_LOG_FALHANDO` compara o contador com a menor amostra da última hora (amostrada a cada avaliação).
 - Ruling (T5): a retenção apaga `backup_run` pelo `RETENTION_MONTHS` (24 meses), como o `sync_run`.
+- Ruling (T6): a faixa fica dentro do `<main>`, acima do conteúdo, e a lista detalhada (âncora `#alertas`) no topo da tela Sincronização; as duas leem a mesma consulta (`['alertas-operacionais']`, a cada 5 min, só para GERENTE). O teste de paridade com o enum do backend é a lista fixa de 14 códigos no frontend (o Vite não deixa importar o `.kt` de fora da raiz) mais `AlertasTraduzidosTest` no backend, que lê o `pt.json`/`en.json`. O teste `todoCodigoTemTraducaoPtEEn` do Plano 10 ainda não existe na `main`; quando existir, passa a cobrir `alertas.*` sozinho.
 
 ## Tarefas
 

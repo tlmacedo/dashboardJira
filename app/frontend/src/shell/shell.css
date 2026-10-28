@@ -302,3 +302,49 @@ h1 {
     animation: none !important;
   }
 }
+
+/* Alertas operacionais (Plano 12). A cor reforça, mas o símbolo (▲ ●) e o texto são o sinal. */
+.alertas-faixa {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  align-items: center;
+  margin-bottom: 12px;
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--warn);
+  border-radius: 6px;
+  background: var(--surface);
+  font-weight: 600;
+}
+.alertas-faixa-critico {
+  color: var(--bad);
+}
+.alertas-faixa-atencao {
+  color: var(--warn);
+}
+.alertas-faixa a {
+  margin-left: auto;
+}
+.alertas-lista ul {
+  list-style: none;
+  margin: 0 0 16px;
+  padding: 0;
+}
+.alertas-lista li {
+  padding: 6px 0;
+  border-bottom: 1px solid var(--line);
+}
+.alertas-lista li.alertas-critico strong {
+  color: var(--bad);
+}
+.alertas-lista li.alertas-atencao strong {
+  color: var(--warn);
+}
+.alertas-lista code {
+  margin-left: 8px;
+  font-size: 12px;
+  background: var(--soft);
+  border-radius: 4px;
+  padding: 1px 5px;
+}
