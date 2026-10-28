@@ -75,12 +75,79 @@ function configuracaoMock() {
   }
 }
 
+function centralMock() {
+  const i = (item: string, n: number | null, estado: string, rota: string, cartao: string | null = 'VG-09', universo: number | null = null) => ({
+    item, valor: n === null ? '—' : universo !== null ? `${n}/${universo}` : String(n), n, universo, estado, rota, cartao, segmento: cartao ? item : null,
+  })
+  const ok = { fracao: 0.8, semCapacidade: false, estado: 'ok' }
+  return {
+    kpis: [
+      { ...i('ABERTAS', 90, 'neutro', 'abertas', 'VG-01'), segmento: 'abertas' },
+      { ...i('VENCIDAS', 7, 'problema', 'negligenciadas', 'VG-05'), segmento: 'vencidas' },
+      { ...i('RISCO_ALTO', 4, 'problema', 'riscos', 'VG-08'), segmento: 'alto' },
+      { ...i('NO_PRAZO', 52, 'atencao', 'metas', 'VG-04', 70), segmento: 'noPrazo' },
+      { ...i('NO_PRAZO_AJUSTADO', 60, 'ok', 'metas', 'VG-04', 70), segmento: 'noPrazoAjustado' },
+    ],
+    itens: [
+      i('VENCIDAS', 7, 'problema', 'negligenciadas'), i('RISCO_ALTO', 4, 'problema', 'riscos'), i('ACIMA_DA_CAPACIDADE', 5, 'problema', 'carga'),
+      i('ATRASOS_PREVISTOS', 3, 'problema', 'capacidade'), i('SEM_ATUALIZACAO', 9, 'atencao', 'negligenciadas'), i('PARADAS_NO_STATUS', 6, 'atencao', 'negligenciadas'),
+      i('SEM_RESPONSAVEL', 2, 'atencao', 'negligenciadas'), i('BLOQUEADAS', 1, 'problema', 'negligenciadas'), i('AUSENCIAS_14D', 3, 'neutro', 'capacidade', null),
+      i('COM_FOLGA', 2, 'neutro', 'carga'), i('META_DE_PRAZO', 52, 'atencao', 'metas', 'VG-09', 70), i('PARES_CR_COM_ALERTA', 4, 'atencao', 'checklistReview'),
+      i('TASK_REVIEW_DIVERGENTE', 3, 'atencao', 'divergencia'), i('ALTERACOES_SEM_AUTORIZACAO', 2, 'problema', 'auditoria'),
+      i('INDICIO_ALTO', 2, 'problema', 'integridade', 'VG-13'), i('SEM_ESTIMATIVA', 14, 'atencao', 'qualidade', 'VG-09', 90),
+    ],
+    entregasPorSemana: ['2026-08-10', '2026-08-17', '2026-08-24', '2026-08-31', '2026-09-07', '2026-09-14'].map((semana, k) => ({ semana, n: 4 + ((k * 3) % 7) })),
+    backlogTermina: { p50: '2026-12-07', p85: '2026-12-21', p95: '2027-01-11', semanasP50: 6, semanasP85: 8, semanasP95: 11 },
+    backlog: 30, confiancaDoBacklog: 'media',
+    squads: [
+      { squad: 'Alfa', ocupacaoMedia: ok, jain: 0.93, pessoas: 4 },
+      { squad: 'Beta', ocupacaoMedia: { fracao: 1.18, semCapacidade: false, estado: 'problema' }, jain: 0.71, pessoas: 3 },
+    ],
+    avisos: [],
+  }
+}
+
+function squadMock() {
+  const ok = { fracao: 0.6, semCapacidade: false, estado: 'ok' }
+  const l = (pessoa: string, abertas: number) => ({
+    pessoa, abertas, wip: 2, filaH: 30, capacidade4SemH: 120, ocupacao: ok, ausenciaDias: 0, acimaDoP85: 1, vencidas: 1, riscoAlto: 1, horasAssumidas: false,
+  })
+  return {
+    squad: 'Alfa', carga: [l('dev.alfa1', 6), l('dev.alfa2', 4)], riscoAlto: 2, riscoMedio: 3, avisos: [],
+    vencimentos: {
+      dias: 7, vencem: 2, riscoDeAtrasar: 1, avisos: [],
+      linhas: [
+        { key: 'TG-201', resumo: 'Tarefa fictícia', pessoa: 'dev.alfa1', vence: '2026-11-04', termino: '2026-11-03', folgaDiasUteis: 1, estado: 'ok' },
+        { key: 'TG-202', resumo: 'Tarefa fictícia', pessoa: 'dev.alfa2', vence: '2026-11-05', termino: '2026-11-06', folgaDiasUteis: -1, estado: 'problema' },
+      ],
+    },
+    ausencias: [{ pessoa: 'dev.alfa1', de: '2026-11-04', ate: '2026-11-05', fracao: 1 }],
+  }
+}
+
+function meuPainelMock() {
+  return {
+    pessoa: 'dev', minhasAbertas: 2, vencemEm7d: 2, emRisco: 1,
+    ocupacao4Sem: { fracao: 0.25, semCapacidade: false, estado: 'ok' },
+    ausenciasFuturas: [{ pessoa: 'dev', de: '2026-11-04', ate: '2026-11-05', fracao: 1 }],
+    fila: [
+      { key: 'TG-201', resumo: 'Tarefa fictícia', vence: '2026-11-04', termino: '2026-11-03', atrasa: false, nivelRisco: 'baixo' },
+      { key: 'TG-202', resumo: 'Tarefa fictícia', vence: '2026-11-05', termino: '2026-11-06', atrasa: true, nivelRisco: 'alto' },
+    ],
+    esforcoDoMes: { pesoTipo: 3, testes: 2.5, horas: 12, indice: 17.5, versaoRegras: 'esforço v1' },
+    avisos: [],
+  }
+}
+
 /** Resposta do mock para as telas do bloco 7b; `undefined` quando a rota não é deste bloco. */
 export function mockFase7b(pathname: string): unknown | undefined {
   if (pathname === '/api/cards/qualidade') return qualidadeMock()
   if (pathname === '/api/distribuicao') return distribuicaoMock()
   if (pathname === '/api/rebalanceamento') return rebalanceamentoMock()
   if (pathname === '/api/governanca/decisoes') return decisoesMock()
+  if (pathname === '/api/central') return centralMock()
+  if (pathname === '/api/squad') return squadMock()
+  if (pathname === '/api/meu-painel') return meuPainelMock()
   if (pathname === '/api/governanca/acessos') return acessosMock()
   if (pathname === '/api/governanca/configuracao') return configuracaoMock()
   return undefined

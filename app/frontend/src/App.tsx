@@ -3,6 +3,9 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { LangProvider } from './i18n/LangProvider'
 import { inicioDoPapel } from './nav/nav'
 import { Abertas } from './screens/Abertas/Abertas'
+import { Central } from './screens/Central/Central'
+import { MeuPainel } from './screens/MeuPainel/MeuPainel'
+import { Squad } from './screens/Squad/Squad'
 import { AgingWip } from './screens/AgingWip/AgingWip'
 import { Auditoria } from './screens/Auditoria/Auditoria'
 import { Bloqueios } from './screens/Bloqueios/Bloqueios'
@@ -61,6 +64,9 @@ export default function App() {
             <Routes>
               <Route element={<Shell />}>
                 <Route index element={<Inicio />} />
+                <Route path="central" element={<Central />} />
+                <Route path="squad" element={<Squad />} />
+                <Route path="meu" element={<MeuPainel />} />
                 <Route path="abertas" element={<Abertas />} />
                 <Route path="negligenciadas" element={<Negligenciadas />} />
                 <Route path="fechadas" element={<Fechadas />} />
