@@ -10,6 +10,7 @@ import { GavetaDeTasks } from '../../shared/GavetaDeTasks'
 import { TabelaOrdenavel, type Coluna } from '../../shared/TabelaOrdenavel'
 import { temBloqueio, useCard } from '../../shared/useCard'
 import type { FechadasDto, LinhaFechada } from './api'
+import { ControleDoCiclo } from './ControleDoCiclo'
 import '../../shared/tabela.css'
 
 type Gaveta = { cartaoId: string; segmento: string; titulo: string }
@@ -201,6 +202,8 @@ export function Fechadas() {
                 />
               </Cartao>
             </div>
+
+            <ControleDoCiclo />
 
             <Cartao id="FE-11" variante="tabela" nivelDoTitulo={2} idDoTitulo="h-fe-pessoa" titulo={t('fechadas.porPessoa')}>
               {dto.porPessoa.length === 0 ? (

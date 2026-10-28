@@ -40,6 +40,23 @@ object Database {
         ).joinToString("&")
     }
 
+    /** Quantas migrações ainda faltam aplicar (0 = esquema em dia). */
+    fun migracoesPendentes(ds: DataSource): Int =
+        Flyway.configure()
+            .dataSource(ds)
+            .locations("classpath:db/migration")
+            .load()
+            .info()
+            .pending()
+            .size
+
+    /** Arquivo do banco que o pool [ds] abre (lido da URL JDBC), ou nulo se não for um pool SQLite do painel. */
+    fun arquivoDe(ds: DataSource): Path? {
+        val url = (ds as? HikariDataSource)?.jdbcUrl ?: return null
+        val caminho = url.removePrefix("jdbc:sqlite:").substringBefore('?')
+        return if (url.startsWith("jdbc:sqlite:") && caminho.isNotBlank()) Path.of(caminho) else null
+    }
+
     /** Aplica as migrações Flyway de `db/migration`. */
     fun migrate(ds: DataSource) {
         Flyway.configure()

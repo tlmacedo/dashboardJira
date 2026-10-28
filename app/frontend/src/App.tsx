@@ -3,9 +3,13 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { LangProvider } from './i18n/LangProvider'
 import { inicioDoPapel } from './nav/nav'
 import { Abertas } from './screens/Abertas/Abertas'
+import { AgingWip } from './screens/AgingWip/AgingWip'
 import { Auditoria } from './screens/Auditoria/Auditoria'
+import { Bloqueios } from './screens/Bloqueios/Bloqueios'
+import { Cruzamentos } from './screens/Cruzamentos/Cruzamentos'
 import { Epicos } from './screens/Epicos/Epicos'
 import { Fechadas } from './screens/Fechadas/Fechadas'
+import { FluxoDaSemana } from './screens/FluxoDaSemana/FluxoDaSemana'
 import { Negativas } from './screens/Negativas/Negativas'
 import { Previsao } from './screens/Previsao/Previsao'
 import { Calendario } from './screens/Calendario/Calendario'
@@ -71,6 +75,10 @@ export default function App() {
                 <Route path="revisoes" element={<Revisoes />} />
                 <Route path="cargaTipo" element={<CargaTipo />} />
                 <Route path="epicos" element={<Epicos />} />
+                <Route path="fluxoDaSemana" element={<FluxoDaSemana />} />
+                <Route path="agingWip" element={<AgingWip />} />
+                <Route path="bloqueios" element={<Bloqueios />} />
+                <Route path="cruzamentos" element={<Cruzamentos />} />
                 <Route path="tempo" element={<TempoEmStatus />} />
                 <Route path="auditoria" element={<Auditoria />} />
                 <Route path="divergencia" element={<Divergencia />} />

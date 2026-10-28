@@ -2,6 +2,9 @@ package br.sidia.painel.sync
 
 import br.sidia.painel.AppContext
 import br.sidia.painel.db.Retention
+import br.sidia.painel.operacao.EstadoComMetricas
+import br.sidia.painel.operacao.Metricas
+import br.sidia.painel.operacao.tarefaDeBackup
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -33,8 +36,26 @@ data class TarefaAgendada(
     val executar: suspend () -> Unit,
 )
 
+/**
+ * Uma tarefa de operação (backup, ...): roda no mesmo laço do [Agendador], mas NÃO é um [SyncKind] e não escreve em
+ * `sync_run`. Registra o próprio desfecho onde fizer sentido (o backup, em `backup_run`). [devida] só olha o relógio e o
+ * registro próprio.
+ */
+data class TarefaDeOperacao(
+    val nome: String,
+    val devida: suspend (agora: Instant) -> Boolean,
+    val executar: suspend () -> Unit,
+)
+
 /** Regras de calendário das tarefas, puras (sem relógio, banco ou rede). */
 object Agenda {
+    /** Como [diariaDevida], para quem só conhece o INÍCIO da última execução (ex.: o `backup_run`). */
+    fun diariaDevidaDesde(agora: Instant, ultimoInicio: Instant?, hora: LocalTime, zone: ZoneId): Boolean {
+        val local = agora.atZone(zone)
+        if (local.toLocalTime() < hora) return false
+        return ultimoInicio == null || ultimoInicio.atZone(zone).toLocalDate() < local.toLocalDate()
+    }
+
     /** Devida quando nunca rodou ou já passou o [intervalo] desde o INÍCIO da última execução. */
     fun incrementalDevida(agora: Instant, ultima: RegistroDeExecucao?, intervalo: Duration): Boolean =
         ultima == null || agora >= ultima.startedAt.plus(intervalo.toJavaDuration())
@@ -62,6 +83,8 @@ class Agendador(
     private val clock: Clock,
     private val passo: Duration = 1.minutes,
     private val dormir: suspend (Duration) -> Unit = { delay(it) },
+    /** Tarefas de operação (backup...), rodadas depois das [tarefas], com o mesmo isolamento de exceções. */
+    private val operacoes: List<TarefaDeOperacao> = emptyList(),
 ) {
     val tipos: List<SyncKind> = tarefas.map { it.kind }
 
@@ -100,6 +123,16 @@ class Agendador(
                     log.warn("Tarefa agendada {} falhou: {}", t.kind, e.javaClass.simpleName)
                 }
             }
+            for (op in operacoes) {
+                try {
+                    if (!op.devida(clock.instant())) continue
+                    op.executar()
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Throwable) {
+                    log.warn("Tarefa de operação {} falhou: {}", op.nome, e.javaClass.simpleName)
+                }
+            }
         } finally {
             trava.unlock()
         }
@@ -128,11 +161,13 @@ fun montarAgendador(
     ctx: AppContext,
     clock: Clock = Clock.systemUTC(),
     dormir: suspend (Duration) -> Unit = { delay(it) },
+    /** Métricas do painel (opcional): conta as execuções concluídas e as linhas removidas pela retenção. */
+    metricas: Metricas? = null,
 ): Agendador? {
     val ds = ctx.dataSource ?: return null
     val settings = ctx.settings
     val cfg = settings.sync
-    val estado = SqliteSyncStateStore(ds)
+    val estado: SyncStateStore = SqliteSyncStateStore(ds).let { if (metricas != null) EstadoComMetricas(it, metricas) else it }
     val gate = SyncGate(settings.jiraLiveEnabled, cfg)
     val tarefas = ArrayList<TarefaAgendada>()
     if (gate.podeAgendar()) {
@@ -158,8 +193,10 @@ fun montarAgendador(
         SyncKind.RETENCAO,
         null,
         { agora, ultima -> Agenda.diariaDevida(agora, ultima, cfg.horaRetencao, settings.zone) },
-    ) { executarRetencao(ctx, estado, clock) }
-    return Agendador(tarefas, estado, clock, dormir = dormir)
+    ) { executarRetencao(ctx, estado, clock, metricas) }
+    // Backup do SQLite: só entra com BACKUP_DIR (e nunca fala com o Jira).
+    val operacoes = listOfNotNull(tarefaDeBackup(ctx, clock, metricas))
+    return Agendador(tarefas, estado, clock, dormir = dormir, operacoes = operacoes)
 }
 
 /** Instância sem credencial vira falha registrada (com código); as demais seguem pelo `SyncService`. */
@@ -183,13 +220,16 @@ private suspend fun executarDoJira(
 }
 
 /** Purga local (nenhuma requisição) registrada como `sync_run` RETENCAO, instância [INSTANCIA_RETENCAO]. */
-private suspend fun executarRetencao(ctx: AppContext, estado: SyncStateStore, clock: Clock) {
+private suspend fun executarRetencao(ctx: AppContext, estado: SyncStateStore, clock: Clock, metricas: Metricas?) {
     val ds = requireNotNull(ctx.dataSource)
     withContext(Dispatchers.IO) {
         val id = estado.iniciar(INSTANCIA_RETENCAO, SyncKind.RETENCAO, clock.instant())
         try {
             val hoje = LocalDate.now(clock.withZone(ctx.settings.zone))
-            val apagadas = Retention(ds, ctx.calendar).purge(hoje, ctx.settings.retentionMonths, ctx.settings.accessLogRetentionMonths)
+            val apagadas = Retention(ds, ctx.calendar).purge(
+                hoje, ctx.settings.retentionMonths, ctx.settings.accessLogRetentionMonths,
+                aoRemover = { categoria, n -> metricas?.retencaoRemoveu(categoria, n) },
+            )
             estado.concluir(id, RunStatus.OK, RunResumo(removidas = apagadas), null, null, clock.instant())
         } catch (e: Exception) {
             logMontagem.warn("Retenção falhou: {}", e.javaClass.simpleName)

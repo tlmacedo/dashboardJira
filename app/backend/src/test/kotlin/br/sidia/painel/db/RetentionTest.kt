@@ -208,6 +208,14 @@ class RetentionTest {
     }
 
     @Test
+    fun backupRunAntigoApagado() {
+        exec("INSERT INTO backup_run(tipo, started_at, status, arquivo) VALUES ('BACKUP', '2024-10-29 12:00:00+00', 'OK', 'painel-2024-10-29-020000.db')")
+        exec("INSERT INTO backup_run(tipo, started_at, status, arquivo) VALUES ('BACKUP', '2024-10-30 04:00:00+00', 'OK', 'painel-2024-10-30-020000.db')")
+        Retention(ds, calendario).purge(LocalDate.of(2026, 10, 30), 24)
+        assertEquals(1, contar("backup_run"))
+    }
+
+    @Test
     fun mesesInvalidosLancamExcecao() {
         assertFailsWith<IllegalArgumentException> { Retention(ds, calendario).purge(LocalDate.of(2026, 10, 24), 0) }
     }

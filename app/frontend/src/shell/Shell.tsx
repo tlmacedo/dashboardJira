@@ -5,6 +5,7 @@ import { fetchMe, fetchMeta, type Me } from '../api/client'
 import { useLang } from '../i18n/LangProvider'
 import { ROLES, type Role } from '../nav/nav'
 import { gravarPreferencia, lerPreferencia } from '../storage'
+import { AvisoDeAlertas } from './AvisoDeAlertas'
 import { DevBanner } from './DevBanner'
 import { Menu } from './Menu'
 import { RoleContext } from './RoleContext'
@@ -69,6 +70,7 @@ export function Shell() {
           <Menu role={papel} aoTrocarPapel={dev ? trocarPapel : undefined} />
           <main id="conteudo" tabIndex={-1}>
             {meta.isError && <p className="notice">{t('shell.metaErro')}</p>}
+            <AvisoDeAlertas />
             <Outlet />
           </main>
         </div>

@@ -19,6 +19,23 @@ import javax.sql.DataSource
 class AccessLogException : RuntimeException("falha ao gravar access_log")
 
 /**
+ * Ponto de injeção da observação: quem monta o painel (métricas e alertas) registra um ouvinte e passa a saber de cada
+ * falha de gravação do `access_log`, sem mudar a assinatura de [AccessLog] nem de quem a instancia. Nunca recebe dados.
+ */
+object ObservadorDeAccessLog {
+    @Volatile
+    var aoFalhar: () -> Unit = {}
+
+    internal fun avisarFalha() {
+        try {
+            aoFalhar()
+        } catch (e: Exception) {
+            // observar nunca muda o desfecho da gravação
+        }
+    }
+}
+
+/**
  * Registro de consultas (auditoria, spec 7.3): uma linha por consulta em `access_log`.
  * Nunca grava token, senha nem corpo de requisição, e nunca consulta o Jira.
  */
@@ -47,10 +64,12 @@ class AccessLog(private val ds: DataSource) {
         } catch (e: SQLException) {
             // Só o SQLState (código padrão, sem dados) vai para o log do servidor; a mensagem do driver pode ecoar valores.
             log.error("Falha ao gravar access_log (SQLState={})", e.sqlState)
+            ObservadorDeAccessLog.avisarFalha()
             throw AccessLogException()
         } catch (e: RuntimeException) {
             // pool fechado ou indisponível (ex.: SQLTransientConnectionException vira SQLException; o resto chega aqui)
             log.error("Falha ao gravar access_log ({})", e.javaClass.simpleName)
+            ObservadorDeAccessLog.avisarFalha()
             throw AccessLogException()
         }
     }

@@ -1,0 +1,41 @@
+# Ficha do card "Cruzamentos" (Plano 17b). Estrita: chave desconhecida falha ao carregar.
+# Universo: as tasks abertas de Abertas (mesmos tipos e exclusão de status).
+
+id: cruzamentos
+titulo: Cruzamentos
+instancia: samsung
+
+campos:
+  - OS Version
+  - priority
+
+filtrosFixos:
+  project: ["TG-Basic"]
+  issuetype: ["Checklist", "Checklist TG", "Checklist Review"]
+
+filtrosExcluidos:
+  status: ["Cancelled", "Canceled", "Dropped"]
+
+parametros:
+  - nome: squad
+    tipo: squad
+    obrigatorio: false
+  - nome: os
+    tipo: os
+    obrigatorio: false
+
+formula: >-
+  Tabela cruzada das tasks abertas sobre uma lista FECHADA de eixos (squad, categoria de status, status, tipo,
+  prioridade, OS Version, faixa de idade, semana de vencimento, com ou sem label de atraso; "pessoa" só como linhas, em
+  ordem alfabética). Medida: contagem (padrão) ou idade P50 na unidade do filtro. Os eixos vêm na URL.
+
+exemplo: >-
+  linhas=tipo, colunas=categoria, medida=contagem.
+
+aceite:
+  - Só aceita eixos da lista fechada; qualquer outro valor é 400.
+  - Pessoa só como linha, nunca ordenada por contagem e sem total por pessoa em destaque.
+  - Cada célula abre as mesmas tasks que a formam; usuário só vê a própria linha.
+  - Idade P50 de célula com menos de 5 tasks leva o aviso de amostra pequena.
+
+expandChangelog: true

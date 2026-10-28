@@ -44,7 +44,7 @@ A 14a (bloco de sincronização) começa logo depois do 9, quando o usuário lig
 | 12 (12 tarefas) | `2026-10-25-plano-12-operacao-em-producao.md` | `../specs/2026-10-25-spec-fase-12-operacao-em-producao.md` | Escrito, aguardando execução |
 | 13 (13 tarefas) | `2026-10-25-plano-13-implantacao-real.md` | `../specs/2026-10-25-spec-fase-13-implantacao-real.md` | Escrito, aguardando execução |
 | 14 (15 tarefas: Tarefa 0 dos hooks, 14a e 14b) | `2026-10-25-plano-14-primeira-conexao-validacao-e-calibracao.md` | `../specs/2026-10-25-spec-fase-14-primeira-conexao-validacao-e-calibracao.md` | Tarefa 0 executada (PR #26); 14a e 14b aguardando execução (depois da flag) |
-| 17 (13 tarefas: 17a antes do 5a, 17b depois do 14b) | `2026-10-28-plano-17-cards-de-fluxo-e-gestao.md` | `../specs/2026-10-28-spec-fase-17-cards-de-fluxo-e-gestao.md` | **17a executado** (PR #31; progresso em `../progresso/2026-10-28-plano-17-cards-de-fluxo-e-gestao.md`); 17b aguardando (por ordem do usuário em 28/10 roda antes do 14b; ver o roteiro) |
+| 17 (13 tarefas: 17a antes do 5a, 17b depois do 14b) | `2026-10-28-plano-17-cards-de-fluxo-e-gestao.md` | `../specs/2026-10-28-spec-fase-17-cards-de-fluxo-e-gestao.md` | **17a executado** (PR #31; progresso em `../progresso/2026-10-28-plano-17-cards-de-fluxo-e-gestao.md`); **17b executado** na branch `feat/cards-de-fluxo-e-gestao` (PR pendente; rodou antes do 14b por ordem do usuário em 28/10; aceite do gestor card a card pendente) |
 | 15 (11 tarefas) | `2026-10-25-plano-15-identidade-final-ingles-e-entrega.md` | `../specs/2026-10-25-spec-fase-15-identidade-final-ingles-e-entrega.md` | Escrito, aguardando execução |
 
 ## Fase 4A — Sincronização periódica (depende das Fases 1 a 3)

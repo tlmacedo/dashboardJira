@@ -144,12 +144,28 @@ class ContratoDeCartoesTest {
     fun cadaTelaDeTrabalhoTemParPositivoNaDemonstracao() {
         // Sem par positivo o contrato "número == drill" seria vácuo (0 == 0) para a tela inteira.
         val e = entrada("gerente.exemplo")
-        for (prefixo in listOf("AB", "NG", "FE", "MT", "NE", "RI", "PV")) {
+        for (prefixo in listOf("AB", "NG", "FE", "MT", "NE", "RI", "PV", "FX", "AW", "BQ", "CT", "CZ")) {
             val positivos = catalogo.visiveisPara(Role.GERENTE).filter { it.meta.id.startsWith("$prefixo-") && it.meta.temDrill }
                 .flatMap { c -> runBlocking { c.valores(e) }.filterValues { it > 0 }.keys.map { c to it } }
             assertTrue(positivos.isNotEmpty(), "$prefixo sem par positivo na demonstração: " + catalogo.visiveisPara(Role.GERENTE).filter { it.meta.id.startsWith("$prefixo-") }.map { c -> c.meta.id to runBlocking { c.valores(e) } })
             val (cartao, segmento) = positivos.first()
             assertTrue(runBlocking { cartao.drill(e, segmento) }.isNotEmpty(), "${cartao.meta.id} / $segmento")
+        }
+    }
+
+    @Test
+    fun cadaCartaoNovoDoPlano17bTemParPositivoNaDemonstracao() {
+        // Plano 17b: nenhum cartão novo pode passar pelo contrato só com 0 == 0. O BQ-05 (ponta de vínculo fora da base) é a
+        // única exceção: um vínculo para chave inexistente quebraria a regra "cada link nas duas pontas" da demonstração; o par
+        // positivo dele está no cenário BQ-1 (BloqueiosRoutesTest).
+        val e = entrada("gerente.exemplo")
+        val ids = listOf("FX-01", "FX-02", "AW-01", "AW-02", "BQ-01", "BQ-02", "BQ-03", "BQ-04", "CT-01", "CT-02", "CZ-01")
+        for (id in ids) {
+            val cartao = requireNotNull(catalogo.porId(id)) { "cartão $id fora do catálogo" }
+            val positivos = runBlocking { cartao.valores(e) }.filterValues { it > 0 }
+            assertTrue(positivos.isNotEmpty(), "$id sem par positivo na demonstração")
+            val (segmento, valor) = positivos.entries.first()
+            assertEquals(valor, runBlocking { cartao.drill(e, segmento) }.size, "$id / $segmento")
         }
     }
 

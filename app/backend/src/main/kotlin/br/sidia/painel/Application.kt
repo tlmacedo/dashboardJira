@@ -17,6 +17,23 @@ import br.sidia.painel.http.ConfigCsrf
 import br.sidia.painel.http.cabecalhosDeSeguranca
 import br.sidia.painel.http.protecaoCsrf
 import br.sidia.painel.http.registrarNegacaoCsrf
+import br.sidia.painel.operacao.ConfiguradorDeLog
+import br.sidia.painel.operacao.comandoDeOperacao
+import kotlin.system.exitProcess
+import br.sidia.painel.db.ObservadorDeAccessLog
+import br.sidia.painel.operacao.LacoDeAlertas
+import br.sidia.painel.operacao.MascaraDeLog
+import br.sidia.painel.operacao.montarAvaliadorDeAlertas
+import br.sidia.painel.operacao.rotasDeAlertas
+import br.sidia.painel.operacao.Metricas
+import br.sidia.painel.operacao.instalarMetricasHttp
+import br.sidia.painel.operacao.iniciarServidorDeMetricas
+import com.zaxxer.hikari.HikariDataSource
+import com.zaxxer.hikari.metrics.micrometer.MicrometerMetricsTrackerFactory
+import br.sidia.painel.operacao.Prontidao
+import br.sidia.painel.operacao.prontidaoPadrao
+import br.sidia.painel.operacao.rotaProntidao
+import br.sidia.painel.operacao.instalarLogDeRequisicao
 import br.sidia.painel.security.Authenticator
 import br.sidia.painel.security.DevAuthenticator
 import br.sidia.painel.security.OidcAuthenticator
@@ -54,7 +71,7 @@ data class MetaResposta(val devMode: Boolean, val liveEnabled: Boolean, val zone
 
 private val log = LoggerFactory.getLogger("br.sidia.painel")
 
-fun main() {
+fun main(args: Array<String>) {
     // Lê o arquivo de variáveis local (PAINEL_ENV_FILE ou ./.env) por baixo do ambiente do processo.
     val arquivoEnv = System.getenv("PAINEL_ENV_FILE")?.takeIf { it.isNotBlank() }?.let { java.nio.file.Path.of(it) }
         ?: java.nio.file.Path.of(".env")
@@ -64,7 +81,13 @@ fun main() {
         System.getProperty(PerfilDeExecucao.PROPRIEDADE),
         ArquivoEnv.combinarComFlagSoDoArquivo(ArquivoEnv.ler(arquivoEnv), System.getenv()),
     )
+    // Subcomandos de operação (validar-config etc.) rodam e saem ANTES de abrir banco, trava ou servidor.
+    comandoDeOperacao(args.toList(), env)?.let { exitProcess(it) }
     val settings = Settings.fromEnv(env)
+    // O Logback iniciou antes da leitura do arquivo de variáveis: reaplica formato e pasta de log e registra os segredos
+    // na máscara (nenhum token sai em log, nem escapado).
+    ConfiguradorDeLog.aplicar(settings.operacao.logFormato, settings.operacao.logDir)
+    MascaraDeLog.registrarSegredos(settings.valoresSecretos())
     // Falhas de configuração, papéis ou banco acontecem aqui, na subida, e não na primeira requisição.
     val context = AppContext.load(settings)
     // Dados fictícios (só em desenvolvimento, Jira desligado) ou recusa de banco misturado; ver DadosDeDemonstracao.
@@ -76,12 +99,29 @@ fun main() {
     }
     Runtime.getRuntime().addShutdownHook(Thread { context.close() })
     // O agendador para antes de o pool do banco fechar (AppContext.close); a retenção roda mesmo com o Jira desligado.
-    val agendador = montarAgendador(context)
+    val metricas = prepararMetricas(context)
+    val agendador = montarAgendador(context, metricas = metricas)
     agendador?.let { context.aoFechar { runBlocking { it.parar() } } }
     embeddedServer(Netty, port = 8080) {
-        module(context.settings, context, agendador = agendador)
+        module(context.settings, context, agendador = agendador, metricas = metricas)
         monitor.subscribe(ApplicationStopped) { context.close() }
     }.start(wait = true)
+}
+
+/**
+ * Monta as métricas do processo: binders da JVM, pool do banco, estado da sincronização, falhas do registro de acesso e o
+ * servidor da porta interna (fechado junto com o contexto). Tudo só observa; nada aqui pode impedir a subida.
+ */
+private fun prepararMetricas(context: AppContext): Metricas {
+    val metricas = Metricas().registrarBindersDaJvm()
+    (context.dataSource as? HikariDataSource)?.metricsTrackerFactory = MicrometerMetricsTrackerFactory(metricas.registro)
+    context.dataSource?.let {
+        metricas.vincularSincronizacao(SqliteSyncStateStore(it), context.settings.sync.instancias, context.clock)
+    }
+    ObservadorDeAccessLog.aoFalhar = { metricas.falhaDeAccessLog() }
+    val op = context.settings.operacao
+    iniciarServidorDeMetricas(metricas, op.metricasHost, op.metricasPorta)?.let { servidor -> context.aoFechar { servidor.close() } }
+    return metricas
 }
 
 /** Em desenvolvimento, sem login (relógio na zona do painel); em produção, o SSO/OIDC. */
@@ -100,6 +140,8 @@ fun Application.module(
     authenticator: Authenticator = autenticadorPadrao(context.settings),
     agendador: Agendador? = null,
     catalogo: CatalogoDeCartoes = catalogoPadrao(),
+    prontidao: Prontidao? = prontidaoPadrao(context),
+    metricas: Metricas? = null,
 ) {
     val settings = context.settings
     val inicioDoProcesso = context.clock.instant()
@@ -118,7 +160,16 @@ fun Application.module(
         agendador?.iniciar(app)
     }
     monitor.subscribe(ApplicationStopping) { runBlocking { agendador?.parar() } }
+    // Alertas operacionais: avaliados a cada 5 min no próprio processo (sem Jira), como o agendador.
+    val avaliador = montarAvaliadorDeAlertas(context, metricas ?: Metricas())
+    val lacoDeAlertas = avaliador?.let { LacoDeAlertas(it) }
+    monitor.subscribe(ApplicationStarted) { app -> lacoDeAlertas?.iniciar(app) }
+    monitor.subscribe(ApplicationStopping) { runBlocking { lacoDeAlertas?.parar() } }
     install(ContentNegotiation) { json() }
+    // Id de requisição e uma linha de log por requisição, com o modelo da rota (ver LogDeRequisicao.kt).
+    instalarLogDeRequisicao()
+    // Contadores e duração por requisição (rota pelo modelo); fecha o /metrics na porta pública.
+    metricas?.let { instalarMetricasHttp(it) }
     // CSP e demais cabeçalhos de segurança em toda resposta (ver CabecalhosDeSeguranca.kt).
     install(cabecalhosDeSeguranca(settings.dashboardDevMode))
     // Sem banco (só em testes) não há auditoria nem rotas de dados.
@@ -156,8 +207,10 @@ fun Application.module(
             rotasDeAuditoria(context, AccessLog(ds))
             rotasDosCardsDeTrabalho(context, AccessLog(ds))
             rotasSyncStatus(context, SqliteSyncStateStore(ds), AccessLog(ds))
+            avaliador?.let { rotasDeAlertas(context, it, AccessLog(ds)) { prontidao?.avaliar()?.codigo } }
         }
         get("/api/health") { call.respond(HealthResposta(ok = true)) }
+        rotaProntidao(prontidao)
         get("/api/meta") {
             call.respond(
                 MetaResposta(
