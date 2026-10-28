@@ -117,6 +117,7 @@ class CentralRoutesTest {
         val r = cli.get("coord.um", rota)
         assertEquals(HttpStatusCode.OK, r.status, r.corpo)
         assertFalse("INDICIO" in r.corpo, "nenhum rastro do item de integridade para o coordenador")
+        assertFalse("DPO" in r.corpo, "nem o aviso do DPO")
         assertFalse("VG-13" in r.corpo)
         // A gaveta do VG-13 também não existe para ele.
         assertEquals(HttpStatusCode.Forbidden, cli.get("coord.um", "/api/cartoes/VG-13/tasks?segmento=INDICIO_ALTO").status)
@@ -141,6 +142,31 @@ class CentralRoutesTest {
             assertEquals(HttpStatusCode.OK, r.status, r.corpo)
             assertFalse("INDICIO" in r.corpo)
             assertEquals(HttpStatusCode.Forbidden, cli.get("gerente.exemplo", "/api/cartoes/VG-13/tasks?segmento=INDICIO_ALTO").status)
+        }
+    }
+
+    @Test
+    fun indicioAltoPositivoTrazOsDoisAvisosFixosENaoGravaTotalNoRegistro() {
+        // INT-2: o bruno tem indício ALTO, então o par é positivo (n > 0), nunca 0 == 0.
+        val c0 = br.sidia.painel.trabalho.novoContextoTrb1(banco, br.sidia.painel.integridade.Int2.issues(), Settings(dashboardDevMode = true)).also { ctx = it }
+        br.sidia.painel.trabalho.rodarTrb1(c0) { get ->
+            val r = get("gerente.exemplo", rota)
+            assertEquals(HttpStatusCode.OK, r.status, r.corpo)
+            val c = dto(r)
+            val item = assertNotNull(c.item("INDICIO_ALTO"))
+            assertTrue((item.n ?: 0) > 0, "par positivo: $item")
+            // Indício, não prova: os dois avisos fixos acompanham o item na resposta.
+            assertEquals(setOf("INDICIO_NAO_PROVA", "VALIDAR_BASE_LEGAL_COM_DPO"), c.avisos.map { it.codigo }.toSet())
+            assertTrue(c.avisos.all { it.gravidade == "informativo" })
+            val g = get("gerente.exemplo", "/api/cartoes/VG-13/tasks?segmento=INDICIO_ALTO")
+            assertEquals(item.n, inteiro(g, "total"))
+            // O registro de acesso da gaveta não guarda a quantidade nem o segmento: seria o próprio achado.
+            val filtros = requireNotNull(c0.dataSource).connection.use { con ->
+                con.createStatement().executeQuery("SELECT filters FROM access_log ORDER BY id DESC LIMIT 1").use { rs -> rs.next(); rs.getString(1).orEmpty() }
+            }
+            assertFalse("total" in filtros || "INDICIO" in filtros, filtros)
+            // O coordenador não recebe nenhum dos dois avisos.
+            assertFalse(dto(get("coord.um", rota)).avisos.any { it.codigo == "INDICIO_NAO_PROVA" })
         }
     }
 

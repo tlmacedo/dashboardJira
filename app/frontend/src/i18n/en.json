@@ -2000,6 +2000,8 @@
   "card.mp05.oQueMostra": "Your open tasks in the order the schedule would run them, with the finish date predicted by your capacity and a warning when they pass the due date.",
   "card.mp05.comoCalcula": "Started ones first; then priority, due date and creation. The finish consumes your net capacity day by day, with absences and holidays.",
   "central.pergunta": "What needs attention now, and where is it?",
+  "cardpage.aviso.INDICIO_NAO_PROVA": "A hint, not proof. Each piece of evidence calls for human review, with the person and the context. Do not use it as a performance grade.",
+  "cardpage.aviso.VALIDAR_BASE_LEGAL_COM_DPO": "Validate the legal basis with the DPO before real use. Until then, fixtures and demonstration data only.",
   "central.kpis": "Main indicators",
   "central.kpi.ABERTAS": "Open",
   "central.kpi.VENCIDAS": "Overdue",

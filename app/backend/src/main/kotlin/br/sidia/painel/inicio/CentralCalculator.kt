@@ -58,6 +58,12 @@ interface FontesDaCentral {
 
 class PrevisaoDaCentral(val backlog: Int, val termina: QuandoDto, val confianca: String)
 
+/** Os dois avisos fixos que acompanham todo dado de Integridade (spec 3.1): o item de indício alto nunca aparece sem eles. */
+private val AVISOS_FIXOS_DE_INTEGRIDADE = listOf(
+    AvisoDto("INDICIO_NAO_PROVA", AvisoDto.INFORMATIVO, "Indício, não prova"),
+    AvisoDto("VALIDAR_BASE_LEGAL_COM_DPO", AvisoDto.INFORMATIVO, "Validar a base legal com o DPO antes do uso real"),
+)
+
 /** Limites do "sem estimativa" (spec 4.2): acima de 20% é problema; acima de 10%, atenção. */
 internal const val LIMITE_SEM_ESTIMATIVA_PROBLEMA = 0.20
 internal const val LIMITE_SEM_ESTIMATIVA_ATENCAO = 0.10
@@ -121,7 +127,7 @@ class CentralCalculator(private val fontes: FontesDaCentral) {
             backlog = previsao?.backlog,
             confiancaDoBacklog = previsao?.confianca,
             squads = if (bloqueado) emptyList() else fontes.squads().sortedBy { it.squad },
-            avisos = avisos,
+            avisos = avisos + if (itens.any { it.item == ItemCentral.INDICIO_ALTO.name }) AVISOS_FIXOS_DE_INTEGRIDADE else emptyList(),
         )
     }
 

@@ -86,6 +86,19 @@ describe('tela Central de atenção', () => {
     simular({ [API]: { status: 200, corpo: comIndicio } })
     renderizarTela(<Central />, '/central')
     expect(await screen.findByRole('link', { name: 'Evidências de indício alto' })).toHaveAttribute('href', '/integridade')
+    // Indício, não prova: os dois avisos fixos vêm no DTO e aparecem junto do item.
+    const comAvisos: CentralDto = {
+      ...comIndicio,
+      avisos: [
+        { codigo: 'INDICIO_NAO_PROVA', gravidade: 'informativo', mensagem: 'x' },
+        { codigo: 'VALIDAR_BASE_LEGAL_COM_DPO', gravidade: 'informativo', mensagem: 'y' },
+      ],
+    }
+    cleanup()
+    simular({ [API]: { status: 200, corpo: comAvisos } })
+    renderizarTela(<Central />, '/central')
+    expect(await screen.findByText(/Indício, não prova/)).toBeInTheDocument()
+    expect(screen.getByText(/Validar a base legal com o DPO/)).toBeInTheDocument()
   })
 
   it('kpisDePrazoLadoALadoEMetaSemTasks', async () => {

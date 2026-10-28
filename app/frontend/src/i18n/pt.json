@@ -2000,6 +2000,8 @@
   "card.mp05.oQueMostra": "Suas tasks abertas na ordem em que a agenda as executaria, com o término previsto pela sua capacidade e o aviso de quando passam do vencimento.",
   "card.mp05.comoCalcula": "As já iniciadas primeiro; depois prioridade, vencimento e criação. O término consome a sua capacidade líquida dia a dia, com ausências e feriados.",
   "central.pergunta": "O que pede atenção agora, e onde está?",
+  "cardpage.aviso.INDICIO_NAO_PROVA": "Indício, não prova. Cada evidência pede revisão humana, com a pessoa e o contexto. Não use como nota de desempenho.",
+  "cardpage.aviso.VALIDAR_BASE_LEGAL_COM_DPO": "Validar a base legal com o DPO antes do uso real. Até lá, só fixtures e dados de demonstração.",
   "central.kpis": "Indicadores principais",
   "central.kpi.ABERTAS": "Abertas",
   "central.kpi.VENCIDAS": "Vencidas",
