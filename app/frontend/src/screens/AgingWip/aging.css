@@ -1,0 +1,69 @@
+/* Gráfico de idade por etapa: SVG próprio, só tokens dos temas. Dentro do normal é círculo; acima do normal é triângulo
+   (forma diferente, além da cor) e o rótulo do ponto diz o mesmo em texto. */
+.aging-grafico {
+  overflow-x: auto;
+}
+.aging-svg {
+  display: block;
+  width: 100%;
+  min-width: 520px;
+  height: auto;
+}
+.aging-legenda {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  list-style: none;
+  margin: 0 0 6px;
+  padding: 0;
+  font-size: 12.5px;
+  color: var(--text2);
+}
+.aging-legenda li {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.aging-ponto {
+  fill: var(--s1);
+  stroke: var(--surface);
+  stroke-width: 1;
+}
+.aging-ponto--acima {
+  fill: var(--bad);
+  stroke: var(--text);
+}
+.aging-faixa {
+  fill: var(--soft);
+  stroke: var(--text2);
+  stroke-width: 1;
+  stroke-dasharray: 3 2;
+}
+.aging-marca {
+  stroke: var(--text2);
+  stroke-width: 1.5;
+}
+.aging-grade {
+  stroke: var(--line);
+  stroke-dasharray: 2 3;
+}
+.aging-divisoria {
+  stroke: var(--line);
+}
+.aging-eixo {
+  fill: var(--text2);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+.aging-etapa {
+  fill: var(--text);
+  font-size: 12.5px;
+  font-weight: 600;
+}
+.aging-ver-pontos {
+  margin-top: 8px;
+}
+.aging-acima {
+  color: var(--bad);
+  font-weight: 600;
+}

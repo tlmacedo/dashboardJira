@@ -3,6 +3,7 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { LangProvider } from './i18n/LangProvider'
 import { inicioDoPapel } from './nav/nav'
 import { Abertas } from './screens/Abertas/Abertas'
+import { AgingWip } from './screens/AgingWip/AgingWip'
 import { Auditoria } from './screens/Auditoria/Auditoria'
 import { Epicos } from './screens/Epicos/Epicos'
 import { Fechadas } from './screens/Fechadas/Fechadas'
@@ -45,6 +46,7 @@ export default function App() {
                 <Route path="previsao" element={<Previsao />} />
                 <Route path="epicos" element={<Epicos />} />
                 <Route path="fluxoDaSemana" element={<FluxoDaSemana />} />
+                <Route path="agingWip" element={<AgingWip />} />
                 <Route path="tempo" element={<TempoEmStatus />} />
                 <Route path="auditoria" element={<Auditoria />} />
                 <Route path="divergencia" element={<Divergencia />} />
