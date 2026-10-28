@@ -34,7 +34,7 @@ export function Bloqueios() {
 
   function quem(b: Bloqueadora) {
     if (b.estado === 'OUTRO_SQUAD') return t('bloqueios.outroSquad')
-    if (b.estado === 'FORA_DA_BASE') return t('bloqueios.foraDaBase').replace('{key}', b.key ?? '')
+    if (b.estado === 'FORA_DA_BASE') return b.key ? t('bloqueios.foraDaBase').replace('{key}', b.key) : t('bloqueios.foraDaBaseSemChave')
     return <span className="mono">{b.key}</span>
   }
 

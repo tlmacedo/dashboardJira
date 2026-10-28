@@ -171,6 +171,27 @@ class BloqueiosCalculatorTest {
     }
 
     @Test
+    fun pontaRemovidaLogicamenteDeForaDaVisaoNaoMostraAChave() {
+        // TG-815 (ana) é bloqueada por TG-820 (carla), que foi removida logicamente: vira "verificar no Jira".
+        val bloqueada = Trb1.issue(
+            "TG-815", "Checklist", "ana", "10-20T12", "In Progress", eventos = Trb1.trilha("TG-815", "Open", "10-26T12" to "In Progress"),
+        ).comLinks(bloqueadaPor = listOf("TG-820"))
+        val removida = Trb1.issue("TG-820", "Checklist", "carla", "10-20T12", "In Progress", eventos = Trb1.trilha("TG-820", "Open", "10-26T12" to "In Progress"))
+        Bq1.carregar(ds, listOf(bloqueada, removida))
+        ds.connection.use { it.createStatement().use { st -> st.executeUpdate("UPDATE issue SET removida_em = 1793275200000 WHERE key = 'TG-820'") } }
+
+        val daAna = analisar(visivel = { it == "ana" })
+        assertTrue("TG-815" in chaves(daAna.verificarNoJira), "continua em verificar no Jira")
+        assertNull(daAna.dto.linhas.single { it.bloqueada == "TG-815" }.bloqueadora.key, "a chave de pessoa fora da visão não aparece")
+        assertFalse("TG-820" in daAna.detalhePorBloqueada.getValue("TG-815"), daAna.detalhePorBloqueada.getValue("TG-815"))
+        assertFalse("TG-820" in Json.encodeToString(daAna.dto))
+
+        // Quem enxerga a carla vê a chave, como antes.
+        val completa = analisar()
+        assertEquals("TG-820", completa.dto.linhas.single { it.bloqueada == "TG-815" }.bloqueadora.key)
+    }
+
+    @Test
     fun bloqueadaSemCausaRegistradaNaQualidadeDosDados() {
         val a = analisar()
         // Status bloqueado com a única bloqueadora já concluída (TG-805) e flag de impedimento sem vínculo (TG-810).

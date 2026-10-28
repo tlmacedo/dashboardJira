@@ -41,7 +41,13 @@ class BloqueiosAnalise(
  */
 class BloqueiosCalculator(private val map: StatusMap, private val cfg: VinculosConfig) {
 
-    private class Par(val bloqueada: IssueSnapshot, val chave: String, val ponta: PontaDoLink?, val visivel: Boolean, val conflito: Boolean)
+    /** [chaveVisivel]: a chave da bloqueadora pode aparecer (ao alcance, ou fora da base sem dono conhecido fora da visão). */
+    private class Par(
+        val bloqueada: IssueSnapshot, val chave: String, val ponta: PontaDoLink?, val visivel: Boolean, val conflito: Boolean,
+        val chaveVisivel: Boolean = true,
+    ) {
+        val chaveEscondida get() = if (ponta != null) !visivel else !chaveVisivel
+    }
 
     /**
      * [abertas]: as abertas do escopo (candidatas a bloqueada). [vinculos]: os vínculos ativos do tipo configurado.
@@ -62,9 +68,11 @@ class BloqueiosCalculator(private val map: StatusMap, private val cfg: VinculosC
         for (b in candidatas) {
             var temCausa = false
             for (v in porBloqueada[b.key].orEmpty().distinctBy { it.fromKey }) {
-                val ponta = pontas[v.fromKey]
+                val lida = pontas[v.fromKey]
+                val ponta = lida?.takeUnless { it.removida }
                 if (ponta == null) {
-                    foraDaBase += Par(b, v.fromKey, null, false, false)
+                    // Ponta removida logicamente é "fora da base", mas a chave de pessoa fora da visão não pode aparecer.
+                    foraDaBase += Par(b, v.fromKey, null, false, false, chaveVisivel = lida == null || visivel(lida.responsavel))
                     temCausa = true
                     continue
                 }
@@ -92,13 +100,13 @@ class BloqueiosCalculator(private val map: StatusMap, private val cfg: VinculosC
                     // Desempate só por dados que a linha mostra: vencimento da bloqueadora e, se a chave aparece, a chave.
                     // A chave escondida ("task de outro squad") nunca entra, para não vazar a ordem relativa dela.
                     .then(compareBy<Par, LocalDate?>(nullsLast()) { it.ponta?.vence })
-                    .then(compareBy(ORDEM_NATURAL_DE_CHAVES) { if (it.ponta != null && !it.visivel) "" else it.chave }),
+                    .then(compareBy(ORDEM_NATURAL_DE_CHAVES) { if (it.chaveEscondida) "" else it.chave }),
             )
             .take(LIMITE_DE_LINHAS)
             .map { p ->
                 val b = p.bloqueada
                 val bloqueadora = when {
-                    p.ponta == null -> BloqueadoraDto(EstadoDaBloqueadora.FORA_DA_BASE, p.chave, null, conflito = false, semVencimento = false)
+                    p.ponta == null -> BloqueadoraDto(EstadoDaBloqueadora.FORA_DA_BASE, p.chave.takeIf { p.chaveVisivel }, null, conflito = false, semVencimento = false)
                     p.visivel -> BloqueadoraDto(EstadoDaBloqueadora.VISIVEL, p.ponta.key, p.ponta.vence?.toString(), p.conflito, p.ponta.vence == null)
                     else -> BloqueadoraDto(EstadoDaBloqueadora.OUTRO_SQUAD, null, p.ponta.vence?.toString(), p.conflito, p.ponta.vence == null)
                 }
@@ -130,7 +138,7 @@ class BloqueiosCalculator(private val map: StatusMap, private val cfg: VinculosC
 
     /** "bloqueada por TG-190 (vence 2026-10-27) ▲ vence depois da bloqueada"; a escondida vira "task de outro squad". */
     private fun detalheDe(p: Par): String {
-        val ponta = p.ponta ?: return "bloqueada por ${p.chave} (fora da base: verificar no Jira)"
+        val ponta = p.ponta ?: return "bloqueada por ${if (p.chaveVisivel) p.chave else "task de outro squad"} (fora da base: verificar no Jira)"
         val quem = if (p.visivel) ponta.key else "task de outro squad"
         val vence = ponta.vence?.let { "vence $it" } ?: "sem vencimento"
         val sinal = if (p.conflito) " ▲ vence depois da bloqueada" else ""

@@ -180,6 +180,7 @@
   "bloqueios.col.sinal": "Signal",
   "bloqueios.outroSquad": "task from another squad",
   "bloqueios.foraDaBase": "{key} (outside the base: check in Jira)",
+  "bloqueios.foraDaBaseSemChave": "task outside the base (check in Jira)",
   "bloqueios.sinal.conflito": "due after the blocked task",
   "bloqueios.sinal.semVencimento": "no due date",
   "bloqueios.sinal.verificar": "check in Jira",

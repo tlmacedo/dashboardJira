@@ -118,6 +118,18 @@ describe('tela Bloqueios entre tasks', () => {
     expect(duplicada).toBe(false)
   })
 
+  it('foraDaBaseSemChaveDizSoQueDeveVerificarNoJira', async () => {
+    const linha = {
+      bloqueada: 'TG-815', resumo: 'Revisar', tipo: 'Checklist', status: 'In Progress', vence: null,
+      bloqueadora: { estado: 'FORA_DA_BASE' as const, key: null, vence: null, conflito: false, semVencimento: false },
+    }
+    simular({ [CARD]: { status: 200, corpo: { ...DTO, linhas: [linha] } } })
+    renderizarTela(<Bloqueios />, '/bloqueios')
+    const tabela = await screen.findByRole('table', { name: 'Bloqueios entre tasks (lista)' })
+    expect(within(tabela).getByText('task fora da base (verificar no Jira)')).toBeInTheDocument()
+    expect(tabela).not.toHaveTextContent('()')
+  })
+
   it('listaNaoRepeteOCartaoBQ01DoIndicador', async () => {
     const cartoes = ['BQ-01', 'BQ-02', 'BQ-03', 'BQ-04', 'BQ-05'].map((id) => ({
       id, grupo: 'trabalho', natureza: 'ESTOQUE', tela: 'bloqueios', tituloChave: 'nav.bloqueios', oQueMostraChave: 'nav.bloqueios',
