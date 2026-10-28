@@ -270,6 +270,8 @@ private fun filtrosAuditados(call: ApplicationCall): Map<String, String> {
 private val PREFIXOS_SENSIVEIS = listOf(
     "/api/integridade", "/api/cartoes/in-", "/api/governanca/acessos", "/api/auditoria", "/api/cards/task-review", "/api/cartoes/au-",
     "/api/cartoes/dv-", "/api/cartoes/vg-14", "/api/drill/auditoria", "/api/drill/integridade", "/api/drill/task-review",
+    // O direito de acesso do titular: a consulta não grava parâmetro nenhum (nem a tentativa de escolher outra pessoa).
+    "/api/titular",
 )
 
 internal fun rotaSensivel(caminho: String): Boolean {
