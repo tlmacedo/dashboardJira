@@ -148,7 +148,7 @@ describe('CardPage', () => {
     )
     await userEvent.click(screen.getByRole('button', { name: 'Tentar de novo' }))
     expect(refetch).toHaveBeenCalled()
-    expect(screen.getByRole('alert')).toHaveTextContent('HTTP 503')
+    expect(screen.getByRole('alert')).toHaveTextContent('Não foi possível carregar os dados.')
   })
 
   it('avisoBloqueanteEmDestaqueEInformativoSeparado', () => {
