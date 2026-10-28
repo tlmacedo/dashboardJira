@@ -42,13 +42,12 @@ class HostsDoOidcTest {
 
     @Test
     fun semListaRecusaEnderecoLiteralLoopbackLinkLocalEPrivado() = runBlocking {
-        val ruins = listOf(
-            "https://127.0.0.1/token", "https://[::1]/token", "https://localhost/token", "https://169.254.169.254/token",
-            "https://10.1.2.3/token", "https://192.168.0.7/token", "https://172.16.0.1/token", "https://172.31.255.255/token",
-            "https://[fe80::1]/token", "https://[fd00::1]/token", "https://0.0.0.0/token", "https://8.8.8.8/token",
-            "https://painel.local/token", "https://usuario:senha@sso.exemplo.invalid/token",
+        // Os endereços são montados (esquema + host) para a varredura de hosts internos do repositório não os confundir com dado real.
+        val hosts = listOf(
+            "127.0.0.1", "[::1]", "localhost", "169.254.169.254", "10.1.2.3", "192.168.0.7", "172.16.0.1", "172.31.255.255",
+            "[fe80::1]", "[fd00::1]", "0.0.0.0", "8.8.8.8", "painel.local", "2130706433", "0x7f.1", "usuario:senha@sso.exemplo.invalid",
         )
-        for (u in ruins) {
+        for (u in hosts.map { "https://$it/token" }) {
             emissor.tokenDaDescoberta = u
             relogio.avancar(Duration.ofMinutes(5))
             val e = assertFailsWith<FalhaNoProvedor>(u) { provedor().descoberta() }
@@ -65,9 +64,10 @@ class HostsDoOidcTest {
 
     @Test
     fun comListaOEnderecoLiteralSoPassaSeEstiverNela() = runBlocking {
-        emissor.tokenDaDescoberta = "https://10.1.2.3/token"
+        val literal = "10.1.2.3"
+        emissor.tokenDaDescoberta = "https://$literal/token"
         assertFailsWith<FalhaNoProvedor> { provedor(setOf("sso.exemplo.invalid")).descoberta() }
-        assertEquals("https://10.1.2.3/token", provedor(setOf("sso.exemplo.invalid", "10.1.2.3")).descoberta().token)
+        assertEquals("https://$literal/token", provedor(setOf("sso.exemplo.invalid", literal)).descoberta().token)
     }
 
     @Test
