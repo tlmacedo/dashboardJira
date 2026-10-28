@@ -10,6 +10,12 @@ object TestPaths {
             ?: error("Propriedade painel.configDir ausente: rode os testes pelo Gradle"),
     )
 
+    /** Raiz do repositório (caminho canônico), definida em `build.gradle.kts` pela propriedade `painel.repoDir`. */
+    val repoDir: Path = Path.of(
+        System.getProperty("painel.repoDir")
+            ?: error("Propriedade painel.repoDir ausente: rode os testes pelo Gradle"),
+    )
+
     /** Pasta `app/backend/src/main`, definida em `build.gradle.kts` pela propriedade `painel.mainSrcDir`. */
     val mainSrcDir: Path = Path.of(
         System.getProperty("painel.mainSrcDir")

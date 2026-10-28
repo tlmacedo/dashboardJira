@@ -24,4 +24,5 @@ Branch: `feat/ci-e-endurecimento` (lote 9a = tarefas 1 a 3; os lotes seguintes c
 
 ## Tarefas
 
-- Tarefa 1: varredura de dados pessoais e segredos (`scripts/ci/`). 40 casos em `test-varredura.sh` passando; mutação conferida (linha removida contada e atribuição de segredo ignorada: ambas derrubaram os testes certos); `--arvore` na árvore atual: `VARREDURA OK`.
+- Tarefa 2: workflow de CI. `CiWorkflowTest` com 17 testes; falhou antes (arquivo do workflow ausente) e passou depois; mutação conferida (`java-version` trocado derrubou `versoesFixas`). O teste `frontendVerificaCsp` entra na Tarefa 3, junto do passo. O `tasks.test` do Gradle passou a declarar `.github/`, `scripts/ci/`, `docs/operacao/` e `app/.env.example` como entradas, senão o Gradle dava os testes por atualizados ao mudar só o workflow. YAML validado com `yaml.safe_load`. **Não rodou no GitHub** (sem acesso); a prova real é o primeiro PR (Tarefa 12).
+- Tarefa 1 (commit edffbf1): varredura de dados pessoais e segredos (`scripts/ci/`). 40 casos em `test-varredura.sh` passando; mutação conferida (linha removida contada e atribuição de segredo ignorada: ambas derrubaram os testes certos); `--arvore` na árvore atual: `VARREDURA OK`.

@@ -48,6 +48,15 @@ tasks.test {
     environment("JIRA_LIVE_ENABLED", "false")
     // Pasta dos YAML de exemplo, por caminho absoluto (não depende do diretório de trabalho).
     systemProperty("painel.configDir", rootProject.layout.projectDirectory.dir("../config").asFile.canonicalPath)
+    // Raiz do repositório, por caminho absoluto: testes que leem o workflow de CI e a documentação.
+    val raizDoRepo = rootProject.layout.projectDirectory.dir("../..").asFile
+    systemProperty("painel.repoDir", raizDoRepo.canonicalPath)
+    // Esses arquivos são entrada dos testes: mudar um deles refaz os testes (senão o Gradle os dá por atualizados).
+    inputs.files(
+        fileTree(raizDoRepo) {
+            include(".github/**", "scripts/ci/**", "docs/operacao/**", "app/.env.example", "app/iniciar.*", "app/README.md")
+        },
+    ).withPropertyName("arquivosDoRepositorioLidosPelosTestes")
     // Fontes de produção, por caminho absoluto: usado pelo teste que varre quem constrói o cliente Jira.
     systemProperty("painel.mainSrcDir", rootProject.layout.projectDirectory.dir("src/main").asFile.canonicalPath)
 }
