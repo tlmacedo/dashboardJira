@@ -48,6 +48,9 @@ interface CartaoRegistrado {
      */
     val moduloSensivel: br.sidia.painel.lgpd.ModuloSensivel? get() = null
 
+    /** Este segmento é sensível mesmo num cartão comum (por exemplo, o que aponta para um módulo sensível): o registro mascara o achado. */
+    fun segmentoSensivel(segmento: String): Boolean = false
+
     suspend fun valores(e: EntradaDeCartao): Map<String, Int>
 
     suspend fun drill(e: EntradaDeCartao, segmento: String): List<LinhaDeDrill>

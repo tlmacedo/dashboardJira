@@ -49,6 +49,12 @@ internal class CartaoDeCentral(
 ) : CartaoRegistrado {
     override val instancia: String = INSTANCIA_TRABALHO
 
+    /**
+     * Os alvos que apontam para a Auditoria (AU-01) são sensíveis: o registro de acesso da gaveta não guarda o segmento, a
+     * pessoa pedida nem a quantidade (seria o próprio achado), como já é na Integridade. Pendência do Plano 11: cartão próprio.
+     */
+    override fun segmentoSensivel(segmento: String): Boolean = destinos[segmento]?.cartao == "AU-01"
+
     /** O cartão de destino, só se quem pergunta pode vê-lo (papel e trava do DPO); senão nulo. */
     private fun visivel(e: EntradaDeCartao, id: String): CartaoRegistrado? {
         val c = catalogo().porId(id) ?: return null

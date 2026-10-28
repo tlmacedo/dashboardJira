@@ -171,6 +171,22 @@ class CentralRoutesTest {
     }
 
     @Test
+    fun gavetaDasAlteracoesSemAutorizacaoNaoGravaTotalNemPessoaNoRegistro() = rodar { cli ->
+        val r = cli.get("gerente.exemplo", "/api/cartoes/VG-09/tasks?segmento=ALTERACOES_SEM_AUTORIZACAO&pessoa=bruno")
+        assertEquals(HttpStatusCode.OK, r.status, r.corpo)
+        val filtros = requireNotNull(ctx!!.dataSource).connection.use { con ->
+            con.createStatement().executeQuery("SELECT filters FROM access_log ORDER BY id DESC LIMIT 1").use { rs -> rs.next(); rs.getString(1).orEmpty() }
+        }
+        assertFalse("total" in filtros || "bruno" in filtros || "ALTERACOES" in filtros, filtros)
+        // As gavetas comuns continuam guardando a quantidade.
+        cli.get("gerente.exemplo", "/api/cartoes/VG-09/tasks?segmento=VENCIDAS")
+        val comum = requireNotNull(ctx!!.dataSource).connection.use { con ->
+            con.createStatement().executeQuery("SELECT filters FROM access_log ORDER BY id DESC LIMIT 1").use { rs -> rs.next(); rs.getString(1).orEmpty() }
+        }
+        assertTrue("total" in comum, comum)
+    }
+
+    @Test
     fun usuarioESquadLeader403() = rodar { cli ->
         for (u in listOf("ana", "carla", "lider.alfa")) assertEquals(HttpStatusCode.Forbidden, cli.get(u, rota).status, u)
         assertEquals(HttpStatusCode.Unauthorized, cli.get(null, rota).status)
