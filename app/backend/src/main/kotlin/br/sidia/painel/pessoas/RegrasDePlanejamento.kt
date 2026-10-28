@@ -30,7 +30,7 @@ data class RegrasDePlanejamento(
     val horizonteCoberturaDias: Int,
 ) {
     init {
-        require(versao == 1) { "versao $versao não suportada (esperado: 1)" }
+        require(versao == 1) { "versao não suportada (esperado: 1)" }
         require(focoPadrao > 0.0 && focoPadrao <= 1.0) { "focoPadrao fora de (0, 1]" }
         require(horasMinimas > 0.0) { "horasMinimas deve ser maior que 0" }
         require(horasPorTipo.values.all { it > 0.0 }) { "horasPorTipo com valor não positivo" }
@@ -39,8 +39,8 @@ data class RegrasDePlanejamento(
         require(semanasSemVencimentoIniciada >= 1) { "semanasSemVencimentoIniciada deve ser pelo menos 1" }
         require(semanasSemVencimentoNaoIniciada >= 1) { "semanasSemVencimentoNaoIniciada deve ser pelo menos 1" }
         require(folga > 0.0) { "folga deve ser maior que 0" }
-        require(folga < ocupacaoAtencao) { "folga ($folga) deve ser menor que ocupacaoAtencao ($ocupacaoAtencao)" }
-        require(ocupacaoAtencao < ocupacaoAlta) { "ocupacaoAtencao ($ocupacaoAtencao) deve ser menor que ocupacaoAlta ($ocupacaoAlta)" }
+        require(folga < ocupacaoAtencao) { "folga deve ser menor que ocupacaoAtencao" }
+        require(ocupacaoAtencao < ocupacaoAlta) { "ocupacaoAtencao deve ser menor que ocupacaoAlta" }
         require(tetoJain > 0.0) { "tetoJain deve ser maior que 0" }
         require(wipPorStatus.values.all { it >= 1 }) { "wipPorStatus com limite menor que 1" }
         require(wipPorPessoa >= 1) { "wipPorPessoa deve ser pelo menos 1" }

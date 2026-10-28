@@ -39,7 +39,7 @@ class EquipesTest {
     @Test
     fun membroForaDoPapeisFalha() {
         val e = assertFailsWith<IllegalArgumentException> { Equipes.fromYaml(arquivo(membro(id = "fantasma.x")), papeisExemplo) }
-        assertTrue("fantasma.x" in e.message.orEmpty(), e.message)
+        assertTrue("#1" in e.message.orEmpty() && "fantasma.x" !in e.message.orEmpty(), e.message)
     }
 
     @Test

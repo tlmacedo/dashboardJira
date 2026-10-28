@@ -12,10 +12,10 @@ import java.nio.file.Path
  */
 data class MembroEquipe(val id: String, val horasSemanais: Double, val foco: Double?, val alocacao: Double, val competencias: Set<String>) {
     init {
-        require(horasSemanais in 0.0..60.0) { "horasSemanais de $id fora de 0 a 60" }
-        require(foco == null || (foco > 0.0 && foco <= 1.0)) { "foco de $id fora de (0, 1]" }
-        require(alocacao in 0.0..1.0) { "alocacao de $id fora de 0 a 1" }
-        require(competencias.all { COMPETENCIA.matches(it) }) { "competência de $id fora do formato [a-z0-9-]" }
+        require(horasSemanais in 0.0..60.0) { "horasSemanais fora de 0 a 60" }
+        require(foco == null || (foco > 0.0 && foco <= 1.0)) { "foco fora de (0, 1]" }
+        require(alocacao in 0.0..1.0) { "alocacao fora de 0 a 1" }
+        require(competencias.all { COMPETENCIA.matches(it) }) { "competência fora do formato [a-z0-9-]" }
     }
 
     companion object {
@@ -30,7 +30,7 @@ class Equipes(membros: List<MembroEquipe>) {
 
     init {
         val repetidos = todos.groupingBy { it.id }.eachCount().filterValues { it > 1 }.keys
-        require(repetidos.isEmpty()) { "ids repetidos em equipes: ${repetidos.joinToString(", ")}" }
+        require(repetidos.isEmpty()) { "id repetido em equipes" }
         porId = todos.associateBy { it.id }
     }
 
@@ -41,8 +41,12 @@ class Equipes(membros: List<MembroEquipe>) {
         fun fromYaml(path: Path, roles: RoleDirectory): Equipes = lerEstrito(path) {
             val bruto = Yaml.default.decodeFromString(EquipesYaml.serializer(), Files.readString(path))
             val membros = bruto.membros.mapIndexed { i, m ->
-                require(roles.conhece(m.id)) { "membro #${i + 1} '${m.id}' não existe no papeis.yaml" }
-                MembroEquipe(m.id, m.horasSemanais, m.foco, m.alocacao, m.competencias.toSet())
+                require(roles.conhece(m.id)) { "membro #${i + 1} não existe no papeis.yaml" }
+                try {
+                    MembroEquipe(m.id, m.horasSemanais, m.foco, m.alocacao, m.competencias.toSet())
+                } catch (e: IllegalArgumentException) {
+                    throw IllegalArgumentException("membro #${i + 1}: ${e.message}")
+                }
             }
             Equipes(membros)
         }

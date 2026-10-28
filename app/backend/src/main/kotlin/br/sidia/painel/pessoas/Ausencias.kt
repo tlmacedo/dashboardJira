@@ -13,8 +13,8 @@ import java.time.format.DateTimeParseException
 /** Ausência de [pessoa] de [de] a [ate] (ambas inclusivas), com [fracao] do dia (1,0 = dia inteiro). NÃO tem motivo. */
 data class Ausencia(val pessoa: String, val de: LocalDate, val ate: LocalDate, val fracao: Double) {
     init {
-        require(!de.isAfter(ate)) { "datas invertidas para $pessoa ($de depois de $ate)" }
-        require(fracao > 0.0 && fracao <= 1.0) { "fracao de $pessoa fora de (0, 1]" }
+        require(!de.isAfter(ate)) { "datas invertidas (de depois de ate)" }
+        require(fracao > 0.0 && fracao <= 1.0) { "fracao fora de (0, 1]" }
     }
 
     fun cobre(dia: LocalDate): Boolean = !dia.isBefore(de) && !dia.isAfter(ate)
@@ -35,7 +35,7 @@ class Ausencias private constructor(lista: List<Ausencia>, validarSobreposicao: 
             for ((pessoa, dela) in porPessoa) {
                 val ordenadas = dela.sortedBy { it.de }
                 for (i in 1 until ordenadas.size) {
-                    require(ordenadas[i].de.isAfter(ordenadas[i - 1].ate)) { "ausências de $pessoa se sobrepõem" }
+                    require(ordenadas[i].de.isAfter(ordenadas[i - 1].ate)) { "ausências da mesma pessoa se sobrepõem" }
                 }
             }
         }
@@ -55,7 +55,8 @@ class Ausencias private constructor(lista: List<Ausencia>, validarSobreposicao: 
 
     override fun iterator(): Iterator<Ausencia> = itens.iterator()
 
-    companion object {        /**
+    companion object {
+        /**
          * Estrito: a chave `motivo` é recusada ("ausências não guardam motivo"), pessoa que não está no `papeis.yaml`,
          * datas inválidas ou invertidas e sobreposição da mesma pessoa falham citando o arquivo e o item (#N da lista).
          */
@@ -72,11 +73,11 @@ class Ausencias private constructor(lista: List<Ausencia>, validarSobreposicao: 
             Ausencias(
                 bruto.ausencias.mapIndexed { i, a ->
                     val n = i + 1
-                    require(roles.conhece(a.pessoa)) { "ausência #$n: '${a.pessoa}' não existe no papeis.yaml" }
+                    require(roles.conhece(a.pessoa)) { "ausência #$n: pessoa não existe no papeis.yaml" }
                     fun data(s: String, campo: String) = try {
                         LocalDate.parse(s)
                     } catch (e: DateTimeParseException) {
-                        throw IllegalArgumentException("ausência #$n de ${a.pessoa}: '$campo' não é uma data aaaa-mm-dd")
+                        throw IllegalArgumentException("ausência #$n: '$campo' não é uma data aaaa-mm-dd")
                     }
                     try {
                         Ausencia(a.pessoa, data(a.de, "de"), data(a.ate, "ate"), a.fracao)

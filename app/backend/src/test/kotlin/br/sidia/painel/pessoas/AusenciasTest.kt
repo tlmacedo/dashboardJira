@@ -54,7 +54,7 @@ class AusenciasTest {
     fun ausenciaDePessoaDesconhecidaFalha() {
         val txt = "ausencias:\n  - pessoa: ana\n    de: 2026-11-04\n    ate: 2026-11-05\n  - pessoa: saiu.do.time\n    de: 2026-11-04\n    ate: 2026-11-05\n"
         val e = assertFailsWith<IllegalArgumentException> { Ausencias.fromYaml(arquivo(txt), Trb1.papeis) }
-        assertTrue("saiu.do.time" in e.message.orEmpty(), e.message)
+        assertTrue("#2" in e.message.orEmpty() && "saiu.do.time" !in e.message.orEmpty(), e.message)
         // Cita o número da linha da lista para quem edita o arquivo achar o erro.
         assertTrue("#2" in e.message.orEmpty(), e.message)
     }
@@ -63,7 +63,7 @@ class AusenciasTest {
     fun datasInvertidasFalham() {
         val txt = "ausencias:\n  - pessoa: ana\n    de: 2026-11-06\n    ate: 2026-11-04\n"
         val e = assertFailsWith<IllegalArgumentException> { Ausencias.fromYaml(arquivo(txt), Trb1.papeis) }
-        assertTrue("ana" in e.message.orEmpty() && "#1" in e.message.orEmpty(), e.message)
+        assertTrue("#1" in e.message.orEmpty() && "ana" !in e.message.orEmpty().substringAfterLast(": "), e.message)
         assertFailsWith<IllegalArgumentException> {
             Ausencias.fromYaml(arquivo("ausencias:\n  - pessoa: ana\n    de: ontem\n    ate: 2026-11-04\n"), Trb1.papeis)
         }
@@ -81,7 +81,7 @@ class AusenciasTest {
     fun sobreposicaoDaMesmaPessoaFalha() {
         val txt = "ausencias:\n  - pessoa: ana\n    de: 2026-11-04\n    ate: 2026-11-06\n  - pessoa: ana\n    de: 2026-11-06\n    ate: 2026-11-09\n"
         val e = assertFailsWith<IllegalArgumentException> { Ausencias.fromYaml(arquivo(txt), Trb1.papeis) }
-        assertTrue("ana" in e.message.orEmpty(), e.message)
+        assertTrue("sobrep" in e.message.orEmpty(), e.message)
         // Pessoas diferentes no mesmo dia, e a mesma pessoa em períodos que só se tocam sem cruzar, são válidas.
         val ok = "ausencias:\n  - pessoa: ana\n    de: 2026-11-04\n    ate: 2026-11-05\n  - pessoa: ana\n    de: 2026-11-06\n    ate: 2026-11-06\n" +
             "  - pessoa: bruno\n    de: 2026-11-04\n    ate: 2026-11-05\n"
