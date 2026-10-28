@@ -166,6 +166,18 @@ class CiWorkflowTest {
     }
 
     @Test
+    fun backendValidaConfigDeExemplo() {
+        // Depois da suíte (que gera o pacote por installDist), o painel valida as configurações de exemplo em modo dev.
+        val passo = passos("backend").firstOrNull { texto(it.get<YamlNode>("run"))?.contains("painel-cli.sh validar-config") == true }
+        assertNotNull(passo, "O backend precisa rodar 'painel-cli.sh validar-config' sobre app/config")
+        val cmd = texto(passo.get<YamlNode>("run"))!!
+        assertTrue(cmd.contains("--dir config"), cmd)
+        assertEquals("true", texto(mapa(passo.get<YamlNode>("env"), "env do passo").get<YamlNode>("DASHBOARD_DEV_MODE")))
+        val posicaoDoTeste = passos("backend").indexOfFirst { texto(it.get<YamlNode>("run"))?.contains("./gradlew") == true }
+        assertTrue(passos("backend").indexOf(passo) > posicaoDoTeste, "a validação vem depois dos testes (precisa do pacote)")
+    }
+
+    @Test
     fun frontendRodaLintTestesEBuild() {
         val cmds = comandos("frontend")
         val ordem = listOf("pnpm lint", "pnpm vitest run", "pnpm build").map { alvo -> cmds.indexOfFirst { it.contains(alvo) } }

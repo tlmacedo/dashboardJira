@@ -1,0 +1,36 @@
+# Regras OPCIONAIS do Prometheus/Alertmanager para quem já tiver essa infraestrutura. O painel não lê este arquivo e não
+# depende dele: os alertas já saem na rota do gerente, na faixa da tela, no log e no arquivo de alertas
+# (PAINEL_ALERTAS_ARQUIVO). Coletar as métricas exige abrir a porta interna (PAINEL_METRICAS_HOST/PORTA) só para o coletor.
+groups:
+  - name: painel
+    rules:
+      # Alertas que pedem ação agora (a gravidade exata de cada código está em /api/operacao/alertas).
+      - alert: PainelAlertaCritico
+        expr: max by (codigo) (painel_alerta_ativo{codigo=~"SYNC_SUSPENSA|RECONCILIACAO_SUSPEITA|ACCESS_LOG_FALHANDO|PAT_EXPIRADO|DISCO_BAIXO|BANCO_SUSPEITO|BACKUP_ATRASADO|MODO_DEV_COM_JIRA_LIGADO"}) > 0
+        for: 5m
+        labels:
+          gravidade: critico
+        annotations:
+          resumo: "Alerta crítico do painel: {{ $labels.codigo }}. Veja o runbook de operação diária."
+      # Alertas de atenção.
+      - alert: PainelAlertaAtencao
+        expr: max by (codigo) (painel_alerta_ativo{codigo=~"SYNC_ATRASADA|RECONCILIACAO_ATRASADA|RETENCAO_FALHOU|PAT_EXPIRANDO|CALENDARIO_SEM_PROXIMO_ANO|RESTAURACAO_NAO_TESTADA"}) > 0
+        for: 5m
+        labels:
+          gravidade: atencao
+        annotations:
+          resumo: "Alerta de atenção do painel: {{ $labels.codigo }}."
+      # O coletor não consegue ler as métricas (o painel parou ou a porta interna não está acessível).
+      - alert: PainelForaDoAr
+        expr: up{job="painel"} == 0
+        for: 5m
+        labels:
+          gravidade: critico
+        annotations:
+          resumo: "O painel não responde na porta de métricas."
+      # Opcional: sonda HTTP de /api/health/pronto (exige o blackbox exporter). Descomente se houver.
+      # - alert: PainelNaoPronto
+      #   expr: probe_success{job="painel-pronto"} == 0
+      #   for: 5m
+      #   labels:
+      #     gravidade: critico

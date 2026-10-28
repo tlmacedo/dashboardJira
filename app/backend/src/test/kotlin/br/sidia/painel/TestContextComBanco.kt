@@ -54,6 +54,8 @@ fun testContextComBanco(
     /** Mapa de status e calendário próprios do cenário (padrão: os arquivos `.exemplo`). */
     statusMap: StatusMap? = null,
     calendar: BusinessCalendar? = null,
+    /** Banco já pronto (ex.: uma cópia restaurada) em vez de um arquivo novo; as migrações são conferidas, não refeitas. */
+    arquivoExistente: java.nio.file.Path? = null,
     /** Equipe, ausências e regras de planejamento do cenário (padrão: os modelos `.exemplo`). */
     equipes: br.sidia.painel.pessoas.Equipes = equipesDeTeste(),
     ausencias: br.sidia.painel.pessoas.Ausencias = ausenciasDeTeste(),
@@ -61,7 +63,7 @@ fun testContextComBanco(
 ): AppContext {
     val campos = camposDeTeste()
     val vinculos = vinculosDeTeste()
-    val ds = Database.connect(Database.urlDeArquivo(banco.novoArquivo()), poolSize = 4)
+    val ds = Database.connect(Database.urlDeArquivo(arquivoExistente ?: banco.novoArquivo()), poolSize = 4)
     Database.migrate(ds)
     return AppContext(
         settings = settings,

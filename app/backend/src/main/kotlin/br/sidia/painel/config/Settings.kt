@@ -2,6 +2,7 @@ package br.sidia.painel.config
 
 import br.sidia.painel.jira.INSTANCIAS_CONHECIDAS
 import br.sidia.painel.jira.JiraAuthKind
+import br.sidia.painel.operacao.OperacaoSettings
 import br.sidia.painel.sync.SyncSettings
 import java.nio.file.InvalidPathException
 import java.nio.file.Path
@@ -56,7 +57,17 @@ data class Settings(
      * barra final). Usada pela proteção CSRF; nula = compara com o `Host` da requisição. Não é segredo.
      */
     val origemPublica: String? = null,
+    /** Ajustes de operação (`PAINEL_LOG_*` e demais do Plano 12); sem segredos. */
+    val operacao: OperacaoSettings = OperacaoSettings(),
+    /** Outros segredos citados na documentação (hoje `OIDC_CLIENT_SECRET`), só para a máscara de log. Nunca em `toString`. */
+    val outrosSegredos: List<String> = emptyList(),
 ) {
+    /** Valores que nunca podem aparecer em log (tokens das instâncias); registrados na máscara de log na subida. */
+    fun valoresSecretos(): List<String> = jiraInstances.values.flatMap {
+        // No Basic, o cabeçalho leva o base64 de "usuario:token"; a máscara registra também essa forma.
+        listOfNotNull(it.token, it.username?.let { u -> "$u:${it.token}" })
+    }.filter { it.isNotBlank() } + operacao.sessao?.textos.orEmpty() + outrosSegredos.filter { it.isNotBlank() }
+
     /** Sem segredos: o painel não guarda senha de banco; as credenciais do Jira nunca entram aqui. */
     override fun toString(): String =
         "Settings(jiraLiveEnabled=$jiraLiveEnabled, dashboardDevMode=$dashboardDevMode, " +
@@ -109,6 +120,8 @@ data class Settings(
                 ).toMap(),
                 sync = lerSync(env),
                 origemPublica = origemPublica(env, dashboardDevMode),
+                operacao = OperacaoSettings.fromEnv(env),
+                outrosSegredos = listOfNotNull(texto(env, "OIDC_CLIENT_SECRET")),
             )
         }
 

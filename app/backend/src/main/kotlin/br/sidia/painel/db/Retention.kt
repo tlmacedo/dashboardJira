@@ -39,7 +39,10 @@ class Retention(private val ds: DataSource, private val calendar: BusinessCalend
                 "(i.removida_em IS NOT NULL AND i.resolved IS NULL AND i.removida_em < ? AND i.updated < ?))"
 
         /** Cada item: SQL e se usa o limite do `access_log` (os demais usam o limite geral). */
-        private class Purga(val sql: String, val doAccessLog: Boolean = false)
+        private class Purga(val sql: String, val doAccessLog: Boolean = false) {
+            /** Nome da tabela do `DELETE FROM <tabela>`: é o rótulo da métrica de remoções (nunca dado). */
+            val categoria: String get() = sql.substringAfter("DELETE FROM ").substringBefore(' ')
+        }
 
         private val PURGAS = listOf(
             Purga("DELETE FROM change_event WHERE at < ?"),
@@ -53,6 +56,7 @@ class Retention(private val ds: DataSource, private val calendar: BusinessCalend
             Purga("DELETE FROM access_log WHERE at < ?", doAccessLog = true),
             Purga("DELETE FROM sync_run WHERE started_at < ?"),
             Purga("DELETE FROM jira_user_key WHERE visto_em < ?"),
+            Purga("DELETE FROM backup_run WHERE started_at < ?"),
         )
     }
 
@@ -61,7 +65,13 @@ class Retention(private val ds: DataSource, private val calendar: BusinessCalend
      * (o que está exatamente na data-limite permanece), numa só transação. Devolve a soma das linhas
      * apagadas diretamente (as removidas em cascata junto com a issue não entram na conta).
      */
-    fun purge(today: LocalDate, months: Int, accessLogMonths: Int = months): Int {
+    fun purge(
+        today: LocalDate,
+        months: Int,
+        accessLogMonths: Int = months,
+        /** Chamado depois do commit, uma vez por tabela, com o nome da tabela e as linhas removidas (para métricas). */
+        aoRemover: (categoria: String, removidas: Int) -> Unit = { _, _ -> },
+    ): Int {
         require(months >= 1) { "months deve ser >= 1 (recebido $months)" }
         require(accessLogMonths >= 1) { "accessLogMonths deve ser >= 1 (recebido $accessLogMonths)" }
         val limite = limite(today, months, calendar.zone).atZone(calendar.zone).toOffsetDateTime()
@@ -70,15 +80,20 @@ class Retention(private val ds: DataSource, private val calendar: BusinessCalend
             c.autoCommit = false
             try {
                 var total = 0
+                val porTabela = ArrayList<Pair<String, Int>>()
                 for (purga in PURGAS) {
                     val sql = purga.sql
                     val corte = if (purga.doAccessLog) limiteAccessLog else limite
                     c.prepareStatement(sql).use { st ->
                         for (i in 1..sql.count { it == '?' }) st.setTimestamp(i, java.sql.Timestamp.from(corte.toInstant()))
-                        total += st.executeUpdate()
+                        val n = st.executeUpdate()
+                        total += n
+                        porTabela += purga.categoria to n
                     }
                 }
                 c.commit()
+                // A observação nunca muda o desfecho da retenção (já confirmada).
+                porTabela.forEach { (categoria, n) -> runCatching { aoRemover(categoria, n) } }
                 total
             } catch (e: Exception) {
                 c.rollback()

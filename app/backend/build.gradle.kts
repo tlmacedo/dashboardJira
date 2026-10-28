@@ -16,6 +16,8 @@ dependencies {
     implementation(libs.ktor.server.netty)
     implementation(libs.ktor.server.content.negotiation)
     implementation(libs.ktor.serialization.json)
+    implementation(libs.ktor.server.call.id)
+    implementation(libs.ktor.server.call.logging)
     implementation(libs.ktor.client.core)
     implementation(libs.ktor.client.cio)
     implementation(libs.kaml)
@@ -23,6 +25,7 @@ dependencies {
     implementation(libs.hikari)
     implementation(libs.flyway.core)
     implementation(libs.sqlite.jdbc)
+    implementation(libs.micrometer.registry.prometheus)
 
     testImplementation(libs.ktor.server.test.host)
     testImplementation(libs.ktor.client.mock)
@@ -64,7 +67,7 @@ tasks.test {
     // Esses arquivos são entrada dos testes: mudar um deles refaz os testes (senão o Gradle os dá por atualizados).
     inputs.files(
         fileTree(raizDoRepo) {
-            include(".github/**", "scripts/ci/**", "docs/operacao/**", "app/.env.example", "app/iniciar.*", "app/README.md")
+            include(".github/**", "scripts/ci/**", "docs/operacao/**", "app/.env.example", "app/iniciar.*", "app/README.md", "app/scripts/**", "ops/**")
         },
     ).withPropertyName("arquivosDoRepositorioLidosPelosTestes")
     // Fontes de produção, por caminho absoluto: usado pelo teste que varre quem constrói o cliente Jira.

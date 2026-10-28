@@ -108,3 +108,21 @@ export function fetchMe(): Promise<Me> {
 export function fetchMeta(): Promise<Meta> {
   return getJson<Meta>('/api/meta')
 }
+
+/** Um alerta operacional ativo (`GET /api/operacao/alertas`, só gerente). Só códigos e instantes: nenhum dado pessoal. */
+export type AlertaOperacional = {
+  codigo: string
+  gravidade: 'CRITICO' | 'ATENCAO' | string
+  instancia: string | null
+  desde: string
+}
+
+/** Alertas operacionais de agora. Resposta fora do formato vira lista vazia (a faixa só aparece com dado válido). */
+export async function fetchAlertas(): Promise<AlertaOperacional[]> {
+  const corpo = await getJson<{ alertas?: unknown }>('/api/operacao/alertas')
+  if (!Array.isArray(corpo?.alertas)) return []
+  return corpo.alertas.filter(
+    (a): a is AlertaOperacional =>
+      typeof a === 'object' && a !== null && typeof a.codigo === 'string' && typeof a.gravidade === 'string' && typeof a.desde === 'string',
+  )
+}
