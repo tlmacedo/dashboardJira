@@ -127,6 +127,46 @@ describe('tela Integridade', () => {
     expect(mock.mock.calls.some((c) => String(c[0]).startsWith('/api/integridade/catalogo'))).toBe(true)
   })
 
+  const FECHADA_POR_OUTRO: IntegridadeDto = {
+    ...DTO,
+    evidencias: [
+      // coord.um fechou a task de ana: o AUTOR é coord.um e o responsável na época é ana.
+      { sinal: 'FECHADA_POR_OUTRO', gravidade: 1, key: 'TG-803', pessoa: 'coord.um', quando: '2026-10-14T13:00:00Z', dia: '2026-10-14', detalhe: { responsavel: 'ana' } },
+    ],
+  }
+
+  it('autorDoEventoEResponsavelNaEpocaSaoColunasDistintas', async () => {
+    simular({ [API]: { status: 200, corpo: FECHADA_POR_OUTRO } })
+    renderizarTela(<Integridade />, '/integridade')
+    const tabela = await screen.findByRole('table', { name: 'Tabela de evidências' })
+    const cabecalhos = within(tabela).getAllByRole('columnheader').map((c) => c.textContent)
+    expect(cabecalhos).toContain('Autor do evento')
+    expect(cabecalhos).toContain('Responsável na época')
+    const linha = within(tabela).getByText('TG-803').closest('tr') as HTMLElement
+    const celulas = within(linha).getAllByRole('cell').map((c) => c.textContent)
+    // Ordem: gravidade, task, autor, responsável na época, dia, detalhe.
+    expect(celulas[2]).toBe('coord.um')
+    expect(celulas[3]).toBe('ana')
+    // O responsável não se repete no texto do detalhe.
+    expect(celulas[5]).not.toMatch(/responsavel|ana/)
+  })
+
+  it('csvAlinhadoComATelaAutorEResponsavel', async () => {
+    const csv = await import('../../shared/csv')
+    const baixar = vi.spyOn(csv, 'baixarCsv').mockImplementation(() => undefined)
+    simular({ [API]: { status: 200, corpo: FECHADA_POR_OUTRO } })
+    renderizarTela(<Integridade />, '/integridade')
+    await screen.findByRole('table', { name: 'Tabela de evidências' })
+    await userEvent.click(screen.getByRole('button', { name: 'Exportar CSV' }))
+    const linhas = baixar.mock.calls[0][1] as string[][]
+    const cab = linhas.find((l) => l.includes('Autor do evento')) as string[]
+    expect(cab).toEqual(['Sinal', 'Gravidade', 'Task', 'Autor do evento', 'Responsável na época', 'Dia', 'Detalhe'])
+    const dado = linhas.find((l) => l.includes('TG-803')) as string[]
+    expect(dado[3]).toBe('coord.um')
+    expect(dado[4]).toBe('ana')
+    expect(dado[6]).not.toMatch(/ana/)
+  })
+
   it('evidenciaSemAutorNaoMostraNull', async () => {
     simular({ [API]: { status: 200, corpo: DTO } })
     renderizarTela(<Integridade />, '/integridade')

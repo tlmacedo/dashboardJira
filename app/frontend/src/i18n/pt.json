@@ -1715,6 +1715,7 @@
   "integridade.col.gravidade": "Gravidade",
   "integridade.col.evidencias": "Evidências",
   "integridade.col.pessoa": "Pessoa",
+  "integridade.col.autor": "Autor do evento",
   "integridade.col.nivel": "Nível",
   "integridade.col.pontos": "Pontos",
   "integridade.col.concluidas": "Concluídas",

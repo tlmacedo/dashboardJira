@@ -1715,6 +1715,7 @@
   "integridade.col.gravidade": "Severity",
   "integridade.col.evidencias": "Evidence",
   "integridade.col.pessoa": "Person",
+  "integridade.col.autor": "Event author",
   "integridade.col.nivel": "Level",
   "integridade.col.pontos": "Points",
   "integridade.col.concluidas": "Completed",

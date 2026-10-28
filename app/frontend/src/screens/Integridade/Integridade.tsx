@@ -18,9 +18,9 @@ import {
 
 type Gaveta = { cartaoId: string; segmento: string; titulo: string }
 
-/** Detalhe da evidência em texto simples: `chave=valor` por par, na ordem de chegada. */
+/** Detalhe da evidência em texto simples: `chave=valor` por par, na ordem de chegada. O responsável tem coluna própria. */
 function detalheEmTexto(e: Evidencia): string {
-  return Object.entries(e.detalhe).map(([k, v]) => `${k}=${v}`).join('; ')
+  return Object.entries(e.detalhe).filter(([k]) => k !== 'responsavel').map(([k, v]) => `${k}=${v}`).join('; ')
 }
 
 /**
@@ -71,8 +71,10 @@ export function Integridade() {
       [`# ${t('integridade.csv.periodo')}: ${dto.de} - ${dto.ate} (${dto.versaoRegras})`],
       [`# ${t('gaveta.csv.filtros')}: ${resumoFiltros}`],
       [],
-      [t('integridade.col.sinal'), t('integridade.col.gravidade'), t('integridade.col.task'), t('integridade.col.pessoa'), t('integridade.col.dia'), t('integridade.col.detalhe')],
-      ...dto.evidencias.map((e) => [t(`integridade.sinal.${e.sinal}`), String(e.gravidade), e.key, e.pessoa ?? t('integridade.semAutor'), e.dia, detalheEmTexto(e)]),
+      [t('integridade.col.sinal'), t('integridade.col.gravidade'), t('integridade.col.task'), t('integridade.col.autor'), t('integridade.col.responsavel'), t('integridade.col.dia'), t('integridade.col.detalhe')],
+      ...dto.evidencias.map((e) => [
+        t(`integridade.sinal.${e.sinal}`), String(e.gravidade), e.key, e.pessoa ?? t('integridade.semAutor'), e.detalhe.responsavel ?? '—', e.dia, detalheEmTexto(e),
+      ]),
     ])
   }
 
@@ -291,6 +293,7 @@ export function Integridade() {
                       <th scope="col">{t('integridade.col.sinal')}</th>
                       <th scope="col">{t('integridade.col.gravidade')}</th>
                       <th scope="col">{t('integridade.col.task')}</th>
+                      <th scope="col">{t('integridade.col.autor')}</th>
                       <th scope="col">{t('integridade.col.responsavel')}</th>
                       <th scope="col">{t('integridade.col.dia')}</th>
                       <th scope="col">{t('integridade.col.detalhe')}</th>
@@ -303,6 +306,7 @@ export function Integridade() {
                         <td>{t(`integridade.gravidade.${e.gravidade}`)}</td>
                         <td className="mono">{e.key}</td>
                         <td>{e.pessoa ?? t('integridade.semAutor')}</td>
+                        <td>{e.detalhe.responsavel ?? '—'}</td>
                         <td className="num">{dataCurta(e.dia, lang)}</td>
                         <td>{detalheEmTexto(e)}</td>
                       </tr>
