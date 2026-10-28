@@ -5,6 +5,7 @@ import { inicioDoPapel } from './nav/nav'
 import { Abertas } from './screens/Abertas/Abertas'
 import { AgingWip } from './screens/AgingWip/AgingWip'
 import { Auditoria } from './screens/Auditoria/Auditoria'
+import { Bloqueios } from './screens/Bloqueios/Bloqueios'
 import { Epicos } from './screens/Epicos/Epicos'
 import { Fechadas } from './screens/Fechadas/Fechadas'
 import { FluxoDaSemana } from './screens/FluxoDaSemana/FluxoDaSemana'
@@ -47,6 +48,7 @@ export default function App() {
                 <Route path="epicos" element={<Epicos />} />
                 <Route path="fluxoDaSemana" element={<FluxoDaSemana />} />
                 <Route path="agingWip" element={<AgingWip />} />
+                <Route path="bloqueios" element={<Bloqueios />} />
                 <Route path="tempo" element={<TempoEmStatus />} />
                 <Route path="auditoria" element={<Auditoria />} />
                 <Route path="divergencia" element={<Divergencia />} />

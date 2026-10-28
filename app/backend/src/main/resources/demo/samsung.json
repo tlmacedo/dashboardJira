@@ -213,7 +213,10 @@
         "status": {"name": "In Progress"},
         "assignee": {"name": "dev.alfa1"}, "reporter": {"name": "pl.alfa"},
         "created": "2026-09-25T09:00:00.000-0400", "updated": "2026-10-27T09:00:00.000-0400",
-        "duedate": "2026-10-20", "labels": [], "customfield_12416": {"value": "Android 17.0 (OneUI_9.0)"}
+        "duedate": "2026-10-20", "labels": [], "customfield_12416": {"value": "Android 17.0 (OneUI_9.0)"},
+        "issuelinks": [
+          {"id": "930003", "type": {"name": "Blocks", "inward": "is blocked by", "outward": "blocks"}, "inwardIssue": {"id": "910015", "key": "DEMO-15"}}
+        ]
       },
       "changelog": {"histories": [
         {"id": "1", "author": {"name": "dev.alfa1"}, "created": "2026-09-28T09:00:00.000-0400", "items": [{"field": "status", "fromString": "To Do", "toString": "In Progress"}]}
@@ -242,7 +245,10 @@
         "status": {"name": "In Review"},
         "assignee": {"name": "dev.alfa2"}, "reporter": {"name": "pl.alfa"},
         "created": "2026-10-06T09:00:00.000-0400", "updated": "2026-10-09T09:00:00.000-0400",
-        "duedate": "2026-11-06", "labels": [], "customfield_12416": {"value": "Android 17.0 (OneUI_9.0)"}
+        "duedate": "2026-11-06", "labels": [], "customfield_12416": {"value": "Android 17.0 (OneUI_9.0)"},
+        "issuelinks": [
+          {"id": "930003", "type": {"name": "Blocks", "inward": "is blocked by", "outward": "blocks"}, "outwardIssue": {"id": "910013", "key": "DEMO-13"}}
+        ]
       },
       "changelog": {"histories": [
         {"id": "1", "author": {"name": "dev.alfa2"}, "created": "2026-10-07T09:00:00.000-0400", "items": [{"field": "status", "fromString": "To Do", "toString": "In Progress"}]},
@@ -283,7 +289,10 @@
         "status": {"name": "In Progress"},
         "assignee": {"name": "dev.alfa2"}, "reporter": {"name": "pl.alfa"},
         "created": "2026-10-27T09:00:00.000-0400", "updated": "2026-10-28T09:00:00.000-0400",
-        "duedate": "2026-11-12", "labels": [], "customfield_12416": {"value": "Android 17.0 (OneUI_9.0)"}
+        "duedate": "2026-11-12", "labels": [], "customfield_12416": {"value": "Android 17.0 (OneUI_9.0)"},
+        "issuelinks": [
+          {"id": "930004", "type": {"name": "Blocks", "inward": "is blocked by", "outward": "blocks"}, "inwardIssue": {"id": "910026", "key": "DEMO-26"}}
+        ]
       },
       "changelog": {"histories": [
         {"id": "1", "author": {"name": "dev.alfa2"}, "created": "2026-10-28T09:00:00.000-0400", "items": [{"field": "status", "fromString": "To Do", "toString": "In Progress"}]}
@@ -403,7 +412,10 @@
         "status": {"name": "In Progress"},
         "assignee": {"name": "dev.alfa2"}, "reporter": {"name": "pl.alfa"},
         "created": "2026-10-02T09:00:00.000-0400", "updated": "2026-10-27T09:00:00.000-0400",
-        "duedate": "2026-11-10", "labels": []
+        "duedate": "2026-11-10", "labels": [],
+        "issuelinks": [
+          {"id": "930004", "type": {"name": "Blocks", "inward": "is blocked by", "outward": "blocks"}, "outwardIssue": {"id": "910018", "key": "DEMO-18"}}
+        ]
       },
       "changelog": {"histories": [
         {"id": "1", "author": {"name": "dev.alfa2"}, "created": "2026-10-03T09:00:00.000-0400", "items": [{"field": "status", "fromString": "To Do", "toString": "In Progress"}]},

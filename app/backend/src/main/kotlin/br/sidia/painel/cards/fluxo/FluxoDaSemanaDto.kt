@@ -14,8 +14,8 @@ object AvisosDoFluxo {
     /** Bloqueio por link cuja outra ponta não está na base (fora da ficha ou de outro projeto). */
     const val BLOQUEIO_FORA_DA_BASE = "BLOQUEIO_FORA_DA_BASE"
 
-    /** O tipo de link configurado não tem nenhum vínculo gravado: os vínculos ainda não foram sincronizados. */
-    const val VINCULOS_INDISPONIVEIS = "VINCULOS_INDISPONIVEIS"
+    /** Nenhum vínculo do tipo configurado na base: os vínculos ainda não foram sincronizados. */
+    const val SEM_VINCULOS_NA_BASE = "SEM_VINCULOS_NA_BASE"
 }
 
 /**

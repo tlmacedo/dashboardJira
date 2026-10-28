@@ -257,7 +257,8 @@ class FixturesDeDemoTest {
         // Os vínculos saem do mesmo leitor da sincronização (o link aparece nas duas pontas e vira uma só linha).
         val vinculos = samsung.flatMap { IssueLinks.ler(chave(it), it).orEmpty() }.distinct()
         val bloqueios = vinculos.filter { it.tipo == "Blocks" }.map { it.fromKey to it.toKey }.toSet() // (bloqueia, é bloqueada)
-        assertEquals(2, bloqueios.size, "a demo tem dois pares Blocks: $bloqueios")
+        // Dois pares Task x Review e, do Plano 17b, dois bloqueios entre tasks abertas (DEMO-15 -> DEMO-13 e DEMO-26 -> DEMO-18).
+        assertEquals(4, bloqueios.size, "a demo tem quatro vínculos Blocks: $bloqueios")
         assertEquals(
             bloqueios.size * 2,
             samsung.sumOf { i -> (fields(i)["issuelinks"] as? JsonArray).orEmpty().size },
