@@ -20,7 +20,9 @@
 #     userinfo, maiúsculas, escapes %, ponto final) com "jira" em algum rótulo; (2) host+caminho com "jira"
 #     e "sidia" juntos; (3) host *.atlassian.net com "sidia" na URL. Documentação pública (atlassian.com e
 #     subdomínios, como confluence.atlassian.com e docs.atlassian.com) é liberada; a decisão é pelo host
-#     REAL (depois do userinfo), e URL aninhada em query (?redirect=...) é avaliada à parte.
+#     REAL (depois do userinfo), e URL aninhada em query (?redirect=...) é avaliada à parte. Barra invertida no
+#     userinfo (x\@jira.corp) avalia os DOIS hosts; host sem ponto (curl jira/rest) conta junto de ferramenta de
+#     comando; --connect-to/--resolve/--proxy/-x/Host:valor e git/rsync/scp/sftp/socat entram na regra.
 #   - Liberado (flag true): as regras acima deixam de bloquear. Continua barrado exibir segredo no terminal
 #     (echo/printf/printenv/env/set/declare citando JIRA_*TOKEN|PASS|SENHA|SECRET, ou env/printenv/set
 #     canalizado para grep de "jira"). Usar o token como argumento de outro comando é liberado.
