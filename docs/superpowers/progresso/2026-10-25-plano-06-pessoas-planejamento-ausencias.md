@@ -4,6 +4,17 @@ Bloco **6a** (Tarefas 1 a 9) na branch `feat/pessoas-planejamento-6a`, a partir 
 
 Ponto de partida (main `b8d203b`): backend 1224 testes, 0 falhas.
 
+**Estado final do 6a:** backend 1387 testes (`--rerun-tasks`), frontend 271, `pnpm build` ok, `varrer-dados-pessoais.sh` e `test-guard.sh` ok; 0 falhas. Revisão: autorrevisão por tarefa com mutação dos testes principais (sem subagente, por regra do despacho); a revisão final independente e o PR ficam para o orquestrador.
+
+**Minor ADIADOS do 6a (sem correção neste PR):**
+- M1: a lista de ordem de prioridade (`Highest` a `Lowest`) existe em 3 lugares (`AbertasCalculator`, `MetasCalculator`, `Agenda`); extrair uma constante única.
+- M2: a captura visual das sete telas (1440 e 390 px, três temas) não foi feita (sem navegador).
+- M3: o fluxo cumulativo de Gargalos é uma linha por status (SVG decorativo + texto); um gráfico empilhado com tabela de datas-chave fica para depois da validação visual.
+- M4: Carga, Capacidade, Plano, Calendário e Vencimentos leem a fila da pessoa com duas consultas ao `WorkStore` quando há Riscos/Previsão (a fila inteira, sem filtros); com base grande vale um método de leitura só da fila.
+- M5: a Tendência usa `permitePosse` e reconstrói 12 semanas por pessoa em memória (O(issues × semanas)); medir com a base real.
+- M6: `RiscoCalculator`/`PrevisaoCalculator` recebem a Agenda pela visão do papel; a `Agenda` não conhece a visibilidade (quem chama filtra), então um card novo que a use precisa passar só issues da visão.
+- M7: `ContratoDeCartoesTest.cadaTelaDeTrabalhoTemParPositivoNaDemonstracao` não inclui os prefixos CP, CA, CL, PL, VE, GA e TD (a demonstração não tem ausências nem fila com horas); o contrato "número == drill" vale por `CargaCapacidadeRoutesTest` e os outros testes de rota do bloco.
+
 ## Estado por tarefa
 
 | Tarefa | Estado | Commit | Observações |
