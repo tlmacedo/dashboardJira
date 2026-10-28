@@ -107,6 +107,15 @@ describe('tela Negativas', () => {
     expect(screen.getByText(/Ordem alfabética, sem ranking/)).toBeInTheDocument()
   })
 
+  it('naoOfereSeletorDeUnidadeQueNaoTemEfeito', async () => {
+    simular({ [CARD]: { status: 200, corpo: DTO } })
+    renderizarTela(<Negativas />, '/negativas')
+    await screen.findByRole('group', { name: 'Indicadores das negativas' })
+    // As contagens são de eventos e de datas de Manaus: dias úteis × corridos não muda nenhum número.
+    expect(screen.queryByRole('button', { name: 'Dias corridos' })).toBeNull()
+    expect(screen.getByRole('button', { name: 'Aplicar filtros' })).toBeInTheDocument()
+  })
+
   it('avisoBloqueanteMostraTraco', async () => {
     simular({ [CARD]: { status: 200, corpo: { ...DTO, avisos: [{ codigo: 'STATUS_SEM_MAPEAMENTO', gravidade: 'bloqueante', mensagem: 'x', params: { status: 'Exotico' } }] } } })
     renderizarTela(<Negativas />, '/negativas')

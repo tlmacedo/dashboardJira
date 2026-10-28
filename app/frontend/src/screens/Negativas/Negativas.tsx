@@ -74,7 +74,7 @@ export function Negativas() {
       <CardPage
         titulo={t('nav.negativas')}
         pergunta={t('negativas.pergunta')}
-        filtros={<Filtros key={sp.toString()} campos={['periodo', 'squad', 'pessoa', 'tipo', 'prioridade', 'os', 'unit']} valor={sp} aoAplicar={aplicar} />}
+        filtros={<Filtros key={sp.toString()} campos={['periodo', 'squad', 'pessoa', 'tipo', 'prioridade', 'os']} valor={sp} aoAplicar={aplicar} />}
         consulta={consulta}
         avisos={dto?.avisos}
         aoExportar={exportar}

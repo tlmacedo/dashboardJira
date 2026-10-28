@@ -118,6 +118,15 @@ describe('tela Riscos', () => {
     expect(screen.getByText(/Ordem alfabética, sem ranking/)).toBeInTheDocument()
   })
 
+  it('naoOfereSeletorDeUnidadeQueNaoTemEfeito', async () => {
+    simular({ [CARD]: { status: 200, corpo: DTO } })
+    renderizarTela(<Riscos />, '/riscos')
+    await screen.findByRole('group', { name: 'Indicadores dos riscos' })
+    // O risco compara a idade em dias úteis sempre: um seletor de unidade enganaria.
+    expect(screen.queryByRole('button', { name: 'Dias corridos' })).toBeNull()
+    expect(screen.getByRole('button', { name: 'Aplicar filtros' })).toBeInTheDocument()
+  })
+
   it('mostraAVersaoDasRegras', async () => {
     simular({ [CARD]: { status: 200, corpo: DTO } })
     renderizarTela(<Riscos />, '/riscos')
