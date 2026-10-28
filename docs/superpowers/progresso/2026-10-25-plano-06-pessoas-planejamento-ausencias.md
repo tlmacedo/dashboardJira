@@ -10,8 +10,11 @@ Ponto de partida (main `b8d203b`): backend 1224 testes, 0 falhas.
 |---|---|---|---|
 | 1 Equipes, ausências e regras de planejamento em YAML | Concluída (backend 1244, 0 falhas) | ver `git log` | `pessoas/{Equipes,Ausencias,RegrasDePlanejamento,LeituraEstrita}.kt`; modelos `equipes/ausencias/planejamento.exemplo.yaml`; `AppContext` ganhou `equipes`, `ausencias`, `regrasPlanejamento` (obrigatórios em produção) |
 | 2 Horas por issue e capacidade líquida | Concluída (18 testes novos, 0 falhas; vermelho visto com stubs) | ver `git log` | `pessoas/{HorasDaIssue,Capacidade}.kt`; cenário CAP-1 em `src/test/.../pessoas/Cap1.kt` |
+| 3 Demanda semanal, ocupação, atraso acumulado e Jain | Concluída (12 testes novos, 0 falhas; vermelho visto com stub) | ver `git log` | `pessoas/Demanda.kt` (`Ocupacao`, `SemanaDeCarga`, `CargaDaPessoa`, `Demanda`, `Jain`) |
 
 ## Rulings
+
+- Ruling: T3 — `Demanda.carga` filtra por `assignee == pessoa` e descarta categoria DONE dentro dela (o chamador pode passar todas as abertas). `horasAssumidas` vale se QUALQUER issue da pessoa (inclusive a vencida) teve horas assumidas. Semana sem capacidade E sem demanda também é `SemCapacidade` (a tela mostra "sem capacidade"; o Jain a ignora). Sem vencimento NÃO aplica o mínimo de semanas (usa o valor configurado). O que passa do horizonte (vencimento distante) fica fora das semanas mostradas. Custo se errado: ajustar uma linha em `Demanda.carga`.
 
 - Ruling: T2 — restante do Jira igual a ZERO não vale como informação (cai para estimativa − registrado ou horas por tipo). O plano diz só "`remainingS` primeiro"; o Jira zera o restante ao estourar a estimativa e a task segue aberta, e contar 0 h tiraria a task da demanda. Custo se errado: trocar `takeIf { it > 0 }` por `!= null` em `HorasDaIssue.de`.
 - Ruling: T2 — o tipo da issue casa com `horasPorTipo` sem diferenciar maiúsculas e sem espaços nas pontas. Custo: nenhum.
