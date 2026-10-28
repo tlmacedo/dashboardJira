@@ -60,6 +60,7 @@ Ponto de partida (main `ad17750`, 5a mesclado): backend 1129 testes, 0 falhas.
 - M6: devolvidas ignoram transições em que `from` ou `to` estão fora da `ordem` (ex.: `On Hold`); só status da ordem entram.
 - M7: `TempoEmStatusRoutes` continua sem usar `FiltrosDeCard`/`escopoDe` (herdado do 5a).
 - M8: captura visual das quatro telas (1440 e 390 px, três temas) pendente: sem navegador no ambiente.
+- Revisão final do 5b (PR #34): Important I1 (id de épico derivado da chave) CORRIGIDO com id posicional; M-e (semente só com filtros aplicados, caixa/espaços normalizados), M-g (reaberta não é nova entrada, teste), M-d (seletor de unidade removido de Riscos e Negativas, com teste), M-a e M-b (diferenças de NE-07/MUITAS_TROCAS e NE-06 documentadas como diferença esperada) CORRIGIDOS. ADIADOS, sem correção neste PR: M-c, M-f e M-h (apontados pela revisão final; detalhes no comentário da revisão da PR #34).
 
 ### Rulings do 5b
 
