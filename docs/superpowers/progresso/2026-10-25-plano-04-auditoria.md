@@ -16,7 +16,7 @@ Tarefas 1 a 3 já estão na `main` (PR #15, mesclada com squash em 26/10). Conti
 | 6 `AuditStore` sobre SQLite | Concluída | `64dba1c` | `SqliteAuditStore`; pares pelo `issue_link` (4A, T12) com as duas pontas ativas; sem migração |
 | 7 API de auditoria, histórico e card Task × Review | Concluída (parte backend; cartões no `CatalogoDeCartoes`) | `c146954` | `GET /api/auditoria/sinais`, `GET /api/auditoria/historico/{key}`, `GET /api/cards/task-review`; cartões `AU-01`, `AU-02`, `AU-03` e `DV-01` |
 | 8 Telas Auditoria e Divergência (React) | Concluída; captura de verificação (Passo 5) NÃO feita | `57d7892` | Usa `Cartao` e `GavetaDeTasks` do 17a; `shared/csv.ts` já existia desde o 17a |
-| 9 Diferenças com o app atual e 1ª conexão | Concluída | ver `git log` (commit `docs(auditoria)`) | `docs/analise/diferencas-esperadas-auditoria.md`, Passo 4 do checklist, matriz (`duedate` e `labels`), HANDOFF, índice e roteiro |
+| 9 Diferenças com o app atual e 1ª conexão | Concluída | `dc5cc80` | `docs/analise/diferencas-esperadas-auditoria.md`, Passo 4 do checklist, matriz (`duedate` e `labels`), HANDOFF, índice e roteiro |
 
 Testes ao fim da Tarefa 9: backend 986, 0 falhas; frontend 143, 0 falhas; `pnpm build` sem erros; varredura de dados pessoais limpa.
 
