@@ -1,6 +1,7 @@
 package br.sidia.painel.operacao
 
 import br.sidia.painel.jira.INSTANCIAS_CONHECIDAS
+import br.sidia.painel.security.SegredosDaSessao
 import java.nio.file.InvalidPathException
 import java.nio.file.Path
 import java.time.LocalDate
@@ -31,6 +32,8 @@ data class OperacaoSettings(
     val patValidade: Map<String, LocalDate> = emptyMap(),
     /** Backup agendado do SQLite (`BACKUP_*`). */
     val backup: BackupSettings = BackupSettings(),
+    /** `SESSION_SECRET` e `SESSION_SECRET_ANTERIOR` (rotação sem derrubar sessões); nulo sem `SESSION_SECRET`. Nunca aparece em `toString`. */
+    val sessao: SegredosDaSessao? = null,
 ) {
     companion object {
         fun fromEnv(env: Map<String, String>): OperacaoSettings {
@@ -51,6 +54,7 @@ data class OperacaoSettings(
                     hora = hora(env, "BACKUP_HORA", padrao.backup.hora),
                     retencaoCopias = inteiro(env, "BACKUP_RETENCAO_COPIAS", 1..365, padrao.backup.retencaoCopias),
                 ),
+                sessao = SegredosDaSessao.fromEnv(env),
             )
         }
 

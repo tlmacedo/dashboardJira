@@ -64,7 +64,7 @@ data class Settings(
     fun valoresSecretos(): List<String> = jiraInstances.values.flatMap {
         // No Basic, o cabeçalho leva o base64 de "usuario:token"; a máscara registra também essa forma.
         listOfNotNull(it.token, it.username?.let { u -> "$u:${it.token}" })
-    }.filter { it.isNotBlank() }
+    }.filter { it.isNotBlank() } + operacao.sessao?.textos.orEmpty()
 
     /** Sem segredos: o painel não guarda senha de banco; as credenciais do Jira nunca entram aqui. */
     override fun toString(): String =
