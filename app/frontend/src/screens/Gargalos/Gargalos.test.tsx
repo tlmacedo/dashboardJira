@@ -60,6 +60,9 @@ describe('tela Gargalos e fluxo', () => {
     const tabela = await screen.findByRole('table', { name: 'Fluxo cumulativo de 60 dias: tasks por status e dia' })
     expect(within(tabela).getAllByRole('rowheader')).toHaveLength(60)
     expect(within(tabela).getAllByRole('columnheader').map((c) => c.textContent)).toEqual(['Dia', 'Open', 'In Progress'])
+    // Região rolável e tabela têm nomes distintos, e o botão aponta para a região.
+    const regiao = screen.getByRole('region', { name: 'Área rolável da tabela do fluxo cumulativo' })
+    expect(screen.getByRole('button', { name: 'Ocultar tabela' })).toHaveAttribute('aria-controls', regiao.id)
     const ultima = within(tabela).getAllByRole('row').at(-1) as HTMLElement
     expect(ultima).toHaveTextContent('13')
   })

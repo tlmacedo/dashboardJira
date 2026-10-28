@@ -113,11 +113,11 @@ export function Gargalos() {
               )}
               {dto.faixas.length > 0 && !bloqueado && (
                 <>
-                  <button type="button" className="btn" aria-expanded={tabela} onClick={() => setTabela(!tabela)}>
+                  <button type="button" className="btn" aria-expanded={tabela} aria-controls={tabela ? 'ga-fluxo-tabela' : undefined} onClick={() => setTabela(!tabela)}>
                     {t(tabela ? 'gargalos.tabela.ocultar' : 'gargalos.tabela.ver')}
                   </button>
                   {tabela && (
-                    <div className="tabela-rolagem" tabIndex={0} role="region" aria-label={t('gargalos.tabela.titulo')}>
+                    <div id="ga-fluxo-tabela" className="tabela-rolagem" tabIndex={0} role="region" aria-label={t('gargalos.tabela.regiao')}>
                       <table className="tabela" aria-label={t('gargalos.tabela.titulo')}>
                         <thead>
                           <tr>
