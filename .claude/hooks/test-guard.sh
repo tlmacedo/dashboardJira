@@ -369,6 +369,28 @@ casoa "export JIRA_LIVE_ENABLED=$T\n" jira "$CURL_J" 0 "arquivo: prefixo export 
 casoa "  JIRA_LIVE_ENABLED = $T  \n" jira "$CURL_J" 0 "arquivo: espaços ao redor do = e nas pontas ligam"
 casoa "JIRA_LIVE_ENABLED=$T\r\n" jira "$CURL_J" 0 "arquivo: fim de linha CRLF liga"
 casoa "\357\273\277JIRA_LIVE_ENABLED=$T\n" jira "$CURL_J" 0 "arquivo: BOM no começo liga"
+casoa "\357\273\277export JIRA_LIVE_ENABLED=$T\n" jira "$CURL_J" 0 "arquivo: BOM + export liga"
+casoa "\357\273\277JIRA_LIVE_ENABLED=$T\r\n" jira "$CURL_J" 0 "arquivo: BOM + CRLF liga"
+casoa "\357\273\277JIRA_LIVE_ENABLED=\"$T\"\r\n" jira "$CURL_J" 0 "arquivo: BOM + aspas + CRLF liga"
+casoa "\357\273\277JIRA_LIVE_ENABLED=sim\n" jira "$CURL_J" 2 "arquivo: BOM + valor inválido bloqueia"
+casoa "NOME=a\303\247\303\243o\nJIRA_LIVE_ENABLED=$T\n" jira "$CURL_J" 0 "arquivo: acento em outra linha não atrapalha"
+casoa "JIRA_LIVE_ENABLED=$T\303\251\n" jira "$CURL_J" 2 "arquivo: valor com acento bloqueia"
+# Outros awks: se gawk (ou outro) existir, repete os casos de BOM com ele no começo do PATH DO TESTE apenas
+# (o guard.sh não aceita escolher o awk por variável de ambiente; só o PATH deste processo de teste muda).
+PATH_ORIG=$PATH
+for outro in gawk original-awk nawk busybox; do
+  command -v "$outro" >/dev/null 2>&1 || { echo "pula  awk $outro: não instalado"; continue; }
+  AWKDIR=$(mktemp -d)
+  if [ "$outro" = busybox ]; then printf '#!/bin/sh\nexec busybox awk "$@"\n' > "$AWKDIR/awk"
+  else printf '#!/bin/sh\nexec %s "$@"\n' "$(command -v "$outro")" > "$AWKDIR/awk"; fi
+  chmod +x "$AWKDIR/awk"
+  PATH="$AWKDIR:$PATH_ORIG"
+  casoa "\357\273\277JIRA_LIVE_ENABLED=$T\n" jira "$CURL_J" 0 "[$outro] BOM liga"
+  casoa "\357\273\277export JIRA_LIVE_ENABLED=$T\n" jira "$CURL_J" 0 "[$outro] BOM + export liga"
+  casoa "\357\273\277JIRA_LIVE_ENABLED=\"$T\"\r\n" jira "$CURL_J" 0 "[$outro] BOM + aspas + CRLF liga"
+  casoa "JIRA_LIVE_ENABLED=$T\303\251\n" jira "$CURL_J" 2 "[$outro] valor com acento bloqueia"
+  PATH=$PATH_ORIG; rm -rf "$AWKDIR"
+done
 casoa "A=1\n\nB=2\nJIRA_LIVE_ENABLED=$T\nC=3\n" jira "$CURL_J" 0 "arquivo: linha da flag no meio de outras liga"
 casoa "JIRA_LIVE_ENABLED=$T" jira "$CURL_J" 0 "arquivo: sem quebra de linha final liga"
 for v in sim yes 1 0 "tr ue" "${T};" "${T}#x" "${T}x" "x${T}" "" "\"$T" "$T\"" "'$T\"" "\"$T\" # c" "$T,"; do

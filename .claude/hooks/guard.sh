@@ -93,7 +93,7 @@ raiz_repo=$(cd "$(dirname "$0")/../.." 2>/dev/null && pwd) || raiz_repo=""
 # "tr ue", NÃO vira true). Qualquer problema (sem raiz, sem arquivo, ilegível, awk falhou) = vazio = travado.
 flag=""
 if [ -n "$raiz_repo" ] && [ -f "$raiz_repo/app/.env" ] && [ -r "$raiz_repo/app/.env" ]; then
-  flag=$(awk "$AWK_FLAG" "$raiz_repo/app/.env" 2>/dev/null | tail -n 1 | sed -E 's/^[[:space:]]+//; s/[[:space:]]+$//' | tr '[:upper:]' '[:lower:]') || flag=""
+  flag=$(LC_ALL=C awk "$AWK_FLAG" "$raiz_repo/app/.env" 2>/dev/null | tail -n 1 | sed -E 's/^[[:space:]]+//; s/[[:space:]]+$//' | tr '[:upper:]' '[:lower:]') || flag=""
 fi
 # modo flag: responde só pelo código de saída (0 = ligada), sem imprimir nada
 if [ "$modo" = "flag" ]; then
@@ -256,7 +256,7 @@ END {
 '
 # 0 = o texto cita endereço de Jira (ou o awk falhou: falha fechada); 1 = não cita. $1 = valor de `rede`.
 cita_url_jira() {
-  printf '%s\n' "$2" | awk -v rede="$1" "$AWK_URL" >/dev/null 2>&1
+  printf '%s\n' "$2" | LC_ALL=C awk -v rede="$1" "$AWK_URL" >/dev/null 2>&1
   [ $? -eq 0 ] && return 1
   return 0
 }
