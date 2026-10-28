@@ -46,7 +46,7 @@ a() { caso arquivos "$(bash_json "$1")" "$2" "arquivos: $1"; }
 jt() { casov true jira "$(bash_json "$1")" "$2" "jira [flag=true]: $1"; }     # flag true
 
 j 'curl -s https://jira.exemplo.com/rest/api/2/search' 2
-j 'python3 -c "import urllib.request as u;u.urlopen(\"https://sidia.atlassian.net/a\")"' 2
+j 'python3 -c "import urllib.request as u;u.urlopen(\"https://sidia.x.atlassian.net/a\")"' 2
 j 'echo $JIRA_TOKEN' 2
 j 'echo $JIRA_SAMSUNG_TOKEN' 2
 j 'printenv JIRA_SIDIA_URL' 2
@@ -277,18 +277,18 @@ for c in 'cd /Volumes/Development/SIDIA/dashboardJira && ls' 'ls dashboardJira/d
   j "$c" 0
 done
 # 2) URL/host de Jira: bloqueada (com e sem esquema, porta, userinfo, maiúsculas, escapes, ponto final)
-for c in 'curl -s https://jira.exemplo.invalid/rest/api/2/myself' 'curl https://meu-jira.x.com/a' 'curl http://jira-lab:8080/' \
-         'curl jira.exemplo.invalid/x' 'curl jira-lab:8080' 'wget https://JIRA.Exemplo.Invalid/' 'curl https://jira.exemplo.invalid./x' \
-         'curl https://usuario:senha@jira.x.com/' 'curl https://a@jira.x.com' 'curl https://jira.x.com:8443/a' 'CURL HTTPS://JIRA.X.COM' \
-         'curl https://jira%2Eexemplo.invalid/x' 'curl https://%6aira.x.com/' 'curl https://jira%252Ex.com/' 'curl https://jira.x.com%2Fa' \
-         'curl https://x.com/jira/sidia' 'curl https://tracker.sidia.invalid/jira/browse/X' 'curl https://sidia.invalid/rest/jira/2' \
-         'curl https://sidia.atlassian.net/x' 'curl https://SIDIA.Atlassian.NET/x' 'curl https://x.atlassian.net/sidia' \
-         'curl https://x.atlassian.net/?q=sidia' 'ssh jira-lab' 'ssh -p 22 usuario@jira.x.com' 'nc -z jira-lab 8080' 'telnet jira.x.com 80' \
-         'iwr jira.exemplo.invalid' 'Invoke-RestMethod -Uri https://jira.x/rest' 'Invoke-WebRequest jira.x.com' 'curl.exe https://jira.x.com' \
-         'python -c "import urllib.request as u;u.urlopen(\"https://jira.x.com/a\")"' 'git clone https://jira.x.com/r.git' \
-         'curl -s -H "Host: jira.x.com" http://10.0.0.1/' 'curl --resolve jira.x.com:443:10.0.0.1 https://10.0.0.1/' 'curl --url=jira.x.com/a' \
-         'git clone git@jira.x.com:r.git' 'scp arquivo usuario@jira-lab:/tmp/' 'curl -x jira.x:3128 http://a.com' \
-         'curl -s "https://jira.x.com/a" -o jira.json''curl http://[::1]/ http://jira/' 'echo ok; curl http://jira.x.com'; do
+for c in 'curl -s https://jira.exemplo.invalid/rest/api/2/myself' 'curl https://meu-jira.x.invalid/a' 'curl http://jira-lab.invalid:8080/' \
+         'curl jira.exemplo.invalid/x' 'curl jira-lab.invalid:8080' 'wget https://JIRA.Exemplo.Invalid/' 'curl https://jira.exemplo.invalid./x' \
+         'curl https://usuario:senha@jira.x.invalid/' 'curl https://a@jira.x.invalid' 'curl https://jira.x.invalid:8443/a' 'CURL HTTPS://JIRA.X.INVALID' \
+         'curl https://jira%2Eexemplo.invalid/x' 'curl https://%6aira.x.invalid/' 'curl https://jira%252Ex.invalid/' 'curl https://jira.x.invalid%2Fa.invalid' \
+         'curl https://x.invalid/jira/sidia' 'curl https://tracker.sidia.invalid/jira/browse/X' 'curl https://sidia.invalid/rest/jira/2' \
+         'curl https://sidia.x.atlassian.net/x' 'curl https://SIDIA.x.Atlassian.NET/x' 'curl https://x.atlassian.net/sidia' \
+         'curl https://x.atlassian.net/?q=sidia' 'ssh jira-lab' 'ssh -p 22 usuario@jira.x.invalid' 'nc -z jira-lab 8080' 'telnet jira.x.invalid 80' \
+         'iwr jira.exemplo.invalid' 'Invoke-RestMethod -Uri https://jira.x.invalid/rest' 'Invoke-WebRequest jira.x.invalid' 'curl.exe https://jira.x.invalid' \
+         'python -c "import urllib.request as u;u.urlopen(\"https://jira.x.invalid/a\")"' 'git clone https://jira.x.invalid/r.git' \
+         'curl -s -H "Host: jira.x.invalid" http://10.0.0.1/' 'curl --resolve jira.x.invalid:443:10.0.0.1 https://10.0.0.1/' 'curl --url=jira.x.invalid/a' \
+         'git clone git@jira.x.invalid:r.git' 'scp arquivo usuario@jira-lab:/tmp/' 'curl -x jira.x.invalid:3128 http://x.invalid' \
+         'curl -s "https://jira.x.invalid/a" -o jira.json''curl http://[::1]/ http://jira/' 'echo ok; curl http://jira.x.invalid'; do
   j "$c" 2
 done
 # 3) documentação pública da Atlassian: liberada, mesmo com jira no caminho ou no rótulo do subdomínio atlassian.com
@@ -297,42 +297,42 @@ for c in 'curl -s https://confluence.atlassian.com/jirasoftwareserver/jira-softw
          'curl https://docs.atlassian.com/software/jira/docs/api/REST/9.12.0/' 'curl https://community.atlassian.com/t5/Jira/x' \
          'curl https://www.atlassian.com/software/jira' 'wget https://DOCS.Atlassian.COM/jira/' 'curl https://www.atlassian.com./software/jira' \
          'curl confluence.atlassian.com/jirasoftwareserver' 'curl https://confluence.atlassian.com:443/jirasoftwareserver' \
-         'curl https://jira.x.com@docs.atlassian.com/' 'curl https://jira.atlassian.com/browse/JRASERVER-1' \
-         'curl https://x.atlassian.net/rest' 'curl https://empresa.atlassian.net/jira/software'; do
+         'curl https://jira.x.invalid@docs.atlassian.com/' 'curl https://jira.atlassian.com/browse/JRASERVER-1' \
+         'curl https://x.atlassian.net/rest' 'curl https://suaempresa.atlassian.net/jira/software'; do
   j "$c" 0
 done
 # 4) tentativas de burla da decisão pelo host real
-for c in 'curl https://confluence.atlassian.com@jira.x.com/' 'curl https://docs.atlassian.com:443@jira.x.com/' \
-         'curl https://atlassian.com.jira.x.com/' 'curl https://docs.atlassian.com.jira.x.com/jirasoftwareserver' 'curl https://jira.x.com/atlassian.com' \
-         'curl "https://jira.x.com/?u=confluence.atlassian.com"' 'curl https://docs.atlassian.com/x?redirect=https://jira.x.com/' \
-         'curl https://docs.atlassian.com/x?redirect=https%3A%2F%2Fjira.x.com%2F' 'curl https://docs.atlassian.com%40jira.x.com/' \
-         'curl https://docs.atlassian.com\@jira.x.com/' 'curl https://notatlassian.com/jira/sidia' 'curl https://x.com/atlassian.com/jira/sidia' \
-         'curl https://x.atlassian.com.sidia.atlassian.net/' 'curl https://jira.x.com\.atlassian.com/' 'curl "https://docs.atlassian.com/x?next=jira.x.com" https://jira.x.com'; do
+for c in 'curl https://confluence.atlassian.com@jira.x.invalid/' 'curl https://docs.atlassian.com:443@jira.x.invalid/' \
+         'curl https://atlassian.com.jira.x.invalid/' 'curl https://docs.atlassian.com.jira.x.invalid/jirasoftwareserver' 'curl https://jira.x.invalid/atlassian.com' \
+         'curl "https://jira.x.invalid/?u=confluence.atlassian.com"' 'curl https://docs.atlassian.com/x?redirect=https://jira.x.invalid/' \
+         'curl https://docs.atlassian.com/x?redirect=https%3A%2F%2Fjira.x.invalid%2F' 'curl https://docs.atlassian.com%40jira.x.invalid/' \
+         'curl https://docs.atlassian.com\@jira.x.invalid/' 'curl https://notatlassian.example/jira/sidia' 'curl https://x.invalid/atlassian.com/jira/sidia' \
+         'curl https://x.atlassian.com.sidia.x.atlassian.net/' 'curl https://jira.x.invalid\.atlassian.com/' 'curl "https://docs.atlassian.com/x?next=jira.x.invalid" https://jira.x.invalid'; do
   j "$c" 2
 done
 # 4b) correções da revisão adversarial (28/10/2026): barra invertida no userinfo, host sem ponto, --connect-to,
 # git/rsync/socat e "Host:" sem espaço
 BS='\'
-for c in "curl 'http://x${BS}@jira.corp/rest'" "wget 'http://a${BS}@jira.corp'" "Invoke-WebRequest 'http://a${BS}@jira.corp'" \
-         'curl https://evil.com%5c@jira.corp/' 'curl https://evil.com%5C@jira.corp/' "curl http://x${BS}@jira.corp" \
-         "curl http://jira.x.com${BS}@evil.com/"  "curl http://docs.atlassian.com${BS}jira.x.com/" \
-         'curl jira/rest/api/2/search' 'wget jira/x' 'iwr jira/rest' 'curl --proxy jira http://x.com' 'curl -x jira http://x.com' \
-         'curl -xjira.corp:3128 http://x.com' 'curl --preproxy jira http://x.com' 'curl jira-lab/x' 'echo ok; curl JIRA/x' \
-         'curl --connect-to ::jira.corp:443 https://example.com' 'curl --connect-to example.com:443:jira.corp:443 https://example.com' \
-         'curl --connect-to=::jira.corp:443 https://example.com' 'curl --connect-to jira.corp:443:example.com:443 https://example.com' \
-         'curl --resolve jira.corp:443:10.0.0.1 https://x.com' 'curl --resolve example.com:443:jira.corp https://example.com' \
-         'git clone jira.corp:x.git' 'git clone jira:x.git' 'git remote add o jira.corp:x' 'git remote set-url o jira:x' \
-         'git ls-remote jira.corp:x' 'git fetch jira.corp:x' 'git pull jira.corp:x' 'git push jira.corp:x main' \
-         'rsync -av x jira.corp:/tmp' 'scp x jira:/tmp' 'sftp jira.corp' 'socat - TCP:jira.corp:80' 'socat TCP4:jira:80 -' \
-         "curl -H 'Host:jira.corp' http://10.0.0.1" 'curl -H Host:jira.corp http://10.0.0.1' 'curl -H "Host:jira" http://10.0.0.1'; do
+for c in "curl 'http://x${BS}@jira.corp.invalid/rest'" "wget 'http://x${BS}@jira.corp.invalid'" "Invoke-WebRequest 'http://x${BS}@jira.corp.invalid'" \
+         'curl https://evil.invalid%5c@jira.corp.invalid/' 'curl https://evil.invalid%5C@jira.corp.invalid/' "curl http://x${BS}@jira.corp.invalid" \
+         "curl http://jira.x.invalid${BS}@evil.invalid/"  "curl http://docs.atlassian.com${BS}jira.x.invalid/" \
+         'curl jira/rest/api/2/search' 'wget jira/x' 'iwr jira/rest' 'curl --proxy jira http://x.invalid' 'curl -x jira http://x.invalid' \
+         'curl -xjira.corp.invalid:3128 http://x.invalid' 'curl --preproxy jira http://x.invalid' 'curl jira-lab/x' 'echo ok; curl JIRA/x' \
+         'curl --connect-to ::jira.corp.invalid:443 https://example.com' 'curl --connect-to example.com:443:jira.corp.invalid:443 https://example.com' \
+         'curl --connect-to=::jira.corp.invalid:443 https://example.com' 'curl --connect-to jira.corp.invalid:443:example.com:443 https://example.com' \
+         'curl --resolve jira.corp.invalid:443:10.0.0.1 https://x.invalid' 'curl --resolve example.com:443:jira.corp.invalid https://example.com' \
+         'git clone jira.corp.invalid:x.git' 'git clone jira:x.git' 'git remote add o jira.corp.invalid:x' 'git remote set-url o jira:x' \
+         'git ls-remote jira.corp.invalid:x' 'git fetch jira.corp.invalid:x' 'git pull jira.corp.invalid:x' 'git push jira.corp.invalid:x main' \
+         'rsync -av x jira.corp.invalid:/tmp' 'scp x jira:/tmp' 'sftp jira.corp.invalid' 'socat - TCP:jira.corp.invalid:80' 'socat TCP4:jira:80 -' \
+         "curl -H 'Host:jira.corp.invalid' http://10.0.0.1" 'curl -H Host:jira.corp.invalid http://10.0.0.1' 'curl -H "Host:jira" http://10.0.0.1'; do
   j "$c" 2
 done
-for c in "curl 'http://x${BS}@docs.atlassian.com/x'" "curl http://x${BS}@example.com/" "curl http://example.com${BS}@x.com/" \
+for c in "curl 'http://x${BS}@docs.atlassian.com/x'" "curl http://x${BS}@example.com/" "curl http://example.com${BS}@x.invalid/" \
          'git push origin HEAD:feat/hooks-url-jira' 'git commit -m "guia do jira"' 'git push origin jira-fix' 'git checkout -B work-hooks-fix origin/feat/hooks-url-jira' \
          'git fetch origin' 'git remote -v' 'git clone https://github.com/dono/dashboardJira.git' 'git pull --ff-only' \
          'curl --connect-to example.com:443:example.org:443 https://example.com' 'curl --resolve example.com:443:10.0.0.1 https://example.com' \
          'curl -H "Host: example.com" http://10.0.0.1' 'curl -H Host:localhost http://10.0.0.1' 'socat - TCP:example.com:80' \
-         'curl --proxy proxy.exemplo.com:3128 http://x.com' 'curl -s localhost:8080/api/jira-status' 'rsync -av docs/jira /tmp/copia' 'ssh-add -l'; do
+         'curl --proxy proxy.exemplo.com:3128 http://x.invalid' 'curl -s localhost:8080/api/jira-status' 'rsync -av docs/jira /tmp/copia' 'ssh-add -l'; do
   j "$c" 0
 done
 # 5) WebFetch do Claude Code (vale se o matcher o incluir): a URL pode vir sem esquema
@@ -347,8 +347,8 @@ casov "$T" jira "$(web_json 'https://jira.exemplo.invalid/x')" 0 "WebFetch: flag
 caso url 'jira.exemplo.invalid/x' 2 "modo url: host sem esquema"
 caso url 'https://docs.atlassian.com/jira' 0 "modo url: documentação pública"
 caso url 'file:///Users/x/dashboardJira/docs/a.html' 0 "modo url: arquivo local"
-caso urlesq 'um texto qualquer jira.md e jira.x' 0 "modo urlesq: sem esquema não conta"
-caso urlesq 'veja https://jira.x.com/a' 2 "modo urlesq: URL com esquema conta"
+caso urlesq 'um texto qualquer jira.md e jira.x.invalid' 0 "modo urlesq: sem esquema não conta"
+caso urlesq 'veja https://jira.x.invalid/a' 2 "modo urlesq: URL com esquema conta"
 casov "$T" url 'jira.exemplo.invalid/x' 0 "modo url: flag ligada libera"
 casov "$T" flag '' 0 "modo flag: ligada responde 0"
 casov false flag '' 1 "modo flag: desligada responde 1"
@@ -442,7 +442,7 @@ casoe "$T" "JIRA_LIVE_ENABLED=false\n" jira "$(bash_json "JIRA_LIVE_ENABLED=$T .
 casoa "JIRA_LIVE_ENABLED=$T\n" jira "$(bash_json 'echo $JIRA_SAMSUNG_TOKEN')" 2 "arquivo ligado: exibir token continua barrado"
 casoa "JIRA_LIVE_ENABLED=$T\n" jira "$MCP_ATL" 0 "arquivo ligado: MCP Atlassian liberado"
 casoa "JIRA_LIVE_ENABLED=false\n" jira "$MCP_ATL" 2 "arquivo false: MCP Atlassian bloqueado"
-casoa "JIRA_LIVE_ENABLED=$T\n" jira "$(bash_json 'curl -s https://sidia.atlassian.net/x')" 0 "arquivo ligado: URL de Jira liberada"
+casoa "JIRA_LIVE_ENABLED=$T\n" jira "$(bash_json 'curl -s https://sidia.x.atlassian.net/x')" 0 "arquivo ligado: URL de Jira liberada"
 
 echo "falhas: $falhas"
 [ "$falhas" = 0 ]

@@ -134,7 +134,7 @@ foreach ($f in @('-', 'false', 'FALSE', 'talvez', ' ', '1')) {
     Caso $f (Cmd "curl -s $URL") $true 'trava: curl para o Jira'
     Caso $f (Cmd 'JIRA_LIVE_ENABLED=true ./gradlew test') $true 'trava: ligar a flag dentro do comando'
     Caso $f (Mcp 'claude_ai_Atlassian_MCP' 'searchJiraIssuesUsingJql') $true 'trava: MCP do Atlassian'
-    Caso $f (Web 'web_fetch' 'https://sidia.atlassian.net/wiki/x') $true 'trava: web_fetch para o Cloud da Atlassian com sidia'
+    Caso $f (Web 'web_fetch' 'https://sidia.x.atlassian.net/wiki/x') $true 'trava: web_fetch para o Cloud da Atlassian com sidia'
     Caso $f (Nav 'https://JIRA.empresa.invalid/browse/X-1') $true 'trava: navegador com host jira (sem diferenciar maiúsculas)'
     Caso $f (Nav 'https://empresa.invalid/JIRA/sidia/browse/X-1') $true 'trava: navegador com jira e sidia no caminho'
     # 28/10/2026: documentação pública e palavra jira solta passam
@@ -145,7 +145,7 @@ Caso '-' (CmdTxt "curl -s $URL") $true 'trava: parâmetros em texto JSON'
 Caso '-' (CmdCli "wget $URL") $true 'trava: formato da CLI (run_commands)'
 Caso '-' (Cmd 'echo $JIRA_TOKEN') $true 'trava: variável de conexão do Jira'
 Caso '-' (Mcp 'jira-local' 'search') $true 'trava: servidor MCP com jira no nome'
-Caso '-' (Mcp 'fetch' 'fetch' '{"url":"https://sidia.atlassian.net/wiki"}') $true 'trava: MCP de fetch com URL do Cloud da Atlassian com sidia'
+Caso '-' (Mcp 'fetch' 'fetch' '{"url":"https://sidia.x.atlassian.net/wiki"}') $true 'trava: MCP de fetch com URL do Cloud da Atlassian com sidia'
 Caso 'false' (Cmd 'JIRA_LIVE_ENABLED=false ./gradlew test') $false 'liberado: flag false no comando não liga nada'
 # ligar a flag por arquivo de configuração: só o usuário escreve em settings do Claude e override do compose
 $JsonOn = 'printf ''{"env":{"JIRA_LIVE_ENABLED":"true"}}'' > .claude/settings.local.json'
@@ -235,7 +235,7 @@ Caso ' TRUE ' (Cmd 'echo $JIRA_SAMSUNG_TOKEN') $true 'trava mesmo com TRUE e esp
 # extras do Windows/PowerShell
 Caso '-' (Cmd "Invoke-WebRequest -Uri $URL") $true 'trava: Invoke-WebRequest'
 Caso '-' (Cmd 'iwr jira.exemplo.invalid') $true 'trava: iwr sem esquema na URL'
-Caso '-' (Cmd 'irm https://sidia.atlassian.net/rest/api/3/myself') $true 'trava: Invoke-RestMethod'
+Caso '-' (Cmd 'irm https://sidia.x.atlassian.net/rest/api/3/myself') $true 'trava: Invoke-RestMethod'
 Caso '-' (Cmd 'curl.exe -s jira.exemplo.invalid') $true 'trava: curl.exe'
 Caso '-' (Cmd '(New-Object Net.WebClient).DownloadString("http://jira.exemplo.invalid")') $true 'trava: Net.WebClient'
 Caso '-' (Cmd 'Write-Output $env:JIRA_SAMSUNG_TOKEN') $true 'trava: $env:JIRA_* no PowerShell'
@@ -319,7 +319,7 @@ Caso '-' '{"preToolUse":{"toolName":"apply_patch","parameters":{"input":"*** Beg
 # ---------- espelho do .claude/hooks/test-guard.sh (modo jira com flag ausente; modo arquivos) ----------
 $espelhoJira = @(
     @('curl -s https://jira.exemplo.com/rest/api/2/search', $true),
-    @('python3 -c "import urllib.request as u;u.urlopen(\"https://sidia.atlassian.net/a\")"', $true),
+    @('python3 -c "import urllib.request as u;u.urlopen(\"https://sidia.x.atlassian.net/a\")"', $true),
     @('echo $JIRA_TOKEN', $true),
     @('echo $JIRA_SAMSUNG_TOKEN', $true),
     @('printenv JIRA_SIDIA_URL', $true),
@@ -468,39 +468,39 @@ Caso '-' (Web 'web_fetch' 'https://github.com/dono/dashboardJira') $false 'palav
 Caso '-' (Ler 'docs/jira/checklist-primeira-conexao.md') $false 'palavra solta: ler arquivo em pasta jira'
 Caso '-' (Mcp 'context7' 'get-library-docs' '{"library":"jira-client"}') $false 'palavra solta: argumento MCP sem URL'
 # 2) URL/host de Jira: bloqueada (com e sem esquema, porta, userinfo, maiúsculas, escapes, ponto final, burlas)
-foreach ($c in @('curl -s https://jira.exemplo.invalid/rest/api/2/myself', 'curl https://meu-jira.x.com/a', 'curl http://jira-lab:8080/',
-        'curl jira.exemplo.invalid/x', 'curl jira-lab:8080', 'wget https://JIRA.Exemplo.Invalid/', 'curl https://jira.exemplo.invalid./x',
-        'curl https://u:s@jira.x.com/', 'curl https://jira%2Eexemplo.invalid/x', 'curl https://x.com/jira/sidia', 'curl https://sidia.atlassian.net/x',
-        'ssh jira-lab', 'ssh usuario@jira.x.com', 'nc -z jira-lab 8080', 'iwr jira.exemplo.invalid', 'Invoke-RestMethod -Uri https://jira.x/rest',
-        'Invoke-WebRequest jira.x.com', 'curl.exe https://jira.x.com', '(New-Object Net.WebClient).DownloadString("jira.x.com")',
-        'git clone git@jira.x.com:r.git', 'curl https://confluence.atlassian.com@jira.x.com/', 'curl https://atlassian.com.jira.x.com/',
-        'curl https://jira.x.com/atlassian.com', 'curl https://docs.atlassian.com/x?redirect=https://jira.x.com/',
-        'curl https://docs.atlassian.com/x?redirect=https%3A%2F%2Fjira.x.com', 'curl https://docs.atlassian.com\@jira.x.com/')) {
+foreach ($c in @('curl -s https://jira.exemplo.invalid/rest/api/2/myself', 'curl https://meu-jira.x.invalid/a', 'curl http://jira-lab.invalid:8080/',
+        'curl jira.exemplo.invalid/x', 'curl jira-lab.invalid:8080', 'wget https://JIRA.Exemplo.Invalid/', 'curl https://jira.exemplo.invalid./x',
+        'curl https://u:s@jira.x.invalid/', 'curl https://jira%2Eexemplo.invalid/x', 'curl https://x.invalid/jira/sidia', 'curl https://sidia.x.atlassian.net/x',
+        'ssh jira-lab', 'ssh usuario@jira.x.invalid', 'nc -z jira-lab 8080', 'iwr jira.exemplo.invalid', 'Invoke-RestMethod -Uri https://jira.x.invalid/rest',
+        'Invoke-WebRequest jira.x.invalid', 'curl.exe https://jira.x.invalid', '(New-Object Net.WebClient).DownloadString("jira.x.invalid")',
+        'git clone git@jira.x.invalid:r.git', 'curl https://confluence.atlassian.com@jira.x.invalid/', 'curl https://atlassian.com.jira.x.invalid/',
+        'curl https://jira.x.invalid/atlassian.com', 'curl https://docs.atlassian.com/x?redirect=https://jira.x.invalid/',
+        'curl https://docs.atlassian.com/x?redirect=https%3A%2F%2Fjira.x.invalid', 'curl https://docs.atlassian.com\@jira.x.invalid/')) {
     Caso '-' (Cmd $c) $true "URL de Jira em comando: $c"
     Caso 'false' (Cmd $c) $true "URL de Jira em comando (flag false): $c"
 }
 # 2b) correções da revisão adversarial (28/10/2026): barra invertida no userinfo, host sem ponto, --connect-to, git/socat, Host:
-foreach ($c in @("curl 'http://x\@jira.corp/rest'", "wget 'http://a\@jira.corp'", "Invoke-WebRequest 'http://a\@jira.corp'",
-        'curl https://evil.com%5c@jira.corp/', 'curl http://jira.x.com\@evil.com/', 'curl http://docs.atlassian.com\jira.x.com/',
-        'curl jira/rest/api/2/search', 'wget jira/x', 'iwr jira/rest', 'curl --proxy jira http://x.com', 'curl -x jira http://x.com',
-        'curl -xjira.corp:3128 http://x.com', 'curl jira-lab/x',
-        'curl --connect-to ::jira.corp:443 https://example.com', 'curl --connect-to example.com:443:jira.corp:443 https://example.com',
-        'curl --connect-to=::jira.corp:443 https://example.com', 'curl --resolve example.com:443:jira.corp https://example.com',
-        'git clone jira.corp:x.git', 'git clone jira:x.git', 'git remote add o jira.corp:x', 'git ls-remote jira.corp:x',
-        'rsync -av x jira.corp:/tmp', 'scp x jira:/tmp', 'socat - TCP:jira.corp:80', 'socat TCP4:jira:80 -',
-        "curl -H 'Host:jira.corp' http://10.0.0.1", 'curl -H Host:jira.corp http://10.0.0.1')) {
+foreach ($c in @("curl 'http://x\@jira.corp.invalid/rest'", "wget 'http://x\@jira.corp.invalid'", "Invoke-WebRequest 'http://x\@jira.corp.invalid'",
+        'curl https://evil.invalid%5c@jira.corp.invalid/', 'curl http://jira.x.invalid\@evil.invalid/', 'curl http://docs.atlassian.com\jira.x.invalid/',
+        'curl jira/rest/api/2/search', 'wget jira/x', 'iwr jira/rest', 'curl --proxy jira http://x.invalid', 'curl -x jira http://x.invalid',
+        'curl -xjira.corp.invalid:3128 http://x.invalid', 'curl jira-lab/x',
+        'curl --connect-to ::jira.corp.invalid:443 https://example.com', 'curl --connect-to example.com:443:jira.corp.invalid:443 https://example.com',
+        'curl --connect-to=::jira.corp.invalid:443 https://example.com', 'curl --resolve example.com:443:jira.corp.invalid https://example.com',
+        'git clone jira.corp.invalid:x.git', 'git clone jira:x.git', 'git remote add o jira.corp.invalid:x', 'git ls-remote jira.corp.invalid:x',
+        'rsync -av x jira.corp.invalid:/tmp', 'scp x jira:/tmp', 'socat - TCP:jira.corp.invalid:80', 'socat TCP4:jira:80 -',
+        "curl -H 'Host:jira.corp.invalid' http://10.0.0.1", 'curl -H Host:jira.corp.invalid http://10.0.0.1')) {
     Caso '-' (Cmd $c) $true "burla corrigida: $c"
 }
-foreach ($c in @("curl 'http://x\@docs.atlassian.com/x'", "curl http://example.com\@x.com/", 'git push origin HEAD:feat/hooks-url-jira',
+foreach ($c in @("curl 'http://x\@docs.atlassian.com/x'", "curl http://example.com\@x.invalid/", 'git push origin HEAD:feat/hooks-url-jira',
         'git commit -m "guia do jira"', 'git push origin jira-fix', 'git clone https://github.com/dono/dashboardJira.git',
         'curl --connect-to example.com:443:example.org:443 https://example.com', 'curl -H "Host: example.com" http://10.0.0.1',
-        'curl -H Host:localhost http://10.0.0.1', 'socat - TCP:example.com:80', 'curl --proxy proxy.exemplo.com:3128 http://x.com')) {
+        'curl -H Host:localhost http://10.0.0.1', 'socat - TCP:example.com:80', 'curl --proxy proxy.exemplo.com:3128 http://x.invalid')) {
     Caso '-' (Cmd $c) $false "não regressão da burla: $c"
 }
-foreach ($u in @('https://jira.x.com/a', 'jira.x.com/a', 'JIRA-LAB:8080', 'https://u@jira.x.com', 'https://x.com/jira/sidia', 'https://sidia.atlassian.net/x',
-        'https://SIDIA.ATLASSIAN.NET', 'https://jira%2Ex.com/', 'https://confluence.atlassian.com@jira.x.com/', 'https://atlassian.com.jira.x.com/',
-        'https://jira.x.com/atlassian.com', 'https://docs.atlassian.com/x?redirect=https://jira.x.com/',
-        'https://docs.atlassian.com/x?redirect=https%3A%2F%2Fjira.x.com', 'https://docs.atlassian.com\@jira.x.com/', 'https://jira.x.com./')) {
+foreach ($u in @('https://jira.x.invalid/a', 'jira.x.invalid/a', 'JIRA-LAB:8080', 'https://u@jira.x.invalid', 'https://x.invalid/jira/sidia', 'https://sidia.x.atlassian.net/x',
+        'https://SIDIA.x.ATLASSIAN.NET', 'https://jira%2Ex.invalid/', 'https://confluence.atlassian.com@jira.x.invalid/', 'https://atlassian.com.jira.x.invalid/',
+        'https://jira.x.invalid/atlassian.com', 'https://docs.atlassian.com/x?redirect=https://jira.x.invalid/',
+        'https://docs.atlassian.com/x?redirect=https%3A%2F%2Fjira.x.invalid', 'https://docs.atlassian.com\@jira.x.invalid/', 'https://jira.x.invalid./')) {
     Caso '-' (Web 'web_fetch' $u) $true "web_fetch bloqueado: $u"
     Caso '-' (Nav $u) $true "navegador bloqueado: $u"
 }
@@ -515,7 +515,7 @@ foreach ($u in @('https://confluence.atlassian.com/jirasoftwareserver/jira-softw
         'https://support.atlassian.com/jira-software-cloud/docs/x', 'https://developer.atlassian.com/server/jira/platform/rest/',
         'https://docs.atlassian.com/software/jira/docs/api/REST/9.12.0/', 'https://community.atlassian.com/t5/Jira/x',
         'https://www.atlassian.com/software/jira', 'https://DOCS.Atlassian.COM/jira/', 'https://www.atlassian.com./software/jira',
-        'https://jira.x.com@docs.atlassian.com/', 'https://x.atlassian.net/rest')) {
+        'https://jira.x.invalid@docs.atlassian.com/', 'https://x.atlassian.net/rest')) {
     Caso '-' (Web 'web_fetch' $u) $false "web_fetch liberado: $u"
     Caso '-' (Nav $u) $false "navegador liberado: $u"
     Caso '-' (Cmd "curl -s $u") $false "curl liberado: $u"
@@ -523,7 +523,7 @@ foreach ($u in @('https://confluence.atlassian.com/jirasoftwareserver/jira-softw
 Caso '-' (Cmd 'Invoke-WebRequest https://confluence.atlassian.com/jirasoftwareserver') $false 'documentação: Invoke-WebRequest'
 Caso '-' (Cmd 'iwr confluence.atlassian.com/jirasoftwareserver') $false 'documentação: iwr sem esquema'
 # 4) com a flag ligada no arquivo, tudo isso passa
-foreach ($u in @('https://jira.x.com/a', 'jira.x.com/a', 'https://sidia.atlassian.net/x', 'https://x.com/jira/sidia')) {
+foreach ($u in @('https://jira.x.invalid/a', 'jira.x.invalid/a', 'https://sidia.x.atlassian.net/x', 'https://x.invalid/jira/sidia')) {
     Caso 'true' (Web 'web_fetch' $u) $false "flag ligada: web_fetch $u"
     Caso 'true' (Nav $u) $false "flag ligada: navegador $u"
     Caso 'true' (Cmd "curl -s $u") $false "flag ligada: curl $u"
@@ -564,14 +564,14 @@ CasoArq "JIRA_LIVE_ENABLED=$T`n# JIRA_LIVE_ENABLED=false`n" (Cmd $CurlJ) $false 
 # ambienteDoProcessoNaoLiga / ambienteDoProcessoNaoDesliga
 CasoAmb $T "JIRA_LIVE_ENABLED=false`n" (Cmd $CurlJ) $true 'ambiente ligado e arquivo false: bloqueia comando'
 CasoAmb $T $null (Cmd $CurlJ) $true 'ambiente ligado e sem arquivo: bloqueia comando'
-CasoAmb $T $null (Web 'web_fetch' 'https://jira.x.com/a') $true 'ambiente ligado e sem arquivo: bloqueia web_fetch'
-CasoAmb $T $null (Nav 'https://jira.x.com/a') $true 'ambiente ligado e sem arquivo: bloqueia navegador'
+CasoAmb $T $null (Web 'web_fetch' 'https://jira.x.invalid/a') $true 'ambiente ligado e sem arquivo: bloqueia web_fetch'
+CasoAmb $T $null (Nav 'https://jira.x.invalid/a') $true 'ambiente ligado e sem arquivo: bloqueia navegador'
 CasoAmb $T $null (Mcp 'claude_ai_Atlassian_MCP' 'searchJiraIssuesUsingJql') $true 'ambiente ligado e sem arquivo: bloqueia MCP do Atlassian'
 CasoAmb $T $null (Cmd "setx JIRA_LIVE_ENABLED $T") $true 'ambiente ligado e sem arquivo: ligar a flag por setx continua barrado'
 CasoAmb $T "JIRA_LIVE_ENABLED=`n" (Cmd $CurlJ) $true 'ambiente ligado e arquivo com valor vazio: bloqueia'
 CasoAmb 'false' "JIRA_LIVE_ENABLED=$T`n" (Cmd $CurlJ) $false 'ambiente false e arquivo ligado: libera comando'
-CasoAmb 'false' "JIRA_LIVE_ENABLED=$T`n" (Web 'web_fetch' 'https://jira.x.com/a') $false 'ambiente false e arquivo ligado: libera web_fetch'
-CasoAmb '' "JIRA_LIVE_ENABLED=$T`n" (Nav 'https://jira.x.com/a') $false 'ambiente vazio e arquivo ligado: libera navegador'
+CasoAmb 'false' "JIRA_LIVE_ENABLED=$T`n" (Web 'web_fetch' 'https://jira.x.invalid/a') $false 'ambiente false e arquivo ligado: libera web_fetch'
+CasoAmb '' "JIRA_LIVE_ENABLED=$T`n" (Nav 'https://jira.x.invalid/a') $false 'ambiente vazio e arquivo ligado: libera navegador'
 CasoAmb 'false' "JIRA_LIVE_ENABLED=$T`n" (Mcp 'claude_ai_Atlassian_MCP' 'searchJiraIssuesUsingJql') $false 'ambiente false e arquivo ligado: libera MCP'
 CasoAmb 'false' "JIRA_LIVE_ENABLED=$T`n" (Cmd 'echo $JIRA_SAMSUNG_TOKEN') $true 'ambiente false e arquivo ligado: exibir token continua barrado'
 # arquivoIlegivelFalhaFechado: não é arquivo comum, lixo binário

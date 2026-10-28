@@ -68,14 +68,14 @@ for f in - false FALSE talvez " " 1; do
   caso "$f" "$(cmd "curl -s $URL")" true "trava: curl para o Jira"
   caso "$f" "$(cmd 'JIRA_LIVE_ENABLED=true ./gradlew test')" true "trava: ligar a flag dentro do comando"
   caso "$f" "$(mcp 'claude_ai_Atlassian_MCP' 'searchJiraIssuesUsingJql')" true "trava: MCP do Atlassian"
-  caso "$f" "$(web web_fetch 'https://sidia.atlassian.net/wiki/x')" true "trava: web_fetch para o Cloud da Atlassian com sidia"
+  caso "$f" "$(web web_fetch 'https://sidia.x.atlassian.net/wiki/x')" true "trava: web_fetch para o Cloud da Atlassian com sidia"
   caso "$f" "$(nav 'https://JIRA.empresa.invalid/browse/X-1')" true "trava: navegador com host jira (sem diferenciar maiúsculas)"
   caso "$f" "$(nav 'https://empresa.invalid/JIRA/sidia/browse/X-1')" true "trava: navegador com jira e sidia no caminho"
   # 28/10/2026: documentação pública e palavra jira solta passam
   caso "$f" "$(web web_fetch 'https://docs.atlassian.com/jira/rest')" false "liberado: web_fetch para documentação pública da Atlassian"
   caso "$f" "$(nav 'https://empresa.invalid/JIRA/browse/X-1')" false "liberado: navegador com JIRA só no caminho (sem sidia)"
 done
-caso - "$(mcp fetch fetch '{"url":"https://sidia.atlassian.net/wiki"}')" true "trava: MCP de fetch com URL do Cloud da Atlassian com sidia"
+caso - "$(mcp fetch fetch '{"url":"https://sidia.x.atlassian.net/wiki"}')" true "trava: MCP de fetch com URL do Cloud da Atlassian com sidia"
 caso - "$(cmd 'Invoke-WebRequest -Uri https://jira.exemplo.invalid/x')" true "trava: Invoke-WebRequest"
 caso - "$(cmd 'iwr jira.exemplo.invalid')" true "trava: iwr sem esquema na URL"
 caso - "$(cmd 'setx JIRA_LIVE_ENABLED true')" true "trava: ligar a flag com setx"
@@ -321,34 +321,34 @@ caso - "$(web web_fetch 'https://github.com/dono/dashboardJira')" false "palavra
 caso - "$(ler 'docs/jira/checklist-primeira-conexao.md')" false "palavra solta: ler arquivo em pasta jira"
 caso - "$(mcp context7 get-library-docs '{"library":"jira-client"}')" false "palavra solta: argumento MCP sem URL"
 # 2) URL/host de Jira: bloqueada
-for c in 'curl -s https://jira.exemplo.invalid/rest/api/2/myself' 'curl https://meu-jira.x.com/a' 'curl http://jira-lab:8080/' 'curl jira.exemplo.invalid/x' \
-         'curl jira-lab:8080' 'wget https://JIRA.Exemplo.Invalid/' 'curl https://jira.exemplo.invalid./x' 'curl https://u:s@jira.x.com/' \
-         'curl https://jira%2Eexemplo.invalid/x' 'curl https://x.com/jira/sidia' 'curl https://sidia.atlassian.net/x' 'ssh jira-lab' \
-         'ssh usuario@jira.x.com' 'nc -z jira-lab 8080' 'iwr jira.exemplo.invalid' 'Invoke-RestMethod -Uri https://jira.x/rest' \
-         'Invoke-WebRequest jira.x.com' 'curl.exe https://jira.x.com' '(New-Object Net.WebClient).DownloadString("jira.x.com")' \
-         'curl https://confluence.atlassian.com@jira.x.com/' 'curl https://atlassian.com.jira.x.com/' 'curl https://jira.x.com/atlassian.com' \
-         'curl https://docs.atlassian.com/x?redirect=https://jira.x.com/' 'curl https://docs.atlassian.com/x?redirect=https%3A%2F%2Fjira.x.com' \
-         'curl https://docs.atlassian.com\@jira.x.com/'; do
+for c in 'curl -s https://jira.exemplo.invalid/rest/api/2/myself' 'curl https://meu-jira.x.invalid/a' 'curl http://jira-lab.invalid:8080/' 'curl jira.exemplo.invalid/x' \
+         'curl jira-lab.invalid:8080' 'wget https://JIRA.Exemplo.Invalid/' 'curl https://jira.exemplo.invalid./x' 'curl https://u:s@jira.x.invalid/' \
+         'curl https://jira%2Eexemplo.invalid/x' 'curl https://x.invalid/jira/sidia' 'curl https://sidia.x.atlassian.net/x' 'ssh jira-lab' \
+         'ssh usuario@jira.x.invalid' 'nc -z jira-lab 8080' 'iwr jira.exemplo.invalid' 'Invoke-RestMethod -Uri https://jira.x.invalid/rest' \
+         'Invoke-WebRequest jira.x.invalid' 'curl.exe https://jira.x.invalid' '(New-Object Net.WebClient).DownloadString("jira.x.invalid")' \
+         'curl https://confluence.atlassian.com@jira.x.invalid/' 'curl https://atlassian.com.jira.x.invalid/' 'curl https://jira.x.invalid/atlassian.com' \
+         'curl https://docs.atlassian.com/x?redirect=https://jira.x.invalid/' 'curl https://docs.atlassian.com/x?redirect=https%3A%2F%2Fjira.x.invalid' \
+         'curl https://docs.atlassian.com\@jira.x.invalid/'; do
   caso - "$(cmd "$c")" true "URL de Jira em comando: $c"
   caso false "$(cmd "$c")" true "URL de Jira em comando (flag false): $c"
 done
 # 2b) correções da revisão adversarial (28/10/2026): barra invertida no userinfo, host sem ponto, --connect-to, git/socat, Host:
 BS='\'
-for c in "curl 'http://x${BS}@jira.corp/rest'" "wget 'http://a${BS}@jira.corp'" "Invoke-WebRequest 'http://a${BS}@jira.corp'" \
-         'curl https://evil.com%5c@jira.corp/' 'curl jira/rest/api/2/search' 'wget jira/x' 'iwr jira/rest' 'curl --proxy jira http://x.com' \
-         'curl --connect-to ::jira.corp:443 https://example.com' 'curl --connect-to example.com:443:jira.corp:443 https://example.com' \
-         'curl --resolve example.com:443:jira.corp https://example.com' 'git clone jira.corp:x.git' 'git clone jira:x.git' \
-         'git remote add o jira.corp:x' 'rsync -av x jira.corp:/tmp' 'socat - TCP:jira.corp:80' "curl -H 'Host:jira.corp' http://10.0.0.1"; do
+for c in "curl 'http://x${BS}@jira.corp.invalid/rest'" "wget 'http://x${BS}@jira.corp.invalid'" "Invoke-WebRequest 'http://x${BS}@jira.corp.invalid'" \
+         'curl https://evil.invalid%5c@jira.corp.invalid/' 'curl jira/rest/api/2/search' 'wget jira/x' 'iwr jira/rest' 'curl --proxy jira http://x.invalid' \
+         'curl --connect-to ::jira.corp.invalid:443 https://example.com' 'curl --connect-to example.com:443:jira.corp.invalid:443 https://example.com' \
+         'curl --resolve example.com:443:jira.corp.invalid https://example.com' 'git clone jira.corp.invalid:x.git' 'git clone jira:x.git' \
+         'git remote add o jira.corp.invalid:x' 'rsync -av x jira.corp.invalid:/tmp' 'socat - TCP:jira.corp.invalid:80' "curl -H 'Host:jira.corp.invalid' http://10.0.0.1"; do
   caso - "$(cmd "$c")" true "burla corrigida: $c"
 done
 for c in "curl 'http://x${BS}@example.com/'" 'git push origin HEAD:feat/hooks-url-jira' 'git commit -m "guia do jira"' 'git push origin jira-fix' \
          'curl --connect-to example.com:443:example.org:443 https://example.com' 'curl -H "Host: example.com" http://10.0.0.1' 'socat - TCP:example.com:80'; do
   caso - "$(cmd "$c")" false "não regressão da burla: $c"
 done
-for u in 'https://jira.x.com/a' 'jira.x.com/a' 'JIRA-LAB:8080' 'https://u@jira.x.com' 'https://x.com/jira/sidia' 'https://sidia.atlassian.net/x' 'https://SIDIA.ATLASSIAN.NET' \
-         'https://jira%2Ex.com/' 'https://confluence.atlassian.com@jira.x.com/' 'https://atlassian.com.jira.x.com/' 'https://jira.x.com/atlassian.com' \
-         'https://docs.atlassian.com/x?redirect=https://jira.x.com/' 'https://docs.atlassian.com/x?redirect=https%3A%2F%2Fjira.x.com' \
-         'https://docs.atlassian.com\@jira.x.com/' 'https://jira.x.com./'; do
+for u in 'https://jira.x.invalid/a' 'jira.x.invalid/a' 'JIRA-LAB:8080' 'https://u@jira.x.invalid' 'https://x.invalid/jira/sidia' 'https://sidia.x.atlassian.net/x' 'https://SIDIA.x.ATLASSIAN.NET' \
+         'https://jira%2Ex.invalid/' 'https://confluence.atlassian.com@jira.x.invalid/' 'https://atlassian.com.jira.x.invalid/' 'https://jira.x.invalid/atlassian.com' \
+         'https://docs.atlassian.com/x?redirect=https://jira.x.invalid/' 'https://docs.atlassian.com/x?redirect=https%3A%2F%2Fjira.x.invalid' \
+         'https://docs.atlassian.com\@jira.x.invalid/' 'https://jira.x.invalid./'; do
   caso - "$(web web_fetch "$u")" true "web_fetch bloqueado: $u"
   caso - "$(nav "$u")" true "navegador bloqueado: $u"
 done
@@ -363,7 +363,7 @@ for u in 'https://confluence.atlassian.com/jirasoftwareserver/jira-software-serv
          'https://support.atlassian.com/jira-software-cloud/docs/x' 'https://developer.atlassian.com/server/jira/platform/rest/' \
          'https://docs.atlassian.com/software/jira/docs/api/REST/9.12.0/' 'https://community.atlassian.com/t5/Jira/x' \
          'https://www.atlassian.com/software/jira' 'https://DOCS.Atlassian.COM/jira/' 'https://www.atlassian.com./software/jira' \
-         'https://jira.x.com@docs.atlassian.com/' 'https://x.atlassian.net/rest'; do
+         'https://jira.x.invalid@docs.atlassian.com/' 'https://x.atlassian.net/rest'; do
   caso - "$(web web_fetch "$u")" false "web_fetch liberado: $u"
   caso - "$(nav "$u")" false "navegador liberado: $u"
   caso - "$(cmd "curl -s $u")" false "curl liberado: $u"
@@ -371,7 +371,7 @@ done
 caso - "$(cmd 'Invoke-WebRequest https://confluence.atlassian.com/jirasoftwareserver')" false "documentação: Invoke-WebRequest"
 caso - "$(cmd 'iwr confluence.atlassian.com/jirasoftwareserver')" false "documentação: iwr sem esquema"
 # 4) com a flag ligada no arquivo, tudo isso passa
-for u in 'https://jira.x.com/a' 'jira.x.com/a' 'https://sidia.atlassian.net/x' 'https://x.com/jira/sidia'; do
+for u in 'https://jira.x.invalid/a' 'jira.x.invalid/a' 'https://sidia.x.atlassian.net/x' 'https://x.invalid/jira/sidia'; do
   caso true "$(web web_fetch "$u")" false "flag ligada: web_fetch $u"
   caso true "$(nav "$u")" false "flag ligada: navegador $u"
   caso true "$(cmd "curl -s $u")" false "flag ligada: curl $u"
@@ -401,13 +401,13 @@ casoa "JIRA_LIVE_ENABLED=false\nJIRA_LIVE_ENABLED=$T\n" "$(cmd "$CURL_J")" false
 # ambienteDoProcessoNaoLiga / ambienteDoProcessoNaoDesliga (em todas as ferramentas que olham a flag)
 casoe "$T" "JIRA_LIVE_ENABLED=false\n" "$(cmd "$CURL_J")" true "ambiente ligado e arquivo false: bloqueia comando"
 casoe "$T" "-" "$(cmd "$CURL_J")" true "ambiente ligado e sem arquivo: bloqueia comando"
-casoe "$T" "-" "$(web web_fetch 'https://jira.x.com/a')" true "ambiente ligado e sem arquivo: bloqueia web_fetch"
-casoe "$T" "-" "$(nav 'https://jira.x.com/a')" true "ambiente ligado e sem arquivo: bloqueia navegador"
+casoe "$T" "-" "$(web web_fetch 'https://jira.x.invalid/a')" true "ambiente ligado e sem arquivo: bloqueia web_fetch"
+casoe "$T" "-" "$(nav 'https://jira.x.invalid/a')" true "ambiente ligado e sem arquivo: bloqueia navegador"
 casoe "$T" "-" "$(mcp 'claude_ai_Atlassian_MCP' 'searchJiraIssuesUsingJql')" true "ambiente ligado e sem arquivo: bloqueia MCP do Atlassian"
 casoe "$T" "-" "$(cmd "setx JIRA_LIVE_ENABLED $T")" true "ambiente ligado e sem arquivo: ligar a flag por setx continua barrado"
 casoe "false" "JIRA_LIVE_ENABLED=$T\n" "$(cmd "$CURL_J")" false "ambiente false e arquivo ligado: libera comando"
-casoe "false" "JIRA_LIVE_ENABLED=$T\n" "$(web web_fetch 'https://jira.x.com/a')" false "ambiente false e arquivo ligado: libera web_fetch"
-casoe "" "JIRA_LIVE_ENABLED=$T\n" "$(nav 'https://jira.x.com/a')" false "ambiente vazio e arquivo ligado: libera navegador"
+casoe "false" "JIRA_LIVE_ENABLED=$T\n" "$(web web_fetch 'https://jira.x.invalid/a')" false "ambiente false e arquivo ligado: libera web_fetch"
+casoe "" "JIRA_LIVE_ENABLED=$T\n" "$(nav 'https://jira.x.invalid/a')" false "ambiente vazio e arquivo ligado: libera navegador"
 casoe "false" "JIRA_LIVE_ENABLED=$T\n" "$(mcp 'claude_ai_Atlassian_MCP' 'searchJiraIssuesUsingJql')" false "ambiente false e arquivo ligado: libera MCP"
 casoe "false" "JIRA_LIVE_ENABLED=$T\n" "$(cmd 'echo $JIRA_SAMSUNG_TOKEN')" true "ambiente false e arquivo ligado: exibir token continua barrado"
 # arquivoIlegivelFalhaFechado
