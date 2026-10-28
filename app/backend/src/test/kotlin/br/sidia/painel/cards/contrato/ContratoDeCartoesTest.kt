@@ -255,7 +255,7 @@ class ContratoDeCartoesTest {
         assertEquals(esperado, dto.linhas.size)
         assertEquals("card.ts03.oQueMostra", dto.definicaoChave)
         assertEquals(listOf("chave", "resumo", "responsavel", "status", "detalhe"), dto.colunas)
-        // O link para o Jira só existe quando a Tarefa 4 o libera; aqui nunca.
+        // Com a flag do Jira desligada (o padrão), o link para o Jira nunca existe (ver LinkJiraTest para o caso ligado).
         assertEquals(null, dto.linkJira)
         // Com filtro, a rota respeita o mesmo recorte.
         val filtrado = Json.decodeFromString<DrillGenericoDto>(get("gerente.exemplo", "/api/cartoes/TS-01/tasks?segmento=analisadas&squad=Alfa").corpo)

@@ -4,7 +4,7 @@ import { createPortal } from 'react-dom'
 import { useLang } from '../../i18n/LangProvider'
 import { ErroDaApi } from '../../api/client'
 import { fetchDrill, type Filtros } from './api'
-import { baixarCsv } from './csv'
+import { baixarCsv } from '../../shared/csv'
 import { inteiro, linhaFiltrosCsv } from './format'
 
 /**

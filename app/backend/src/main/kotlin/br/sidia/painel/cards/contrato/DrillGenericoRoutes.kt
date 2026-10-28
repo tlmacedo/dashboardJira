@@ -2,6 +2,7 @@ package br.sidia.painel.cards.contrato
 
 import br.sidia.painel.AppContext
 import br.sidia.painel.cards.CODIGO_SEGMENTO_INVALIDO
+import br.sidia.painel.cards.EXTRAS_DE_AUDITORIA
 import br.sidia.painel.cards.ErroHttp
 import br.sidia.painel.cards.executar
 import br.sidia.painel.cards.papeisVigentes
@@ -36,14 +37,16 @@ fun Route.rotasDeDrillGenerico(ctx: AppContext, catalogo: CatalogoDeCartoes, sto
             if (!cartao.meta.temDrill) throw ErroHttp(HttpStatusCode.NotFound)
             val segmento = call.request.queryParameters["segmento"] ?: throw ErroHttp(HttpStatusCode.BadRequest, CODIGO_SEGMENTO_INVALIDO)
             val linhas = cartao.drill(EntradaDeCartao(ctx, store, principal, call.request.queryParameters), segmento)
+            // A auditoria guarda a quantidade, nunca as chaves das tasks.
+            call.attributes.put(EXTRAS_DE_AUDITORIA, mapOf("total" to linhas.size.toString()))
             DrillGenericoDto(
                 tituloChave = cartao.meta.tituloChave,
                 definicaoChave = cartao.meta.oQueMostraChave,
                 total = linhas.size,
                 colunas = COLUNAS_DA_GAVETA,
                 linhas = linhas,
-                // O link para o Jira é montado no backend e só existe com o acesso liberado (Tarefa 4).
-                linkJira = null,
+                // Montado aqui, só com a flag ligada e a instância configurada; o frontend só usa o que vem pronto.
+                linkJira = LinkJira.paraChaves(ctx.settings, ctx.campos, cartao.instancia, linhas.map { it.key }),
             )
         }
     }

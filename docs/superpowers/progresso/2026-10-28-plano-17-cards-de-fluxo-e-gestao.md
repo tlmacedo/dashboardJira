@@ -11,7 +11,7 @@ Branch: `feat/contrato-do-cartao` (bloco 17a = Tarefas 1 a 7). Executor: Claude 
 - [x] Tarefa 1: registro de cartões e catálogo por papel (testes: backend 869 totais, 0 falhas; +8 em `CatalogoDeCartoesTest`)
 - [x] Tarefa 2: drill genérico e teste de contrato (testes: ver contagem final no fechamento; +13 em `ContratoDeCartoesTest`)
 - [x] Tarefa 3: componente `Cartao` e ajuda (ⓘ) (frontend 86 totais, 0 falhas; +12 em `Cartao.test.tsx`; build ok)
-- [ ] Tarefa 4: gaveta de tasks compartilhada e "Abrir no Jira"
+- [x] Tarefa 4: gaveta de tasks compartilhada e "Abrir no Jira" (backend 890 totais, 0 falhas; +8 em `LinkJiraTest`; frontend 104 totais, 0 falhas; +18 em `GavetaDeTasks.test.tsx`, +4 em `csv.test.ts`, −4 que saíram de `TempoEmStatus.test.tsx` sem mudança de asserção; build ok)
 - [ ] Tarefa 5: migrar Tempo em status e Sincronização para o contrato
 - [ ] Tarefa 6: tela Mapa de cartões
 - [ ] Tarefa 7: revisão visual, acessibilidade e fechamento do 17a
@@ -45,6 +45,12 @@ Branch: `feat/contrato-do-cartao` (bloco 17a = Tarefas 1 a 7). Executor: Claude 
 - Ruling: no tipo `kpi` o corpo (valor, legenda, estado e "Ver tasks") fica DENTRO do botão da ação principal; título, chip e ⓘ ficam fora (irmãos) e acima da camada `::after` — o nome acessível do botão é título + conteúdo por `aria-labelledby`. Nas outras variantes o corpo é livre (z-index acima do `::after`) e a ação é um botão de rodapé. Preserva as asserções de Tempo em status (botão com o valor no texto e o símbolo ⏸).
 - Ruling: os formatadores genéricos (`numero`, `inteiro`, `percentual`, `dataCurta`) passaram para `shared/format.ts`; `screens/TempoEmStatus/format.ts` os reexporta e mantém o que é da tela — o `Cartao` e a gaveta precisam deles e não devem importar de uma tela.
 - Ruling: o ⓘ tem o rótulo fixo "Sobre este cartão" (sem o título) — um rótulo com o título casaria com `getByRole('button', {name: /Paradas além do normal/})` nos testes existentes e duplicaria o nome do cartão para leitor de tela, que já anuncia o `<article>` rotulado pelo título.
+- Ruling: o montador do link é `LinkJira.paraChaves(settings, campos, instancia, chaves)` (objeto em `cards/contrato/`); usa `JqlBuilder.keysIn` (chave suspeita é rejeitada, nunca escapada) e devolve `https://host[:porta][/contexto]/issues/?jql=...`; base com credencial, sem https, com consulta ou fragmento dá `null`. Como o Plano 10 ainda não existe, não há `LinkJira` anterior a reutilizar; o Plano 10 deve estender este objeto.
+- Ruling: o cartão informa a instância do Jira pelo membro opcional `CartaoRegistrado.instancia` (padrão nulo; TS-0n devolve `samsung`) — o drill genérico precisa dela para o link; membro com valor padrão não quebra os cartões futuros.
+- Ruling: o `access_log` guarda a quantidade pelo extra `total` (atributo `EXTRAS_DE_AUDITORIA` da chamada, posto pelo bloco da rota); chaves de issue, JQL e endereço do Jira nunca entram (testado).
+- Ruling: a gaveta só aceita `linkJira` https e sem credencial (defesa contra `javascript:`/`http:` vindos de uma resposta adulterada), além de o backend já montar só https.
+- Ruling: o teste `pessoasEmOrdemAlfabetica` do plano ficou como `ordemDaListaVemDaApiSemRanking` na gaveta (a lista é de tasks, não de pessoas: a ordem natural de chaves vem do backend e a gaveta não reordena por responsável nem por tempo); a ordem alfabética de pessoas é verificada no contrato do backend (`drillOrdenaPessoasAlfabeticamente`, segmentos de TS-06) e na matriz da tela, que já tem teste. A coluna Responsável mostra `—` para null (fora da visão OU sem responsável: o `DrillRow` não distingue os dois, então "outra pessoa" seria falso para task sem dono) — custo se errado: distinguir no DTO e trocar o texto.
+- Ruling: `csv.ts` foi para `shared/csv.ts` e seus 4 testes para `shared/csv.test.ts`; as regras de tabela e de gaveta ganharam `shared/tabela.css` e `shared/gaveta.css` (as cópias em `tempo.css` saem na Tarefa 5, junto do `DrillDrawer`).
 - Ruling: o papel que filtra o catálogo vem de `papeisVigentes` (diretório de hoje; exceção só do `dev`), a mesma regra de `/api/me`, e não do `principal.roles` bruto.
 
 ## Minor adiados

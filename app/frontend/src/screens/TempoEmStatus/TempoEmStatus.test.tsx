@@ -6,7 +6,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { LangProvider } from '../../i18n/LangProvider'
 import { ThemeProvider } from '../../theme/ThemeProvider'
 import { Shell } from '../../shell/Shell'
-import { neutralizarCelulaCsv, paraCsv } from './csv'
 import { TempoEmStatus } from './TempoEmStatus'
 import type { DrillRow, TempoEmStatusDto } from './api'
 
@@ -253,30 +252,7 @@ describe('tela Tempo em status', () => {
   })
 })
 
-describe('CSV', () => {
-  it('neutralizaFormulas', () => {
-    for (const perigo of ['=1+1', '+1', '-1', '@x', '\tx', '\rx']) {
-      expect(neutralizarCelulaCsv(perigo).startsWith("'")).toBe(true)
-    }
-    expect(neutralizarCelulaCsv('TG-1')).toBe('TG-1')
-  })
-
-  it('escapaAspasESeparador', () => {
-    expect(paraCsv([['a;b', 'c"d']])).toBe('"a;b";"c""d"')
-  })
-
-  it('neutralizaAposEspacosEAspas', () => {
-    for (const perigo of [' =HYPERLINK("x")', '"=cmd"', "'+1", '\t=1', ' =1', '​@x', '  \t-1']) {
-      expect(neutralizarCelulaCsv(perigo).startsWith("'")).toBe(true)
-    }
-    expect(neutralizarCelulaCsv('TG-1 resumo normal')).toBe('TG-1 resumo normal')
-    expect(neutralizarCelulaCsv('1,5 dias')).toBe('1,5 dias')
-  })
-
-  it('escapeContinuaCorretoDepoisDaNeutralizacao', () => {
-    expect(paraCsv([['="a";b']])).toBe('"\'=""a"";b"')
-  })
-})
+// Os testes do CSV (neutralização de fórmula, aspas, separador) foram para `shared/csv.test.ts`.
 
 describe('gaveta', () => {
   it('csvDaGavetaLevaFiltrosEUnidade', async () => {

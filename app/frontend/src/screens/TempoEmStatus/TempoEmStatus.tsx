@@ -12,7 +12,7 @@ import {
   type TempoEmStatusDto,
   type Unidade,
 } from './api'
-import { baixarCsv } from './csv'
+import { baixarCsv } from '../../shared/csv'
 import { DrillDrawer } from './DrillDrawer'
 import { dataCurta, faixaDe, inteiro, linhaFiltrosCsv, numero, percentual, SIMBOLO, type Faixa } from './format'
 import './tempo.css'

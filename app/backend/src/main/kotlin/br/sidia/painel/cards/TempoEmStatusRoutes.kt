@@ -25,6 +25,7 @@ import io.ktor.server.request.path
 import io.ktor.server.response.respond
 import io.ktor.server.routing.Route
 import io.ktor.server.routing.get
+import io.ktor.util.AttributeKey
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -68,6 +69,12 @@ private val FILTROS_AUDITADOS = setOf("squad", "pessoa", "tipo", "os", "de", "at
 private val FORMATO_USERNAME = Regex("[a-z0-9._-]{1,64}")
 
 private val log = LoggerFactory.getLogger("br.sidia.painel.cards")
+
+/**
+ * Dados a mais para o `access_log`, postos pelo bloco da rota (ex.: `total`, a quantidade de linhas devolvidas).
+ * Nunca chaves de issue, JQL nem endereço do Jira: a auditoria guarda rota e quantidade.
+ */
+internal val EXTRAS_DE_AUDITORIA = AttributeKey<Map<String, String>>("painel.auditoria.extras")
 
 /**
  * Resposta de erro de requisição: só o status, nunca corpo (nada de eco de valores nem de detalhes). Com [codigo],
@@ -227,7 +234,8 @@ internal suspend inline fun <reified T : Any> ApplicationCall.executar(
         withContext(Dispatchers.IO) {
             auditoria.record(
                 principal.userId, request.path(),
-                filtrosAuditados(this@executar) + ("resultado" to status.value.toString()),
+                filtrosAuditados(this@executar) + (attributes.getOrNull(EXTRAS_DE_AUDITORIA).orEmpty()) +
+                    ("resultado" to status.value.toString()),
                 ctx.clock.instant(),
             )
         }

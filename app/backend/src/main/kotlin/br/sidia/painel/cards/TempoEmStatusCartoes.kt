@@ -23,6 +23,8 @@ internal class CartaoTempoEmStatus(
     /** Os números do cartão por segmento, a partir do mesmo cálculo da tela. */
     private val numeros: (TempoEmStatusDto) -> Map<String, Int>,
 ) : CartaoRegistrado {
+    override val instancia: String = INSTANCIA_TEMPO_EM_STATUS
+
     override suspend fun valores(e: EntradaDeCartao): Map<String, Int> {
         val filtros = lerFiltros(e.parametros, hoje(e.ctx))
         return numeros(calcular(e.ctx, e.store, e.principal, filtros).dto)

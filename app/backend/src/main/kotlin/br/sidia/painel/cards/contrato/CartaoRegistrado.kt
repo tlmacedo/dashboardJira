@@ -33,6 +33,9 @@ class EntradaDeCartao(
 interface CartaoRegistrado {
     val meta: CartaoMeta
 
+    /** Instância do Jira de onde as tasks do drill vêm; serve só para montar o link "Abrir no Jira". */
+    val instancia: String? get() = null
+
     suspend fun valores(e: EntradaDeCartao): Map<String, Int>
 
     suspend fun drill(e: EntradaDeCartao, segmento: String): List<LinhaDeDrill>
