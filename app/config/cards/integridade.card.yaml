@@ -1,0 +1,44 @@
+# Ficha da Integridade (Plano 7a). Estrita: chave desconhecida falha ao carregar. SÓ o GERENTE vê, e toda consulta é auditada.
+# A leitura no banco aplica estes tipos (FiltroDeFicha) e NÃO exclui status: cancelamento também é lido (o sinal só vale para
+# task concluída de verdade, mas a ficha é a mesma da sincronização). O JQL só serve à sincronização e ao ensaio.
+
+id: integridade
+titulo: Integridade
+instancia: samsung
+
+campos:
+  - OS Version
+  - priority
+  - timeoriginalestimate
+
+filtrosFixos:
+  project: ["TG-Basic"]
+  issuetype: ["Checklist", "Checklist TG", "Checklist Review", "Feature check", "TG Feature check", "Task"]
+
+parametros:
+  - nome: squad
+    tipo: squad
+    obrigatorio: false
+  - nome: periodo
+    tipo: periodo
+    obrigatorio: false
+
+formula: >-
+  Doze sinais de possível manipulação de prazo e de fluxo, calculados na consulta sobre o changelog (nada é guardado): resgate
+  por prorrogação, troca de responsável logo antes de fechar, criada e fechada em minutos, reabre e fecha, fechamento em lote,
+  vencimento prorrogado, vencimento definido tarde, pulou o fluxo, estimativa aumentada, label de criticidade removida, fechada
+  por outro e fechada no limite do prazo (fuso de Manaus). Cada sinal tem gravidade de 1 a 3 e limiares em integridade.yaml. O
+  nível por pessoa (alto, médio, normal) usa pontos, a taxa contra a mediana do time e os sinais graves. É INDÍCIO para revisão
+  humana, não prova de má-fé.
+
+exemplo: >-
+  periodo dos últimos 90 dias (máximo de 180), squad=[dev.alfa].
+
+aceite:
+  - Só o GERENTE vê; coordenador, squad leader e usuário recebem 403 na tela, na API, na gaveta e no catálogo.
+  - Toda consulta (200, 400, 403 e 404) fica no access_log, sem chave de issue; se não for possível gravar, a resposta é 503 sem dados.
+  - Em produção, sem o aceite do DPO, só fixtures e demonstração (403 AGUARDANDO_ACEITE_DPO).
+  - Pessoas em ordem alfabética, sem posição nem nota; o texto diz sempre "indício, não prova".
+  - Cada número abre as mesmas tasks que o formam.
+
+expandChangelog: true

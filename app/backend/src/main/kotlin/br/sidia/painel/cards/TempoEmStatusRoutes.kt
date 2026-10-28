@@ -12,6 +12,8 @@ import br.sidia.painel.domain.TimeInStatusResult
 import br.sidia.painel.domain.TimeUnitMode
 import br.sidia.painel.domain.UnmappedStatusException
 import br.sidia.painel.http.ErroDto
+import br.sidia.painel.lgpd.BloqueadoPeloDpoException
+import br.sidia.painel.lgpd.TravaDpo
 import br.sidia.painel.security.Principal
 import br.sidia.painel.security.Role
 import br.sidia.painel.security.Visibility
@@ -206,24 +208,98 @@ suspend fun registrarNegacaoSemPapel(auditoria: AccessLog, ctx: AppContext, call
  * Rota como vai para o `access_log`: o PADRÃO, sem a chave de issue do caminho (a auditoria guarda rota e quantidade,
  * nunca chaves). Hoje só o histórico da auditoria leva a chave no caminho.
  */
-internal fun rotaParaRegistro(caminho: String): String =
-    if (caminho.startsWith("/api/auditoria/historico/")) "/api/auditoria/historico/{key}" else caminho
+internal fun rotaParaRegistro(caminho: String): String {
+    val normal = normalizarCaminho(caminho)
+    return if (normal.startsWith("/api/auditoria/historico/", ignoreCase = true)) "/api/auditoria/historico/{key}" else normal
+}
+
+/**
+ * Caminho como o roteador o enxerga e como a auditoria deve guardá-lo: percent-decode repetido (até 3 vezes, para `%252D`),
+ * sem `;parametros`, sem barras duplas, `.` nem `..`. Um caminho codificado (`/api/%69ntegridade`) vira o mesmo texto do normal
+ * e nunca escapa da máscara nem do rastro de quem consultou. Caixa preservada (a comparação ignora caixa onde importa).
+ */
+internal fun normalizarCaminho(caminho: String): String {
+    var atual = caminho.substringBefore('?')
+    repeat(3) {
+        val decodificado = try {
+            java.net.URLDecoder.decode(atual.replace("+", "%2B"), Charsets.UTF_8)
+        } catch (e: IllegalArgumentException) {
+            return@repeat
+        }
+        if (decodificado == atual) return@repeat
+        atual = decodificado
+    }
+    val segmentos = ArrayDeque<String>()
+    for (bruto in atual.replace('\\', '/').split('/')) {
+        val s = bruto.substringBefore(';').filter { !it.isISOControl() }
+        when (s) {
+            "", "." -> Unit
+            ".." -> segmentos.removeLastOrNull()
+            else -> segmentos.addLast(s)
+        }
+    }
+    return "/" + segmentos.joinToString("/")
+}
+
+/** Posta pela rota que atende um módulo sensível, mesmo antes de o caminho dizer: o registro mascara o achado. */
+internal val ROTA_SENSIVEL = AttributeKey<Boolean>("painel.auditoria.sensivel")
 
 internal fun hoje(ctx: AppContext): LocalDate = LocalDate.now(ctx.clock.withZone(ctx.settings.zone))
 
-private fun filtrosAuditados(call: ApplicationCall): Map<String, String> =
-    call.request.queryParameters.entries()
-        .filter { it.key in FILTROS_AUDITADOS }
-        .associate { it.key to valorAuditado(it.key, it.value.firstOrNull().orEmpty()) }
+private fun filtrosAuditados(call: ApplicationCall): Map<String, String> {
+    val sensivel = rotaSensivel(call.request.path()) || call.attributes.getOrNull(ROTA_SENSIVEL) == true
+    return call.request.queryParameters.entries()
+        .filter { it.key in FILTROS_AUDITADOS && !(sensivel && it.key in FILTROS_QUE_NOMEIAM_O_ACHADO) }
+        .associate { it.key to valorAuditado(it.key, it.value.firstOrNull().orEmpty(), sensivel) }
+}
+
+/**
+ * Rotas dos módulos sensíveis ([br.sidia.painel.lgpd.ModuloSensivel]) que HOJE passam pela `TravaDpo`: a Integridade e os
+ * cartões `IN-nn`. O `access_log` guarda ali QUEM consultou o módulo, nunca o achado: sem id de pessoa, sem nome de sinal e sem
+ * contagem. A decisão usa o caminho NORMALIZADO e sem diferenciar caixa, mais o atributo [ROTA_SENSIVEL] posto pela própria
+ * rota/cartão resolvido. A Auditoria (`ModuloSensivel.AUDITORIA`) NÃO está aqui nem passa pela `TravaDpo` ainda: é do Plano 11;
+ * um módulo novo que passe pela trava acrescenta o seu prefixo aqui.
+ */
+private val PREFIXOS_SENSIVEIS = listOf("/api/integridade", "/api/cartoes/in-")
+
+internal fun rotaSensivel(caminho: String): Boolean {
+    val normal = normalizarCaminho(caminho).lowercase(java.util.Locale.ROOT)
+    return PREFIXOS_SENSIVEIS.any { normal.startsWith(it) }
+}
+
+/** Filtros que, numa rota sensível, apontariam para a pessoa ou o sinal consultado: não são gravados. */
+private val FILTROS_QUE_NOMEIAM_O_ACHADO = setOf("pessoa", "sinal")
+
+/** Segmentos sem pessoa nem sinal que podem ir inteiros para a auditoria de uma rota sensível. */
+private val SEGMENTOS_NEUTROS = setOf("todas", "afetadas")
 
 /** Marcador gravado no lugar de um eixo ou medida fora da lista fechada (o valor cru nunca vai para a auditoria). */
 private const val VALOR_INVALIDO = "(invalido)"
 
 /** Eixos e medida do Cruzamentos só vão ao `access_log` se forem ids da lista fechada; qualquer outro texto vira o marcador. */
-private fun valorAuditado(parametro: String, valor: String): String = when (parametro) {
+private fun valorAuditado(parametro: String, valor: String, sensivel: Boolean): String = when (parametro) {
     "linhas", "colunas" -> if (Eixo.deId(valor) != null) valor else VALOR_INVALIDO
     "medida" -> if (Medida.deId(valor) != null) valor else VALOR_INVALIDO
+    // Rota sensível: só o TIPO do segmento (`pessoa:*`, `nivel:*`, `sinal:*`), nunca o id da pessoa nem o nome do sinal.
+    "segmento" -> when {
+        sensivel -> segmentoSensivelParaRegistro(valor)
+        // Segmento de gaveta que cita uma chave de issue (pedido malformado ou plantado; qualquer caixa): a chave nunca vai para a auditoria.
+        CHAVE_DE_ISSUE_NO_TEXTO.containsMatchIn(valor) -> VALOR_INVALIDO
+        else -> valor
+    }
     else -> valor
+}
+
+/** Forma de uma chave de issue do Jira (`TG-701`) em qualquer lugar do texto. */
+private val CHAVE_DE_ISSUE_NO_TEXTO = Regex("\\b[A-Za-z][A-Za-z0-9_]*-\\d+\\b")
+
+private val TIPOS_DE_SEGMENTO_SENSIVEL = setOf("pessoa", "nivel", "sinal")
+
+/** `pessoa:bruno` vira `pessoa:*`; segmento neutro passa inteiro; qualquer outra coisa vira o marcador de inválido. */
+private fun segmentoSensivelParaRegistro(valor: String): String {
+    if (valor in SEGMENTOS_NEUTROS) return valor
+    val tipo = valor.substringBefore(':')
+    return if (':' in valor && tipo in TIPOS_DE_SEGMENTO_SENSIVEL) "$tipo:*" else VALOR_INVALIDO
 }
 
 /**
@@ -245,6 +321,10 @@ internal suspend inline fun <reified T : Any> ApplicationCall.executar(
     } catch (e: ErroHttp) {
         status = e.status
         codigoDoErro = e.codigo
+    } catch (e: BloqueadoPeloDpoException) {
+        // Módulo sensível fechado pela trava do DPO: 403 com o código estável, sem dado; a consulta fica no `access_log`.
+        status = HttpStatusCode.Forbidden
+        codigoDoErro = TravaDpo.CODIGO
     } catch (e: CancellationException) {
         throw e
     } catch (e: Exception) {

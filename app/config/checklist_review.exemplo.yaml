@@ -1,0 +1,24 @@
+# Modelo das regras do card Checklist × Review (copie para checklist_review.yaml e ajuste). Não leva dado pessoal.
+# Estrito: chave desconhecida falha ao carregar. Os tipos de Review NÃO ficam aqui: vêm de vinculos.yaml (fonte única,
+# a mesma da Divergência Task × Review). O par é o link "Blocks / is blocked by" (issue_link), nunca o campo parent.
+versao: 1
+
+# Tipos de issue que contam como o "pai" do par (o lado Checklist), sem diferenciar maiúsculas. Não pode ser vazio.
+tiposPai: [Checklist, "Checklist TG"]
+
+# Amostra mínima (n) para o painel afirmar um aprendizado, um lift de label ou uma taxa por faixa. Abaixo disto o número
+# aparece, marcado como "n baixo", e nenhuma frase é gerada. Vale de 1 a 1000.
+amostraMinima: 5
+
+# Fração de pares a partir da qual o indicador acende a atenção (0 a 1, exclusivo de 0): review que vence depois do pai
+# e mesma pessoa nos dois (●), pares com algum alerta (▲).
+limiteVenceDepois: 0.10
+limiteMesmaPessoa: 0.10
+limiteParesComAlerta: 0.30
+
+# Review com menos horas ativas que isto (horas corridas em status ativo) e pai reaberto gera o alerta de review curta.
+reviewCurtaHoras: 0.5
+
+# Cortes, em horas ativas da review, das faixas de duração (crescentes, de 1 a 6 cortes): [1, 4, 12] dá
+# "<1h", "1-4h", "4-12h" e ">=12h".
+faixasDuracaoHoras: [1, 4, 12]

@@ -36,6 +36,12 @@ interface CartaoRegistrado {
     /** Instância do Jira de onde as tasks do drill vêm; serve só para montar o link "Abrir no Jira". */
     val instancia: String? get() = null
 
+    /**
+     * Módulo sensível a que o cartão pertence (Integridade, Auditoria): a rota genérica do drill só o serve com a trava do DPO
+     * aberta ([br.sidia.painel.lgpd.TravaDpo]). Nulo = cartão comum.
+     */
+    val moduloSensivel: br.sidia.painel.lgpd.ModuloSensivel? get() = null
+
     suspend fun valores(e: EntradaDeCartao): Map<String, Int>
 
     suspend fun drill(e: EntradaDeCartao, segmento: String): List<LinhaDeDrill>
