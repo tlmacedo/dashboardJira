@@ -95,10 +95,12 @@ class SessaoAssinada(
         val agoraMesmo = agora()
         // O segredo anterior só vale na janela da rotação: depois dela, mesmo com a variável ainda no arquivo, nada o aceita.
         if (comAnterior && !agoraMesmo.isBefore(inicioDaJanela.plus(janela))) return null
-        val fim = partes[2].toLongOrNull()?.let { Instant.ofEpochSecond(it) } ?: return null
+        // Fim fora do intervalo representável (assinado por quem tem o segredo) é cookie inválido, não exceção.
+        val fim = partes[2].toLongOrNull()?.let { runCatching { Instant.ofEpochSecond(it) }.getOrNull() } ?: return null
         if (!agoraMesmo.isBefore(fim)) return null
         // Nenhum cookie vale além da duração da sessão: quem tem o segredo não forja um cookie de longa duração.
-        if (fim.isAfter(agoraMesmo.plus(duracao))) return null
+        val limite = runCatching { agoraMesmo.plus(duracao) }.getOrNull() ?: return null
+        if (fim.isAfter(limite)) return null
         val usuario = try {
             String(Base64.getUrlDecoder().decode(partes[1]), Charsets.UTF_8)
         } catch (e: IllegalArgumentException) {
@@ -111,7 +113,7 @@ class SessaoAssinada(
     fun regravarSeNecessario(leitura: LeituraDeSessao): String? =
         if (leitura.usouSegredoAnterior) assinar(leitura.userId, leitura.expiraEm.epochSecond, segredos.atual) else null
 
-    private fun assinar(userId: String, fimEmSegundos: Long, segredo: ByteArray): String {
+    internal fun assinar(userId: String, fimEmSegundos: Long, segredo: ByteArray): String {
         val usuario = Base64.getUrlEncoder().withoutPadding().encodeToString(userId.toByteArray(Charsets.UTF_8))
         val corpo = "$VERSAO.$usuario.$fimEmSegundos"
         return corpo + "." + Base64.getUrlEncoder().withoutPadding().encodeToString(hmac(corpo, segredo))

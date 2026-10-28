@@ -1,0 +1,41 @@
+# Ficha do card "Fluxo da semana" (Plano 17b). Estrita: chave desconhecida falha ao carregar.
+# NÃO exclui status de cancelamento: as canceladas formam a série "canceladas à parte" (SerieSemanal, a mesma da Previsão).
+# Mesmos tipos de Abertas e da Previsão (o backlog é o mesmo), para a entrada e a saída baterem com as da Previsão.
+
+id: fluxo-da-semana
+titulo: Fluxo da semana
+instancia: samsung
+
+campos:
+  - OS Version
+  - priority
+
+filtrosFixos:
+  project: ["TG-Basic"]
+  issuetype: ["Checklist", "Checklist TG", "Checklist Review"]
+
+parametros:
+  - nome: squad
+    tipo: squad
+    obrigatorio: false
+  - nome: os
+    tipo: os
+    obrigatorio: false
+
+formula: >-
+  Por semana (segunda a domingo de Manaus), nas últimas 12 semanas (a de hoje, ainda incompleta, vem marcada): quantas
+  tasks ENTRARAM (data de criação), COMEÇARAM (primeira entrada em status ativo, de espera ou bloqueado) e SAÍRAM
+  (conclusão positiva pela data de resolução), com as canceladas à parte. O saldo do backlog é entrada menos saída menos
+  canceladas. Entrada acima da saída por 3 semanas FECHADAS seguidas acende o sinal "backlog crescendo".
+
+exemplo: >-
+  squad=[dev.alfa], os não informado.
+
+aceite:
+  - Reaberta não conta como nova entrada; issue removida (removida_em) sai da série.
+  - A semana é de segunda a domingo no fuso de Manaus (domingo 23:59 ainda é da semana que termina).
+  - Resolução de cancelamento (Won't Do, Duplicate) vai para a série de canceladas, não para a de saídas.
+  - A entrada e a saída são as mesmas da Previsão (função única SerieSemanal).
+  - Cada número abre as mesmas tasks que o formam; usuário só vê as próprias, com aviso de amostra pequena.
+
+expandChangelog: true

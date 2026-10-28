@@ -101,6 +101,17 @@ Efeito fora do repositório: o código está pronto e nada abaixo foi decidido n
 
 Corrigidos, cada um com teste e um commit: I1 (falha não tratada: log só com modelo da rota e classe, resposta 500 sem corpo; 404/405 e parsing cobertos), I2 (método HTTP como lista fixa mais OUTRO; status e rota fechados), I3 (sessão rejeita fim além da duração máxima; segredo anterior só na janela de rotação), M1 (prontidão pública só pronto/não pronto; motivo no log e na rota do gerente), M2 (painel-cli.ps1 só ASCII e exit 2 efetivo), M3 (.parcial com permissão restrita desde o início), M4 (.sha256 ao lado de cada cópia, usado sem banco vivo), M5 (symlink do BACKUP_DIR resolvido; aviso de host de métricas fora do loopback), M6 (OIDC_CLIENT_SECRET na máscara; valores entre aspas), M8 (comentário da fábrica do Jira), M9 (espaçamento do toml).
 
+Minor da re-revisão (aprovada, sem Critical/Important), adiados para o Plano 8/13:
+
+1. `LogDeRequisicao.kt:43-60`: exceção em fase anterior ao interceptor (Setup, Monitoring, CallLogging/MDC) ainda cai no `Unhandled: GET - <caminho cru>` do Ktor, com mensagem e pilha.
+2. `CancellationException` é relançada e logada pelo Ktor com mensagem e pilha.
+3. O teste `naoEncontradoEMetodoErradoNaoVazamCaminho` serve só como regressão.
+4. FEITO agora: `SessaoAssinada.ler` com `fim` absurdo e assinatura válida lançava `DateTimeException`; agora devolve nulo (teste `fimAbsurdoComAssinaturaValidaNaoLancaExcecao`).
+5. `SessaoAssinada.kt` (~77): `inicioDaRotacao` nulo vira o instante de criação, e cada reinício reabre a janela do segredo anterior; o Plano 8 deve persistir o início da rotação. `SESSION_SECRET` em branco vira "ausente" sem erro.
+6. `MascaraDeLog.kt` (~63-70): JSON aninhado com aspas escapadas e `password=a b` sem aspas escapam do padrão.
+7. `ServicoDeBackup.kt` (~127): `.sha256` órfão se o `move` falhar.
+8. `AlertasRoutes.kt`: `runCatching` engole `CancellationException`; a lista de loopback é literal (127.0.0.2 e LOCALHOST geram aviso); `painel-cli.ps1` chama o `.bat` sem tratar metacaracteres do cmd.
+
 Adiados (decisão registrada, sem mudança de código):
 
 - M7: adiado para o Plano 13 (implantação), onde o desenho final do serviço e dos volumes é fechado.

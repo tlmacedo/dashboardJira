@@ -99,6 +99,16 @@ class SessaoRotacaoTest {
     }
 
     @Test
+    fun fimAbsurdoComAssinaturaValidaNaoLancaExcecao() {
+        val segredos = SegredosDaSessao.de(novo, null)
+        val emissor = SessaoAssinada(segredos, Duration.ofHours(8)) { agora }
+        val leitor = sessao(novo)
+        for (fim in listOf(Long.MAX_VALUE, Long.MIN_VALUE, 31556889864403200L)) {
+            assertNull(leitor.ler(emissor.assinar("ana.silva", fim, segredos.atual)), "fim=$fim")
+        }
+    }
+
+    @Test
     fun segredoAnteriorSoValeDentroDaJanelaDeRotacao() {
         var relogio = agora
         val cookie = SessaoAssinada(SegredosDaSessao.de(antigo, null), Duration.ofHours(8)) { agora }.emitir("ana.silva")

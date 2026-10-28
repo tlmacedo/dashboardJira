@@ -146,6 +146,22 @@ describe('tela Fechadas', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent(/não permite ver estes dados/i)
   })
 
+  it('controleDoCicloEhUmaSecaoDaTelaECompartilhaOsFiltros', async () => {
+    const controle = {
+      series: [{ tipo: 'Checklist', n: 1, p50: 4, p85: 4, amostraPequena: true, janela: null, pontos: [{ dia: '2026-10-09', ciclo: 4, mediaMovel: null, outlier: false }], meses: [{ mes: '2026-10', n: 1, p50: 4, p85: 4, amostraPequena: true }] }],
+      concluidas: 1, semOutliers: false, limiteOutlierDias: 30, outliersExcluidos: 0, de: '2025-11-01', ate: '2026-10-30', unit: 'util', avisos: [],
+    }
+    const mock = simular({ [CARD]: { status: 200, corpo: DTO }, '/api/cards/controle-ciclo': { status: 200, corpo: controle } })
+    renderizarTela(<Fechadas />, '/fechadas', '/fechadas?squad=Alfa')
+    expect(await screen.findByRole('group', { name: 'Gráfico de controle do ciclo' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Tendência mensal do ciclo' })).toBeInTheDocument()
+    // A seção lê os mesmos filtros da URL da página.
+    await vi.waitFor(() => {
+      const chamada = mock.mock.calls.map((c) => String(c[0])).find((u) => u.startsWith('/api/cards/controle-ciclo'))
+      expect(chamada).toContain('squad=Alfa')
+    })
+  })
+
   it('semPontosMostraTracoNaoZero', async () => {
     simular({ [CARD]: { status: 200, corpo: { ...DTO, pontos: null, comPontos: 0 } } })
     renderizarTela(<Fechadas />, '/fechadas')

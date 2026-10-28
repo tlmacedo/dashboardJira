@@ -1,0 +1,44 @@
+# Ficha do card "Envelhecimento por etapa" (Aging WIP, Plano 17b). Estrita: chave desconhecida falha ao carregar.
+# Mesmos tipos e mesma exclusão de status de Abertas (o estoque em andamento é o mesmo).
+
+id: aging-wip
+titulo: Envelhecimento por etapa
+instancia: samsung
+
+campos:
+  - OS Version
+  - priority
+
+filtrosFixos:
+  project: ["TG-Basic"]
+  issuetype: ["Checklist", "Checklist TG", "Checklist Review"]
+
+filtrosExcluidos:
+  status: ["Cancelled", "Canceled", "Dropped"]
+
+parametros:
+  - nome: squad
+    tipo: squad
+    obrigatorio: false
+  - nome: os
+    tipo: os
+    obrigatorio: false
+
+formula: >-
+  Para cada etapa do fluxo (na ordem do status_map), as tasks EM ANDAMENTO (ativas, em espera ou bloqueadas) como pontos
+  com a idade na etapa: agora menos a última entrada no status atual, em dias úteis (opção dias corridos). A faixa da
+  etapa é o P50 e o P85 do tempo que as concluídas das últimas 16 semanas passaram naquele status (TimeInStatusCalculator).
+  Ponto acima do P85 recebe ▲ e o texto "acima do normal". Etapa com menos de 5 itens no histórico mostra os pontos sem
+  faixa e com aviso de amostra pequena.
+
+exemplo: >-
+  squad=[dev.alfa], unit=util.
+
+aceite:
+  - A idade reinicia a cada nova entrada no status (reentrada).
+  - Etapa sem amostra mínima não mostra faixa, só os pontos e o aviso.
+  - O ponto não traz nome de pessoa; a pessoa só aparece na gaveta, pela visão do papel.
+  - A ordem das etapas vem do status_map; espera e bloqueio são etapas próprias.
+  - O número "acima do normal" abre as mesmas tasks que o formam.
+
+expandChangelog: true

@@ -1,6 +1,8 @@
 package br.sidia.painel.cards
 
 import br.sidia.painel.AppContext
+import br.sidia.painel.cards.fluxo.Eixo
+import br.sidia.painel.cards.fluxo.Medida
 import br.sidia.painel.db.AccessLog
 import br.sidia.painel.domain.IssueTimeline
 import br.sidia.painel.domain.ORDEM_NATURAL_DE_CHAVES
@@ -68,6 +70,8 @@ private val FILTROS_AUDITADOS = setOf(
     "squad", "pessoa", "tipo", "os", "de", "ate", "unit", "semOutliers", "segmento", "sinal", "resultado",
     // Cards de trabalho e prazos (Plano 5).
     "prioridade", "granularidade", "movimento",
+    // Cruzamentos (Plano 17b): só os ids dos eixos e da medida, nunca valor de eixo (que pode ser nome de pessoa).
+    "linhas", "colunas", "medida",
 )
 
 private val FORMATO_USERNAME = Regex("[a-z0-9._-]{1,64}")
@@ -210,7 +214,17 @@ internal fun hoje(ctx: AppContext): LocalDate = LocalDate.now(ctx.clock.withZone
 private fun filtrosAuditados(call: ApplicationCall): Map<String, String> =
     call.request.queryParameters.entries()
         .filter { it.key in FILTROS_AUDITADOS }
-        .associate { it.key to it.value.firstOrNull().orEmpty() }
+        .associate { it.key to valorAuditado(it.key, it.value.firstOrNull().orEmpty()) }
+
+/** Marcador gravado no lugar de um eixo ou medida fora da lista fechada (o valor cru nunca vai para a auditoria). */
+private const val VALOR_INVALIDO = "(invalido)"
+
+/** Eixos e medida do Cruzamentos só vão ao `access_log` se forem ids da lista fechada; qualquer outro texto vira o marcador. */
+private fun valorAuditado(parametro: String, valor: String): String = when (parametro) {
+    "linhas", "colunas" -> if (Eixo.deId(valor) != null) valor else VALOR_INVALIDO
+    "medida" -> if (Medida.deId(valor) != null) valor else VALOR_INVALIDO
+    else -> valor
+}
 
 /**
  * Executa [bloco] (fora do laço de eventos, pois usa JDBC), registra a consulta com o resultado e só então
