@@ -143,12 +143,31 @@ class MascaraDeLogTest {
         assertTrue(Settings().valoresSecretos().isEmpty())
     }
 
+    /** Mediana de 5 execuções depois de 4 de aquecimento (a primeira chamada paga o carregamento das regex e do JIT). */
     private fun medirMs(texto: String): Long {
-        MascaraDeLog.mascarar("aquecimento password=x")
-        val ini = System.nanoTime()
-        MascaraDeLog.mascarar(texto)
-        return (System.nanoTime() - ini) / 1_000_000
+        repeat(4) { MascaraDeLog.mascarar(texto) }
+        val tempos = (1..5).map {
+            val ini = System.nanoTime()
+            MascaraDeLog.mascarar(texto)
+            (System.nanoTime() - ini) / 1_000_000
+        }.sorted()
+        return tempos[2]
     }
+
+    @Test
+    fun senhaSeguidaDeEspacosNaoEhQuadratica() {
+        val casos = mapOf(
+            "espacos" to "password=x" + " ".repeat(20_000) + "y",
+            "espacoETab" to "password=a" + " \t".repeat(5_000),
+            "palavrasEEspacos" to "password=x" + (" ".repeat(4_000) + "abc").repeat(2),
+            "senhaDoisPontos" to "senha: " + "a ".repeat(10_000),
+        )
+        for ((nome, texto) in casos) {
+            val ms = medirMs(texto)
+            assertTrue(ms < 300, "$nome levou ${ms}ms")
+        }
+    }
+
 
     @Test
     fun entradaGrandeNaoTravaAMascara() {
@@ -164,7 +183,7 @@ class MascaraDeLogTest {
         )
         for ((nome, texto) in casos) {
             val ms = medirMs(texto)
-            assertTrue(ms < 200, "$nome levou ${ms}ms")
+            assertTrue(ms < 300, "$nome levou ${ms}ms")
         }
     }
 

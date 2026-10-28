@@ -87,7 +87,10 @@ object MascaraDeLog {
         // da linha ou até a próxima `chave=` (nunca além de `"`, `'`, `&`, `,` e `;`). Os demais segredos (tokens, chaves)
         // são opacos e param no espaço, na regra seguinte.
         Regex(
-            "(?i)((?:[A-Za-z0-9_.-]{0,$PREFIXO_MAXIMO}(?:password|passwd|senha))[\"']?\\s*[=:]\\s*+)(?![\"'])(?:(?!\\s+[A-Za-z_][A-Za-z0-9_.-]*\\s*=)[^\\r\\n\"'&,;])+",
+            "(?i)((?:[A-Za-z0-9_.-]{0,$PREFIXO_MAXIMO}(?:password|passwd|senha))[\"']?\\s*[=:]\\s*+)(?![\"'])" +
+                // Palavras separadas por espaço/tab; o lookahead da próxima `chave=` roda só no início de cada palavra e os
+                // quantificadores são possessivos: tempo linear mesmo com milhares de espaços.
+                "[^\\s\"'&,;]++(?:[ \\t]++(?![A-Za-z_][A-Za-z0-9_.-]*\\s*=)[^\\s\"'&,;]++)*+",
         ) to { m -> m.groupValues[1] + "***" },
         // `password=x`, `senha: x`, `SESSION_SECRET=x`, `"token":"x"`
         // Valor entre aspas (simples ou duplas): vai até a aspa de fechamento, com espaços e aspas escapadas dentro.
