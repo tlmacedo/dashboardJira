@@ -46,6 +46,12 @@ data class Settings(
     /** `DATABASE_PATH`: arquivo SQLite do painel (criado na primeira subida). Sem servidor, sem usuário, sem senha. */
     val databasePath: Path = Path.of("data/painel.db"),
     /**
+     * `PAINEL_HOST`: interface em que o painel escuta (porta 8080). O padrão `127.0.0.1` só atende a própria máquina:
+     * o proxy da empresa roda ao lado e termina o TLS. Outra interface (ou `0.0.0.0`) é escolha explícita de quem
+     * implanta e exige firewall; o `validar-config` avisa (`ESCUTA_FORA_DO_LOOPBACK`).
+     */
+    val host: String = "127.0.0.1",
+    /**
      * `PAINEL_CACHE_SEG`: por quantos segundos as telas reaproveitam a leitura bruta do banco (issues e histórico) em vez de
      * relê-la a cada requisição. Vale só quando o painel sobe pelo `main`; os testes não ligam. `0` desliga. Fim de sincronização
      * e de retenção invalidam na hora, então isto só limita o quanto um dado pode envelhecer sem elas (vencida, a leitura
@@ -83,7 +89,7 @@ data class Settings(
         "Settings(jiraLiveEnabled=$jiraLiveEnabled, dashboardDevMode=$dashboardDevMode, " +
             "dashboardDemoData=$dashboardDemoData, " +
             "retentionMonths=$retentionMonths, accessLogRetentionMonths=$accessLogRetentionMonths, zone=$zone, configDir=$configDir, " +
-            "databasePath=$databasePath, cacheDeLeituraSeg=$cacheDeLeituraSeg, staticDir=$staticDir, " +
+            "databasePath=$databasePath, host=$host, cacheDeLeituraSeg=$cacheDeLeituraSeg, staticDir=$staticDir, " +
             "databasePoolSize=$databasePoolSize, jiraInstances=$jiraInstances, origemPublica=$origemPublica, " +
             "oidc=${if (oidc != null) "configurado" else "ausente"})"
 
@@ -120,6 +126,7 @@ data class Settings(
                 } ?: padrao.zone,
                 configDir = caminho(env, "PAINEL_CONFIG_DIR") ?: padrao.configDir,
                 databasePath = caminho(env, "DATABASE_PATH") ?: padrao.databasePath,
+                host = host(env, padrao.host),
                 cacheDeLeituraSeg = texto(env, "PAINEL_CACHE_SEG")?.let {
                     it.toIntOrNull()?.takeIf { n -> n in 0..600 }
                         ?: throw IllegalArgumentException("PAINEL_CACHE_SEG inválido (esperado inteiro de 0 a 600)")
@@ -164,6 +171,13 @@ data class Settings(
             require(uri.rawPath.isNullOrEmpty() || uri.rawPath == "/") { "$nome inválida (sem caminho)" }
             val porta = if (uri.port == -1) "" else ":${uri.port}"
             return "$esquema://$host$porta"
+        }
+
+        /** `PAINEL_HOST`: nome de host ou endereço IP (letras, dígitos, `.`, `:` e `-`); a mensagem cita só o nome da variável. */
+        private fun host(env: Map<String, String>, padrao: String): String {
+            val valor = texto(env, "PAINEL_HOST") ?: return padrao
+            require(Regex("[A-Za-z0-9.:\\-]{1,253}").matches(valor)) { "PAINEL_HOST inválido (esperado nome de host ou endereço IP)" }
+            return valor
         }
 
         private const val MAX_MESES_DE_RETENCAO = 600

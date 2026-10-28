@@ -37,7 +37,9 @@ DASHBOARD_DEMO_DATA=true sh iniciar.sh        # PowerShell: $env:DASHBOARD_DEMO_
 | `DASHBOARD_DEV_MODE` | `true` em `iniciar.sh`/`iniciar.ps1` e em `./gradlew run`; `false` no pacote instalado | Modo desenvolvimento: **sem login**, todos os dados, faixa vermelha. O pacote instalado (`installDist`) sobe em modo produção quando a variável falta; o modelo `.env.example` não a liga. |
 | `DASHBOARD_DEMO_DATA` | `false` | Carrega issues **fictícias** na subida, sem tocar no Jira. Só com `DASHBOARD_DEV_MODE=true` e `JIRA_LIVE_ENABLED=false`; qualquer outra combinação derruba a subida. |
 | `PAINEL_STATIC_DIR` | `frontend/dist` | Pasta do build do frontend servida em `/`. |
+| `PAINEL_HOST` | `127.0.0.1` | Interface em que o painel escuta (porta 8080). O padrão só atende a própria máquina; outra interface exige firewall (`docs/implantacao.md`). |
 | `PAINEL_CACHE_SEG` | `60` | Segundos em que as telas reaproveitam a leitura bruta do banco; `0` desliga. Fim de sincronização e de retenção invalidam na hora. |
+| `OIDC_ISSUER`, `OIDC_CLIENT_ID`, `OIDC_CLIENT_SECRET`, `OIDC_REDIRECT_URI`, `OIDC_CLAIM_USERNAME`, `SESSION_SECRET` | vazio | Login SSO/OIDC e assinatura da sessão. Obrigatórios em produção (menos o segredo do cliente e a claim); ver `docs/implantacao.md`. |
 | `DATABASE_PATH` | `data/painel.db` | Arquivo SQLite do painel. |
 
 ## Sincronização periódica (`SYNC_*`)
@@ -85,6 +87,17 @@ cd ../backend && ./gradlew installDist                          # gera o pacote
 ```
 
 O pacote fica em `app/backend/build/install/painel/` (script `bin/painel`; no Windows, `bin/painel.bat`). Diferente de `iniciar.*` e de `./gradlew run`, o **pacote instalado** sobe em **modo produção** quando `DASHBOARD_DEV_MODE` não está definida: sem o arquivo de variáveis e os YAML reais ele falha na subida ("obrigatório em produção") em vez de abrir sem login. Quem quiser modo dev no pacote precisa escrever a linha explicitamente (e a faixa vermelha continua). O pacote não leva `.env`, YAML reais nem banco; informe-os por `PAINEL_ENV_FILE`, `PAINEL_CONFIG_DIR` e `DATABASE_PATH`.
+
+## Produção
+
+O pacote de produção (sem contêiner, com SQLite em arquivo) é montado e conferido por dois scripts, a partir de `app/`:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\montar-pacote.ps1
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\verificar-pacote.ps1
+```
+
+(`sh scripts/montar-pacote.sh` e `sh scripts/verificar-pacote.sh` no Linux/macOS.) O resultado fica em `app/pacote/painel/` (ignorado pelo git) e **nunca** leva configuração real, arquivo de variáveis real nem banco. Tudo sobre pastas e variáveis de produção, login SSO/OIDC, endereço de escuta (`PAINEL_HOST`, padrão `127.0.0.1`), ordem segura para ligar o Jira, serviço, backup e atualização está em [`docs/implantacao.md`](../docs/implantacao.md).
 
 ## Inicialização e configuração
 

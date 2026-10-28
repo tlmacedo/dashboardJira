@@ -1,0 +1,148 @@
+# Guia de implantação do Painel de Squads (pacote de produção, sem contêiner)
+
+Este guia leva o painel do repositório até uma máquina de produção **sem contêiner, sem servidor de banco e sem WSL** (a empresa bloqueia os três). O painel é um processo só: a API (Ktor) e as telas (build do frontend) saem do mesmo pacote, e o banco é um arquivo SQLite. Quem faz a implantação real (serviço do sistema, proxy, TLS, cofre) segue também os documentos de operação e o Plano 13; este guia entrega o pacote e como verificá-lo.
+
+> Regra que vale para tudo aqui: **o acesso ao Jira só liga quando o usuário liga a chave `JIRA_LIVE_ENABLED` à mão, no arquivo de variáveis**. Nenhum passo deste guia, nenhum script e nenhuma pessoa de TI ou IA a liga por conta própria.
+
+## 1. O que é o pacote
+
+Resultado de `installDist` (backend) mais o build do frontend, montado por `montar-pacote` em `app/pacote/painel/`:
+
+```
+bin/            painel (sh) e painel.bat (Windows): sobem o painel
+lib/            os jars
+frontend/dist/  as telas
+config/         SÓ os modelos *.exemplo.yaml (e *.demo.yaml) e as fichas de cards/
+.env.example    modelo das variáveis; nunca um arquivo real
+VERSAO.txt      versão, commit curto e data da montagem
+LEIA-ME.txt     como rodar
+```
+
+O pacote **nunca** leva configuração real (`papeis.yaml`, `equipes.yaml`, `ausencias.yaml`, `calendario.yaml`...), arquivo de variáveis real, arquivo de banco, trava, chave ou certificado, nem a pasta `legacy/`. O `verificar-pacote` confere isso a cada montagem.
+
+## 2. Requisitos
+
+| Onde | O que |
+|---|---|
+| Máquina de montagem | JDK 21, Node 22 e pnpm; acesso aos registros de pacotes (ou ao espelho interno da empresa; veja `PAINEL_PNPM_ARGS` e `PAINEL_GRADLE_ARGS` abaixo) |
+| Máquina de produção | JDK 21 (`JAVA_HOME` ou no `PATH`). Nada mais: sem Node, sem banco, sem contêiner |
+
+## 3. Montar e verificar
+
+Cada comando parte da pasta `app/` do repositório. No PowerShell 5.1 não existe `&&`: use `;` e confira `$LASTEXITCODE`.
+
+| Ação | Windows 11 (PowerShell, principal) | `sh` (Linux/macOS/Git Bash) |
+|---|---|---|
+| Montar | `powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\montar-pacote.ps1` | `sh scripts/montar-pacote.sh` |
+| Verificar | `powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\verificar-pacote.ps1` | `sh scripts/verificar-pacote.sh` |
+
+`montar-pacote` roda `pnpm install --frozen-lockfile` e `pnpm build` no frontend, `gradlew installDist` no backend e copia o resultado para `app/pacote/` (a pasta é ignorada pelo git). Atrás de proxy ou espelho que exige parâmetros, defina antes `PAINEL_PNPM_ARGS` e/ou `PAINEL_GRADLE_ARGS` (por exemplo `--offline` quando as dependências já estão no cache).
+
+`verificar-pacote` falha com código diferente de 0 e uma mensagem curta se:
+
+1. houver no pacote qualquer YAML real, arquivo de variáveis (além do `.env.example`), arquivo de banco ou trava, chave/certificado, a pasta `legacy/` ou artefato de contêiner;
+2. faltar `bin/painel`, `bin/painel.bat`, o jar do painel em `lib/` ou `frontend/dist/index.html`;
+3. o pacote **em modo produção sem `OIDC_ISSUER`** não recusar a subida (tem de terminar com erro citando `OIDC_ISSUER` e sem mostrar nenhum valor de segredo);
+4. o pacote em modo desenvolvimento não responder `{"ok":true}` em `GET /api/health`.
+
+A verificação usa a porta 8080 e pastas temporárias, nunca liga a chave do Jira (o arquivo de variáveis de teste não tem essa linha) e aborta com aviso se a porta já estiver em uso.
+
+## 4. Pastas e variáveis: tudo o que é real fica FORA do pacote
+
+Trocar o pacote por um mais novo não pode apagar nada. Por isso a configuração real, o arquivo de variáveis e os dados ficam em pastas próprias, apontadas por variáveis:
+
+| Variável | Para quê |
+|---|---|
+| `PAINEL_CONFIG_DIR` | Pasta dos YAML reais (`papeis.yaml`, `equipes.yaml`, `ausencias.yaml`, `calendario.yaml`, `status_map.yaml`...). Em produção os arquivos reais são obrigatórios; os modelos `.exemplo` não valem |
+| `DATABASE_PATH` | Arquivo SQLite do painel (por exemplo `D:\painel\dados\painel.db`). Criado na primeira subida |
+| `PAINEL_ENV_FILE` | Arquivo de variáveis real (nunca no repositório nem no pacote; permissão só da conta do serviço) |
+| `PAINEL_STATIC_DIR` | Build do frontend; o padrão `frontend/dist` (relativo à raiz do pacote) já serve |
+| `DATABASE_POOL_SIZE` | Conexões do pool (1 a 100; padrão 4). No SQLite só uma grava por vez; mais conexões só aumentam leitores |
+| `PAINEL_HOST` | Interface em que o painel escuta (padrão `127.0.0.1`; veja a seção 7) |
+| `PAINEL_CACHE_SEG` | Segundos em que as telas reaproveitam a leitura bruta do banco (padrão 60; `0` desliga). Sem isso, cada requisição relê as issues e o histórico inteiros |
+| `RETENTION_MONTHS` | Meses de dados locais mantidos (6 a 600; padrão 24; o prazo final é do DPO) |
+| `ACCESS_LOG_RETENTION_MONTHS` | Meses do registro de acesso (12 a 600; padrão 24) |
+
+As demais variáveis (sincronização, logs, métricas, backup) estão em `docs/operacao/configuracao.md` e no modelo `.env.example`.
+
+## 5. Rodar o pacote
+
+A pasta de trabalho é a **raiz do pacote**, porque `frontend/dist` e a fonte dos modelos são caminhos relativos. Exige JDK 21.
+
+Windows 11 (PowerShell):
+
+```powershell
+$env:PAINEL_CONFIG_DIR = 'D:\painel\config'
+$env:DATABASE_PATH     = 'D:\painel\dados\painel.db'
+$env:PAINEL_ENV_FILE   = 'D:\painel\painel.env'
+Set-Location D:\painel\pacote\painel
+.\bin\painel.bat
+```
+
+`sh`:
+
+```sh
+cd /opt/painel/pacote/painel
+PAINEL_CONFIG_DIR=/etc/painel DATABASE_PATH=/var/lib/painel/painel.db PAINEL_ENV_FILE=/etc/painel/painel.env ./bin/painel
+```
+
+Os scripts do pacote fixam o **perfil de produção**: sem `DASHBOARD_DEV_MODE` no arquivo de variáveis o painel sobe com o modo desenvolvimento desligado e **falha fechado** (não sobe) se faltar qualquer configuração obrigatória. Antes de subir, `painel validar-config` confere os YAML e as variáveis (veja `docs/operacao/runbook-diario.md`).
+
+## 6. Login SSO/OIDC e sessão (obrigatório em produção)
+
+Em produção o painel só sobe com o login configurado. Qualquer provedor OpenID Connect com *authorization code* e PKCE serve; o provedor concreto é da infraestrutura da empresa.
+
+| Variável | Regra |
+|---|---|
+| `OIDC_ISSUER` | URL `https` do emissor; o `iss` do token precisa ser igual a ela |
+| `OIDC_CLIENT_ID` | Identificador do painel cadastrado no provedor |
+| `OIDC_CLIENT_SECRET` | Opcional (cliente público com PKCE); nunca vai para log nem para a tela |
+| `OIDC_REDIRECT_URI` | Endereço público do painel terminado em `/auth/callback` (por exemplo `https://painel.exemplo.invalid/auth/callback`, com o endereço real), exatamente como cadastrada no provedor |
+| `OIDC_CLAIM_USERNAME` | Claim do `id_token` com o username do Jira (padrão `preferred_username`); a escolha é da implantação |
+| `SESSION_SECRET` | Segredo que assina o cookie de sessão: base64, no mínimo 32 bytes (veja `docs/operacao/rotacao-de-segredos.md`) |
+
+- Ausente **ou em branco**, qualquer uma das quatro obrigatórias derruba a subida; a mensagem cita só o nome da variável.
+- Os **papéis nunca vêm do token**: vêm do `papeis.yaml` na data de hoje. Quem não está lá, ou cujo papel acabou, recebe 403.
+- O `id_token` é validado com as chaves do próprio provedor (descoberta em `/.well-known/openid-configuration` e JWKS): só `RS256`, emissor igual ao configurado, `aud` com o `OIDC_CLIENT_ID`, `exp`, `nonce` do login e PKCE. O segredo do cliente, se houver, vai no corpo da troca do código (`client_secret_post`); um provedor que exija autenticação Basic nesse endpoint pede uma mudança de código (avise antes de implantar).
+- Cookie `painel_sessao`: `HttpOnly`, `Secure`, `SameSite=Lax`, assinado, 8 horas. O painel escuta atrás do proxy da empresa, que termina o TLS.
+- `GET /auth/login`, `GET /auth/callback` e `POST /auth/logout` gravam o registro de acesso, sem token.
+- Rotação do segredo da sessão sem derrubar ninguém: mova o valor atual para `SESSION_SECRET_ANTERIOR`, ponha o novo em `SESSION_SECRET` e reinicie; depois apague a anterior. O início da rotação fica gravado ao lado do banco (`painel.db.rotacao`), então reiniciar não reabre a janela do segredo antigo.
+
+## 7. Endereço de escuta
+
+O painel escuta em `127.0.0.1:8080` por padrão (`PAINEL_HOST`): só a própria máquina o alcança, e o proxy da empresa, instalado na mesma máquina, encaminha para ele e termina o TLS. Se o proxy estiver em **outra** máquina, defina `PAINEL_HOST` com a interface da rede interna (ou `0.0.0.0`): isso expõe o painel a toda a rede dessa interface, então só com regra de firewall que libere apenas o proxy. O `painel validar-config` avisa (`ESCUTA_FORA_DO_LOOPBACK`) quando a escuta sai do loopback. A porta das métricas (9464) tem variável própria e também escuta só no loopback.
+
+## 8. Um painel por arquivo de banco
+
+O painel grava uma trava ao lado do banco (`painel.db.lock`). Uma segunda subida no mesmo arquivo é recusada. Não existe "outra réplica": o SQLite tem um gravador por vez, e a sincronização e as consultas dividem o mesmo arquivo (WAL: leituras não bloqueiam). Para trocar o pacote: pare o serviço, troque a pasta do pacote, suba de novo.
+
+## 9. Ligar o Jira: ordem segura
+
+O pacote chega à produção com o Jira **desligado**. Quem liga é só o usuário, à mão, no arquivo de variáveis, depois de seguir:
+
+1. `docs/jira/checklist-primeira-conexao.md` (o que conferir e quando parar);
+2. `docs/jira/runbook-sincronizacao.md` (como acompanhar e o que fazer se algo sair do esperado).
+
+Os testes automáticos do projeto usam só fixtures e `MockEngine`, mesmo com a chave ligada: nenhum teste acessa o Jira real nem um provedor de identidade real.
+
+## 10. Serviço, backup, atualização e reversão
+
+| Assunto | Onde |
+|---|---|
+| Serviço do sistema operacional, logs, prontidão (`/api/health/pronto`), métricas, alertas, backup consistente do SQLite e restauração testada | Plano 12, documentos em `docs/operacao/` |
+| Atualização, reversão ensaiada, proxy, TLS, cofre de segredos, conta de serviço e firewall | Plano 13 |
+
+**Regra de reversão:** o esquema do banco só avança, por migração. Toda migração nova precisa ser compatível com o pacote anterior **ou** ter backup feito antes da atualização; reverter é voltar a pasta do pacote anterior (e, se a migração não for compatível, restaurar o backup).
+
+## 11. O que pedir à infraestrutura
+
+- Provedor OIDC cadastrado (`OIDC_ISSUER`, `OIDC_CLIENT_ID`, segredo se exigir, URI de retorno `.../auth/callback`) e a claim que traz o username do Jira.
+- Proxy reverso com TLS na frente do painel, encaminhando para `127.0.0.1:8080`, e a origem pública para `DASHBOARD_ORIGEM_PUBLICA` (obrigatória atrás de proxy; `https`).
+- Conta de serviço **sem privilégio**, dona só das pastas de dados, de configuração e de backup; permissão restrita ao arquivo de variáveis.
+- Regra de firewall: nada de entrada direta na porta 8080 além do proxy; a 9464 só para o coletor de métricas, se houver.
+- Volume cifrado (BitLocker/LUKS) para o banco e para as cópias, e a cópia diária para fora do servidor.
+- Se a saída até o provedor passar por proxy da empresa: certificado raiz no repositório de confiança do JDK.
+
+## 12. Antes do uso real: DPO
+
+O painel guarda auditoria de acessos e de alterações e tem a tela de Integridade (só gerente, sempre auditada). A base legal, o prazo de retenção e o texto de comunicação precisam da validação do DPO **antes** de dados reais entrarem. Até lá, só fixtures e demonstração.

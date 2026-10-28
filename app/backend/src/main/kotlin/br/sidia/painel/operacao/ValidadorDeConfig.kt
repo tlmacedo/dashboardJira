@@ -66,10 +66,12 @@ object ValidadorDeConfig {
         problemas += conferirBackup(settings, dev)
 
         val comProblema = problemas.map { it.arquivo }.toSet()
-        val avisos = if (settings.operacao.metricasPorta != 0 && settings.operacao.metricasHost !in LOOPBACK) {
-            listOf(ProblemaDeConfig("METRICAS_HOST_NAO_LOOPBACK", "PAINEL_METRICAS_HOST"))
-        } else {
-            emptyList()
+        val avisos = buildList {
+            if (settings.operacao.metricasPorta != 0 && settings.operacao.metricasHost !in LOOPBACK) {
+                add(ProblemaDeConfig("METRICAS_HOST_NAO_LOOPBACK", "PAINEL_METRICAS_HOST"))
+            }
+            // O painel exposto além da própria máquina é decisão de quem implanta; o firewall passa a ser a única barreira de rede.
+            if (settings.host !in LOOPBACK) add(ProblemaDeConfig("ESCUTA_FORA_DO_LOOPBACK", "PAINEL_HOST"))
         }
         return ResultadoDaValidacao(problemas, arquivosDaPasta(dir).filter { it !in comProblema }, avisos)
     }

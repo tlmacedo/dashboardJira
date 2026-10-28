@@ -109,7 +109,8 @@ fun main(args: Array<String>) {
     // Leitura bruta do banco reaproveitada por poucos segundos (desligada nos testes; ver CacheDeLeituras). Depois da carga
     // de demonstração e antes de aceitar a primeira requisição.
     CacheDeLeituras.configurar(java.time.Duration.ofSeconds(settings.cacheDeLeituraSeg.toLong()))
-    embeddedServer(Netty, port = 8080) {
+    // Só escuta na interface de PAINEL_HOST (padrão 127.0.0.1): quem expõe o painel à rede escolhe isso de propósito.
+    embeddedServer(Netty, port = 8080, host = settings.host) {
         module(context.settings, context, agendador = agendador, metricas = metricas)
         monitor.subscribe(ApplicationStopped) { context.close() }
     }.start(wait = true)
