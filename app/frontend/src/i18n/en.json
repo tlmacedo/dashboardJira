@@ -1682,7 +1682,7 @@
   "card.in08.titulo": "Signal catalog",
   "card.in08.oQueMostra": "What each signal looks for, its severity and configured limit, with no data about people. No tasks behind it.",
   "card.in08.comoCalcula": "Read from the versioned integridade.yaml: severity, whether it is active and the thresholds (hours, minutes, share of life, labels).",
-  "cardpage.aviso.SINAL_SEM_DADO": "The signal {sinal} is on, but the changelog does not store the estimate value yet: no evidence is possible.",
+  "cardpage.aviso.SINAL_SEM_DADO": "The signal {sinal} is on, but no estimate event has its value stored yet: the next Jira load (only with the flag on) fills it.",
   "cardpage.aviso.EVIDENCIAS_PARCIAIS": "The table shows {n} of {total} pieces of evidence; the numbers and the drawer include all of them.",
   "integridade.pergunta": "Are there signs that deadlines or flow were adjusted suspiciously? Each signal is a reason to talk and check in Jira.",
   "integridade.aviso.indicio": "A hint, not proof. Each signal calls for human review, with the person and the context (for example, an extension authorized by the customer). Do not use it as a performance grade.",

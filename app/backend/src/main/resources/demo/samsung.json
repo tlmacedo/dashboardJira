@@ -609,6 +609,40 @@
         {"id": "1", "author": {"name": "dev.alfa1"}, "created": "2026-10-10T09:00:00.000-0400", "items": [{"field": "status", "fromString": "To Do", "toString": "In Progress"}]},
         {"id": "2", "author": {"name": "lider.alfa"}, "created": "2026-10-15T10:00:00.000-0400", "items": [{"field": "assignee", "from": "dev.alfa1", "to": "JIRAUSER99999"}]}
       ]}
+    },
+    {
+      "id": "910039", "key": "DEMO-39",
+      "fields": {
+        "summary": "Task com estimativa aumentada e depois reduzida (demonstracao 39)",
+        "project": {"key": "TG", "name": "TG-Basic"}, "issuetype": {"name": "Task"},
+        "status": {"name": "In Progress"},
+        "assignee": {"name": "dev.alfa1"}, "reporter": {"name": "pl.alfa"},
+        "created": "2026-10-01T09:00:00.000-0400", "updated": "2026-10-26T09:00:00.000-0400",
+        "duedate": "2026-11-06", "labels": []
+      },
+      "changelog": {"histories": [
+        {"id": "1", "author": {"name": "dev.alfa1"}, "created": "2026-10-05T09:00:00.000-0400", "items": [{"field": "status", "fromString": "To Do", "toString": "In Progress"}]},
+        {"id": "2", "author": {"name": "dev.alfa1"}, "created": "2026-10-07T10:00:00.000-0400", "items": [{"field": "timeoriginalestimate", "from": "28800", "fromString": "8h", "to": "50400", "toString": "14h"}]},
+        {"id": "3", "author": {"name": "dev.alfa1"}, "created": "2026-10-19T10:00:00.000-0400", "items": [{"field": "timeoriginalestimate", "from": "50400", "fromString": "14h", "to": "21600", "toString": "6h"}]}
+      ]}
+    },
+    {
+      "id": "910040", "key": "DEMO-40",
+      "fields": {
+        "summary": "Task com horas registradas com atraso (demonstracao 40)",
+        "project": {"key": "TG", "name": "TG-Basic"}, "issuetype": {"name": "Task"},
+        "status": {"name": "In Progress"},
+        "assignee": {"name": "dev.alfa2"}, "reporter": {"name": "pl.alfa"},
+        "created": "2026-10-08T09:00:00.000-0400", "updated": "2026-10-27T17:00:00.000-0400",
+        "duedate": "2026-11-10", "labels": [],
+        "worklog": {"startAt": 0, "maxResults": 20, "total": 2, "worklogs": [
+          {"id": "940001", "author": {"name": "dev.alfa2"}, "started": "2026-10-21T09:00:00.000-0400", "created": "2026-10-26T10:00:00.000-0400", "timeSpentSeconds": 7200},
+          {"id": "940002", "author": {"name": "dev.alfa2"}, "started": "2026-10-27T09:00:00.000-0400", "created": "2026-10-27T17:00:00.000-0400", "timeSpentSeconds": 3600}
+        ]}
+      },
+      "changelog": {"histories": [
+        {"id": "1", "author": {"name": "dev.alfa2"}, "created": "2026-10-12T09:00:00.000-0400", "items": [{"field": "status", "fromString": "To Do", "toString": "In Progress"}]}
+      ]}
     }
   ]
 }

@@ -90,7 +90,7 @@ class IntegridadeRoutesTest {
         assertEquals(SinalIntegridade.entries.map { it.name }, d.resumo.porSinal.map { it.sinal })
         assertEquals(6, d.resumo.porSinal.first { it.sinal == "FECHAMENTO_EM_LOTE" }.n)
         assertEquals(3, d.resumo.porSinal.first { it.sinal == "VENCIMENTO_PRORROGADO" }.n)
-        assertEquals(false, d.resumo.porSinal.first { it.sinal == "ESTIMATIVA_AUMENTADA" }.ativo)
+        assertEquals(true, d.resumo.porSinal.first { it.sinal == "ESTIMATIVA_AUMENTADA" }.ativo)
         assertEquals(6, d.resumo.evidenciasNivelAlto)
         assertEquals(3, d.resumo.evidenciasNivelMedio)
         assertEquals("integridade v1", d.versaoRegras)

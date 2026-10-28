@@ -1682,7 +1682,7 @@
   "card.in08.titulo": "Catálogo de sinais",
   "card.in08.oQueMostra": "O que cada sinal procura, a gravidade e o limite configurado, sem nenhum dado de pessoas. Não há tasks por trás.",
   "card.in08.comoCalcula": "Lido do integridade.yaml versionado: gravidade, se está ativo e os limiares (horas, minutos, fração da vida, labels).",
-  "cardpage.aviso.SINAL_SEM_DADO": "O sinal {sinal} está ligado, mas o changelog ainda não guarda o valor da estimativa: nenhuma evidência é possível.",
+  "cardpage.aviso.SINAL_SEM_DADO": "O sinal {sinal} está ligado, mas nenhum evento de estimativa tem o valor guardado ainda: a nova carga do Jira (feita só com a flag ligada) o preenche.",
   "cardpage.aviso.EVIDENCIAS_PARCIAIS": "A tabela mostra {n} das {total} evidências; os números e a gaveta trazem todas.",
   "integridade.pergunta": "Há sinais de que prazo ou fluxo foram ajustados de forma suspeita? Cada sinal é um motivo para conversar e conferir no Jira.",
   "integridade.aviso.indicio": "Indício, não prova. Cada sinal pede revisão humana, com a pessoa e o contexto (por exemplo, uma prorrogação autorizada pelo cliente). Não use como nota de desempenho.",

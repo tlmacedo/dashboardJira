@@ -9,8 +9,14 @@ Branch `feat/auditoria-completa-lgpd-plano-11`, a partir da `main` `31c95e1` (mi
 | 1 Trava do DPO no backend | Concluída | `lgpd/{LgpdSettings,TravaDpo}.kt`, Auditoria atrás da trava, VG-14, access_log sem alvo |
 | 2 Trava do DPO na tela | Concluída | `shared/AguardandoDpo.tsx`, Menu com ⏸ e texto, Central com aviso |
 | 3 Ampliar dados guardados (opção A) | Concluída | migração `V6__dados_para_auditoria_completa.sql` |
+| 4 Estimativa reduzida | Concluída | `auditoria/DetectoresDeEstimativa.kt` |
+| 5 Worklog retroativo | Concluída | `auditoria/DetectoresDeWorklog.kt`, histórico com horas |
+| 6 Integridade com `ESTIMATIVA_AUMENTADA` e documentação | Concluída | 13 de 13 sinais; casos de demonstração DEMO-39 e DEMO-40 |
 
 ## Rulings
+
+- Ruling: T4/T5 — a `unidade` de `auditoria.yaml` (corrido/útil) não afeta o worklog retroativo: ele sempre conta dias úteis de Manaus (o plano). O histórico da gaveta mostra a estimativa em horas com uma casa e as horas como linha `worklog` (`para` = "aaaa-mm-dd (1.5 h)").
+- Ruling: T6 — a demonstração (`DASHBOARD_DEMO_DATA`) passou a ler `fields.worklog.worklogs` da fixture e a deslocar `started`/`created` junto das demais datas; DEMO-39 (estimativa aumentada e depois reduzida) e DEMO-40 (horas registradas com atraso) são fictícios.
 
 - Ruling: T3 (ponto de parada) — opção A (Recomendada): guardar o valor das estimativas no `change_event` (segundos brutos) e a data de criação do worklog; a migração zera `sync_state.watermark` (conferido: `SyncStateStore.cursor` lê `sync_state.watermark`) e remove a tabela `person` (sem uso em `src/main`; só dois testes a usavam e foram ajustados). Decisão tomada pelo executor sem o usuário, pela regra do roteiro (seção 0); data 28/10/2026; reversão: não ligar nada, a migração só tem efeito quando o usuário ligar a flag do Jira. O usuário deve registrar o "sim" no `HANDOFF.md` ao ligar a flag.
 - Ruling: T3 — número da migração: V6 (a V5 é a última na `main` `31c95e1`). O Plano 10 pode usar a V6; no push final conferir `origin/main` e renumerar para a próxima livre.
