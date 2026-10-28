@@ -1,0 +1,103 @@
+/* Tela Mapa de cartões: leitura (editorial), gerada do catálogo. Só tokens dos temas. */
+.mapa {
+  max-width: 1100px;
+}
+.mapa-filtros {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  align-items: flex-end;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 10px 12px;
+  margin-bottom: 10px;
+}
+.mapa-filtros select,
+.mapa-filtros input[type='search'] {
+  font: inherit;
+  font-size: 13px;
+  color: var(--text);
+  background: var(--bg);
+  /* Borda de controle com contraste ≥ 3:1 (o --line não chega a 1,4:1 e serve só para divisórias). */
+  border: 1px solid var(--text2);
+  border-radius: 6px;
+  padding: 5px 8px;
+  min-height: 32px;
+  min-width: 160px;
+}
+.mapa-grupo h2 {
+  font-size: 15px;
+  margin: 16px 0 8px;
+  letter-spacing: 0;
+}
+.mapa-lista {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+.mapa-cartao {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 10px 14px;
+}
+.mapa-topo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+}
+.mapa-topo h3 {
+  margin: 0;
+  font-size: 14px;
+  letter-spacing: 0;
+}
+.mapa-id {
+  color: var(--text2);
+}
+.mapa-natureza {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text2);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 0 8px;
+  line-height: 18px;
+}
+.mapa-dl {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: 3px 14px;
+  margin: 8px 0 0;
+  font-size: 13px;
+}
+.mapa-dl dt {
+  color: var(--text2);
+  font-weight: 600;
+}
+.mapa-dl dd {
+  margin: 0;
+  max-width: 80ch;
+}
+.mapa-dl a {
+  color: var(--primary);
+}
+@media (max-width: 640px) {
+  .mapa-dl {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .mapa-dl dd {
+    margin-bottom: 4px;
+  }
+  .mapa-filtros select,
+  .mapa-filtros input[type='search'] {
+    min-width: 0;
+    width: 100%;
+  }
+  .mapa-filtros .campo {
+    flex: 1 1 140px;
+  }
+}

@@ -1,0 +1,268 @@
+/* Cartão do painel (docs/design/cartoes-gramatica-e-wireframes.md, seção 2). Só tokens dos temas, nenhuma cor nova.
+   A ação principal é um botão cujo ::after cobre o cartão; o título, o chip e o ⓘ ficam numa camada acima. */
+.cartao {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 10px 14px;
+  text-align: left;
+  font-variant-numeric: tabular-nums;
+}
+.cartao .so-leitor {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  margin: 0;
+}
+
+/* Topo: título, natureza e ajuda. Fica acima do ::after da ação para o ⓘ continuar clicável. */
+.cartao-topo {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  pointer-events: none;
+}
+.cartao-titulo {
+  flex: 1 1 auto;
+  margin: 0;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text2);
+  letter-spacing: 0;
+}
+/* Cartões de seção (série, tabela, lista) têm título de leitura; o KPI usa o rótulo discreto. */
+.cartao--serie .cartao-titulo,
+.cartao--tabela .cartao-titulo,
+.cartao--lista .cartao-titulo {
+  font-size: 14px;
+  color: var(--text);
+}
+.cartao-natureza {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text2);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 0 8px;
+  line-height: 18px;
+  white-space: nowrap;
+}
+.cartao-ajuda {
+  position: relative;
+  pointer-events: auto;
+}
+.cartao-ajuda-botao {
+  border: 0;
+  background: transparent;
+  color: var(--text2);
+  cursor: pointer;
+  font: inherit;
+  font-size: 16px;
+  line-height: 1;
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+}
+.cartao-ajuda-botao:hover {
+  background: var(--soft);
+  color: var(--text);
+}
+.cartao-balao {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  z-index: 5;
+  width: min(320px, 80vw);
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 8px 12px;
+  box-shadow: 0 6px 18px rgb(0 0 0 / 0.18);
+  font-size: 12.5px;
+  font-weight: 400;
+  text-align: left;
+}
+.cartao-balao dl {
+  margin: 0;
+}
+.cartao-balao dt {
+  font-weight: 650;
+  margin-top: 6px;
+}
+.cartao-balao dt:first-child {
+  margin-top: 0;
+}
+.cartao-balao dd {
+  margin: 0;
+  color: var(--text2);
+}
+
+/* Corpo do tipo kpi: tudo dentro da ação principal. */
+.cartao-kpi {
+  display: grid;
+  gap: 2px;
+  align-content: start;
+}
+.cartao-valor {
+  font-size: 30px;
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: -0.5px;
+}
+.cartao-simbolo {
+  color: var(--warn);
+  font-size: 20px;
+  vertical-align: 3px;
+}
+.cartao-legenda,
+.cartao-variacao {
+  font-size: 12px;
+  color: var(--text2);
+}
+.cartao-estado {
+  font-size: 12.5px;
+  font-weight: 600;
+}
+.cartao-estado--ok {
+  color: var(--ok);
+}
+.cartao-estado--atencao {
+  color: var(--warn);
+}
+.cartao-estado--problema {
+  color: var(--bad);
+}
+.cartao-estado--neutro {
+  color: var(--text2);
+}
+.cartao-ver {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--primary);
+  margin-top: 2px;
+}
+
+/* Ação principal: botão sem moldura; o ::after amplia a área clicável para o cartão inteiro. */
+.cartao-acao {
+  position: static;
+  display: block;
+  width: 100%;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.cartao-acao::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  border-radius: 10px;
+}
+.cartao--clicavel:hover {
+  background: var(--soft);
+  border-color: var(--primary);
+}
+/* O anel de foco contorna o cartão inteiro (o ::after da ação cobre o cartão): contraste do --focus ≥ 6:1 nos três temas. */
+.cartao-acao:focus-visible {
+  outline: none;
+}
+.cartao-acao:focus-visible::after {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+/* Corpo das outras variantes: acima do ::after para os elementos clicáveis (linhas, barras, células) funcionarem. */
+.cartao-corpo {
+  position: relative;
+  z-index: 2;
+  min-width: 0;
+  overflow-x: auto;
+}
+.cartao-acao--rodape {
+  margin-top: auto;
+  padding-top: 6px;
+}
+
+/* Rodapé: procedência e aviso. Links ficam acima da área clicável. */
+.cartao-rodape {
+  position: relative;
+  z-index: 2;
+  margin-top: auto;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 10px;
+  border-top: 1px solid var(--line);
+  padding-top: 6px;
+  font-size: 11.5px;
+  color: var(--text2);
+}
+.cartao-aviso {
+  color: var(--warn);
+  font-weight: 600;
+}
+.cartao-aviso a {
+  color: var(--primary);
+}
+
+/* Estados */
+.cartao-mensagem {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  gap: 4px;
+  font-size: 13px;
+}
+.cartao-mensagem p {
+  margin: 0;
+}
+.cartao-mensagem--erro {
+  color: var(--bad);
+}
+.cartao-dica {
+  color: var(--text2);
+  font-size: 12px;
+}
+.cartao-tentar {
+  justify-self: start;
+}
+.cartao-esqueleto {
+  display: grid;
+  gap: 8px;
+  margin-top: 4px;
+}
+.cartao-esq {
+  background: var(--soft);
+  border-radius: 8px;
+  height: 36px;
+  animation: cartao-pulso 1.4s ease-in-out infinite;
+}
+.cartao-esq--curto {
+  height: 16px;
+  width: 60%;
+}
+@keyframes cartao-pulso {
+  50% {
+    opacity: 0.55;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cartao-esq {
+    animation: none;
+  }
+}

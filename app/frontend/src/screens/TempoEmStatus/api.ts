@@ -1,4 +1,4 @@
-// Contrato do card "Tempo em status" (espelha TempoEmStatusDto/DrillRow do backend).
+// Contrato do card "Tempo em status" (espelha TempoEmStatusDto do backend; as tasks por trás dos números vêm do drill genérico, ver shared/tasksApi.ts).
 // Só fala com o backend do próprio painel; nunca com o Jira.
 
 import { ErroDaApi, getJson } from '../../api/client'
@@ -34,14 +34,6 @@ export type TempoEmStatusDto = {
   abertasParadas: StuckIssue[]
   unit: 'util' | 'corrido' | string
   avisos: Aviso[]
-}
-
-export type DrillRow = {
-  key: string
-  resumo: string
-  responsavel: string | null
-  status: string
-  detalhe: string
 }
 
 export type Unidade = 'util' | 'corrido'
@@ -92,10 +84,4 @@ function pegar<T>(caminho: string, params: URLSearchParams): Promise<T> {
 
 export function fetchTempoEmStatus(filtros: Filtros): Promise<TempoEmStatusDto> {
   return pegar('/api/cards/tempo-em-status', paramsDe(filtros))
-}
-
-export function fetchDrill(filtros: Filtros, kind: string): Promise<DrillRow[]> {
-  const p = paramsDe(filtros)
-  p.set('kind', kind)
-  return pegar('/api/drill/tempo-em-status', p)
 }

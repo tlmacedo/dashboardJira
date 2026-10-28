@@ -365,8 +365,8 @@ class DadosDeDemonstracaoTest {
                 assertTrue(card["paradas"]!!.jsonPrimitive.content.toInt() > 0, card.toString())
                 val bloqueantes = card["avisos"]!!.jsonArray.filter { it.jsonObject["gravidade"]!!.jsonPrimitive.content == "bloqueante" }
                 assertEquals(emptyList(), bloqueantes)
-                val analisadas = Json.parseToJsonElement(client.get("/api/drill/tempo-em-status?kind=analisadas").bodyAsText())
-                    .jsonArray.map { it.jsonObject["key"]!!.jsonPrimitive.content }
+                val analisadas = Json.parseToJsonElement(client.get("/api/cartoes/TS-01/tasks?segmento=analisadas").bodyAsText())
+                    .jsonObject["linhas"]!!.jsonArray.map { it.jsonObject["key"]!!.jsonPrimitive.content }
                 assertTrue("DEMO-1" in analisadas, analisadas.toString())
                 // O Epic e a Cancelled ficam fora; a Closed sem resolução e as chaves da outra instância também.
                 val epico = issuesDaFixture("samsung").first { it["fields"]!!.jsonObject["issuetype"]!!.jsonObject["name"]!!.jsonPrimitive.content == "Epic" }

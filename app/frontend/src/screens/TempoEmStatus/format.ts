@@ -1,26 +1,8 @@
 import type { Lang } from '../../i18n'
+import { dataCurta } from '../../shared/format'
 
-const locale = (lang: Lang) => (lang === 'pt' ? 'pt-BR' : 'en-US')
-
-/** Número no formato do idioma, com casas fixas. */
-export function numero(v: number, lang: Lang, casas = 1): string {
-  return v.toLocaleString(locale(lang), { minimumFractionDigits: casas, maximumFractionDigits: casas })
-}
-
-export function inteiro(v: number, lang: Lang): string {
-  return v.toLocaleString(locale(lang), { maximumFractionDigits: 0 })
-}
-
-export function percentual(fracao: number, lang: Lang): string {
-  return `${Math.round(fracao * 100).toLocaleString(locale(lang))}%`
-}
-
-/** yyyy-mm-dd (valor do input date) para dd/mm/aaaa (pt) ou mm/dd/yyyy (en). */
-export function dataCurta(iso: string, lang: Lang): string {
-  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso)
-  if (!m) return iso
-  return lang === 'pt' ? `${m[3]}/${m[2]}/${m[1]}` : `${m[2]}/${m[3]}/${m[1]}`
-}
+// Os formatadores genéricos vivem em `shared/format.ts` (usados pelo componente Cartao); aqui só os da tela.
+export { dataCurta, inteiro, numero, percentual } from '../../shared/format'
 
 /** Faixa do tempo mediano por pessoa × status: ≤ 3 d ✓, 3–6 d ●, > 6 d ▲. */
 export type Faixa = 'ok' | 'atencao' | 'alto'
@@ -33,8 +15,8 @@ export function faixaDe(dias: number): Faixa {
 
 export const SIMBOLO: Record<Faixa, string> = { ok: '✓', atencao: '●', alto: '▲' }
 
-/** Linha "# filtros: ... (unidade)" usada nos dois CSV, com o que o usuário vê na tela. */
-export function linhaFiltrosCsv(
+/** "Squad: Alfa | Período: ... (dias úteis)": os filtros ativos em texto, para a gaveta e para o CSV. */
+export function resumoDosFiltros(
   f: import('./api').Filtros,
   t: (k: string) => string,
   lang: Lang,
@@ -48,5 +30,14 @@ export function linhaFiltrosCsv(
   }
   if (f.semOutliers) partes.push(t('tempo.filtro.semOutliers'))
   const unidade = t(f.unit === 'util' ? 'tempo.unidade.util' : 'tempo.unidade.corrido').toLowerCase()
-  return `# ${t('tempo.csv.filtros')}: ${partes.join(' | ') || t('tempo.csv.nenhum')} (${unidade})`
+  return `${partes.join(' | ') || t('tempo.csv.nenhum')} (${unidade})`
+}
+
+/** Linha "# filtros: ..." do CSV da tela, com o que o usuário vê na tela. */
+export function linhaFiltrosCsv(
+  f: import('./api').Filtros,
+  t: (k: string) => string,
+  lang: Lang,
+): string {
+  return `# ${t('tempo.csv.filtros')}: ${resumoDosFiltros(f, t, lang)}`
 }

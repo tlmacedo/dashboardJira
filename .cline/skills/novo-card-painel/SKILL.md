@@ -16,7 +16,10 @@ Skill própria do projeto. O card **Tempo em status** (Plano 3, `docs/superpower
 | Domínio e cálculo | `app/backend/src/main/kotlin/br/sidia/painel/domain/` |
 | Rota e DTO | `app/backend/src/main/kotlin/br/sidia/painel/cards/TempoEmStatusRoutes.kt`, `TempoEmStatusDto.kt` |
 | Teste da rota | `app/backend/src/test/kotlin/br/sidia/painel/cards/TempoEmStatusRoutesTest.kt` |
-| Tela | `app/frontend/src/screens/TempoEmStatus/` (`TempoEmStatus.tsx`, `api.ts`, `DrillDrawer.tsx`, `csv.ts`, `format.ts`, teste) |
+| Tela | `app/frontend/src/screens/TempoEmStatus/` (`TempoEmStatus.tsx`, `api.ts`, `format.ts`, teste) |
+| Contrato do cartão (Plano 17a) | backend: `cards/contrato/` (`CartaoMeta`, `CartaoRegistrado`, `CatalogoDeCartoes`, drill genérico `GET /api/cartoes/{id}/tasks`) e `cards/TempoEmStatusCartoes.kt` como exemplo de registro; frontend: `shared/Cartao.tsx`, `shared/GavetaDeTasks.tsx`, `shared/csv.ts`, `shared/useCatalogo.ts` |
+
+**Todo cartão novo se registra no `CatalogoDeCartoes` (`catalogoPadrao()`), usa o componente `Cartao` e abre a `GavetaDeTasks`; o número do cartão tem de ser o total do drill (`ContratoDeCartoesTest` percorre o registro) e os textos "título", "o que mostra" e "como calcula" entram em `pt.json` e `en.json`. Não crie `KpiCard`, gaveta nem rota de drill própria.**
 
 ## O que todo card precisa
 

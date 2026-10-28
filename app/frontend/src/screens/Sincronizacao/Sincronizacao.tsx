@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { useLang } from '../../i18n/LangProvider'
 import { ErroDaApi } from '../../api/client'
+import { Cartao } from '../../shared/Cartao'
 import { fetchSyncStatus, type ExecucaoDto, type InstanciaStatusDto, type SyncStatusDto } from './api'
 import './sincronizacao.css'
 
@@ -77,25 +78,28 @@ function Conteudo({ dto, t, lang }: { dto: SyncStatusDto; t: T; lang: string }) 
   const desligado = dto.modo === 'DESLIGADO_PELA_FLAG'
   return (
     <>
-      <div className={`sinc-faixa sinc-faixa--${desligado ? 'aviso' : 'ok'}`} role="status">
-        <strong>{`${desligado ? '●' : '✓'} ${rotulo(t, `sinc.modo.${dto.modo}`, dto.modo)}`}</strong>
-        <span>{rotulo(t, `sinc.modo.nota.${dto.modo}`, '')}</span>
-      </div>
+      {/* SY-01: o modo do sincronizador. Sem tasks por trás, então o cartão não tem gaveta. */}
+      <Cartao id="SY-01" variante="lista" nivelDoTitulo={2} titulo={t('sinc.modo')}>
+        <div className={`sinc-faixa sinc-faixa--${desligado ? 'aviso' : 'ok'}`} role="status">
+          <strong>{`${desligado ? '●' : '✓'} ${rotulo(t, `sinc.modo.${dto.modo}`, dto.modo)}`}</strong>
+          <span>{rotulo(t, `sinc.modo.nota.${dto.modo}`, '')}</span>
+        </div>
+      </Cartao>
 
       {dto.instancias.length === 0 && <p className="sinc-vazio">{t('sinc.semInstancias')}</p>}
       {dto.instancias.map((i) => (
         <Instancia key={i.instancia} inst={i} t={t} lang={lang} />
       ))}
 
-      <section className="sinc-bloco" aria-labelledby="sinc-retencao">
-        <h2 id="sinc-retencao">{t('sinc.retencao')}</h2>
+      {/* SY-03: a última limpeza local. */}
+      <Cartao id="SY-03" variante="tabela" nivelDoTitulo={2} idDoTitulo="sinc-retencao" titulo={t('sinc.retencao')}>
         <p className="sinc-nota">{t('sinc.retencao.nota')}</p>
         {dto.retencao ? (
           <TabelaExecucoes nome={t('sinc.retencao')} execucoes={[dto.retencao]} t={t} lang={lang} />
         ) : (
           <p className="sinc-vazio">{t('sinc.retencao.vazia')}</p>
         )}
-      </section>
+      </Cartao>
     </>
   )
 }
@@ -104,8 +108,8 @@ function Instancia({ inst, t, lang }: { inst: InstanciaStatusDto; t: T; lang: st
   const id = `sinc-inst-${inst.instancia}`
   const classe = CLASSE_GATE[inst.gate] ?? 'aviso'
   return (
-    <section className="sinc-bloco" aria-labelledby={id}>
-      <h2 id={id}>{`${t('sinc.instancia')} ${inst.instancia}`}</h2>
+    // SY-02: as últimas execuções de uma instância; o título leva o nome da instância.
+    <Cartao id="SY-02" variante="tabela" nivelDoTitulo={2} idDoTitulo={id} titulo={`${t('sinc.instancia')} ${inst.instancia}`}>
       <dl className="sinc-dl">
         <div>
           <dt>{t('sinc.gate')}</dt>
@@ -136,7 +140,7 @@ function Instancia({ inst, t, lang }: { inst: InstanciaStatusDto; t: T; lang: st
       ) : (
         <TabelaExecucoes nome={`${t('sinc.execucoes')} — ${inst.instancia}`} execucoes={inst.execucoes} t={t} lang={lang} />
       )}
-    </section>
+    </Cartao>
   )
 }
 

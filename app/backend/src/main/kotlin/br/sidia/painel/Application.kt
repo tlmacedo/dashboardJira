@@ -1,5 +1,9 @@
 package br.sidia.painel
 
+import br.sidia.painel.cards.contrato.CatalogoDeCartoes
+import br.sidia.painel.cards.contrato.catalogoPadrao
+import br.sidia.painel.cards.contrato.rotasDeDrillGenerico
+import br.sidia.painel.cards.contrato.rotasDoCatalogo
 import br.sidia.painel.cards.registrarNegacaoSemPapel
 import br.sidia.painel.cards.rotasTempoEmStatus
 import br.sidia.painel.config.ArquivoEnv
@@ -93,6 +97,7 @@ fun Application.module(
     context: AppContext,
     authenticator: Authenticator = autenticadorPadrao(context.settings),
     agendador: Agendador? = null,
+    catalogo: CatalogoDeCartoes = catalogoPadrao(),
 ) {
     val settings = context.settings
     val inicioDoProcesso = context.clock.instant()
@@ -144,6 +149,8 @@ fun Application.module(
         spaEstatica(settings.staticDir)
         context.dataSource?.let { ds ->
             rotasTempoEmStatus(context, SqliteIssueStore(ds), AccessLog(ds))
+            rotasDoCatalogo(context, catalogo, AccessLog(ds))
+            rotasDeDrillGenerico(context, catalogo, SqliteIssueStore(ds), AccessLog(ds))
             rotasSyncStatus(context, SqliteSyncStateStore(ds), AccessLog(ds))
         }
         get("/api/health") { call.respond(HealthResposta(ok = true)) }
