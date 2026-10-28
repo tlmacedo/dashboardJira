@@ -41,7 +41,8 @@ fun Route.rotasDeDrillGenerico(ctx: AppContext, catalogo: CatalogoDeCartoes, sto
             val segmento = call.request.queryParameters["segmento"] ?: throw ErroHttp(HttpStatusCode.BadRequest, CODIGO_SEGMENTO_INVALIDO)
             val linhas = cartao.drill(EntradaDeCartao(ctx, store, principal, call.request.queryParameters), segmento)
             // A auditoria guarda a quantidade, nunca as chaves das tasks.
-            call.attributes.put(EXTRAS_DE_AUDITORIA, mapOf("total" to linhas.size.toString()))
+            // Cartão de módulo sensível: nem a quantidade vai para a auditoria (seria o próprio achado). Fica só "quem consultou o módulo".
+            if (cartao.moduloSensivel == null) call.attributes.put(EXTRAS_DE_AUDITORIA, mapOf("total" to linhas.size.toString()))
             DrillGenericoDto(
                 tituloChave = cartao.meta.tituloChave,
                 definicaoChave = cartao.meta.oQueMostraChave,

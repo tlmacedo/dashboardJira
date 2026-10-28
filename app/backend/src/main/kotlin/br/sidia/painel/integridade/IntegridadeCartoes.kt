@@ -88,7 +88,8 @@ internal fun cartoesDeIntegridade(): List<CartaoRegistrado> = listOf(
             when {
                 seg == "nivel:ALTO" -> linhasDeEvidencias(c.doNivel(NivelIntegridade.ALTO), c)
                 seg == "nivel:MEDIO" -> linhasDeEvidencias(c.doNivel(NivelIntegridade.MEDIO), c)
-                seg.startsWith("pessoa:") -> c.daPessoa(seg.removePrefix("pessoa:"))?.let { linhasDeEvidencias(it, c) }
+                // Sem oráculo: pessoa fora de ALTO/MÉDIO (ou inexistente) responde 200 com lista vazia, igual a quem não tem nada.
+                seg.startsWith("pessoa:") -> c.daPessoa(seg.removePrefix("pessoa:"))?.let { linhasDeEvidencias(it, c) } ?: emptyList()
                 else -> null
             }
         },

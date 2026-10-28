@@ -143,6 +143,48 @@ class IntegridadeRoutesTest {
     }
 
     @Test
+    fun accessLogNaoGuardaOAchado() = rodar { get ->
+        // Enumera todas as pessoas (com e sem indício, e uma que não existe), por gaveta e por filtro da tela.
+        val pessoas = listOf("ana", "bruno", "carla", "lider.alfa", "coord.um", "fulano.inexistente")
+        val status = mutableSetOf<HttpStatusCode>()
+        val tamanhos = mutableMapOf<String, Int>()
+        for (p in pessoas) {
+            val r = get(gerente, "/api/cartoes/IN-02/tasks?segmento=${enc("pessoa:$p")}")
+            status += r.status
+            tamanhos[p] = gaveta(r).linhas.size
+            assertEquals(HttpStatusCode.OK, get(gerente, "/api/integridade?pessoa=${enc(p)}&sinal=FECHAMENTO_EM_LOTE").status)
+        }
+        assertEquals(setOf(HttpStatusCode.OK), status, "sem oráculo: pessoa fora de ALTO/MÉDIO também responde 200")
+        assertEquals(0, tamanhos.getValue("carla"), "pessoa normal: lista vazia")
+        assertEquals(0, tamanhos.getValue("fulano.inexistente"), "pessoa inexistente: lista vazia")
+        assertTrue(tamanhos.getValue("bruno") > 0, "quem tem indício continua vendo as tasks")
+        get(gerente, "/api/cartoes/IN-02/tasks?segmento=${enc("nivel:ALTO")}")
+        get(gerente, "/api/cartoes/IN-05/tasks?segmento=SINAL_QUE_NAO_EXISTE")
+        get("coord.um", "/api/cartoes/IN-02/tasks?segmento=${enc("pessoa:bruno")}")
+        val linhas = linhasDoAccessLog()
+        assertTrue(linhas.isNotEmpty())
+        for ((usuario, rota, filtros) in linhas) {
+            val resto = "$rota $filtros"
+            for (p in pessoas) assertFalse(p in resto, "id de pessoa no access_log: $p em $resto")
+            assertFalse("total" in filtros, "contagem do achado no access_log: $filtros")
+            assertFalse(Regex("FECHAMENTO_EM_LOTE|SINAL_QUE_NAO_EXISTE").containsMatchIn(filtros), "nome de sinal no access_log: $filtros")
+            assertTrue(usuario == gerente || usuario == "coord.um")
+        }
+        // Continua registrando QUEM consultou o módulo, e só o tipo do segmento.
+        assertTrue(linhas.any { it.third.contains("\"segmento\":\"pessoa:*\"") }, linhas.toString())
+    }
+
+    @Test
+    fun chaveDeIssueEmMinusculasTambemNaoVaiParaOAccessLog() = rodar { get ->
+        // Rota não sensível (Checklist × Review): a máscara vale para qualquer caixa (M7).
+        get(gerente, "/api/cartoes/CR-01/tasks?segmento=${enc("tg-701")}")
+        get(gerente, "/api/cartoes/CR-01/tasks?segmento=${enc("alerta:Tg-701")}")
+        val linhas = linhasDoAccessLog()
+        assertEquals(2, linhas.size)
+        assertTrue(linhas.none { it.third.contains("701", ignoreCase = true) }, linhas.toString())
+    }
+
+    @Test
     fun falhaAoRegistrar503SemDados() = rodar { get ->
         requireNotNull(ctx!!.dataSource).connection.use { it.createStatement().execute("ALTER TABLE access_log RENAME TO access_log_fora") }
         try {
@@ -184,9 +226,9 @@ class IntegridadeRoutesTest {
         confere("IN-02", "nivel:ALTO", d.resumo.evidenciasNivelAlto)
         confere("IN-02", "nivel:MEDIO", d.resumo.evidenciasNivelMedio)
         for (p in d.resumo.pessoas) confere("IN-02", "pessoa:${p.pessoa}", p.evidencias)
-        // Cada cartão só abre os seus números; pessoa de nível normal ou inexistente não tem gaveta.
+        // Cada cartão só abre os seus números; pessoa de nível normal ou inexistente tem gaveta VAZIA (200, sem oráculo).
         assertEquals(HttpStatusCode.BadRequest, get(gerente, "/api/cartoes/IN-05/tasks?segmento=todas").status)
-        assertEquals(HttpStatusCode.BadRequest, get(gerente, "/api/cartoes/IN-02/tasks?segmento=${enc("pessoa:carla")}").status)
+        confere("IN-02", "pessoa:carla", 0)
         // Cartões sem tasks por trás não têm gaveta.
         for (sem in listOf("IN-04", "IN-06", "IN-08")) assertEquals(HttpStatusCode.NotFound, get(gerente, "/api/cartoes/$sem/tasks?segmento=x").status, sem)
     }

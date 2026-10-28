@@ -213,25 +213,56 @@ internal fun rotaParaRegistro(caminho: String): String =
 
 internal fun hoje(ctx: AppContext): LocalDate = LocalDate.now(ctx.clock.withZone(ctx.settings.zone))
 
-private fun filtrosAuditados(call: ApplicationCall): Map<String, String> =
-    call.request.queryParameters.entries()
-        .filter { it.key in FILTROS_AUDITADOS }
-        .associate { it.key to valorAuditado(it.key, it.value.firstOrNull().orEmpty()) }
+private fun filtrosAuditados(call: ApplicationCall): Map<String, String> {
+    val sensivel = rotaSensivel(call.request.path())
+    return call.request.queryParameters.entries()
+        .filter { it.key in FILTROS_AUDITADOS && !(sensivel && it.key in FILTROS_QUE_NOMEIAM_O_ACHADO) }
+        .associate { it.key to valorAuditado(it.key, it.value.firstOrNull().orEmpty(), sensivel) }
+}
+
+/**
+ * Rotas dos módulos sensíveis ([br.sidia.painel.lgpd.ModuloSensivel]): a Integridade e os cartões `IN-nn`. O `access_log` guarda
+ * ali QUEM consultou o módulo, nunca o achado: sem id de pessoa, sem nome de sinal e sem contagem. Um módulo sensível novo
+ * acrescenta o seu prefixo aqui.
+ */
+private val PREFIXOS_SENSIVEIS = listOf("/api/integridade", "/api/cartoes/IN-")
+
+internal fun rotaSensivel(caminho: String): Boolean = PREFIXOS_SENSIVEIS.any { caminho.startsWith(it) }
+
+/** Filtros que, numa rota sensível, apontariam para a pessoa ou o sinal consultado: não são gravados. */
+private val FILTROS_QUE_NOMEIAM_O_ACHADO = setOf("pessoa", "sinal")
+
+/** Segmentos sem pessoa nem sinal que podem ir inteiros para a auditoria de uma rota sensível. */
+private val SEGMENTOS_NEUTROS = setOf("todas", "afetadas")
 
 /** Marcador gravado no lugar de um eixo ou medida fora da lista fechada (o valor cru nunca vai para a auditoria). */
 private const val VALOR_INVALIDO = "(invalido)"
 
 /** Eixos e medida do Cruzamentos só vão ao `access_log` se forem ids da lista fechada; qualquer outro texto vira o marcador. */
-private fun valorAuditado(parametro: String, valor: String): String = when (parametro) {
+private fun valorAuditado(parametro: String, valor: String, sensivel: Boolean): String = when (parametro) {
     "linhas", "colunas" -> if (Eixo.deId(valor) != null) valor else VALOR_INVALIDO
     "medida" -> if (Medida.deId(valor) != null) valor else VALOR_INVALIDO
-    // Segmento de gaveta que cita uma chave de issue (pedido malformado ou plantado): a chave nunca vai para a auditoria.
-    "segmento" -> if (CHAVE_DE_ISSUE_NO_TEXTO.containsMatchIn(valor)) VALOR_INVALIDO else valor
+    // Rota sensível: só o TIPO do segmento (`pessoa:*`, `nivel:*`, `sinal:*`), nunca o id da pessoa nem o nome do sinal.
+    "segmento" -> when {
+        sensivel -> segmentoSensivelParaRegistro(valor)
+        // Segmento de gaveta que cita uma chave de issue (pedido malformado ou plantado; qualquer caixa): a chave nunca vai para a auditoria.
+        CHAVE_DE_ISSUE_NO_TEXTO.containsMatchIn(valor) -> VALOR_INVALIDO
+        else -> valor
+    }
     else -> valor
 }
 
 /** Forma de uma chave de issue do Jira (`TG-701`) em qualquer lugar do texto. */
-private val CHAVE_DE_ISSUE_NO_TEXTO = Regex("\\b[A-Z][A-Z0-9_]*-\\d+\\b")
+private val CHAVE_DE_ISSUE_NO_TEXTO = Regex("\\b[A-Za-z][A-Za-z0-9_]*-\\d+\\b")
+
+private val TIPOS_DE_SEGMENTO_SENSIVEL = setOf("pessoa", "nivel", "sinal")
+
+/** `pessoa:bruno` vira `pessoa:*`; segmento neutro passa inteiro; qualquer outra coisa vira o marcador de inválido. */
+private fun segmentoSensivelParaRegistro(valor: String): String {
+    if (valor in SEGMENTOS_NEUTROS) return valor
+    val tipo = valor.substringBefore(':')
+    return if (':' in valor && tipo in TIPOS_DE_SEGMENTO_SENSIVEL) "$tipo:*" else VALOR_INVALIDO
+}
 
 /**
  * Executa [bloco] (fora do laço de eventos, pois usa JDBC), registra a consulta com o resultado e só então
