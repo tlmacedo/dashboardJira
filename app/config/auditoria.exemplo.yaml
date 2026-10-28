@@ -11,6 +11,10 @@ posseAntesDoVencimentoDias: 2
 # Quantas trocas de responsável caracterizam passa-bola (2 a 10).
 passaBolaTrocas: 3
 
+# Alteração em lote (informativo): a mesma pessoa mexer no mesmo campo, no mesmo minuto, em tantas issues ou mais
+# marca os sinais com "em lote (N)". É contexto, não prova (2 a 100; se a chave faltar, vale 5).
+emLoteMinimo: 5
+
 # Como contar os dias: corrido ou util (dias úteis do calendário).
 unidade: corrido
 

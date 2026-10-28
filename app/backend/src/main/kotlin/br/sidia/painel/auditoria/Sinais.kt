@@ -53,6 +53,8 @@ data class Sinal(
     val motivo: MotivoAutorizacao,
     val responsavel: String?,
     val changelogId: String,
+    /** Alteração em lote (I-15): quantas issues a mesma pessoa mexeu, no mesmo campo e minuto; nulo abaixo do mínimo. Contexto, não prova. */
+    val emLote: Int? = null,
 )
 
 /** Tudo o que um [Detector] precisa além da linha do tempo da issue. */

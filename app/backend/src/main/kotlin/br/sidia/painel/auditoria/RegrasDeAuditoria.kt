@@ -17,7 +17,8 @@ data class RegraSinal(val gravidade: Int, val ativo: Boolean = true)
 /**
  * Regras da auditoria, lidas de `auditoria.yaml` (versionado, sem dado pessoal). [tiposReview] tem uma fonte só:
  * o `vinculos.yaml` (o `auditoria.yaml` não tem essa chave). Limites: `pertoDoVencimentoDias` e
- * `posseAntesDoVencimentoDias` de 0 a 30, `passaBolaTrocas` de 2 a 10, gravidade de 1 a 3; todo [CodigoSinal]
+ * `posseAntesDoVencimentoDias` de 0 a 30, `passaBolaTrocas` de 2 a 10, `emLoteMinimo` de 2 a 100 (padrão 5; a partir de
+ * quantas issues a mesma pessoa, no mesmo campo e minuto, vira "em lote"), gravidade de 1 a 3; todo [CodigoSinal]
  * precisa de regra. Violações são [IllegalArgumentException] citando a chave.
  */
 data class RegrasDeAuditoria(
@@ -29,11 +30,13 @@ data class RegrasDeAuditoria(
     val statusCancelamento: Set<String>,
     val tiposReview: Set<String>,
     val sinais: Map<CodigoSinal, RegraSinal>,
+    val emLoteMinimo: Int = 5,
 ) {
     init {
         require(pertoDoVencimentoDias in 0..30) { "pertoDoVencimentoDias $pertoDoVencimentoDias fora de 0..30" }
         require(posseAntesDoVencimentoDias in 0..30) { "posseAntesDoVencimentoDias $posseAntesDoVencimentoDias fora de 0..30" }
         require(passaBolaTrocas in 2..10) { "passaBolaTrocas $passaBolaTrocas fora de 2..10" }
+        require(emLoteMinimo in 2..100) { "emLoteMinimo $emLoteMinimo fora de 2..100" }
         require(statusCancelamento.isNotEmpty() && statusCancelamento.none { it.isBlank() }) {
             "statusCancelamento deve ter ao menos um status, sem itens vazios"
         }
@@ -76,6 +79,7 @@ data class RegrasDeAuditoria(
                     statusCancelamento = bruto.statusCancelamento.toSet(),
                     tiposReview = vinculos.tiposReview,
                     sinais = sinais,
+                    emLoteMinimo = bruto.emLoteMinimo,
                 )
             } catch (e: IllegalArgumentException) {
                 invalido(e.message.orEmpty(), e)
@@ -96,4 +100,5 @@ private data class RegrasYaml(
     val unidade: String,
     val statusCancelamento: List<String>,
     val sinais: Map<String, RegraSinalYaml>,
+    val emLoteMinimo: Int = 5,
 )
