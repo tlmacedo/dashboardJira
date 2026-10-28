@@ -33,9 +33,9 @@ class AbertasCalculator(private val cal: BusinessCalendar, private val map: Stat
         private val ORDEM_DE_PRIORIDADE = listOf("Highest", "High", "Medium", "Low", "Lowest")
 
         fun faixaDeIdade(idade: Double): String = when {
-            idade < 8 -> "0-7"
-            idade < 15 -> "8-14"
-            idade < 31 -> "15-30"
+            idade <= 7 -> "0-7"
+            idade <= 14 -> "8-14"
+            idade <= 30 -> "15-30"
             else -> ">30"
         }
     }

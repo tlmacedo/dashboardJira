@@ -160,4 +160,14 @@ class AbertasCalculatorTest {
         assertEquals(7.4, checklist.p85, 1e-9)
         assertTrue(Fluxo.AMOSTRA_MINIMA > checklist.n)
     }
+
+    @Test
+    fun faixasDeIdadeNasFronteirasComoORelatorio() {
+        // Relatório: 0-7, 8-14, 15-30 e "> 30" (limite superior inclusivo, idade fracionária).
+        val esperado = listOf(
+            0.0 to "0-7", 7.0 to "0-7", 7.5 to "8-14", 14.0 to "8-14", 14.5 to "15-30",
+            30.0 to "15-30", 30.5 to ">30", 45.0 to ">30",
+        )
+        for ((idade, faixa) in esperado) assertEquals(faixa, AbertasCalculator.faixaDeIdade(idade), "idade $idade")
+    }
 }
