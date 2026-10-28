@@ -9,7 +9,9 @@ import br.sidia.painel.domain.TimeInStatusCalculator
 import br.sidia.painel.domain.TimeInStatusResult
 import br.sidia.painel.domain.TimeUnitMode
 import br.sidia.painel.domain.UnmappedStatusException
+import br.sidia.painel.http.ErroDto
 import br.sidia.painel.security.Principal
+import br.sidia.painel.security.Role
 import br.sidia.painel.security.Visibility
 import br.sidia.painel.security.normalizarUsername
 import br.sidia.painel.security.principal
@@ -61,16 +63,20 @@ private const val MAX_FILTRO = 100
 private const val ID_DEV = "dev"
 
 /** Única lista de filtros que vai para a auditoria: o que não está aqui nunca é gravado. */
-private val FILTROS_AUDITADOS = setOf("squad", "pessoa", "tipo", "os", "de", "ate", "unit", "semOutliers", "kind")
+private val FILTROS_AUDITADOS = setOf("squad", "pessoa", "tipo", "os", "de", "ate", "unit", "semOutliers", "kind", "segmento")
 
 private val FORMATO_USERNAME = Regex("[a-z0-9._-]{1,64}")
 
 private val log = LoggerFactory.getLogger("br.sidia.painel.cards")
 
-/** Resposta de erro de requisição: só o status, nunca corpo (nada de eco de valores nem de detalhes). */
-private class ErroHttp(val status: HttpStatusCode) : RuntimeException(status.toString(), null, false, false)
+/**
+ * Resposta de erro de requisição: só o status, nunca corpo (nada de eco de valores nem de detalhes). Com [codigo],
+ * o corpo é o `ErroDto` com esse código estável (a tela monta o texto por ele); nunca leva o valor recebido.
+ */
+internal class ErroHttp(val status: HttpStatusCode, val codigo: String? = null) :
+    RuntimeException(status.toString(), null, false, false)
 
-private class Filtros(
+internal class Filtros(
     val squad: String?,
     val pessoa: String?,
     val tipo: String?,
@@ -82,7 +88,7 @@ private class Filtros(
 )
 
 /** Cálculo já filtrado pela visibilidade de quem pediu; base do card e do detalhamento. */
-private class Calculado(
+internal class Calculado(
     val dto: TempoEmStatusDto,
     val resultado: TimeInStatusResult?,
     val calculador: TimeInStatusCalculator,
@@ -95,7 +101,7 @@ private class Calculado(
 )
 
 /** O que o detalhamento pede (`kind`). */
-private sealed interface Detalhe {
+internal sealed interface Detalhe {
     data object Analisadas : Detalhe
     data object Paradas : Detalhe
     data class PorStatus(val status: String) : Detalhe
@@ -111,13 +117,7 @@ fun Route.rotasTempoEmStatus(ctx: AppContext, store: IssueStore, auditoria: Acce
     get("/api/me") {
         call.executar(ctx, auditoria) {
             val principal = call.principal
-            val hoje = hoje(ctx)
-            // Papéis sempre do diretório na data de hoje; só o principal `dev` do modo desenvolvimento é a exceção.
-            val papeis = if (ctx.settings.dashboardDevMode && principal.userId == ID_DEV) {
-                principal.roles
-            } else {
-                ctx.roles.rolesOf(principal.userId, hoje)
-            }
+            val papeis = papeisVigentes(ctx, principal)
             if (papeis.isEmpty()) throw ErroHttp(HttpStatusCode.Forbidden)
             MeDto(principal.userId, papeis.sorted().map { it.name })
         }
@@ -133,18 +133,43 @@ fun Route.rotasTempoEmStatus(ctx: AppContext, store: IssueStore, auditoria: Acce
 
     get("/api/drill/tempo-em-status") {
         call.executar(ctx, auditoria) {
-            val principal = call.principal
-            val detalhe = lerDetalhe(call.request.queryParameters["kind"])
-            val filtros = lerFiltros(call.request.queryParameters, hoje(ctx))
-            val calculado = calcular(ctx, store, principal, filtros, (detalhe as? Detalhe.PorPessoaStatus)?.pessoa)
-            // Pessoa fora da visibilidade: 403 (mesmo critério do filtro `pessoa` do card).
-            if (detalhe is Detalhe.PorPessoaStatus && detalhe.pessoa !in calculado.visiveis) {
-                throw ErroHttp(HttpStatusCode.Forbidden)
-            }
-            linhasDoDetalhe(calculado, detalhe)
+            drillDeTempoEmStatus(ctx, store, call.principal, call.request.queryParameters, call.request.queryParameters["kind"])
         }
     }
 }
+
+/**
+ * Papéis vigentes de quem pediu: sempre do diretório na data de hoje; só o principal `dev` do modo
+ * desenvolvimento é a exceção (ele não existe no diretório).
+ */
+internal fun papeisVigentes(ctx: AppContext, principal: Principal): Set<Role> =
+    if (ctx.settings.dashboardDevMode && principal.userId == ID_DEV) {
+        principal.roles
+    } else {
+        ctx.roles.rolesOf(principal.userId, hoje(ctx))
+    }
+
+/**
+ * Tasks de um segmento (`kind` da rota antiga, `segmento` da genérica) com os mesmos filtros do card. Único
+ * caminho do detalhamento de Tempo em status: a rota antiga e os cartões TS-nn passam por aqui.
+ */
+internal fun drillDeTempoEmStatus(
+    ctx: AppContext, store: IssueStore, principal: Principal, params: Parameters, segmento: String?,
+    aceita: (Detalhe) -> Boolean = { true },
+): List<DrillRow> {
+    val detalhe = lerDetalhe(segmento)
+    if (!aceita(detalhe)) throw ErroHttp(HttpStatusCode.BadRequest, CODIGO_SEGMENTO_INVALIDO)
+    val filtros = lerFiltros(params, hoje(ctx))
+    val calculado = calcular(ctx, store, principal, filtros, (detalhe as? Detalhe.PorPessoaStatus)?.pessoa)
+    // Pessoa fora da visibilidade: 403 (mesmo critério do filtro `pessoa` do card).
+    if (detalhe is Detalhe.PorPessoaStatus && detalhe.pessoa !in calculado.visiveis) {
+        throw ErroHttp(HttpStatusCode.Forbidden)
+    }
+    return linhasDoDetalhe(calculado, detalhe)
+}
+
+/** Código estável do 400 de segmento (ou `kind`) desconhecido ou malformado. */
+internal const val CODIGO_SEGMENTO_INVALIDO = "SEGMENTO_INVALIDO"
 
 /**
  * Grava a negação de um principal autenticado porém sem papel vigente (o controle de acesso responde 403
@@ -166,7 +191,7 @@ suspend fun registrarNegacaoSemPapel(auditoria: AccessLog, ctx: AppContext, call
     }
 }
 
-private fun hoje(ctx: AppContext): LocalDate = LocalDate.now(ctx.clock.withZone(ctx.settings.zone))
+internal fun hoje(ctx: AppContext): LocalDate = LocalDate.now(ctx.clock.withZone(ctx.settings.zone))
 
 private fun filtrosAuditados(call: ApplicationCall): Map<String, String> =
     call.request.queryParameters.entries()
@@ -176,20 +201,22 @@ private fun filtrosAuditados(call: ApplicationCall): Map<String, String> =
 /**
  * Executa [bloco] (fora do laço de eventos, pois usa JDBC), registra a consulta com o resultado e só então
  * responde. Erros de requisição viram status sem corpo; qualquer outra falha vira 500 sem detalhes
- * (o log do servidor guarda só o tipo da exceção).
+ * (o log do servidor guarda só o tipo da exceção). Um [ErroHttp] com código responde o `ErroDto` do código.
  */
-private suspend inline fun <reified T : Any> ApplicationCall.executar(
+internal suspend inline fun <reified T : Any> ApplicationCall.executar(
     ctx: AppContext,
     auditoria: AccessLog,
-    crossinline bloco: () -> T,
+    crossinline bloco: suspend () -> T,
 ) {
     val principal = principal
     var status = HttpStatusCode.OK
     var corpo: T? = null
+    var codigoDoErro: String? = null
     try {
         corpo = withContext(Dispatchers.IO) { bloco() }
     } catch (e: ErroHttp) {
         status = e.status
+        codigoDoErro = e.codigo
     } catch (e: CancellationException) {
         throw e
     } catch (e: Exception) {
@@ -212,7 +239,11 @@ private suspend inline fun <reified T : Any> ApplicationCall.executar(
         respond(HttpStatusCode.ServiceUnavailable)
         return
     }
-    if (corpo != null) respond(corpo) else respond(status)
+    when {
+        corpo != null -> respond(corpo)
+        codigoDoErro != null -> respond(status, ErroDto(codigoDoErro))
+        else -> respond(status)
+    }
 }
 
 // ---- Leitura e validação dos parâmetros ----
@@ -235,7 +266,7 @@ private fun data(params: Parameters, nome: String): LocalDate? =
         d
     }
 
-private fun lerFiltros(params: Parameters, hoje: LocalDate): Filtros {
+internal fun lerFiltros(params: Parameters, hoje: LocalDate): Filtros {
     val ate = data(params, "ate") ?: hoje
     val de = data(params, "de") ?: ate.minusDays(PERIODO_PADRAO_DIAS)
     if (de.isAfter(ate) || de.plusDays(PERIODO_MAXIMO_DIAS).isBefore(ate)) throw ErroHttp(HttpStatusCode.BadRequest)
@@ -272,23 +303,24 @@ private fun usernameValido(bruto: String): String {
     return id
 }
 
-private fun lerDetalhe(kind: String?): Detalhe {
+internal fun lerDetalhe(kind: String?): Detalhe {
+    val invalido = { ErroHttp(HttpStatusCode.BadRequest, CODIGO_SEGMENTO_INVALIDO) }
     val k = kind?.trim().orEmpty()
-    if (k.isEmpty() || k.length > MAX_FILTRO * 2 || k.any { it.isISOControl() }) throw ErroHttp(HttpStatusCode.BadRequest)
+    if (k.isEmpty() || k.length > MAX_FILTRO * 2 || k.any { it.isISOControl() }) throw invalido()
     return when {
         k == "analisadas" -> Detalhe.Analisadas
         k == "paradas" -> Detalhe.Paradas
-        k.startsWith("status:") -> Detalhe.PorStatus(k.removePrefix("status:").trim().ifEmpty { throw ErroHttp(HttpStatusCode.BadRequest) })
+        k.startsWith("status:") -> Detalhe.PorStatus(k.removePrefix("status:").trim().ifEmpty { throw invalido() })
         k.startsWith("pessoa:") -> {
             // O id de usuário não tem ':', então o primeiro ":status:" separa a pessoa do status.
             val resto = k.removePrefix("pessoa:")
             val corte = resto.indexOf(":status:")
-            if (corte < 0) throw ErroHttp(HttpStatusCode.BadRequest)
+            if (corte < 0) throw invalido()
             val status = resto.substring(corte + ":status:".length).trim()
-            if (status.isEmpty()) throw ErroHttp(HttpStatusCode.BadRequest)
+            if (status.isEmpty()) throw invalido()
             Detalhe.PorPessoaStatus(usernameValido(resto.substring(0, corte)), status)
         }
-        else -> throw ErroHttp(HttpStatusCode.BadRequest)
+        else -> throw invalido()
     }
 }
 
@@ -301,7 +333,7 @@ private fun pessoasDe(t: IssueTimeline): Set<String> = buildSet {
     t.currentAssignee?.let(::add)
 }
 
-private fun calcular(
+internal fun calcular(
     ctx: AppContext,
     store: IssueStore,
     principal: Principal,
@@ -437,7 +469,7 @@ private fun numero(v: Double): String = String.format(Locale.ROOT, "%.1f", v)
 
 private fun rotuloDaUnidade(u: TimeUnitMode) = if (u == TimeUnitMode.UTIL) "dias úteis" else "dias corridos"
 
-private fun linhasDoDetalhe(c: Calculado, detalhe: Detalhe): List<DrillRow> {
+internal fun linhasDoDetalhe(c: Calculado, detalhe: Detalhe): List<DrillRow> {
     val resultado = c.resultado ?: return emptyList()
     val unidade = rotuloDaUnidade(c.unit)
     fun visivel(pessoa: String?) = pessoa?.takeIf { it in c.visiveis }
