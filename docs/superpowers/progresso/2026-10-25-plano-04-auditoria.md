@@ -12,8 +12,9 @@ Tarefas 1 a 3 já estão na `main` (PR #15, mesclada com squash em 26/10). Conti
 | 2 Linha do tempo de auditoria e quem pode alterar | Concluída, revisão aprovada | `f01edb5` | `AuditModel`, `AuditTimeline`, `Autorizacao`; `duedate` no `ChangelogParser` |
 | 3 Sinais de vencimento, responsável, passa-bola e cancelamento | Concluída. A revisão reprovou 1 Important (DoS na contagem de dias úteis com datas absurdas), corrigido na rodada seguinte | `0e34a05` + `35d7326` | A contagem em `UTIL` para ao passar de `pertoDoVencimentoDias + 1`; anos fora de 2000..2100 são ilegíveis; sem re-revisão separada (o teste de tempo passaria também no código antigo: pega só regressão grosseira) |
 | 4 Sinais de labels de atraso | Concluída (branch `feat/auditoria-tarefas-4-a-9`, retomada de 28/10) | `55e4446` | `DetectoresDeLabels`; um sinal por label (a label adicionada vai em `Sinal.para`); `ContextoDeteccao.diaAntes` (corrido ou útil) |
-| 5 Task × Review, no prazo e calculador | Concluída | ver `git log` | `TaskReview`, `NoPrazo` (+ `detalhar`), `AuditCalculator`; modificador "em lote (N)" (I-15, spec 17 seção 6) |
-| 6 a 9 | Em andamento nesta branch (ver as linhas abaixo quando concluídas) | | |
+| 5 Task × Review, no prazo e calculador | Concluída | `5fb74f9` | `TaskReview`, `NoPrazo` (+ `detalhar`), `AuditCalculator`; modificador "em lote (N)" (I-15, spec 17 seção 6) |
+| 6 `AuditStore` sobre SQLite | Concluída | ver `git log` | `SqliteAuditStore`; pares pelo `issue_link` (4A, T12) com as duas pontas ativas; sem migração |
+| 7 a 9 | Em andamento nesta branch (ver as linhas abaixo quando concluídas) | | |
 
 ### Rulings da retomada de 28/10/2026 (Tarefas 4 a 9; sem consultar o usuário, opção recomendada)
 
