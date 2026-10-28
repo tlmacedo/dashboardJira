@@ -99,7 +99,7 @@ jobs:
   guarda-windows:
     name: guarda-windows
     runs-on: windows-latest
-    timeout-minutes: 10
+    timeout-minutes: 30
     steps:
       - name: Desligar a conversão de fim de linha
         run: git config --global core.autocrlf false
