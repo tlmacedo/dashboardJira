@@ -212,7 +212,7 @@ h1 {
 }
 .btn {
   background: var(--surface);
-  border: 1px solid var(--line);
+  border: 1px solid var(--line-control);
   border-radius: 7px;
   padding: 6px 10px;
   cursor: pointer;
