@@ -1,5 +1,6 @@
 package br.sidia.painel.cards.esforco
 
+import br.sidia.painel.AppContext
 import br.sidia.painel.cards.AvisoDto
 import br.sidia.painel.cards.CardDeLeitura
 import br.sidia.painel.cards.CartaoDeLeitura
@@ -29,6 +30,13 @@ import java.util.Locale
 /** Código do aviso: parte das horas veio do tempo gasto do Jira, porque a task não tem worklog (`n` = quantas tasks). */
 const val AVISO_HORAS_DO_CAMPO_TIMESPENT = "HORAS_DO_CAMPO_TIMESPENT"
 
+/** O esforço de cada task (chave -> componentes e índice) com o worklog sincronizado; a Carga por tipo/OS usa o mesmo cálculo. */
+internal fun esforcosDas(ctx: AppContext, tasks: List<IssueSnapshot>): Map<String, EsforcoTask> {
+    val worklogs = ctx.dataSource?.let { SqliteWorklogStore(it).porIssue(INSTANCIA_TRABALHO, tasks.map { s -> s.key }.toSet()) }.orEmpty()
+    val calc = EsforcoCalculator(ctx.regrasEsforco)
+    return tasks.associate { s -> s.key to calc.daTask(s, worklogs[s.key].orEmpty()) }
+}
+
 /**
  * Card Esforço por task fechada: as concluídas positivas do período (padrão 30 dias, pela resolução) com o peso do tipo, os
  * testes `TEST-*` e as horas do worklog lado a lado e o índice composto de `esforco.yaml` (proposta inicial). Por pessoa, o
@@ -57,9 +65,8 @@ object CardEsforco : CardDeLeitura<EsforcoDto> {
             Fluxo.concluidaPositiva(it, ctx.statusMap) && e.filtros.aceita(it) && e.escopo.permitePosse(it, ctx.statusMap, e.agora)
         }.sortedWith(compareBy(ORDEM_NATURAL_DE_CHAVES) { it.key })
 
-        val worklogs = ctx.dataSource?.let { SqliteWorklogStore(it).porIssue(INSTANCIA_TRABALHO, tasks.map { s -> s.key }.toSet()) }.orEmpty()
         val calc = EsforcoCalculator(ctx.regrasEsforco)
-        val esforcos = tasks.associate { s -> s.key to calc.daTask(s, worklogs[s.key].orEmpty()) }
+        val esforcos = esforcosDas(ctx, tasks)
         val posses = tasks.associate { s -> s.key to PosseCalculator.posse(s, e.agora, ctx.statusMap, ctx.calendar, e.filtros.unit) }
         val visiveis = e.escopo.visiveis
         val porPessoa = calc.porPessoa(tasks.map { esforcos.getValue(it.key) to posses.getValue(it.key) }).filterKeys { it in visiveis }
