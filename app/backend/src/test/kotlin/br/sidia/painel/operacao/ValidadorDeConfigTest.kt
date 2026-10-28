@@ -1,5 +1,6 @@
 package br.sidia.painel.operacao
 
+import br.sidia.painel.ENV_OIDC_DE_TESTE
 import br.sidia.painel.TestPaths
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assumptions.assumeTrue
@@ -47,7 +48,7 @@ class ValidadorDeConfigTest {
             "DASHBOARD_DEV_MODE" to "false",
             "DATABASE_PATH" to nova("painel-dados-").resolve("painel.db").toString(),
             "BACKUP_DIR" to nova("painel-copias-").toString(),
-        ) + extras
+        ) + ENV_OIDC_DE_TESTE + extras
 
     private fun codigos(r: ResultadoDaValidacao) = r.problemas.map { it.codigo }
 
@@ -65,6 +66,18 @@ class ValidadorDeConfigTest {
     fun exemplosComoArquivosReaisPassamEmProducao() {
         val r = ValidadorDeConfig.validar(producao(), pastaDeConfig(comoReal = true), hoje)
         assertEquals(emptyList(), r.problemas)
+    }
+
+    @Test
+    fun producaoSemLoginOidcFalhaCitandoSoONome() {
+        val sem = producao() - "OIDC_ISSUER"
+        val r = ValidadorDeConfig.validar(sem, pastaDeConfig(comoReal = true), hoje)
+        assertEquals(listOf(ProblemaDeConfig("SETTINGS_INVALIDO", "OIDC_ISSUER")), r.problemas)
+        val semSegredo = producao() - "SESSION_SECRET"
+        assertEquals(
+            listOf(ProblemaDeConfig("SETTINGS_INVALIDO", "SESSION_SECRET")),
+            ValidadorDeConfig.validar(semSegredo, pastaDeConfig(comoReal = true), hoje).problemas,
+        )
     }
 
     @Test

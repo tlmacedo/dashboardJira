@@ -73,8 +73,134 @@ class PreparacaoDocsTest {
         }
     }
 
+    /** Seções "Passo extra" (fora dos cinco passos): cada uma é uma chamada própria e também confirma a flag. */
     @Test
-    fun documentosDeJiraNaoTemHostRealTokenNemEmail() {
+    fun todoPassoExtraTambemConfirmaAFlag() {
+        val texto = ler("docs/jira/checklist-primeira-conexao.md")
+        val linhas = texto.lines()
+        val inicios = linhas.indices.filter { linhas[it].startsWith("## Passo extra") }
+        assertTrue(inicios.size >= 4, "Esperados os passos extras (papéis, vocabulário, worklog, reporter): ${inicios.size}")
+        for (ini in inicios) {
+            val fim = (ini + 1 until linhas.size).firstOrNull { linhas[it].startsWith("## ") } ?: linhas.size
+            val secao = linhas.subList(ini, fim).joinToString("\n")
+            assertTrue(secao.contains(FRASE_DE_CONFIRMACAO), "Seção sem '$FRASE_DE_CONFIRMACAO': ${linhas[ini]}")
+            assertTrue(secao.contains("Quando parar"), "Seção sem 'Quando parar': ${linhas[ini]}")
+            assertTrue(secao.contains("O que conferir"), "Seção sem 'O que conferir': ${linhas[ini]}")
+        }
+    }
+
+    /** Nomes dos campos do dicionário cuja finalidade ainda diz "a confirmar" (inclusive "tipo a confirmar"). */
+    private fun camposAConfirmar(): List<String> {
+        val linhas = ler("app/config/jira_campos.exemplo.yaml").lines()
+        val saida = mutableListOf<String>()
+        var atual: String? = null
+        for (l in linhas) {
+            Regex("^\\s*- nome:\\s*(.+?)\\s*$").find(l)?.let { atual = it.groupValues[1].trim('"', '\'') }
+            if (Regex("^\\s*finalidade:.*a confirmar").containsMatchIn(l)) atual?.let { saida += it }
+        }
+        return saida.distinct()
+    }
+
+    @Test
+    fun checklistCitaCadaCampoAConfirmar() {
+        val checklist = ler("docs/jira/checklist-primeira-conexao.md")
+        val campos = camposAConfirmar()
+        assertTrue(campos.size >= 10, "o dicionário deveria ter ao menos 10 campos 'a confirmar', achou $campos")
+        for (esperado in listOf("Story Points", "Epic Link", "Flagged", "cf[12416]", "cf[11412]", "Reporter", "Model Name", "Checklist Type")) {
+            assertTrue(esperado in campos, "o dicionário perdeu o campo '$esperado' marcado como a confirmar")
+        }
+        val faltam = (campos + "OS Version").filter { it !in checklist }
+        assertEquals(emptyList(), faltam, "campos 'a confirmar' que o checklist não cita")
+    }
+
+    @Test
+    fun checklistCobreVocabularioFluxoWorklogEReporter() {
+        val texto = ler("docs/jira/checklist-primeira-conexao.md")
+        for (
+            item in listOf(
+                "priority", "labelsCriticidade", "prioridadePadrao", "ordem", "resolucoesNegativas", "/rest/api/2/priority",
+                "/rest/api/2/resolution", "worklog", "timeSpentSeconds", "from/to", "assignee", "Reporter", "PL",
+            )
+        ) {
+            assertTrue(texto.contains(item), "Checklist sem '$item'")
+        }
+    }
+
+    @Test
+    fun matrizCitaCadaEndpoint() {
+        val matriz = ler("docs/jira/matriz-compatibilidade.md")
+        val checklist = ler("docs/jira/checklist-primeira-conexao.md")
+        // os endpoints do cliente do Jira e das conferências do checklist: cada um precisa de linha própria na matriz
+        val endpoints = listOf(
+            "POST /rest/api/2/search", "/rest/api/2/field", "/rest/api/2/myself", "/rest/api/2/status",
+            "/rest/api/2/issue/{key}/worklog", "/rest/api/2/priority", "/rest/api/2/resolution", "/rest/api/2/user",
+        )
+        for (e in endpoints) {
+            assertTrue(matriz.contains(e), "Matriz sem o endpoint '$e'")
+        }
+        // o changelog tem duas formas (expand e rota própria)
+        assertTrue(matriz.contains("expand=changelog") && matriz.contains("/issue/{key}/changelog"))
+        // e tudo o que a matriz cita como endpoint aparece também no checklist (que é o que o usuário executa)
+        for (e in endpoints.drop(1)) {
+            assertTrue(checklist.contains(e.replace("{key}", "{chave}")) || checklist.contains(e), "Checklist sem o endpoint '$e'")
+        }
+    }
+
+    @Test
+    fun cadaFichaUsaSoCamposDoDicionario() {
+        val dic = br.sidia.painel.jql.FieldDictionary.fromYaml(TestPaths.configDir.resolve("jira_campos.exemplo.yaml"))
+        val fichas = Files.list(TestPaths.configDir.resolve("cards")).use { s ->
+            s.filter { it.fileName.toString().endsWith(".card.yaml") }.sorted().toList()
+        }
+        assertTrue(fichas.size >= 20, "Esperadas as fichas de card; achou ${fichas.size}")
+        for (f in fichas) {
+            // a carga já recusa campo fora do dicionário; aqui se confere de novo, ficha por ficha, com o nome do arquivo
+            val spec = br.sidia.painel.jql.CardSpecs.fromYaml(f, dic)
+            for (campo in spec.campos + spec.filtrosFixos.keys + spec.filtrosExcluidos.keys) {
+                assertTrue(dic.has(campo), "${f.fileName}: campo '$campo' fora do dicionário")
+            }
+        }
+    }
+
+    @Test
+    fun documentosDeJiraSemRegraAntiga() {
+        for (doc in todosOsDocumentosDeJira()) {
+            val texto = Files.readString(doc)
+            assertTrue(!texto.contains("autorização expressa"), "${raiz.relativize(doc)} ainda cita 'autorização expressa'")
+            assertTrue(!texto.contains("por pesquisa"), "${raiz.relativize(doc)} ainda cita 'por pesquisa'")
+        }
+    }
+
+    @Test
+    fun documentosDeJiraSemContainerNemPostgres() {
+        val proibidos = Regex("docker|postgres|testcontainers|kubernetes|\\bwsl\\b", RegexOption.IGNORE_CASE)
+        for (doc in todosOsDocumentosDeJira()) {
+            val achou = proibidos.find(Files.readString(doc))
+            assertTrue(achou == null, "${raiz.relativize(doc)} cita '${achou?.value}': o painel roda como pacote, com SQLite (docs/implantacao.md)")
+        }
+    }
+
+    @Test
+    fun testesNaoAcessamOJiraReal() {
+        for (arquivo in listOf("docs/jira/checklist-primeira-conexao.md", "docs/jira/runbook-sincronizacao.md")) {
+            val texto = ler(arquivo)
+            for (item in listOf("MockEngine", "fixtures", "SomenteAFabricaCriaClientesJira", "FlagDesligadaZeroRequisicoesTest")) {
+                assertTrue(texto.contains(item), "$arquivo sem '$item'")
+            }
+            assertTrue(Regex("(?s)testes automáticos.{0,300}mesmo com a flag").containsMatchIn(texto.replace('\n', ' ')), "$arquivo não diz que os testes automáticos nunca acessam o Jira, mesmo com a flag ligada")
+        }
+        // a prova técnica citada existe de fato
+        for (classe in listOf("SomenteAFabricaCriaClientesJira", "FlagDesligadaZeroRequisicoesTest")) {
+            val achou = Files.walk(raiz.resolve("app/backend/src/test")).use { s -> s.anyMatch { it.fileName.toString() == "$classe.kt" } }
+            assertTrue(achou, "o documento cita $classe, que não existe nos testes")
+        }
+    }
+
+    private fun todosOsDocumentosDeJira(): List<Path> =
+        Files.walk(raiz.resolve("docs/jira")).use { s -> s.filter { it.toString().endsWith(".md") }.toList() }
+
+    @Test
+    fun semHostRealNemToken() {
         val hostsPermitidos = setOf("exemplo.invalid", "example.com", "localhost")
         val docs = Files.list(raiz.resolve("docs/jira")).use { s -> s.filter { it.toString().endsWith(".md") }.toList() }
         assertTrue(docs.size >= 2, "Esperados os documentos de docs/jira")

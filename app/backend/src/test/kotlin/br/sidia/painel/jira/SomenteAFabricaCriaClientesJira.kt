@@ -39,8 +39,20 @@ class SomenteAFabricaCriaClientesJira {
      */
     @Test
     fun jiraClientSoEhConstruidoNaFabrica() {
-        val violacoes = varrerFontes(textos(), setOf("JiraClientFactory.kt", "JiraClient.kt"))
+        // ClienteHttpOidc.kt é a única exceção: o cliente do login SSO/OIDC fala só com o provedor de identidade. O teste
+        // abaixo prova que ele não cita o Jira nem recebe configuração de instância.
+        val violacoes = varrerFontes(textos(), setOf("JiraClientFactory.kt", "JiraClient.kt", "ClienteHttpOidc.kt"))
         assertEquals(emptyList(), violacoes)
+    }
+
+    @Test
+    fun clienteHttpDoOidcNaoTocaNoJira() {
+        val texto = textos().entries.single { it.key.endsWith("security/ClienteHttpOidc.kt") }.value
+        assertTrue(!texto.contains("jira", ignoreCase = true), "o cliente do OIDC não pode citar o Jira")
+        assertTrue(!texto.contains("Settings") && !texto.contains("LiveGuard"), "sem configuração do Jira")
+        // e só o login o usa
+        val usos = textos().filter { it.value.contains("criarClienteHttpOidc") }.keys.map { it.substringAfterLast('/') }.toSet()
+        assertEquals(setOf("ClienteHttpOidc.kt", "Application.kt"), usos)
     }
 
     @Test

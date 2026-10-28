@@ -8,6 +8,8 @@
   "shell.tema": "Tema",
   "shell.idioma": "Idioma",
   "shell.fuso": "Fuso: America/Manaus (UTC−4)",
+  "shell.sair": "Sair",
+  "shell.sairErro": "Não foi possível sair. Tente de novo.",
   "shell.semPermissao": "Sem permissão para este papel.",
   "shell.telaPrevista": "Tela prevista no mapa de navegação; ainda não implementada.",
   "shell.metaErro": "Não foi possível consultar o servidor. O menu mostra apenas o mínimo.",

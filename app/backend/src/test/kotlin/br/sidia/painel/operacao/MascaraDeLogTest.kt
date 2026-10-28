@@ -113,6 +113,32 @@ class MascaraDeLogTest {
     }
 
     @Test
+    fun jsonDentroDeJsonComAspasEscapadasEMascarado() {
+        // um corpo JSON dentro do campo "msg" de um log JSON: as aspas internas chegam escapadas
+        val interno = """{"msg":"corpo: {\"password\":\"valor secreto 1\",\"user\":\"ana\"}"}"""
+        val saida = MascaraDeLog.mascarar(interno)
+        assertFalse("valor secreto 1" in saida, saida)
+        assertFalse("secreto" in saida, saida)
+        assertTrue("""\"user\":\"ana\"""" in saida, "o resto do texto fica intacto: $saida")
+        assertEquals("""{"msg":"x {\"client_secret\":\"***\"}"}""", MascaraDeLog.mascarar("""{"msg":"x {\"client_secret\":\"a b c\"}"}"""))
+        // escapado duas vezes
+        assertEquals("""{\\"token\\":\\"***\\"}""", MascaraDeLog.mascarar("""{\\"token\\":\\"abc def\\"}"""))
+    }
+
+    @Test
+    fun senhaComEspacoSemAspasEMascaradaPorInteiro() {
+        assertEquals("password=***", MascaraDeLog.mascarar("password=a b"))
+        assertEquals("falha: senha: *** fim", MascaraDeLog.mascarar("falha: senha: minha senha 123\nfim").replace("\n", " "))
+        // para na próxima chave=valor, na linha, na vírgula e na aspa
+        assertEquals("password=*** user=ana", MascaraDeLog.mascarar("password=a b user=ana"))
+        assertEquals("password=***, depois", MascaraDeLog.mascarar("password=a b, depois"))
+        // token é opaco: continua parando no espaço
+        assertEquals("token=*** fim", MascaraDeLog.mascarar("token=abc fim"))
+        // idempotente
+        assertEquals("password=***", MascaraDeLog.mascarar(MascaraDeLog.mascarar("password=a b")))
+    }
+
+    @Test
     fun settingsSemSegredosNaoDevolveNada() {
         assertTrue(Settings().valoresSecretos().isEmpty())
     }

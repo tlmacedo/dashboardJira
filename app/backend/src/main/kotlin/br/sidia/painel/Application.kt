@@ -12,6 +12,7 @@ import br.sidia.painel.config.ArquivoEnv
 import br.sidia.painel.config.PerfilDeExecucao
 import br.sidia.painel.config.Settings
 import br.sidia.painel.db.AccessLog
+import br.sidia.painel.db.CacheDeLeituras
 import br.sidia.painel.demo.prepararDemonstracao
 import br.sidia.painel.http.ConfigCsrf
 import br.sidia.painel.http.cabecalhosDeSeguranca
@@ -36,7 +37,10 @@ import br.sidia.painel.operacao.rotaProntidao
 import br.sidia.painel.operacao.instalarLogDeRequisicao
 import br.sidia.painel.security.Authenticator
 import br.sidia.painel.security.DevAuthenticator
+import br.sidia.painel.security.InicioDaRotacao
 import br.sidia.painel.security.OidcAuthenticator
+import br.sidia.painel.security.criarClienteHttpOidc
+import br.sidia.painel.security.rotasDeLogin
 import br.sidia.painel.security.installAccessControl
 import br.sidia.painel.sync.Agendador
 import br.sidia.painel.sync.SqliteIssueStore
@@ -102,7 +106,11 @@ fun main(args: Array<String>) {
     val metricas = prepararMetricas(context)
     val agendador = montarAgendador(context, metricas = metricas)
     agendador?.let { context.aoFechar { runBlocking { it.parar() } } }
-    embeddedServer(Netty, port = 8080) {
+    // Leitura bruta do banco reaproveitada por poucos segundos (desligada nos testes; ver CacheDeLeituras). Depois da carga
+    // de demonstração e antes de aceitar a primeira requisição.
+    CacheDeLeituras.configurar(java.time.Duration.ofSeconds(settings.cacheDeLeituraSeg.toLong()))
+    // Só escuta na interface de PAINEL_HOST (padrão 127.0.0.1): quem expõe o painel à rede escolhe isso de propósito.
+    embeddedServer(Netty, port = 8080, host = settings.host) {
         module(context.settings, context, agendador = agendador, metricas = metricas)
         monitor.subscribe(ApplicationStopped) { context.close() }
     }.start(wait = true)
@@ -124,9 +132,22 @@ private fun prepararMetricas(context: AppContext): Metricas {
     return metricas
 }
 
-/** Em desenvolvimento, sem login (relógio na zona do painel); em produção, o SSO/OIDC. */
-private fun autenticadorPadrao(settings: Settings): Authenticator =
-    if (settings.dashboardDevMode) DevAuthenticator(clock = Clock.system(settings.zone)) else OidcAuthenticator()
+/**
+ * Em desenvolvimento, sem login (relógio na zona do painel); em produção, o SSO/OIDC. Produção sem OIDC configurado
+ * NÃO sobe (falha fechada; `Settings.fromEnv` já a barra na leitura das variáveis, isto cobre um `Settings` montado à mão).
+ * O início da rotação do `SESSION_SECRET` é lido do arquivo ao lado do banco (e gravado na primeira subida da rotação).
+ */
+private fun autenticadorPadrao(context: AppContext): Authenticator {
+    val settings = context.settings
+    if (settings.dashboardDevMode) return DevAuthenticator(clock = Clock.system(settings.zone))
+    val oidc = settings.oidc ?: throw IllegalStateException("OIDC_ISSUER é obrigatório em produção (login SSO/OIDC não configurado)")
+    val http = criarClienteHttpOidc()
+    context.aoFechar { http.close() }
+    val inicioDaRotacao = InicioDaRotacao.resolver(
+        InicioDaRotacao.arquivoAoLadoDe(settings.databasePath), oidc.sessao.anterior, context.clock.instant(),
+    )
+    return OidcAuthenticator(oidc, context.roles, context.clock, http, inicioDaRotacao)
+}
 
 /**
  * Módulo Ktor do painel: JSON, controle de acesso, rota de saúde e metadados do ambiente.
@@ -137,7 +158,7 @@ private fun autenticadorPadrao(settings: Settings): Authenticator =
 fun Application.module(
     @Suppress("UNUSED_PARAMETER") settingsIgnorado: Settings? = null,
     context: AppContext,
-    authenticator: Authenticator = autenticadorPadrao(context.settings),
+    authenticator: Authenticator = autenticadorPadrao(context),
     agendador: Agendador? = null,
     catalogo: CatalogoDeCartoes = catalogoPadrao(),
     prontidao: Prontidao? = prontidaoPadrao(context),
@@ -209,6 +230,8 @@ fun Application.module(
             rotasSyncStatus(context, SqliteSyncStateStore(ds), AccessLog(ds))
             avaliador?.let { rotasDeAlertas(context, it, AccessLog(ds)) { prontidao?.avaliar()?.codigo } }
         }
+        // Login SSO/OIDC (só quando o autenticador é o OIDC, isto é, em produção): /auth/login, /auth/callback, /auth/logout.
+        (authenticator as? OidcAuthenticator)?.let { rotasDeLogin(it, auditoria, context.clock) }
         get("/api/health") { call.respond(HealthResposta(ok = true)) }
         rotaProntidao(prontidao)
         get("/api/meta") {

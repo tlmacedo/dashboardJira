@@ -60,6 +60,17 @@ object MascaraDeLog {
         // `Cookie:` / `Set-Cookie:` inteiro e o cookie de sessão onde aparecer
         Regex("(?i)((?:set-)?cookie\\s*:\\s*)[^\\r\\n]+") to { m -> m.groupValues[1] + "***" },
         Regex("(?i)(painel_sessao=)[^;\\s\"]+") to { m -> m.groupValues[1] + "***" },
+        // JSON dentro de JSON (mensagem de log que carrega um corpo JSON): `{\"password\":\"x y\"}` com as aspas escapadas
+        // por uma ou mais barras. O valor vai até a próxima aspa escapada.
+        Regex(
+            "(?i)((?:[A-Za-z0-9_.-]*(?:password|passwd|senha|secret|token|apikey|api_key)|\\bpat)\\\\+[\"']\\s*[=:]\\s*\\\\+[\"'])(?:(?!\\\\+[\"']).)*",
+        ) to { m -> m.groupValues[1] + "***" },
+        // Senha digitada por uma pessoa (`password=a b`, `senha: a b`) pode ter espaços e vir sem aspas: o valor vai até o fim
+        // da linha ou até a próxima `chave=` (nunca além de `"`, `'`, `&`, `,` e `;`). Os demais segredos (tokens, chaves)
+        // são opacos e param no espaço, na regra seguinte.
+        Regex(
+            "(?i)((?:[A-Za-z0-9_.-]*(?:password|passwd|senha))[\"']?\\s*[=:]\\s*+)(?![\"'])(?:(?!\\s+[A-Za-z_][A-Za-z0-9_.-]*\\s*=)[^\\r\\n\"'&,;])+",
+        ) to { m -> m.groupValues[1] + "***" },
         // `password=x`, `senha: x`, `SESSION_SECRET=x`, `"token":"x"`
         // Valor entre aspas (simples ou duplas): vai até a aspa de fechamento, com espaços e aspas escapadas dentro.
         Regex(

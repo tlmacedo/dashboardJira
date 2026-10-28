@@ -92,6 +92,8 @@ class Retention(private val ds: DataSource, private val calendar: BusinessCalend
                     }
                 }
                 c.commit()
+                // O que saiu do banco não pode continuar nas leituras em cache.
+                CacheDeLeituras.invalidar()
                 // A observação nunca muda o desfecho da retenção (já confirmada).
                 porTabela.forEach { (categoria, n) -> runCatching { aoRemover(categoria, n) } }
                 total

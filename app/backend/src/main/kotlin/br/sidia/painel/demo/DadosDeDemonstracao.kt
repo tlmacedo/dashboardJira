@@ -259,6 +259,7 @@ fun prepararDemonstracao(ctx: AppContext) {
         // Defesa em profundidade: o Settings já recusa estas combinações, mas um Settings montado à mão não passa.
         if (!s.dashboardDevMode || s.jiraLiveEnabled) throw DemoRecusadaException("AMBIENTE_NAO_PERMITIDO")
         val resumo = demo.carregar()
+        br.sidia.painel.db.CacheDeLeituras.invalidar()
         log.info(
             "Dados de demonstração carregados (fictícios): {}",
             resumo.joinToString("; ") { "${it.instancia}: ${it.issues} issues, ${it.eventos} eventos" },

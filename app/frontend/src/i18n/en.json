@@ -8,6 +8,8 @@
   "shell.tema": "Theme",
   "shell.idioma": "Language",
   "shell.fuso": "Time zone: America/Manaus (UTC−4)",
+  "shell.sair": "Sign out",
+  "shell.sairErro": "Could not sign out. Try again.",
   "shell.semPermissao": "Not available for this role.",
   "shell.telaPrevista": "Screen planned in the navigation map; not implemented yet.",
   "shell.metaErro": "Could not reach the server. The menu shows the minimum only.",

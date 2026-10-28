@@ -1,6 +1,8 @@
 package br.sidia.painel.trabalho
 
 import br.sidia.painel.auditoria.Vencimentos
+import br.sidia.painel.db.CacheDeLeituras
+import br.sidia.painel.db.ChaveDeLeitura
 import br.sidia.painel.db.emJson
 import br.sidia.painel.db.idsEmJson
 import br.sidia.painel.db.jsonParaTextos
@@ -45,7 +47,44 @@ fun WorkStore.candidatasNoPrazo(
 /** Implementação sobre SQLite (JDBC). Tudo parametrizado; listas entram como JSON em `json_each(?)`. */
 class SqliteWorkStore(private val ds: DataSource) : WorkStore {
 
+    // As três leituras abaixo são brutas (sem recorte por pessoa), então podem ser reaproveitadas por poucos segundos:
+    // ver CacheDeLeituras. O papel e as pessoas visíveis só entram DEPOIS, no código de cada card.
+    //
+    // Com o cache ligado, guarda-se UMA leitura por (instância, filtro) e situação, janela de resolução e OS Version são
+    // recortados em memória, com a mesma semântica do SQL (ver [recortar]). Assim os cartões não multiplicam cópias do
+    // mesmo conjunto na memória. Vencimento é comparado como texto no SQL; essas consultas seguem direto ao banco.
     override fun snapshots(c: ConsultaDeTrabalho): List<IssueSnapshot> {
+        if (!CacheDeLeituras.ligado || c.vencimentoDe != null || c.vencimentoAte != null) {
+            return CacheDeLeituras.obter(ChaveDeLeitura(ds, "snapshots", c)) { lerSnapshots(c) }
+        }
+        return recortar(base(c.instance, c.filtro), c)
+    }
+
+    private fun base(instance: String, filtro: FiltroDeFicha?): List<IssueSnapshot> {
+        val b = ConsultaDeTrabalho(instance = instance, filtro = filtro, situacao = Situacao.TODAS)
+        return CacheDeLeituras.obter(ChaveDeLeitura(ds, "snapshots", b)) { lerSnapshots(b) }
+    }
+
+    /** O `lower()` do SQLite só rebaixa ASCII; o recorte em memória precisa dar o mesmo resultado. */
+    private fun minuscula(s: String): String = buildString(s.length) { for (ch in s) append(if (ch in 'A'..'Z') ch + 32 else ch) }
+
+    private fun recortar(todas: List<IssueSnapshot>, c: ConsultaDeTrabalho): List<IssueSnapshot> {
+        val de = c.resolvidasDe?.toEpochMilli()
+        val ate = c.resolvidasAte?.toEpochMilli()
+        val os = c.osVersion?.let(::minuscula)
+        if (c.situacao == Situacao.TODAS && os == null) return todas
+        return todas.filter { s ->
+            val ms = s.resolved?.toEpochMilli()
+            val situacaoOk = when (c.situacao) {
+                Situacao.TODAS -> true
+                Situacao.ABERTAS -> ms == null
+                Situacao.RESOLVIDAS -> ms != null && (de == null || ms >= de) && (ate == null || ms < ate)
+            }
+            situacaoOk && (os == null || s.osVersion?.let(::minuscula) == os)
+        }
+    }
+
+    private fun lerSnapshots(c: ConsultaDeTrabalho): List<IssueSnapshot> {
         val filtros = StringBuilder()
         val params = mutableListOf<Any>()
         when (c.situacao) {
@@ -71,6 +110,21 @@ class SqliteWorkStore(private val ds: DataSource) : WorkStore {
         instance: String, filtro: FiltroDeFicha?, campos: Set<String>, de: Instant, ate: Instant,
     ): List<IssueSnapshot> {
         if (campos.isEmpty()) return emptyList()
+        if (!CacheDeLeituras.ligado) return lerComEventoEntre(instance, filtro, campos, de, ate)
+        val alvo = campos.map { it.lowercase(Locale.ROOT) }.toSet()
+        val deMs = de.toEpochMilli()
+        val ateMs = ate.toEpochMilli()
+        return base(instance, filtro).filter { s ->
+            s.events.any { e ->
+                val t = e.at.toEpochMilli()
+                t >= deMs && t < ateMs && minuscula(e.field) in alvo
+            }
+        }
+    }
+
+    private fun lerComEventoEntre(
+        instance: String, filtro: FiltroDeFicha?, campos: Set<String>, de: Instant, ate: Instant,
+    ): List<IssueSnapshot> {
         val filtros = " AND EXISTS (SELECT 1 FROM change_event e WHERE e.issue_id = issue.id AND e.at >= ? AND e.at < ? " +
             "AND lower(e.field) IN (SELECT value FROM json_each(?)))"
         val params = listOf<Any>(Timestamp.from(de), Timestamp.from(ate), campos.map { it.lowercase(Locale.ROOT) }.emJson())
@@ -88,6 +142,9 @@ class SqliteWorkStore(private val ds: DataSource) : WorkStore {
         }
 
     override fun pessoas(instance: String): Set<String> =
+        CacheDeLeituras.obter(ChaveDeLeitura(ds, "pessoas", instance)) { lerPessoas(instance) }
+
+    private fun lerPessoas(instance: String): Set<String> =
         ds.connection.use { con ->
             val sql = """
                 SELECT assignee_ref FROM issue WHERE instance = ? AND removida_em IS NULL AND assignee_ref IS NOT NULL

@@ -6,6 +6,10 @@ Procedimento para o **usuário** ligar, acompanhar e desligar a sincronização 
 
 Este documento não contém host, token nem username: eles ficam só no ambiente do usuário.
 
+**Testes automáticos.** Os testes automáticos do projeto usam só fixtures e `MockEngine`, mesmo com a flag ligada: nenhum deles acessa o Jira real nem um provedor de login real. A prova técnica são os testes `SomenteAFabricaCriaClientesJira` (só a fábrica cria cliente do Jira) e `FlagDesligadaZeroRequisicoesTest` (com a flag desligada, zero requisição). Ligar a flag só muda o comportamento do painel em uso; a suíte continua offline.
+
+**Pacote de produção.** O painel roda como pacote (`installDist` + build do frontend), sem contêiner e com SQLite em arquivo; a montagem, a verificação e as pastas estão em [`docs/implantacao.md`](../implantacao.md). Em produção o painel só sobe com o login SSO/OIDC configurado e **com o Jira desligado**: a flag é ligada depois, à mão, pelo usuário.
+
 ## Pré-requisitos
 
 - Passos 1 a 5 do [checklist](checklist-primeira-conexao.md) concluídos e registrados:
