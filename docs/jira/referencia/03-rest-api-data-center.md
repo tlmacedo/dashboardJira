@@ -25,7 +25,7 @@ Referência em pt-BR, do básico ao avançado, da **Jira Platform REST v2** (`/r
 - **Expansão:** `expand=a,b` (lista separada por vírgula; notação de ponto para aninhados). Os nomes expansíveis aparecem na propriedade `expand` do objeto pai.
 - **Ordenação:** alguns recursos aceitam `orderBy` (`-campo` = decrescente).
 - **Erros:** corpo JSON com `errorMessages` (lista), `errors` (mapa campo -> mensagem) e `status`.
-- **CSRF:** endpoints que aceitam `multipart/form-data` só processam com `X-Atlassian-Token: no-check`. Para leitura (GET/POST de busca em JSON) não é necessário.
+- **CSRF:** endpoints que aceitam `multipart/form-data` só processam quando o cabeçalho `X-Atlassian-Token` leva o valor `no-check`. Para leitura (GET/POST de busca em JSON) não é necessário.
 - **Cabeçalho `X-AUSERNAME`:** a resposta informa o usuário autenticado ou `anonymous`. Útil para detectar credencial que "não pegou" (o DC permite acesso anônimo e não devolve desafio 401 padrão).
 
 ---
@@ -62,10 +62,10 @@ Authorization: Bearer <token-fictício-AbCdEf123>
 GET /rest/api/2/search?jql=project%3DDEMO&maxResults=1
 Accept: application/json
 Content-Type: application/json
-X-Atlassian-Token: no-check
+X-Atlassian-Token  (valor: no-check)
 ```
 **Corpo / resposta (campos que importam):** de resposta: `X-AUSERNAME`, `X-Seraph-LoginReason`, `Retry-After`, `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Interval-Seconds`, `X-RateLimit-FillRate`.
-**Observações:** `X-Atlassian-Token: no-check` só é exigido em upload multipart (anexos); em leitura é dispensável (não o envie sem necessidade). A introdução da referência 9.12 cita também `POST /rest/auth/1/session` para login por cookie (evite: cookie de sessão também entra no limite de taxa e complica o ciclo de vida). Não siga redirecionamentos automaticamente com a credencial (o nosso cliente desliga `followRedirects`).
+**Observações:** o cabeçalho `X-Atlassian-Token` com valor `no-check` só é exigido em upload multipart (anexos); em leitura é dispensável (não o envie sem necessidade). A introdução da referência 9.12 cita também `POST /rest/auth/1/session` para login por cookie (evite: cookie de sessão também entra no limite de taxa e complica o ciclo de vida). Não siga redirecionamentos automaticamente com a credencial (o nosso cliente desliga `followRedirects`).
 **Fonte:** https://docs.atlassian.com/software/jira/docs/api/REST/9.12.0/
 
 ---

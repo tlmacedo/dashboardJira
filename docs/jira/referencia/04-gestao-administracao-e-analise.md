@@ -414,7 +414,7 @@ Administração > Issues > Notification schemes.
 **Como fazer / comando:**
 Administração > User management > Users (desativar em vez de excluir).
 **Observações:** fonte apenas de fornecedor (não oficial): desativar libera licença e mantém o histórico; excluir quebra menções e histórico. Issues podem continuar atribuídas a usuário inativo.
-**Fonte:** https://votazz.co/2026/01/14/jira-inactive-users-license-audit/
+**Fonte:** artigo de fornecedor sobre auditoria de licenças e usuários inativos (fonte secundária; endereço omitido da referência)
 **Uso possível no nosso painel:** regra de Qualidade dos dados: responsável inativo.
 
 ### SLA e Jira Service Management
