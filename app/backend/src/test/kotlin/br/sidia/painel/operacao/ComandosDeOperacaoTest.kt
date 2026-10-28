@@ -89,6 +89,62 @@ class ComandosDeOperacaoTest {
         assertEquals(emptyList(), dados.listDirectoryEntries(), "nenhum arquivo de banco nem .lock pode nascer")
     }
 
+    private fun bancoComDados(): Path {
+        val pasta = nova()
+        val arquivo = pasta.resolve("painel.db")
+        val ds = br.sidia.painel.db.Database.connect(br.sidia.painel.db.Database.urlDeArquivo(arquivo), poolSize = 1)
+        br.sidia.painel.db.Database.migrate(ds)
+        ds.connection.use { it.createStatement().execute("INSERT INTO issue(key, instance, project) VALUES ('TG-1', 'samsung', 'TG')") }
+        (ds as AutoCloseable).close()
+        return arquivo
+    }
+
+    @Test
+    fun backupAgoraSemDirSaiCom2() {
+        val (codigo, saida) = executar(listOf("backup-agora"), dev + ("DATABASE_PATH" to bancoComDados().toString()))
+        assertEquals(2, codigo)
+        assertTrue(saida.single().contains("BACKUP_DIR"), saida.toString())
+    }
+
+    @Test
+    fun backupAgoraCopiaEImprimeNomeETamanho() {
+        val banco = bancoComDados()
+        val copias = nova()
+        val (codigo, saida) = executar(listOf("backup-agora"), dev + mapOf("DATABASE_PATH" to banco.toString(), "BACKUP_DIR" to copias.toString()))
+        assertEquals(0, codigo, saida.toString())
+        val linha = saida.single()
+        assertTrue(Regex("^BACKUP OK painel-\\d{4}-\\d{2}-\\d{2}-\\d{6}\\.db \\d+$").matches(linha), linha)
+        assertFalse(copias.toString() in linha, "a saída não mostra o caminho")
+        assertEquals(1, copias.listDirectoryEntries().size)
+    }
+
+    @Test
+    fun backupAgoraComServicoRodando() {
+        val banco = bancoComDados()
+        val copias = nova()
+        // O "serviço" está de pé: a trava do banco é dele. O subcomando não a pede e ainda copia.
+        val trava = br.sidia.painel.db.TravaDeProcesso.adquirir(banco)
+        try {
+            val (codigo, saida) = executar(listOf("backup-agora"), dev + mapOf("DATABASE_PATH" to banco.toString(), "BACKUP_DIR" to copias.toString()))
+            assertEquals(0, codigo, saida.toString())
+            assertEquals(1, copias.listDirectoryEntries().size)
+        } finally {
+            trava.close()
+        }
+    }
+
+    @Test
+    fun backupAgoraNaoCriaBancoNovo() {
+        val pasta = nova()
+        val (codigo, saida) = executar(
+            listOf("backup-agora"),
+            dev + mapOf("DATABASE_PATH" to pasta.resolve("nao-existe.db").toString(), "BACKUP_DIR" to nova().toString()),
+        )
+        assertEquals(1, codigo)
+        assertEquals(listOf("BACKUP FALHOU BANCO_NAO_ENCONTRADO"), saida)
+        assertEquals(emptyList(), pasta.listDirectoryEntries())
+    }
+
     @Test
     fun scriptsDeCliExistemERepassamOsArgumentosSemDocker() {
         val sh = TestPaths.repoDir.resolve("app/scripts/painel-cli.sh")

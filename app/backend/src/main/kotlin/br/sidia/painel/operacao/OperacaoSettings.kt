@@ -4,6 +4,7 @@ import br.sidia.painel.jira.INSTANCIAS_CONHECIDAS
 import java.nio.file.InvalidPathException
 import java.nio.file.Path
 import java.time.LocalDate
+import java.time.LocalTime
 import java.time.format.DateTimeParseException
 
 /**
@@ -28,6 +29,8 @@ data class OperacaoSettings(
      * nunca consulta o Jira para descobri-la; só o alerta de PAT usa isto.
      */
     val patValidade: Map<String, LocalDate> = emptyMap(),
+    /** Backup agendado do SQLite (`BACKUP_*`). */
+    val backup: BackupSettings = BackupSettings(),
 ) {
     companion object {
         fun fromEnv(env: Map<String, String>): OperacaoSettings {
@@ -43,8 +46,24 @@ data class OperacaoSettings(
                     val nome = "SYNC_PAT_VALIDADE_${id.uppercase()}"
                     texto(env, nome)?.let { id to data(nome, it) }
                 }.toMap(),
+                backup = BackupSettings(
+                    dir = caminho(env, "BACKUP_DIR"),
+                    hora = hora(env, "BACKUP_HORA", padrao.backup.hora),
+                    retencaoCopias = inteiro(env, "BACKUP_RETENCAO_COPIAS", 1..365, padrao.backup.retencaoCopias),
+                ),
             )
         }
+
+        private val FORMATO_HORA = java.time.format.DateTimeFormatter.ofPattern("HH:mm").withResolverStyle(java.time.format.ResolverStyle.STRICT)
+
+        private fun hora(env: Map<String, String>, nome: String, padrao: LocalTime): LocalTime =
+            texto(env, nome)?.let {
+                try {
+                    LocalTime.parse(it, FORMATO_HORA)
+                } catch (e: DateTimeParseException) {
+                    throw IllegalArgumentException("$nome inválido (esperado HH:mm)")
+                }
+            } ?: padrao
 
         private fun data(nome: String, valor: String): LocalDate =
             try {

@@ -33,6 +33,7 @@ fun montarAvaliadorDeAlertas(ctx: AppContext, metricas: Metricas): AvaliadorDeAl
         discoLivre = { VerificacaoDeDisco.livreBytes(pastaDoBanco) },
         saidas = saidas,
         clock = ctx.clock,
+        discoDoBackup = ctx.settings.operacao.backup.dir?.let { pasta -> { VerificacaoDeDisco.livreBytes(pasta) } },
     )
 }
 

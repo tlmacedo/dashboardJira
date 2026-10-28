@@ -62,6 +62,7 @@ object ValidadorDeConfig {
             problemas += conferirPessoas(ctx, dir, hoje, dev)
         }
         if (!dev) problemas += conferirPastaDoBanco(settings.databasePath)
+        problemas += conferirBackup(settings, dev)
 
         val comProblema = problemas.map { it.arquivo }.toSet()
         return ResultadoDaValidacao(problemas, arquivosDaPasta(dir).filter { it !in comProblema })
@@ -186,6 +187,32 @@ object ValidadorDeConfig {
         while (pasta != null && !Files.exists(pasta)) pasta = pasta.parent
         val gravavel = pasta != null && Files.isDirectory(pasta) && Files.isWritable(pasta)
         return if (gravavel) emptyList() else listOf(ProblemaDeConfig("BANCO_PASTA_SEM_ESCRITA", "DATABASE_PATH"))
+    }
+
+    /**
+     * `BACKUP_DIR`: obrigatório em produção; fora do repositório (nenhuma pasta acima com `.git`), fora da pasta do banco
+     * (perder o disco perderia banco e cópias juntos) e com escrita. `BACKUP_HORA` e `BACKUP_RETENCAO_COPIAS` inválidos já
+     * saem como `SETTINGS_INVALIDO`. O "arquivo" citado é o NOME da variável, nunca o caminho.
+     */
+    private fun conferirBackup(settings: Settings, dev: Boolean): List<ProblemaDeConfig> {
+        val dir = settings.operacao.backup.dir
+        if (dir == null) {
+            return if (dev) emptyList() else listOf(ProblemaDeConfig("BACKUP_DIR_AUSENTE", "BACKUP_DIR"))
+        }
+        val problemas = mutableListOf<ProblemaDeConfig>()
+        val absoluto = dir.toAbsolutePath().normalize()
+        if (generateSequence(absoluto) { it.parent }.any { Files.exists(it.resolve(".git")) }) {
+            problemas += ProblemaDeConfig("BACKUP_DIR_DENTRO_DO_REPOSITORIO", "BACKUP_DIR")
+        }
+        val pastaDoBanco = settings.databasePath.toAbsolutePath().normalize().parent
+        if (pastaDoBanco != null && absoluto.startsWith(pastaDoBanco)) {
+            problemas += ProblemaDeConfig("BACKUP_DIR_NA_PASTA_DO_BANCO", "BACKUP_DIR")
+        }
+        val existente = generateSequence(absoluto) { it.parent }.firstOrNull { Files.exists(it) }
+        if (existente == null || !Files.isDirectory(existente) || !Files.isWritable(existente)) {
+            problemas += ProblemaDeConfig("BACKUP_DIR_SEM_ESCRITA", "BACKUP_DIR")
+        }
+        return problemas
     }
 
     // ---- leitura tolerante de equipes/ausências ----

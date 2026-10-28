@@ -4,6 +4,7 @@ import br.sidia.painel.AppContext
 import br.sidia.painel.db.Retention
 import br.sidia.painel.operacao.EstadoComMetricas
 import br.sidia.painel.operacao.Metricas
+import br.sidia.painel.operacao.tarefaDeBackup
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -35,8 +36,26 @@ data class TarefaAgendada(
     val executar: suspend () -> Unit,
 )
 
+/**
+ * Uma tarefa de operação (backup, ...): roda no mesmo laço do [Agendador], mas NÃO é um [SyncKind] e não escreve em
+ * `sync_run`. Registra o próprio desfecho onde fizer sentido (o backup, em `backup_run`). [devida] só olha o relógio e o
+ * registro próprio.
+ */
+data class TarefaDeOperacao(
+    val nome: String,
+    val devida: suspend (agora: Instant) -> Boolean,
+    val executar: suspend () -> Unit,
+)
+
 /** Regras de calendário das tarefas, puras (sem relógio, banco ou rede). */
 object Agenda {
+    /** Como [diariaDevida], para quem só conhece o INÍCIO da última execução (ex.: o `backup_run`). */
+    fun diariaDevidaDesde(agora: Instant, ultimoInicio: Instant?, hora: LocalTime, zone: ZoneId): Boolean {
+        val local = agora.atZone(zone)
+        if (local.toLocalTime() < hora) return false
+        return ultimoInicio == null || ultimoInicio.atZone(zone).toLocalDate() < local.toLocalDate()
+    }
+
     /** Devida quando nunca rodou ou já passou o [intervalo] desde o INÍCIO da última execução. */
     fun incrementalDevida(agora: Instant, ultima: RegistroDeExecucao?, intervalo: Duration): Boolean =
         ultima == null || agora >= ultima.startedAt.plus(intervalo.toJavaDuration())
@@ -64,6 +83,8 @@ class Agendador(
     private val clock: Clock,
     private val passo: Duration = 1.minutes,
     private val dormir: suspend (Duration) -> Unit = { delay(it) },
+    /** Tarefas de operação (backup...), rodadas depois das [tarefas], com o mesmo isolamento de exceções. */
+    private val operacoes: List<TarefaDeOperacao> = emptyList(),
 ) {
     val tipos: List<SyncKind> = tarefas.map { it.kind }
 
@@ -100,6 +121,16 @@ class Agendador(
                 } catch (e: Throwable) {
                     // Inclui Error (ex.: NoSuchMethodError): nada derruba o laço; só a classe é logada, nunca a mensagem.
                     log.warn("Tarefa agendada {} falhou: {}", t.kind, e.javaClass.simpleName)
+                }
+            }
+            for (op in operacoes) {
+                try {
+                    if (!op.devida(clock.instant())) continue
+                    op.executar()
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Throwable) {
+                    log.warn("Tarefa de operação {} falhou: {}", op.nome, e.javaClass.simpleName)
                 }
             }
         } finally {
@@ -163,7 +194,9 @@ fun montarAgendador(
         null,
         { agora, ultima -> Agenda.diariaDevida(agora, ultima, cfg.horaRetencao, settings.zone) },
     ) { executarRetencao(ctx, estado, clock, metricas) }
-    return Agendador(tarefas, estado, clock, dormir = dormir)
+    // Backup do SQLite: só entra com BACKUP_DIR (e nunca fala com o Jira).
+    val operacoes = listOfNotNull(tarefaDeBackup(ctx, clock, metricas))
+    return Agendador(tarefas, estado, clock, dormir = dormir, operacoes = operacoes)
 }
 
 /** Instância sem credencial vira falha registrada (com código); as demais seguem pelo `SyncService`. */

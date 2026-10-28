@@ -43,7 +43,11 @@ class ValidadorDeConfigTest {
     private val dev = mapOf("DASHBOARD_DEV_MODE" to "true")
 
     private fun producao(vararg extras: Pair<String, String>): Map<String, String> =
-        mapOf("DASHBOARD_DEV_MODE" to "false", "DATABASE_PATH" to nova("painel-dados-").resolve("painel.db").toString()) + extras
+        mapOf(
+            "DASHBOARD_DEV_MODE" to "false",
+            "DATABASE_PATH" to nova("painel-dados-").resolve("painel.db").toString(),
+            "BACKUP_DIR" to nova("painel-copias-").toString(),
+        ) + extras
 
     private fun codigos(r: ResultadoDaValidacao) = r.problemas.map { it.codigo }
 
@@ -207,10 +211,58 @@ class ValidadorDeConfigTest {
         val somenteLeitura = nova("painel-ro-")
         somenteLeitura.toFile().setWritable(false, false)
         assumeTrue(!Files.isWritable(somenteLeitura), "este sistema deixa escrever em pasta somente leitura (ex.: executando como root)")
-        val env = mapOf("DASHBOARD_DEV_MODE" to "false", "DATABASE_PATH" to somenteLeitura.resolve("painel.db").toString())
+        val env = producao("DATABASE_PATH" to somenteLeitura.resolve("painel.db").toString())
         val r = ValidadorDeConfig.validar(env, pastaDeConfig(comoReal = true), hoje)
         assertEquals(listOf("BANCO_PASTA_SEM_ESCRITA"), codigos(r))
         somenteLeitura.toFile().setWritable(true, false)
+    }
+
+    @Test
+    fun backupDirAusenteEmProducao() {
+        val env = producao().filterKeys { it != "BACKUP_DIR" }
+        val r = ValidadorDeConfig.validar(env, pastaDeConfig(comoReal = true), hoje)
+        assertEquals(listOf(ProblemaDeConfig("BACKUP_DIR_AUSENTE", "BACKUP_DIR")), r.problemas)
+        // em desenvolvimento o backup é opcional
+        assertEquals(emptyList(), ValidadorDeConfig.validar(dev, TestPaths.configDir, hoje).problemas)
+    }
+
+    @Test
+    fun backupDirDentroDoRepositorio() {
+        val repo = nova("painel-repo-")
+        Files.createDirectory(repo.resolve(".git"))
+        val dentro = repo.resolve("copias")
+        val r = ValidadorDeConfig.validar(producao("BACKUP_DIR" to dentro.toString()), pastaDeConfig(comoReal = true), hoje)
+        assertEquals(listOf(ProblemaDeConfig("BACKUP_DIR_DENTRO_DO_REPOSITORIO", "BACKUP_DIR")), r.problemas)
+    }
+
+    @Test
+    fun backupDirNaPastaDoBanco() {
+        val dados = nova("painel-dados-")
+        val iguais = ValidadorDeConfig.validar(
+            producao("DATABASE_PATH" to dados.resolve("painel.db").toString(), "BACKUP_DIR" to dados.toString()),
+            pastaDeConfig(comoReal = true), hoje,
+        )
+        assertEquals(listOf(ProblemaDeConfig("BACKUP_DIR_NA_PASTA_DO_BANCO", "BACKUP_DIR")), iguais.problemas)
+        val dentro = ValidadorDeConfig.validar(
+            producao("DATABASE_PATH" to dados.resolve("painel.db").toString(), "BACKUP_DIR" to dados.resolve("copias").toString()),
+            pastaDeConfig(comoReal = true), hoje,
+        )
+        assertEquals(listOf("BACKUP_DIR_NA_PASTA_DO_BANCO"), codigos(dentro))
+    }
+
+    @Test
+    fun backupDirSemEscrita() {
+        val arquivoComum = Files.createTempFile("painel-copias-arquivo-", ".txt").also { temporarias.add(it) }
+        val r = ValidadorDeConfig.validar(producao("BACKUP_DIR" to arquivoComum.resolve("dentro").toString()), pastaDeConfig(comoReal = true), hoje)
+        assertEquals(listOf(ProblemaDeConfig("BACKUP_DIR_SEM_ESCRITA", "BACKUP_DIR")), r.problemas)
+    }
+
+    @Test
+    fun backupHoraERetencaoInvalidosViramSettingsInvalido() {
+        for ((nome, valor) in listOf("BACKUP_HORA" to "25:99", "BACKUP_RETENCAO_COPIAS" to "0")) {
+            val r = ValidadorDeConfig.validar(producao(nome to valor), pastaDeConfig(comoReal = true), hoje)
+            assertEquals(listOf(ProblemaDeConfig("SETTINGS_INVALIDO", nome)), r.problemas, nome)
+        }
     }
 
     @Test

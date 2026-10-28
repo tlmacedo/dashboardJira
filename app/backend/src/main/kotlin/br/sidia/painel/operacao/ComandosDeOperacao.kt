@@ -1,8 +1,11 @@
 package br.sidia.painel.operacao
 
 import br.sidia.painel.config.Settings
+import br.sidia.painel.db.Database
+import java.nio.file.Files
 import java.nio.file.InvalidPathException
 import java.nio.file.Path
+import java.time.Clock
 import java.time.LocalDate
 
 /**
@@ -17,13 +20,52 @@ fun comandoDeOperacao(args: List<String>, env: Map<String, String>, saida: (Stri
     val resto = args.drop(1)
     return when (args.first()) {
         "validar-config" -> validarConfig(resto, env, saida)
+        "backup-agora" -> if (resto.isEmpty()) backupAgora(env, saida) else uso(saida)
         else -> uso(saida)
     }
 }
 
 private fun uso(saida: (String) -> Unit): Int {
-    saida("USO: painel validar-config [--dir <caminho>]")
+    saida("USO: painel validar-config [--dir <caminho>] | backup-agora")
     return 2
+}
+
+/**
+ * `painel backup-agora`: uma cópia imediata do banco para `BACKUP_DIR`, a mesma do agendamento. Abre o banco SEM tomar a
+ * trava e SEM migrar (funciona com o serviço rodando, porque `VACUUM INTO` só lê) e nunca cria um banco novo. Imprime
+ * `BACKUP OK <nome> <tamanho>` (0) ou `BACKUP FALHOU <codigo>` (1); sem `BACKUP_DIR`, explica e sai com 2.
+ */
+private fun backupAgora(env: Map<String, String>, saida: (String) -> Unit): Int {
+    val settings = try {
+        Settings.fromEnv(env)
+    } catch (e: IllegalArgumentException) {
+        saida("BACKUP FALHOU SETTINGS_INVALIDO")
+        return 1
+    }
+    val cfg = settings.operacao.backup
+    if (cfg.dir == null) {
+        saida("BACKUP_DIR não está definido: o backup está desligado. Defina BACKUP_DIR (pasta fora do repositório e fora da pasta do banco) no arquivo de variáveis.")
+        return 2
+    }
+    if (!Files.isRegularFile(settings.databasePath)) {
+        saida("BACKUP FALHOU BANCO_NAO_ENCONTRADO")
+        return 1
+    }
+    val ds = Database.connect(Database.urlDeArquivo(settings.databasePath), poolSize = 1)
+    return (ds as AutoCloseable).use {
+        val relogio = Clock.system(settings.zone)
+        val servico = ServicoDeBackup(ds, settings.databasePath, cfg, SqliteBackupRunStore(ds), null, relogio, settings.zone)
+        when (val r = servico.executar()) {
+            is ResultadoDoBackup.Ok -> {
+                saida("BACKUP OK ${r.arquivo.fileName} ${r.tamanhoBytes}")
+                0
+            }
+            is ResultadoDoBackup.Falha -> {
+                saida("BACKUP FALHOU ${r.codigo}")
+                1
+            }
+        }
+    }
 }
 
 private fun validarConfig(args: List<String>, env: Map<String, String>, saida: (String) -> Unit): Int {
