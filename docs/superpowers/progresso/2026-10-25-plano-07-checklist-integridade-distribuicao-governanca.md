@@ -99,3 +99,32 @@ Ruling: T8 — as seis regras de alerta do par e os limiares de nível foram con
 - Ruling: T7 — o número do cartão IN-02 é o das EVIDÊNCIAS das pessoas (é o que a gaveta abre); a tela mostra a contagem de pessoas como valor e as evidências na legenda. A lista `pessoas` da API traz só ALTO e MEDIO (alfabética); mediana e níveis são do universo período + squad, e os filtros `sinal` e `pessoa` só recortam a lista de evidências.
 - Ruling: T7 — TDD parcial: serviço, rotas e tela foram escritos antes dos testes. Vermelho provado por mutação (tirar `exigirGerente` do catálogo, da rota e do drill; tirar a trava do DPO do drill; desligar as rotas), todas restauradas e conferidas verdes. Custo se errado: nenhum no produto.
 - Ruling: T7 — Passo 5 (captura visual da Checklist × Review e da Integridade) NÃO feito: sem navegador no ambiente. Fica como pendência; o mock de desenvolvimento (`dev-mock/mockFase7a.ts`) cobre as duas telas.
+
+---
+
+# Bloco 7b (Tarefas 9 a 18), branch `feat/distribuicao-governanca-inicio`
+
+Executor: Claude Code (subagente implementador), sem o usuário presente; pontos de parada resolvidos pela opção Recomendada e registrados como `Ruling:`. Parte da `main` `7e66738` (7a mesclado, PR #40; Plano 8 mesclado, PR #41). Roda em paralelo com o PR de endurecimento do Plano 8 (#42, não mesclado: `MascaraDeLog`, `Oidc*`, `CacheDeLeituras`, `.gitignore`, scripts de pacote ficaram intocados). Sem Jira, sem `.env`, sem dependência nova.
+
+Ruling: migração — migrações existentes V1 a V4 na `main` e em todas as branches abertas (conferido com `ls` e `git ls-tree` de cada branch remota); a desta fase é a **V5** (`V5__decisao_distribuicao.sql`). Custo se errado: outro PR tomar a V5 antes: renumerar o arquivo (nenhum outro lugar cita o número).
+
+## Estado herdado do 7b (conferido no código)
+
+| Nome do plano | Nome real | Observação |
+|---|---|---|
+| `Equipes`, `Capacidade`, `Demanda`, `Ocupacao`, `Jain`, `Agenda`, `CargaDaPessoa` | iguais, em `pessoas/` | `Demanda.carga(pessoa, abertas, hoje, semanas)` devolve `CargaDaPessoa` |
+| `FontesDaCentral` / `/api/drill/*` | o drill é o do contrato do 17a (`GET /api/cartoes/{id}/tasks?segmento=`) | como no 7a |
+| `executarAuditado` | `cards/RotaAuditada.kt`, igual | |
+| `ROTA_SENSIVEL`, `normalizarCaminho`, `rotaParaRegistro`, `TravaDpo` | `cards/TempoEmStatusRoutes.kt` e `lgpd/TravaDpo.kt` (7a) | |
+| `BloqueiosCalculator.CODIGO_SEM_CAUSA` / `BloqueiosAnalise.semCausa` | iguais (17b) | ponto de extensão que a Qualidade usa |
+
+## Rulings do 7b
+
+### Tarefa 9 (Distribuição em modo sombra, motor)
+
+- Ruling: T9 — o score usa a `cargaProjetadaH` informada SEM somar as horas do item candidato (os números do plano, `ana` 16,8 h → 0,416667, só fecham assim); o legado somava as horas do item à carga de cada candidato. Depois de cada atribuição a carga do escolhido sobe, então o item seguinte já vê o efeito. Registrado em `docs/analise/diferencas-esperadas-checklist-integridade-governanca.md` (Tarefa 18). Custo se errado: somar `horas` em `Distribuidor.fatoresDe`.
+- Ruling: T9 — o WIP do escolhido NÃO sobe a cada atribuição (o plano pede que suba; o legado, `chosen.wip += 0`, e o domínio dizem o contrário: a task nova entra em "a fazer" e só vira WIP ao iniciar). Custo se errado: somar 1 ao WIP em `distribuir`.
+- Ruling: T9 — produtividade = gasto ÷ estimado (plano), que MULTIPLICA a carga projetada; o legado usava o throughput relativo dividindo a capacidade (mais produtivo = mais capacidade). Os dois limitam em 0,85–1,15. O motor limita o valor bruto do `Candidato.produtividade`; o serviço (T11) o calcula das concluídas em 16 semanas. Custo se errado: inverter o termo de carga.
+- Ruling: T9 — `Candidato` ganhou dois campos opcionais (`competencias`, `afinidades`; nulos = usar os campos fixos do plano) e `distribuir` um parâmetro `afinidadeDoItem` com padrão vazio: os campos fixos do plano (`competenciasFaltantes`, `jaTrabalhouNoEpicoOuComponente`) são por candidato e não por item, então com vários itens só o conjunto permite contar o que falta para CADA item. A assinatura do plano continua válida.
+- Ruling: T9 — `Fatores.bonus` guarda o valor SUBTRAÍDO (positivo): `score = carga + wip + wipCheio + competencias − bonus`. Empate: score arredondado em 1e-9, depois última atribuição (nula = nunca recebeu = primeiro), depois quem recebeu antes nesta rodada, depois ordem alfabética. Jain do conjunto elegível, ocupação = carga ÷ capacidade (sem produtividade), com o teto do planejamento.
+- Ruling: T9 — `distribuicao.yaml` é obrigatório em produção (`AppContext`, `resolver`), em dev cai no `.exemplo` com aviso, leitura estrita (`lerEstrito`: o erro cita o arquivo, nunca o valor nem o nome de chave lido). `AppContextTest` ganhou `distribuicao` nas listas de arquivos reais e modelos. TDD: o `Distribuidor` nasceu como esqueleto que devolve vazio (10 testes falharam por asserção), depois foi implementado; `RegrasDeDistribuicao` foi escrita antes do teste (a prova de que o teste pega defeito é a lista `regrasEstritas`, 20 casos recusados).
