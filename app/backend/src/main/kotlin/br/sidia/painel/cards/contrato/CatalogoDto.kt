@@ -27,10 +27,14 @@ data class CartaoCatalogoDto(
 @Serializable
 data class CatalogoDto(val cartoes: List<CartaoCatalogoDto>)
 
-/** Corpo do drill genérico (`GET /api/cartoes/{id}/tasks`). [linkJira] fica nulo até o link ser liberado (Tarefa 4). */
+/**
+ * Corpo do drill genérico (`GET /api/cartoes/{id}/tasks`). [tituloChave] e [definicaoChave] são CHAVES de tradução
+ * (título e "o que mostra" do cartão); [colunas] são os ids das colunas de [linhas]. [linkJira] vem pronto do
+ * backend (ou nulo): o frontend nunca monta URL do Jira.
+ */
 @Serializable
 data class DrillGenericoDto(
-    val titulo: String,
+    val tituloChave: String,
     val definicaoChave: String,
     val total: Int,
     val colunas: List<String>,

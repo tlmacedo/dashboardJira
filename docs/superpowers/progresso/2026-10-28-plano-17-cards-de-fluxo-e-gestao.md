@@ -9,7 +9,7 @@ Branch: `feat/contrato-do-cartao` (bloco 17a = Tarefas 1 a 7). Executor: Claude 
 ## Checklist (17a)
 
 - [x] Tarefa 1: registro de cartões e catálogo por papel (testes: backend 869 totais, 0 falhas; +8 em `CatalogoDeCartoesTest`)
-- [ ] Tarefa 2: drill genérico e teste de contrato
+- [x] Tarefa 2: drill genérico e teste de contrato (testes: ver contagem final no fechamento; +13 em `ContratoDeCartoesTest`)
 - [ ] Tarefa 3: componente `Cartao` e ajuda (ⓘ)
 - [ ] Tarefa 4: gaveta de tasks compartilhada e "Abrir no Jira"
 - [ ] Tarefa 5: migrar Tempo em status e Sincronização para o contrato
@@ -37,6 +37,10 @@ Branch: `feat/contrato-do-cartao` (bloco 17a = Tarefas 1 a 7). Executor: Claude 
 - Ruling: TS-05 ("Onde o tempo é gasto") registrado à parte de TS-04, com os mesmos segmentos (a tela mostra os dois na mesma seção) — o inventário lista os dois — custo se errado: remover um registro.
 - Ruling: TS-02 (eficiência, um percentual) abre as tasks analisadas (numerador e denominador), conforme a regra 5 do contrato — antes não era clicável.
 - Ruling: `executarAuditado` do plano é `executar` (privada) em `TempoEmStatusRoutes.kt`; passou a `internal`, aceita bloco `suspend` e responde `ErroDto` quando o `ErroHttp` leva código — necessário para o 400 com código `SEGMENTO_INVALIDO` e para a rota do catálogo reutilizar a mesma auditoria — custo se errado: nenhum.
+- Ruling: a resposta do drill genérico traz `tituloChave` (chave de tradução) no lugar de `titulo` — o backend não carrega texto; a tela traduz — custo se errado: renomear o campo no DTO e na gaveta.
+- Ruling: a "fixture padrão" do teste de contrato são os dados de demonstração fictícios (`DadosDeDemonstracao`, usuários `dev.alfa1`, `lider.alfa`...) com diretório de papéis em memória; assim o teste não duplica um semeador de issues e o mesmo conjunto serve aos planos seguintes.
+- Ruling: `drillOrdenaPessoasAlfabeticamente` verifica (a) os segmentos por pessoa de TS-06 em ordem alfabética e (b) as linhas de toda gaveta em ordem natural de chave, nunca por tempo ou pessoa; o drill não ordena por responsável porque a lista é de tasks, não de pessoas.
+- Ruling: `todaRotaDeCardEstaNoRegistro` percorre `RoutingNode.children` do servidor de teste e exige que cada `/api/cards/<tela>` seja a `tela` de algum cartão registrado; um teste irmão prova que uma rota extra é acusada.
 - Ruling: o papel que filtra o catálogo vem de `papeisVigentes` (diretório de hoje; exceção só do `dev`), a mesma regra de `/api/me`, e não do `principal.roles` bruto.
 
 ## Minor adiados
