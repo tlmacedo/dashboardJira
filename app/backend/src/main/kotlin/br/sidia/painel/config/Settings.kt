@@ -3,6 +3,7 @@ package br.sidia.painel.config
 import br.sidia.painel.jira.INSTANCIAS_CONHECIDAS
 import br.sidia.painel.jira.JiraAuthKind
 import br.sidia.painel.operacao.OperacaoSettings
+import br.sidia.painel.security.OidcSettings
 import br.sidia.painel.sync.SyncSettings
 import java.nio.file.InvalidPathException
 import java.nio.file.Path
@@ -61,6 +62,8 @@ data class Settings(
     val operacao: OperacaoSettings = OperacaoSettings(),
     /** Outros segredos citados na documentação (hoje `OIDC_CLIENT_SECRET`), só para a máscara de log. Nunca em `toString`. */
     val outrosSegredos: List<String> = emptyList(),
+    /** SSO/OIDC (`OIDC_*` e `SESSION_SECRET`). Obrigatório em produção; nulo só em desenvolvimento (sem login). Sem segredos no `toString`. */
+    val oidc: OidcSettings? = null,
 ) {
     /** Valores que nunca podem aparecer em log (tokens das instâncias); registrados na máscara de log na subida. */
     fun valoresSecretos(): List<String> = jiraInstances.values.flatMap {
@@ -74,7 +77,8 @@ data class Settings(
             "dashboardDemoData=$dashboardDemoData, " +
             "retentionMonths=$retentionMonths, accessLogRetentionMonths=$accessLogRetentionMonths, zone=$zone, configDir=$configDir, " +
             "databasePath=$databasePath, staticDir=$staticDir, " +
-            "databasePoolSize=$databasePoolSize, jiraInstances=$jiraInstances, origemPublica=$origemPublica)"
+            "databasePoolSize=$databasePoolSize, jiraInstances=$jiraInstances, origemPublica=$origemPublica, " +
+            "oidc=${if (oidc != null) "configurado" else "ausente"})"
 
     companion object {
         /**
@@ -122,6 +126,8 @@ data class Settings(
                 origemPublica = origemPublica(env, dashboardDevMode),
                 operacao = OperacaoSettings.fromEnv(env),
                 outrosSegredos = listOfNotNull(texto(env, "OIDC_CLIENT_SECRET")),
+                // Falha fechada: em produção sem OIDC (ou sem SESSION_SECRET) o painel não sobe.
+                oidc = OidcSettings.fromEnv(env, dashboardDevMode),
             )
         }
 

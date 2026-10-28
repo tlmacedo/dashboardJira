@@ -106,7 +106,10 @@ O modelo é `app/.env.example` (copie para `app/.env`, que o git ignora, ou apon
 | `PAINEL_METRICAS_PORTA`, `PAINEL_METRICAS_HOST` | 9464, `127.0.0.1` | Porta interna das métricas; `0` desliga. Host fora do loopback gera `AVISO METRICAS_HOST_NAO_LOOPBACK` no `validar-config` (não muda o código de saída) |
 | `PAINEL_ALERTAS_ARQUIVO` | vazio | Arquivo de texto dos alertas |
 | `SYNC_PAT_VALIDADE_SAMSUNG`, `SYNC_PAT_VALIDADE_SIDIA` | vazio | Validade do token, `aaaa-mm-dd`, informada por você |
-| `SESSION_SECRET`, `SESSION_SECRET_ANTERIOR` | vazio | Assinatura do cookie de sessão ([rotação de segredos](rotacao-de-segredos.md)) |
+| `SESSION_SECRET`, `SESSION_SECRET_ANTERIOR` | vazio | Assinatura do cookie de sessão ([rotação de segredos](rotacao-de-segredos.md)). **Obrigatório em produção** (em branco = a subida falha); o início da rotação fica gravado ao lado do banco (`<banco>.rotacao`) para que reiniciar não reabra a janela do segredo anterior |
+| `OIDC_ISSUER`, `OIDC_CLIENT_ID`, `OIDC_REDIRECT_URI` | vazio | Login SSO/OIDC. **Obrigatórios em produção**: faltando um, o painel não sobe e a mensagem cita só o nome. `OIDC_ISSUER` e `OIDC_REDIRECT_URI` são `https`; a segunda termina em `/auth/callback` |
+| `OIDC_CLIENT_SECRET` | vazio | Segredo do cliente, se o provedor exigir (opcional com PKCE); nunca vai para log nem para `toString` |
+| `OIDC_CLAIM_USERNAME` | `preferred_username` | Claim do `id_token` com o username do Jira; o papel nunca vem do token, vem do `papeis.yaml` |
 | `BACKUP_DIR`, `BACKUP_HORA`, `BACKUP_RETENCAO_COPIAS` | vazio, `02:00`, 14 | Backup do banco ([backup e restauração](backup-e-restauracao.md)) |
 
 ## Depois da flag / com o usuário

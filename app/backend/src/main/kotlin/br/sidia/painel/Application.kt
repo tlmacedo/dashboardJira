@@ -36,7 +36,10 @@ import br.sidia.painel.operacao.rotaProntidao
 import br.sidia.painel.operacao.instalarLogDeRequisicao
 import br.sidia.painel.security.Authenticator
 import br.sidia.painel.security.DevAuthenticator
+import br.sidia.painel.security.InicioDaRotacao
 import br.sidia.painel.security.OidcAuthenticator
+import br.sidia.painel.security.criarClienteHttpOidc
+import br.sidia.painel.security.rotasDeLogin
 import br.sidia.painel.security.installAccessControl
 import br.sidia.painel.sync.Agendador
 import br.sidia.painel.sync.SqliteIssueStore
@@ -124,9 +127,22 @@ private fun prepararMetricas(context: AppContext): Metricas {
     return metricas
 }
 
-/** Em desenvolvimento, sem login (relógio na zona do painel); em produção, o SSO/OIDC. */
-private fun autenticadorPadrao(settings: Settings): Authenticator =
-    if (settings.dashboardDevMode) DevAuthenticator(clock = Clock.system(settings.zone)) else OidcAuthenticator()
+/**
+ * Em desenvolvimento, sem login (relógio na zona do painel); em produção, o SSO/OIDC. Produção sem OIDC configurado
+ * NÃO sobe (falha fechada; `Settings.fromEnv` já a barra na leitura das variáveis, isto cobre um `Settings` montado à mão).
+ * O início da rotação do `SESSION_SECRET` é lido do arquivo ao lado do banco (e gravado na primeira subida da rotação).
+ */
+private fun autenticadorPadrao(context: AppContext): Authenticator {
+    val settings = context.settings
+    if (settings.dashboardDevMode) return DevAuthenticator(clock = Clock.system(settings.zone))
+    val oidc = settings.oidc ?: throw IllegalStateException("OIDC_ISSUER é obrigatório em produção (login SSO/OIDC não configurado)")
+    val http = criarClienteHttpOidc()
+    context.aoFechar { http.close() }
+    val inicioDaRotacao = InicioDaRotacao.resolver(
+        InicioDaRotacao.arquivoAoLadoDe(settings.databasePath), oidc.sessao.anterior, context.clock.instant(),
+    )
+    return OidcAuthenticator(oidc, context.roles, context.clock, http, inicioDaRotacao)
+}
 
 /**
  * Módulo Ktor do painel: JSON, controle de acesso, rota de saúde e metadados do ambiente.
@@ -137,7 +153,7 @@ private fun autenticadorPadrao(settings: Settings): Authenticator =
 fun Application.module(
     @Suppress("UNUSED_PARAMETER") settingsIgnorado: Settings? = null,
     context: AppContext,
-    authenticator: Authenticator = autenticadorPadrao(context.settings),
+    authenticator: Authenticator = autenticadorPadrao(context),
     agendador: Agendador? = null,
     catalogo: CatalogoDeCartoes = catalogoPadrao(),
     prontidao: Prontidao? = prontidaoPadrao(context),
@@ -209,6 +225,8 @@ fun Application.module(
             rotasSyncStatus(context, SqliteSyncStateStore(ds), AccessLog(ds))
             avaliador?.let { rotasDeAlertas(context, it, AccessLog(ds)) { prontidao?.avaliar()?.codigo } }
         }
+        // Login SSO/OIDC (só quando o autenticador é o OIDC, isto é, em produção): /auth/login, /auth/callback, /auth/logout.
+        (authenticator as? OidcAuthenticator)?.let { rotasDeLogin(it, auditoria, context.clock) }
         get("/api/health") { call.respond(HealthResposta(ok = true)) }
         rotaProntidao(prontidao)
         get("/api/meta") {

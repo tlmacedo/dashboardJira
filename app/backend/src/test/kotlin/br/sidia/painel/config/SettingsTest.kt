@@ -1,5 +1,6 @@
 package br.sidia.painel.config
 
+import br.sidia.painel.ENV_OIDC_DE_TESTE
 import br.sidia.painel.jira.JiraAuthKind
 import br.sidia.painel.sync.SyncSettings
 import java.nio.file.Path
@@ -35,7 +36,7 @@ class SettingsTest {
                 "JIRA_LIVE_ENABLED" to "true",
                 "DASHBOARD_DEV_MODE" to "false",
                 "RETENTION_MONTHS" to "12",
-            ),
+            ) + ENV_OIDC_DE_TESTE,
         )
         assertTrue(s.jiraLiveEnabled)
         assertFalse(s.dashboardDevMode)
@@ -341,7 +342,7 @@ class SettingsTest {
         assertEquals("DASHBOARD_DEMO_DATA exige JIRA_LIVE_ENABLED=false", e.message)
         // Demonstração desligada não impede a flag ligada nem a produção.
         assertTrue(Settings.fromEnv(mapOf("JIRA_LIVE_ENABLED" to "true", "DASHBOARD_DEMO_DATA" to "false")).jiraLiveEnabled)
-        assertFalse(Settings.fromEnv(mapOf("DASHBOARD_DEV_MODE" to "false")).dashboardDemoData)
+        assertFalse(Settings.fromEnv(mapOf("DASHBOARD_DEV_MODE" to "false") + ENV_OIDC_DE_TESTE).dashboardDemoData)
     }
 
     @Test
@@ -380,7 +381,7 @@ class SettingsTest {
     @Test
     fun origemPublicaNormalizada() {
         val s = Settings.fromEnv(
-            mapOf("DASHBOARD_DEV_MODE" to "false", "DASHBOARD_ORIGEM_PUBLICA" to " HTTPS://Painel.Exemplo.Invalid:8443/ "),
+            mapOf("DASHBOARD_DEV_MODE" to "false", "DASHBOARD_ORIGEM_PUBLICA" to " HTTPS://Painel.Exemplo.Invalid:8443/ ") + ENV_OIDC_DE_TESTE,
         )
         assertEquals("https://painel.exemplo.invalid:8443", s.origemPublica)
         assertTrue(s.toString().contains("origemPublica=https://painel.exemplo.invalid:8443"))

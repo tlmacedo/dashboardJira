@@ -37,6 +37,8 @@ export function Menu(props: {
   role: Role
   /** Só em desenvolvimento: permite simular outro papel. */
   aoTrocarPapel?: (r: Role) => void
+  /** Só em produção (com login): encerra a sessão. */
+  aoSair?: () => void
 }) {
   const { lang, setLang, t } = useLang()
   const { theme, setTheme } = useTheme()
@@ -99,6 +101,11 @@ export function Menu(props: {
           aoEscolher={setLang}
         />
         <div>{t('shell.fuso')}</div>
+        {props.aoSair && (
+          <button type="button" className="btn" onClick={props.aoSair}>
+            {t('shell.sair')}
+          </button>
+        )}
       </div>
     </aside>
   )

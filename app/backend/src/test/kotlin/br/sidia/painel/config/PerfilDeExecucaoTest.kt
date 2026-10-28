@@ -1,5 +1,6 @@
 package br.sidia.painel.config
 
+import br.sidia.painel.ENV_OIDC_DE_TESTE
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -19,14 +20,14 @@ class PerfilDeExecucaoTest {
 
     @Test
     fun producaoDesligaModoDevQuandoAusente() {
-        val s = Settings.fromEnv(PerfilDeExecucao.aplicar(PerfilDeExecucao.PRODUCAO, emptyMap()))
+        val s = Settings.fromEnv(PerfilDeExecucao.aplicar(PerfilDeExecucao.PRODUCAO, ENV_OIDC_DE_TESTE))
         assertFalse(s.dashboardDevMode)
     }
 
     @Test
     fun producaoTrataVazioComoAusente() {
         for (vazio in listOf("", "   ")) {
-            val s = Settings.fromEnv(PerfilDeExecucao.aplicar("producao", mapOf("DASHBOARD_DEV_MODE" to vazio)))
+            val s = Settings.fromEnv(PerfilDeExecucao.aplicar("producao", mapOf("DASHBOARD_DEV_MODE" to vazio) + ENV_OIDC_DE_TESTE))
             assertFalse(s.dashboardDevMode, "valor '$vazio'")
         }
     }
@@ -36,7 +37,7 @@ class PerfilDeExecucaoTest {
         // Decisão registrada: quem escreve a linha de modo dev no pacote a quer (a faixa vermelha continua).
         val s = Settings.fromEnv(PerfilDeExecucao.aplicar("producao", mapOf("DASHBOARD_DEV_MODE" to "true")))
         assertTrue(s.dashboardDevMode)
-        val f = Settings.fromEnv(PerfilDeExecucao.aplicar("producao", mapOf("DASHBOARD_DEV_MODE" to "false")))
+        val f = Settings.fromEnv(PerfilDeExecucao.aplicar("producao", mapOf("DASHBOARD_DEV_MODE" to "false") + ENV_OIDC_DE_TESTE))
         assertFalse(f.dashboardDevMode)
     }
 
@@ -60,7 +61,7 @@ class PerfilDeExecucaoTest {
     @Test
     fun producaoNaoLigaDemonstracao() {
         // Dados de demonstração exigem modo dev: o perfil de produção nunca os habilita.
-        val saida = PerfilDeExecucao.aplicar("producao", emptyMap())
+        val saida = PerfilDeExecucao.aplicar("producao", ENV_OIDC_DE_TESTE)
         assertFalse(Settings.fromEnv(saida).dashboardDemoData)
     }
 }

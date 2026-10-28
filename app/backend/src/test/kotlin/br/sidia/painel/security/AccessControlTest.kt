@@ -19,6 +19,11 @@ import kotlin.test.assertFalse
 import kotlin.test.assertNotEquals
 import kotlin.test.assertTrue
 
+/** Autenticador de teste que nunca reconhece ninguém (o papel que o stub do OIDC fazia antes do login real existir). */
+private class AutenticadorQueNega : Authenticator {
+    override suspend fun authenticate(call: ApplicationCall): Principal? = null
+}
+
 class AccessControlTest {
     @Test
     fun uriQueNaoComecaComBarraExigeAutenticacao() {
@@ -64,9 +69,9 @@ class AccessControlTest {
     @Test
     fun producaoSemTokenRetorna401() {
         val s = Settings(dashboardDevMode = false)
-        assertEquals(HttpStatusCode.Unauthorized, status(s, OidcAuthenticator()))
-        assertEquals(HttpStatusCode.OK, status(s, OidcAuthenticator(), "/api/health"))
-        assertEquals(HttpStatusCode.OK, status(s, OidcAuthenticator(), "/api/meta"))
+        assertEquals(HttpStatusCode.Unauthorized, status(s, AutenticadorQueNega()))
+        assertEquals(HttpStatusCode.OK, status(s, AutenticadorQueNega(), "/api/health"))
+        assertEquals(HttpStatusCode.OK, status(s, AutenticadorQueNega(), "/api/meta"))
     }
 
     @Test
@@ -88,24 +93,24 @@ class AccessControlTest {
     @Test
     fun caminhosCamufladosNaoContornamAutenticacao() {
         listOf("/%61pi/ping-protegido", "/API/ping-protegido", "/api//ping-protegido").forEach {
-            assertEquals(HttpStatusCode.Unauthorized, status(producao, OidcAuthenticator(), it), it)
+            assertEquals(HttpStatusCode.Unauthorized, status(producao, AutenticadorQueNega(), it), it)
         }
     }
 
     @Test
     fun caminhoCodificadoQueViraHealthEPublico() {
         // /api/%68ealth normaliza para /api/health, que é público por definição.
-        assertEquals(HttpStatusCode.OK, status(producao, OidcAuthenticator(), "/api/%68ealth"))
+        assertEquals(HttpStatusCode.OK, status(producao, AutenticadorQueNega(), "/api/%68ealth"))
     }
 
     @Test
     fun publicoSomenteHealthEMetaExatos() {
         // Barra final: o caminho é público (não exige login); o roteador pode responder 404, nunca 401.
-        assertNotEquals(HttpStatusCode.Unauthorized, status(producao, OidcAuthenticator(), "/api/health/"))
-        assertEquals(HttpStatusCode.Unauthorized, status(producao, OidcAuthenticator(), "/api/meta/x"))
-        assertEquals(HttpStatusCode.Unauthorized, status(producao, OidcAuthenticator(), "/api/healthXYZ"))
+        assertNotEquals(HttpStatusCode.Unauthorized, status(producao, AutenticadorQueNega(), "/api/health/"))
+        assertEquals(HttpStatusCode.Unauthorized, status(producao, AutenticadorQueNega(), "/api/meta/x"))
+        assertEquals(HttpStatusCode.Unauthorized, status(producao, AutenticadorQueNega(), "/api/healthXYZ"))
         // Mudança: fora de /api é a casca estática (sem dados) e deixou de exigir login; ver SPA abaixo.
-        assertNotEquals(HttpStatusCode.Unauthorized, status(producao, OidcAuthenticator(), "/fora-da-api"))
+        assertNotEquals(HttpStatusCode.Unauthorized, status(producao, AutenticadorQueNega(), "/fora-da-api"))
     }
 
     /** Executa [caminho] em produção (dashboardDevMode=false) com um `dist` de teste. */
@@ -130,10 +135,10 @@ class AccessControlTest {
     @Test
     fun cascaEstaticaEPublicaEmProducao() {
         listOf("/", "/assets/app.js", "/rota-de-pagina", "/squads/x", "/api/health", "/api/meta").forEach {
-            assertEquals(HttpStatusCode.OK, statusComDist(OidcAuthenticator(), it), it)
+            assertEquals(HttpStatusCode.OK, statusComDist(AutenticadorQueNega(), it), it)
         }
         // Arquivo estático ausente: 404 (nunca 401, a casca é pública).
-        assertEquals(HttpStatusCode.NotFound, statusComDist(OidcAuthenticator(), "/favicon.ico"))
+        assertEquals(HttpStatusCode.NotFound, statusComDist(AutenticadorQueNega(), "/favicon.ico"))
     }
 
     @Test
@@ -143,7 +148,7 @@ class AccessControlTest {
             "/api/qualquer", "/api/x/../health", "/api/%2e%2e/meta", "/%61pi/x", "/api//x", "/API/x",
             "/api/health;x", "/api/meta%00", "/api",
         ).forEach {
-            assertEquals(HttpStatusCode.Unauthorized, statusComDist(OidcAuthenticator(), it), it)
+            assertEquals(HttpStatusCode.Unauthorized, statusComDist(AutenticadorQueNega(), it), it)
         }
     }
 
@@ -195,7 +200,7 @@ class AccessControlTest {
         var codigo = HttpStatusCode.OK
         testApplication {
             application {
-                module(producao, testContext(producao), OidcAuthenticator())
+                module(producao, testContext(producao), AutenticadorQueNega())
                 routing { requireRole(Role.GERENTE) { get("/api/efeito") { executou = true; call.respondText("x") } } }
             }
             codigo = client.get("/api/efeito").status
@@ -293,22 +298,25 @@ class AccessControlTest {
     }
 
     @Test
-    fun rotaPublicaDoPlano8PodeSerAcrescentada() {
-        assertFalse(ehPublica("/auth/login"))
-        assertTrue(ehPublica("/auth/login", rotasPublicas + setOf(listOf("auth", "login"))))
-        // O acréscimo vale só para o caminho exato.
-        assertFalse(ehPublica("/auth/login/x", rotasPublicas + setOf(listOf("auth", "login"))))
+    fun rotasDeLoginSaoPublicasSoNoCaminhoExato() {
+        // Login, callback e logout (Plano 8) são públicos; o acréscimo vale só para o caminho exato.
+        listOf("/auth/login", "/auth/callback", "/auth/logout").forEach { assertTrue(ehPublica(it), it) }
+        listOf("/auth/login/x", "/auth/callback/x", "/auth", "/auth/", "/auth/outra", "/AUTH/login").forEach {
+            assertFalse(ehPublica(it), it)
+        }
+        // Sem a lista de permissão, nada sob /auth é público.
+        assertFalse(ehPublica("/auth/login", setOf(listOf("api", "health"))))
     }
 
     @Test
     fun authQualquerRetorna401EmProducao() {
-        assertEquals(HttpStatusCode.Unauthorized, status(producao, OidcAuthenticator(), "/auth/qualquer"))
+        assertEquals(HttpStatusCode.Unauthorized, status(producao, AutenticadorQueNega(), "/auth/qualquer"))
     }
 
     @Test
     fun navegacaoViaClienteRetorna401() {
         listOf("/api/x/../health", "/api/x/%2e%2e/meta", "/api/%2e/health").forEach {
-            assertEquals(HttpStatusCode.Unauthorized, status(producao, OidcAuthenticator(), it), it)
+            assertEquals(HttpStatusCode.Unauthorized, status(producao, AutenticadorQueNega(), it), it)
         }
     }
 }

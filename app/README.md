@@ -74,7 +74,7 @@ No PowerShell: `.\scripts\painel-cli.ps1 validar-config`, `... backup-agora`, `.
 
 O modo desenvolvimento **não tem login**. Nunca o exponha em rede com dados reais. O painel escuta na porta `8080` e **quem restringe o acesso é o firewall/rede da máquina**: em estação de trabalho, deixe-o acessível só em `127.0.0.1`.
 
-Para produção: use o pacote instalado (seção abaixo), que já sobe com `DASHBOARD_DEV_MODE=false` quando a variável não está definida, ou defina a variável como `false` (exige o login SSO/OIDC, previsto em plano posterior). Não exponha em rede enquanto o login não existir.
+Para produção: use o pacote instalado (seção abaixo), que já sobe com `DASHBOARD_DEV_MODE=false` quando a variável não está definida, ou defina a variável como `false` (exige o login SSO/OIDC: `OIDC_ISSUER`, `OIDC_CLIENT_ID`, `OIDC_REDIRECT_URI` e `SESSION_SECRET`; sem eles o painel não sobe). O provedor de identidade é o da empresa (qualquer OpenID Connect com PKCE); ainda não há provedor ligado, então não exponha o painel em rede com dados reais.
 
 ## Pacote instalável
 
@@ -105,6 +105,7 @@ Na subida o painel carrega o calendário e o diretório de papéis, abre o pool 
 - YAML inválido: a mensagem cita só o caminho e o tipo do erro.
 - `equipes.yaml`, `ausencias.yaml` ou `planejamento.yaml` ausentes (em dev usam o `.exemplo` com aviso; em produção são obrigatórios). Copie de `config/equipes.exemplo.yaml`, `config/ausencias.exemplo.yaml` e `config/planejamento.exemplo.yaml`. **`equipes.yaml` e `ausencias.yaml` têm dados pessoais: ficam fora do git**, só leitura (nenhuma tela grava), e os `id` precisam existir no `papeis.yaml`. A ausência não tem motivo (a chave `motivo` é recusada).
 - Nenhum **GERENTE** com papel vigente hoje no `papeis.yaml`.
+- `OIDC_ISSUER`, `OIDC_CLIENT_ID`, `OIDC_REDIRECT_URI` ou `SESSION_SECRET` ausentes ou em branco (o login SSO/OIDC é obrigatório em produção); a mensagem cita só o nome da variável.
 - Arquivo de banco inacessível, já em uso por outro painel ou migração que falha.
 - Com a flag `JIRA_LIVE_ENABLED` ligada, instância do Jira mal configurada (a mensagem cita só o id e a regra).
 
