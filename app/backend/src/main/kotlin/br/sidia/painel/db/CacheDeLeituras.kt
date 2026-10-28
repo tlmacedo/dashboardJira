@@ -53,6 +53,20 @@ object CacheDeLeituras {
     }
     private val travas = ConcurrentHashMap<Any, Any>()
 
+    /**
+     * A trava de uma chave. O mapa tem teto: passando de `4 x MAXIMO_DE_ENTRADAS`, as travas de chaves que não estão no cache
+     * saem. Perder a trava de uma carga em andamento só permite uma carga repetida (inofensiva), nunca dado errado.
+     */
+    private fun travaDe(chave: Any): Any {
+        if (travas.size > MAXIMO_DE_ENTRADAS * 4) {
+            val vivas = synchronized(entradas) { entradas.keys.toSet() }
+            travas.keys.removeIf { it !in vivas && it != chave }
+        }
+        return travas.computeIfAbsent(chave) { Any() }
+    }
+
+    internal fun tamanhoDasTravas(): Int = travas.size
+
     /** Uma thread só, de fundo (não impede a JVM de encerrar): renovar nunca compete com as requisições por CPU. */
     private val executorPadrao by lazy {
         Executors.newSingleThreadExecutor { r -> Thread(r, "cache-de-leituras").also { it.isDaemon = true } }
@@ -113,7 +127,7 @@ object CacheDeLeituras {
 
     @Suppress("UNCHECKED_CAST")
     private fun <T : Any> carregarEGuardar(chave: Any, carregar: () -> T): T {
-        val trava = travas.computeIfAbsent(chave) { Any() }
+        val trava = travaDe(chave)
         synchronized(trava) {
             val v = versao.get()
             val agora = relogio()
@@ -157,7 +171,7 @@ object CacheDeLeituras {
     }
 
     private fun <T : Any> recarregar(chave: Any, carregar: () -> T) {
-        val trava = travas.computeIfAbsent(chave) { Any() }
+        val trava = travaDe(chave)
         synchronized(trava) {
             val v = versao.get()
             val agora = relogio()

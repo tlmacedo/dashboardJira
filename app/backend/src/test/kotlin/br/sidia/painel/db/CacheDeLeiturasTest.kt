@@ -226,6 +226,18 @@ class CacheDeLeiturasTest {
     }
 
     @Test
+    fun mapaDeTravasTemTeto() {
+        ligar()
+        // chaves distintas em quantidade (consulta com parâmetros livres) não podem fazer o mapa de travas crescer sem fim
+        for (i in 1..5_000) CacheDeLeituras.obter("t$i") { listOf(i) }
+        assertTrue(CacheDeLeituras.tamanhoDasTravas() <= CacheDeLeituras.MAXIMO_DE_ENTRADAS * 4 + 1, "${CacheDeLeituras.tamanhoDasTravas()}")
+        // e o cache continua correto: uma chave guardada não recarrega
+        val chamadas = AtomicInteger()
+        CacheDeLeituras.obter("t5000") { chamadas.incrementAndGet(); listOf(0) }
+        assertEquals(0, chamadas.get())
+    }
+
+    @Test
     fun cargaQueFalhaDevolveAVagaDoTeto() {
         ligar()
         repeat(CacheDeLeituras.MAXIMO_DE_CARGAS_SIMULTANEAS + 3) { n ->
