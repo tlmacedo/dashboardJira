@@ -25,6 +25,8 @@ Branch: `feat/ci-e-endurecimento` (lote 9a = tarefas 1 a 3; os lotes seguintes c
 - Ruling (T6): ponto de parada 5 (como o pacote decide o modo): opção 1, perfil de produção só nos scripts do pacote (`-Dpainel.perfil=producao` via `tasks.startScripts.defaultJvmOpts`); `run` e `iniciar.*` seguem em modo dev. Reversível: remover a propriedade do script. O padrão global de `DASHBOARD_DEV_MODE` não mudou.
 - Ruling (T6): os dois testes de processo do plano (`pacoteSemVariaveisSobeEmModoProducao` e `pacoteSemConfiguracaoFalhaFechado`) viraram um só (`pacoteSemVariaveisSobeEmModoProducaoEFalhaFechado`), como o próprio plano descreve ("um só teste de processo"). A conferência da mensagem "obrigatório em produção" ignora a acentuação (`obrigat\S+ em produ\S+`) porque, com o ambiente limpo, a JVM escreve em ASCII e os acentos saem como `?`.
 
+- Ruling (T7): o `.env.example` já tinha `DASHBOARD_DEV_MODE` e `DASHBOARD_DEMO_DATA` comentadas e `DASHBOARD_ORIGEM_PUBLICA` documentada (T4); só acrescentei o texto sobre o pacote instalado e a garantia de que o modelo não liga o modo dev. Quatro dos seis testes de `ModeloDeVariaveisTest` já passavam de primeira (o modelo já estava conforme); falharam pela asserção só `modeloDocumentaOrigemPublicaEPacote` e `readmeDiferenciaOModoDevDoPacote`. O poder dos demais fica garantido pela leitura do mapa ativo (qualquer linha ativa ligada derruba o teste).
+
 ## Minor adiados
 
 (nenhum até aqui)
