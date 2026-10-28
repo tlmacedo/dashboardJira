@@ -32,6 +32,22 @@ Ponto de partida (main `fa8493c`): backend 986 testes, frontend 143 (números do
   - M7: a tabela por squad de Metas usa o squad da posse na resolução.
   - M8: capturas visuais das telas pendentes (sem navegador no ambiente).
 
+## Bloco 5b (Tarefas 10 a 14), branch `feat/cards-trabalho-5b`
+
+Ponto de partida (main `ad17750`, 5a mesclado): backend 1129 testes, 0 falhas.
+
+| Tarefa | Estado | Commit | Observações |
+|---|---|---|---|
+| 10 Negativas (domínio e API) | Concluída (backend 1146, 0 falhas) | ver `git log` | Cartões `NE-01` a `NE-08` e `NE-10` (o NE-09 é do Plano 10); cenário NEG-1 em `src/test/.../trabalho/Neg1.kt` |
+
+### Rulings do 5b
+
+- Ruling: Negativas (T10) — `devolvida` NÃO inclui a reabertura (de categoria DONE para outra): a reabertura de TG-131 volta na ordem do fluxo, mas o plano espera `devolvidas = 1` (só TG-132) e `reabertas = 1`; os dois conceitos não se sobrepõem. Custo se errado: tirar a guarda `else if` do calculador (a reaberta passaria a contar também como devolvida).
+- Ruling: Negativas (T10) — `NegativasCalculator.calcular/analisar` ganhou os parâmetros `agora` (para "abertas vencidas", que é o retrato de hoje) e `unit` (devolvido no DTO); o plano não tinha o relógio na assinatura. Custo: nenhum.
+- Ruling: Negativas (T10) — a visão é pelo responsável ATUAL (`permiteAtual`), como Fechadas e Metas; a atribuição por pessoa usa o dono no instante do evento, mas só aparece para quem vê a task hoje (ex.: a reabertura de TG-131, feita quando era da `ana`, não aparece para a `ana` depois que passou ao `bruno`; o gerente e o squad leader dos dois a veem). Custo se errado: trocar para `permitePosse` nas listas de evento.
+- Ruling: Negativas (T10) — período padrão de 90 dias (como Fechadas); atraso e estouro valem pelas resolvidas NO período (não pelo universo por vencimento de "no prazo"), mas a conta é a mesma regra única (`NoPrazo.classificar`). Ficha com os mesmos 6 tipos da sincronização e sem exclusão de status.
+- Ruling: Negativas (T10) — o NE-08 (taxas) abre as tasks dos NUMERADORES (segmentos `taxa:reabertura|devolucao|atraso|atrasoSemJustificativa`, as mesmas listas dos cartões de contagem) e a base `concluidas`; o NE-09 ("maior tempo" por status) continua no Plano 10, T10.
+
 ## Rulings
 
 - Ruling: na Tarefa 9 a TG-120 é resolvida às 03h UTC (não 03h30), porque o helper de fixtures `Trb1.t` só aceita hora cheia; o efeito (23h de 15/10 em Manaus) é o mesmo. Os testes de consistência e de compatibilidade com o legado passaram na primeira execução (conferem comportamento já implementado nas Tarefas 5 a 7); só os testes do documento falharam antes de escrevê-lo. A "mesma semana" de Tempo em status é checada pelo drill `TS-01` com a semana como período, pois aquele card não tem série semanal.

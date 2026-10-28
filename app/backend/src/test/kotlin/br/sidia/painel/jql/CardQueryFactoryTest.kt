@@ -141,6 +141,14 @@ class CardQueryFactoryTest {
     }
 
     @Test
+    fun jqlSnapshotNegativas() {
+        // Como Fechadas: os 6 tipos da sincronização e nenhuma exclusão de status (as canceladas contam em NE-03).
+        val todosOsTipos = "project in (\"TG-Basic\") AND issuetype in (\"Checklist\", \"Checklist TG\", \"Checklist Review\", " +
+            "\"Feature check\", \"TG Feature check\", \"Task\")"
+        assertEquals(todosOsTipos, jqlDaFicha("negativas"))
+    }
+
+    @Test
     fun fichaDeSincronizacaoPedeCamposNovos() {
         val fields = fabrica.build(fichaSync, mapOf("desde" to desde)).fields
         for (campo in listOf("priority", "timeestimate", "timespent", "timeoriginalestimate", "components")) {
