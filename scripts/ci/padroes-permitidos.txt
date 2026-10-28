@@ -1,0 +1,136 @@
+# Domínios de e-mail e hosts públicos aceitos pela varredura (scripts/ci/varrer-dados-pessoais.sh).
+# Uma entrada por linha; vale o domínio exato e seus subdomínios. Comentários com #.
+# SÓ hosts públicos e marcadores de lugar. Host da empresa ou dado pessoal NUNCA entra aqui:
+# é ponto de parada (pergunte ao usuário). Domínios terminados em .invalid ou .example, localhost
+# e 127.0.0.1 já são aceitos sem constar aqui.
+
+# E-mails fictícios e de sistemas
+exemplo.invalid
+example.com
+users.noreply.github.com
+# Linha Co-Authored-By dos commits
+anthropic.com
+
+# Link de sessão da linha de coautoria dos commits e das PRs
+claude.ai
+
+# Marcadores de lugar usados em documentação e testes (não existem de verdade)
+exemplo.com
+suaempresa.com.br
+suaempresa.com
+acme.com
+x
+suaempresa.atlassian.net
+x.atlassian.net
+h
+u
+j
+host
+jira
+jira-base-url
+0.0.0.0
+10.0.0.1
+127.0.0.2
+
+# Registros de pacotes e ferramentas de build
+github.com
+githubusercontent.com
+npmjs.org
+gradle.org
+maven.org
+gitlab.com
+unpkg.com
+jsdelivr.net
+tailwindcss.com
+sheetjs.com
+googleapis.com
+gstatic.com
+powershellgallery.com
+vite.dev
+modelcontextprotocol.io
+cline.bot
+apache.org
+w3.org
+microsoft.com
+
+# Documentação pública do Jira e de ferramentas de mercado citadas nas pesquisas
+atlassian.com
+eazybi.com
+adaptavist.com
+scriptrunnerhq.com
+decadis.net
+yext.com
+tempo.io
+saasjet.com
+codefortynine.com
+deiser.com
+titanapps.io
+oculai.de
+fusioncharts.com
+dundas.com
+screenful.com
+planview.com
+businessmap.io
+kanbanzone.com
+kanbanguides.org
+prokanban.org
+nimblework.com
+temperstack.com
+helpdocs.io
+gitscrum.com
+getnave.com
+getknit.dev
+hookdeck.com
+withone.ai
+oneuptime.com
+nango.dev
+scalekit.com
+qodex.ai
+# Clientes Atlassian Cloud públicos de fornecedores, vistos em páginas de documentação
+appfire.atlassian.net
+55degrees.atlassian.net
+tempo-io.atlassian.net
+snapbytesapps.atlassian.net
+divimdevelopment.atlassian.net
+deiser-apps.atlassian.net
+bojaprod.atlassian.net
+
+# Artigos, métricas de engenharia e referências
+swarmia.com
+linearb.helpdocs.io
+jellyfish.co
+axify.io
+pensero.ai
+grafana.com
+dora.dev
+cd.foundation
+devops.com
+leaddev.com
+thoughtworks.com
+scrum.org
+nngroup.com
+acm.org
+queue.acm.org
+wikipedia.org
+reddit.com
+substack.com
+stripe.com
+nkdagility.com
+dsebastien.net
+theinformationlab.co.uk
+lawsofsoftwareengineering.com
+third-bit.com
+thinkinsights.net
+aihero.dev
+resumelens.org
+reportlab.com
+unpaywall.org
+harvard.edu
+wustl.edu
+ambitojuridico.com.br
+brasilapi.com.br
+migalhas.com.br
+levysalomao.com.br
+confidata.com.br
+jus.com.br
+planalto.gov.br
