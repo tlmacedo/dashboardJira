@@ -1,0 +1,40 @@
+# Ficha do card "Simulador de ausência" (Plano 6). Estrita: chave desconhecida falha ao carregar.
+# A leitura no banco aplica estes tipos e a exclusão de status (FiltroDeFicha); o JQL só serve à sincronização e ao ensaio.
+
+id: simulador
+titulo: Simulador de ausência
+instancia: samsung
+
+campos:
+  - OS Version
+  - priority
+  - timeoriginalestimate
+  - timeestimate
+  - timespent
+
+filtrosFixos:
+  project: ["TG-Basic"]
+  issuetype: ["Checklist", "Checklist TG", "Checklist Review"]
+
+filtrosExcluidos:
+  status: ["Cancelled", "Canceled", "Dropped"]
+
+parametros:
+  - nome: squad
+    tipo: squad
+    obrigatorio: false
+
+formula: >-
+  Compara a agenda pela capacidade da pessoa com e sem uma ausência HIPOTÉTICA (pessoa, de, ate e fracao 0,5 ou 1,0; no máximo 60
+  dias): as tasks que não atrasavam e passam a atrasar, as horas agendadas nesses dias que não cabem mais e a ocupação semanal
+  antes e depois. É só leitura: nada é gravado e nenhuma ausência é cadastrada (as ausências reais vêm do ausencias.yaml).
+
+exemplo: >-
+  pessoa=dev.alfa, de=2026-11-03, ate=2026-11-06, fracao=1.0.
+
+aceite:
+  - Nada é gravado (nenhuma tabela muda além do registro da consulta).
+  - Período acima de 60 dias, fração fora de 0,5 e 1,0 e datas ruins respondem 400 sem repetir o valor.
+  - Pessoa fora da visão responde 403; o usuário comum não tem acesso.
+
+expandChangelog: true
