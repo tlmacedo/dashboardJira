@@ -8,7 +8,6 @@ import io.ktor.http.HttpStatusCode
 import io.ktor.http.Parameters
 import kotlinx.serialization.Serializable
 import java.time.LocalDate
-import java.time.format.DateTimeParseException
 
 /**
  * Ocupação para a tela: [fracao] nula e [semCapacidade] verdadeiro quando a capacidade é zero (a tela escreve "sem
@@ -41,15 +40,8 @@ internal fun Parameters.inteiroEntre(nome: String, padrao: Int, valores: IntRang
     return n
 }
 
-/** Parâmetro de data `aaaa-mm-dd`; ausente é nulo; ilegível é 400. */
-internal fun Parameters.dataOuNulo(nome: String): LocalDate? {
-    val bruto = this[nome]?.trim()?.takeIf { it.isNotEmpty() } ?: return null
-    return try {
-        LocalDate.parse(bruto)
-    } catch (e: DateTimeParseException) {
-        throw ErroHttp(HttpStatusCode.BadRequest)
-    }
-}
+/** Parâmetro de data `aaaa-mm-dd`: a MESMA leitura dos filtros comuns (`data`, com o intervalo de anos); ausente é nulo, ilegível ou extremo é 400. */
+internal fun Parameters.dataOuNulo(nome: String): LocalDate? = data(this, nome)
 
 /** Códigos de aviso dos cards de pessoas e planejamento (o texto sai de `cardpage.aviso.<CODIGO>` no frontend). */
 object AvisosDePessoas {
