@@ -68,6 +68,8 @@ private val FILTROS_AUDITADOS = setOf(
     "squad", "pessoa", "tipo", "os", "de", "ate", "unit", "semOutliers", "segmento", "sinal", "resultado",
     // Cards de trabalho e prazos (Plano 5).
     "prioridade", "granularidade", "movimento",
+    // Cruzamentos (Plano 17b): só os ids dos eixos e da medida, nunca valor de eixo (que pode ser nome de pessoa).
+    "linhas", "colunas", "medida",
 )
 
 private val FORMATO_USERNAME = Regex("[a-z0-9._-]{1,64}")

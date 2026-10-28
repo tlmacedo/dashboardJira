@@ -57,6 +57,7 @@ export const NAV_ITEMS: NavItem[] = [
 
   item('fechadas', 'resultados', 'all'),
   item('negativas', 'resultados', 'all'),
+  item('cruzamentos', 'resultados', 'all'),
   item('tempo', 'resultados', 'all'),
   item('esforco', 'resultados', 'all'),
 
