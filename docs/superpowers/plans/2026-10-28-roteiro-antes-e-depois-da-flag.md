@@ -26,7 +26,7 @@ Cada linha é um PR a partir da `main` atualizada; a seguinte só começa depois
 | A8 | Distribuição, Governança, início do gerente/squad/usuário | Plano 7b (10 tarefas); verificação I-12 (labels fora do vocabulário); I-14 só se houver sub-tarefa na ficha (senão, fica para o 14b) | — | a fazer |
 | A9 | Complementos de telas e filtros | Plano 10 (12 tarefas) + I-26 e I-27 | — | a fazer |
 | A10 | Auditoria completa e LGPD | Plano 11 (12 tarefas) | T3 (ampliar dados guardados): **opção recomendada**; Trava do DPO fica **fechada** (fail-closed) | a fazer |
-| A11 | Cards novos de fluxo e gestão | Plano 17b (T8 a T13) | PP5: executado **antes** do 14b por ordem do usuário (risco: calibração só com dados reais; ver seção 4) | a fazer |
+| A11 | Cards novos de fluxo e gestão | Plano 17b (T8 a T13) | PP5: executado **antes** do 14b por ordem do usuário (risco: calibração só com dados reais; ver seção 4) | executado na branch `feat/cards-de-fluxo-e-gestao` (PR pendente); aceite do gestor pendente |
 | A12 | Preparação final (sem remoção do `legacy/`) | Plano 8, T1 a T8 e T10 | Endereço de escuta: opção recomendada; **T3 passo 5 e T9 (remoção) ficam para a seção 3** | a fazer |
 | A13 | Operação em produção | Plano 12 (12 tarefas) | canal de alertas, local do backup e do YAML: opção recomendada para o código; entrega externa fica na seção 3 | a fazer |
 | A14 | Implantação real (somente a parte de código e empacotamento) | Plano 13, T2 a T6 e T9 a T10 (código, zip e SHA-256, ensaio local) | T1, T7 (tag), T8 (serviço no SO da empresa), T11 a T13: seção 3 | a fazer |

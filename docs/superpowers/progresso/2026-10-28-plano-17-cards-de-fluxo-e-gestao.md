@@ -129,7 +129,25 @@ Ponto de partida (main `b8d203b`, 5b mesclado): backend `./gradlew test --rerun-
 - [x] Tarefa 10: Bloqueios entre tasks (I-08) — backend 1275 testes (+10 `BloqueiosCalculatorTest`, +8 `BloqueiosRoutesTest`), frontend 268 (+10 `Bloqueios.test.tsx`); cartões `BQ-01` a `BQ-05`; demonstração ampliada (ver Ruling)
 - [x] Tarefa 11: Controle do ciclo e tendência (I-02 e I-03) — backend 1292 testes (+10 `ControleDoCicloCalculatorTest`, +7 `ControleDoCicloRoutesTest`), frontend 280 (+11 `ControleDoCiclo.test.tsx`, +1 em `Fechadas.test.tsx`); cartões `CT-01` e `CT-02`
 - [x] Tarefa 12: Aba Cruzamentos (I-10) — cartão `CZ-01`; números da suíte na linha do fechamento (Tarefa 13)
-- [ ] Tarefa 13: Fechamento do 17b
+- [x] Tarefa 13: Fechamento do 17b (passos 1, 2 e 4 parciais; passo 3 pendente do gestor; ver "Fechamento do 17b"). **Números finais (sem cache):** backend `--rerun-tasks` 1317 testes, 0 falhas; frontend 293 testes, build ok; varredura `VARREDURA OK`
+
+## Fechamento do 17b (Tarefa 13)
+
+- **Passo 1 (contrato e Mapa):** `ContratoDeCartoesTest` percorre os 12 cartões novos (`FX-01/02`, `AW-01/02`, `BQ-01` a `05`, `CT-01/02`, `CZ-01`) no catálogo, com textos em pt e en (`todoCartaoTemTextoPtEEn`); novo teste `cadaCartaoNovoDoPlano17bTemParPositivoNaDemonstracao` exige par positivo na demonstração para cada um (exceto o BQ-05, ver Ruling de Bloqueios, coberto pelo cenário BQ-1). O Mapa de cartões é gerado do catálogo, então os novos aparecem sozinhos; o mock de desenvolvimento (`dev-mock/mockFluxo.ts`) serve os cinco cards e os 12 cartões.
+- **Passo 2 (revisão visual):** sem navegador no ambiente, igual ao 17a: conferido por leitura do CSS e dos testes. Contraste calculado dos tokens usados pelos gráficos contra `--surface` (mínimo 3:1 para gráfico): claro/Sidia `--s1` 11,34, `--s2` 6,19, `--s3` 4,66, `--bad` 6,54, `--warn` 5,43; escuro `--s1` 7,30, `--s2` 7,56, `--s3` 6,61, `--bad` 7,29, `--warn` 9,62; o script `contraste-dos-tokens.mjs` repete os pares do 17a (só a divisória decorativa `--line` segue abaixo de 3:1, já registrada). Estado nunca só por cor: Fluxo da semana (cheio, vazado, hachurado), Aging (círculo e triângulo), Controle do ciclo (círculo e losango, marcador vazado no mês pequeno), Cruzamentos (hachurado na célula mais alta) e sempre ▲ ● ✓ ■ com texto. Teclado: barras do Fluxo e botões das tabelas alcançáveis; pontos do Aging e do Controle são imagens/mouse com a tabela equivalente por teclado. SVG com `min-width` e rolagem dentro do cartão (sem rolagem da página a 360 px, por CSS). Pendente: capturas nos três temas e três larguras e simulação de daltonismo, por quem rodar `PAINEL_MOCK=1 pnpm dev`.
+- **Passo 3 (aceite do gestor):** NÃO feito (o gestor não estava presente). As diferenças contra as fichas estão na seção "12. Executado" de `docs/superpowers/ideias-de-cards-a-partir-da-referencia.md`. Pendente: o aceite card a card, junto do aceite do 14b.
+- **Passo 4 (entrega):** suíte sem cache, varredura e push feitos nesta branch; revisão final independente em contexto limpo, PR, CI e merge ficam com o orquestrador (fora do pedido).
+
+## Minor adiados do 17b
+
+- O clique no PONTO do Aging WIP e do Controle do ciclo não abre a task (a gaveta universal é do Plano 10); hoje abrem a lista da etapa/do dia.
+- `LeitorDePontas` (Bloqueios) lê as pontas por chave sem índice dedicado além de `(instance, key)` do `issue`; com dezenas de milhares de vínculos vale medir (cenário: base real do 14b).
+- O Aging compara a permanência atual com o tempo TOTAL das concluídas na etapa (convenção de NG-05); uma task que reentra tende a parecer mais nova do que o total histórico (ver Ruling).
+- `FluxoDaSemana` lê abertas + resolvidas desde a primeira semana (sem filtro de `created`); a base real pode pedir um índice por `resolved`.
+- Os textos do detalhe das gavetas (`detalhe`) saem só em pt-BR na tela em inglês (padrão herdado do 5a, M-h).
+- A "faixa mais alta" do Cruzamentos (75% do maior valor) e a janela de 12 semanas/meses são valores de tela sem YAML; calibrar com dados reais no 14b.
+- O DTO do Cruzamentos de `squad` usa o diretório de HOJE (não o squad da posse no instante).
+- Flake observado uma vez no frontend sob carga (Gradle em paralelo), passou na rerodada; não reproduzido com a máquina livre.
 
 ## Estado herdado do 17b (conferido no código)
 
