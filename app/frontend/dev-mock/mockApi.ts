@@ -3,6 +3,7 @@
 import type { Plugin } from 'vite'
 import { agingMock, bloqueiosMock, catalogoFluxo, controleMock, cruzamentosMock, fluxoMock } from './mockFluxo.ts'
 import { mockFase7a } from './mockFase7a.ts'
+import { mockFase7b } from './mockFase7b.ts'
 import { cartoesDePessoasMock, mockPessoas } from './mockPessoas.ts'
 
 const STATUS = [
@@ -496,6 +497,7 @@ export function mockApi(): Plugin {
           corpo = cruzamentosMock(url.searchParams.get('linhas') ?? 'tipo', url.searchParams.get('colunas') ?? 'categoria', url.searchParams.get('medida') ?? 'contagem')
         } else if (mockPessoas(url.pathname, url.searchParams) !== undefined) corpo = mockPessoas(url.pathname, url.searchParams)
         else if (mockFase7a(url.pathname) !== undefined) corpo = mockFase7a(url.pathname)
+        else if (mockFase7b(url.pathname) !== undefined) corpo = mockFase7b(url.pathname)
         else if (url.pathname === '/api/auditoria/sinais') corpo = auditoria()
         else if (url.pathname.startsWith('/api/auditoria/historico/')) corpo = historico(decodeURIComponent(url.pathname.split('/')[4] ?? ''))
         else if (url.pathname === '/api/cards/task-review') corpo = taskReview()

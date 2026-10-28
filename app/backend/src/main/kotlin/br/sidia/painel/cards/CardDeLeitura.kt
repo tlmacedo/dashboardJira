@@ -125,9 +125,13 @@ internal class CartaoDeLeitura<D : Any>(
 ) : CartaoRegistrado {
     override val instancia: String = INSTANCIA_TRABALHO
 
+    @Suppress("UNCHECKED_CAST")
     private fun calcular(e: EntradaDeCartao): ResultadoDeCard<D> {
+        e.memo?.get(card.id)?.let { return it as ResultadoDeCard<D> }
         val store = SqliteWorkStore(requireNotNull(e.ctx.dataSource))
-        return card.calcularSeguro(montarEntrada(e.ctx, store, e.principal, e.parametros, card.periodoPadraoDias))
+        val resultado = card.calcularSeguro(montarEntrada(e.ctx, store, e.principal, e.parametros, card.periodoPadraoDias))
+        e.memo?.put(card.id, resultado)
+        return resultado
     }
 
     override suspend fun valores(e: EntradaDeCartao): Map<String, Int> = numeros(calcular(e).dto)

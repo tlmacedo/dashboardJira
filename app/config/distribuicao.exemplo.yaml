@@ -1,0 +1,30 @@
+# Modelo das regras da Distribuição e do Rebalanceamento (copie para distribuicao.yaml e ajuste). Não leva dado pessoal.
+# Estrito: chave desconhecida, valor ausente ou fora do limite falham ao carregar. São as heurísticas do app anterior,
+# ainda SEM calibração com dados reais. O painel só SUGERE (modo sombra): nada é escrito no Jira e nada muda o responsável.
+versao: 1
+
+# Score de cada candidato (menor vence):
+#   carga projetada x produtividade / capacidade
+#   + pesoWip x WIP / limite de WIP da pessoa
+#   + penalidadeWipCheio, se o WIP já está no limite ou acima
+#   + pesoCompetenciaFaltante x competências que a task pede e a pessoa não tem
+#   - bonusEpicoOuComponente, se a pessoa já trabalhou no mesmo épico ou componente.
+pesoWip: 0.5
+penalidadeWipCheio: 1.0
+pesoCompetenciaFaltante: 0.6
+bonusEpicoOuComponente: 0.15
+
+# Produtividade da pessoa = horas gastas / horas estimadas das concluídas (16 semanas), limitada a esta faixa.
+# Sem histórico vale 1,0. Multiplica a carga projetada (quem gasta mais que o estimado enche mais rápido).
+produtividadeMin: 0.85
+produtividadeMax: 1.15
+
+# Só é candidata a pessoa com capacidade líquida de 4 semanas ACIMA deste valor, em horas.
+capacidadeMinimaH: 0.5
+
+# Rebalanceamento: acima desta ocupação do horizonte (1,10 = 110%) a pessoa é origem; no máximo "maxMovimentos"
+# movimentos por cálculo; o destino precisa ficar pelo menos "histereseRebalanceamentoPp" pontos percentuais abaixo
+# da origem DEPOIS do movimento (evita o vai e volta). Só tasks ainda não iniciadas se movem.
+gatilhoRebalanceamento: 1.10
+maxMovimentos: 10
+histereseRebalanceamentoPp: 20

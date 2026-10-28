@@ -48,8 +48,11 @@ class RoleDirectory(pessoas: List<Pessoa>) {
     fun membersOf(squad: String, date: LocalDate): Set<String> =
         pessoas.keys.filter { squadOf(it, date) == squad }.toSet()
 
-    /** Todos os squads com ao menos um membro ou líder vigente na data (conjunto; a ordem de exibição é de quem exibe). */
-    fun squads(date: LocalDate): Set<String> =
+    /** Quantas pessoas o diretório tem (em qualquer data). Só o número: a Configuração nunca mostra quem são. */
+    val total: Int get() = pessoas.size
+
+    /** Squads que têm algum papel vigente na data (conjunto; a ordem de exibição é de quem exibe). */
+    fun squadsEm(date: LocalDate): Set<String> =
         pessoas.keys.flatMap { id -> ativos(id, date).mapNotNull { it.squad } }.toSet()
 
     /** Squads que a pessoa lidera na data. */

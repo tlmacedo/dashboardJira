@@ -2,6 +2,7 @@ package br.sidia.painel
 
 import br.sidia.painel.cards.metas.RegrasDeMetas
 import br.sidia.painel.checklist.RegrasChecklistReview
+import br.sidia.painel.distribuicao.RegrasDeDistribuicao
 import br.sidia.painel.integridade.RegrasDeIntegridade
 import br.sidia.painel.pessoas.Ausencias
 import br.sidia.painel.pessoas.Equipes
@@ -76,6 +77,8 @@ class AppContext(
     val regrasChecklistReview: RegrasChecklistReview = RegrasChecklistReview.PADRAO,
     /** Limiares, gravidades e níveis da Integridade (heurísticas sem calibração); lido de `integridade.yaml` (o modelo só vale em desenvolvimento). */
     val regrasIntegridade: RegrasDeIntegridade = RegrasDeIntegridade.PADRAO,
+    /** Pesos, produtividade e gatilhos da Distribuição e do Rebalanceamento (modo sombra); lido de `distribuicao.yaml` (o modelo só vale em desenvolvimento). */
+    val regrasDistribuicao: RegrasDeDistribuicao = RegrasDeDistribuicao.PADRAO,
 ) : AutoCloseable {
     private val aoFechar = java.util.concurrent.CopyOnWriteArrayList<() -> Unit>()
 
@@ -178,6 +181,9 @@ class AppContext(
             // Integridade (Fase 7): heurísticas versionadas sem dado pessoal; o modelo só cai em dev.
             val arquivoIntegridade = resolver(settings, "integridade")
             val regrasIntegridade = lerYaml(arquivoIntegridade) { RegrasDeIntegridade.fromYaml(arquivoIntegridade) }
+            // Distribuição e Rebalanceamento (Fase 7, bloco 7b): heurísticas versionadas sem dado pessoal; o modelo só cai em dev.
+            val arquivoDistribuicao = resolver(settings, "distribuicao")
+            val regrasDistribuicao = lerYaml(arquivoDistribuicao) { RegrasDeDistribuicao.fromYaml(arquivoDistribuicao) }
 
             // Valida na subida todas as instâncias do Jira configuradas (sem enviar nada); só id e regra na falha.
             val jira = JiraClientFactory(settings)
@@ -210,7 +216,7 @@ class AppContext(
                 travaDeProcesso = trava, regrasDeMetas = regrasDeMetas, regrasDeRisco = regrasDeRisco,
                 regrasDePrevisao = regrasDePrevisao, equipes = equipes, ausencias = ausencias, regrasPlanejamento = regrasPlanejamento,
                 regrasEsforco = regrasEsforco, regrasChecklistReview = regrasChecklistReview,
-                regrasIntegridade = regrasIntegridade,
+                regrasIntegridade = regrasIntegridade, regrasDistribuicao = regrasDistribuicao,
             )
         }
 

@@ -45,7 +45,7 @@ private fun opcoesDe(ctx: AppContext, store: SqliteWorkStore, principal: Princip
     val escopo = Escopo(visiveis, veSemResponsavel = coordenacao)
 
     val squads: Set<String> = if (coordenacao) {
-        ctx.roles.squads(hoje)
+        ctx.roles.squadsEm(hoje)
     } else {
         buildSet {
             ctx.roles.squadOf(principal.userId, hoje)?.let(::add)

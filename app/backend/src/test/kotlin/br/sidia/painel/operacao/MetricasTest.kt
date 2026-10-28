@@ -192,8 +192,8 @@ class MetricasTest {
                 metricas.retencaoRemoveu(categoria, n)
             }
             assertEquals(
-                listOf("change_event", "worklog", "issue_link", "issue", "access_log", "sync_run", "jira_user_key"),
-                categorias.take(7),
+                listOf("change_event", "worklog", "issue_link", "issue", "access_log", "decisao_distribuicao", "sync_run", "jira_user_key"),
+                categorias.take(8),
             )
             metricas.retencaoRemoveu("change_event", 3)
             assertEquals(3.0, valor(linhas(metricas.texto(), "painel_retencao_removidas_total", "categoria=\"change_event\"").single()))

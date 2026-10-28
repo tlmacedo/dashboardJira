@@ -15,7 +15,8 @@ import javax.sql.DataSource
  * - `issue_link` (vínculos entre issues): apaga os que têm uma ponta purgada nesta execução e os removidos no Jira
  *   antes do limite (`removida_em < limite`);
  * - `access_log` por `at`, com limite próprio e mais longo (`accessLogMonths`: a auditoria não encurta com a
- *   retenção geral), `sync_run` por `started_at` e `jira_user_key` por `visto_em` (última vez vista).
+ *   retenção geral), `decisao_distribuicao` por `decidido_em` (o mesmo limite longo), `sync_run` por `started_at` e
+ *   `jira_user_key` por `visto_em` (última vez vista).
  * Nunca toca em `person` nem em `sync_state`.
  */
 class Retention(private val ds: DataSource, private val calendar: BusinessCalendar) {
@@ -54,6 +55,8 @@ class Retention(private val ds: DataSource, private val calendar: BusinessCalend
             ),
             Purga("DELETE FROM issue AS i WHERE $ISSUE_PURGAVEL"),
             Purga("DELETE FROM access_log WHERE at < ?", doAccessLog = true),
+            // O registro de decisões de Distribuição é auditoria como o access_log: mesma retenção longa (quem decidiu e por quê).
+            Purga("DELETE FROM decisao_distribuicao WHERE decidido_em < ?", doAccessLog = true),
             Purga("DELETE FROM sync_run WHERE started_at < ?"),
             Purga("DELETE FROM jira_user_key WHERE visto_em < ?"),
             Purga("DELETE FROM backup_run WHERE started_at < ?"),

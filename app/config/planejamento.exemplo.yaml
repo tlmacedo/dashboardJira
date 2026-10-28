@@ -51,3 +51,7 @@ diaCriticoCapacidade: 0.6
 
 # Cobertura por ausência: quantos dias à frente olhar.
 horizonteCoberturaDias: 30
+
+# Qualidade dos dados: a prioridade que o Jira dá a quem ninguém triou. O painel conta quantas abertas ainda a têm
+# ("prioridade padrão"). Vocabulário a confirmar na 1ª conexão real; opcional (sem a chave vale "Medium").
+prioridadePadrao: "Medium"

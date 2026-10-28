@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { t } from '../i18n'
-import { visibleNav } from './nav'
+import { inicioDoPapel, visibleNav } from './nav'
 
 const ids = (roles: Parameters<typeof visibleNav>[0]) =>
   visibleNav(roles).flatMap((g) => g.items.map((i) => i.id))
@@ -28,10 +28,24 @@ describe('menu por papel', () => {
     expect(ids(['SQUAD_LEADER'])).not.toContain('mapaCartoes')
     expect(ids(['USUARIO'])).not.toContain('mapaCartoes')
     const governanca = visibleNav(['COORDENADOR']).find((g) => g.id === 'governanca')
-    expect(governanca?.items.map((i) => i.id)).toEqual(['mapaCartoes'])
-    // Só o gerente continua vendo Qualidade, Sincronização e Configuração.
-    expect(ids(['GERENTE'])).toEqual(expect.arrayContaining(['qualidade', 'sincronizacao', 'configuracao']))
+    // Coordenação vê o Mapa, a Qualidade dos dados e as Decisões; Registro de acesso, Sincronização e Configuração são só do gerente.
+    expect(governanca?.items.map((i) => i.id)).toEqual(['mapaCartoes', 'qualidade', 'decisoes'])
+    expect(ids(['GERENTE'])).toEqual(expect.arrayContaining(['qualidade', 'decisoes', 'registroAcesso', 'sincronizacao', 'configuracao']))
     expect(ids(['COORDENADOR'])).not.toContain('sincronizacao')
+    expect(ids(['COORDENADOR'])).not.toContain('registroAcesso')
+    expect(ids(['COORDENADOR'])).not.toContain('configuracao')
+  })
+
+  it('menuDecisoesSoCoordenacaoEGerente', () => {
+    expect(ids(['GERENTE'])).toContain('decisoes')
+    expect(ids(['COORDENADOR'])).toContain('decisoes')
+    expect(ids(['SQUAD_LEADER'])).not.toContain('decisoes')
+    expect(ids(['USUARIO'])).not.toContain('decisoes')
+    // Distribuição e Rebalanceamento: a liderança (inclui o líder de squad), nunca o usuário comum.
+    for (const id of ['distribuicao', 'rebalanceamento']) {
+      expect(ids(['SQUAD_LEADER'])).toContain(id)
+      expect(ids(['USUARIO'])).not.toContain(id)
+    }
   })
 
   it('gruposVaziosOmitidos', () => {
@@ -42,6 +56,22 @@ describe('menu por papel', () => {
     expect(visibleNav(['USUARIO']).every((g) => g.items.length > 0)).toBe(true)
     // o gerente vê os 8 grupos do plano visual
     expect(visibleNav(['GERENTE'])).toHaveLength(8)
+  })
+})
+
+describe('início por papel', () => {
+  it('inicioPorPapel', () => {
+    expect(inicioDoPapel('GERENTE')).toBe('/central')
+    expect(inicioDoPapel('COORDENADOR')).toBe('/central')
+    expect(inicioDoPapel('SQUAD_LEADER')).toBe('/squad')
+    expect(inicioDoPapel('USUARIO')).toBe('/meu')
+  })
+
+  it('cadaInicioEstaNoMenuDoSeuPapel', () => {
+    // O destino do início de cada papel é um item que o próprio papel vê (nunca leva a uma tela proibida).
+    for (const papel of ['GERENTE', 'COORDENADOR', 'SQUAD_LEADER', 'USUARIO'] as const) {
+      expect(ids([papel]).map((i) => `/${i}`)).toContain(inicioDoPapel(papel))
+    }
   })
 })
 

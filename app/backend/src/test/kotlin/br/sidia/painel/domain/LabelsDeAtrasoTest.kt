@@ -53,6 +53,34 @@ class LabelsDeAtrasoTest {
     }
 
     @Test
+    fun ignoradasSaoOpcionaisECasamPorPrefixoSemJustificarAtraso() {
+        // Arquivo antigo, sem a chave `ignoradas`, continua válido.
+        val antigo = LabelsDeAtraso.fromYaml(yaml("versao: 1\njustificativas: [\"A\"]\ntardias: []\n"))
+        assertFalse(antigo.ignora("skill:android"))
+        assertFalse(antigo.classificada("qualquer"))
+        // Exato e prefixo `*` no fim, sem diferenciar maiúsculas; classificar não é justificar atraso.
+        val l = LabelsDeAtraso.fromYaml(yaml("versao: 1\njustificativas: [\"A\"]\ntardias: []\nignoradas: [\"skill:*\", \"Review\"]\n"))
+        assertTrue(l.ignora("SKILL:Android"))
+        assertTrue(l.ignora("review"))
+        assertFalse(l.ignora("revisao"))
+        assertFalse(l.justifica("skill:android"), "ignorar um label não o torna justificativa de atraso")
+        assertTrue(l.classificada("a"))
+        assertTrue(l.classificada("skill:rede"))
+        assertFalse(l.classificada("outra"))
+        // O modelo versionado ignora as competências (`skill:*`).
+        assertTrue(modelo().ignora("skill:android"))
+    }
+
+    @Test
+    fun ignoradasInvalidasFalham() {
+        for (ruim in listOf("[\"\"]", "[\"*\"]", "[\"*X\"]", "[\"A*B\"]", "[\"A**\"]")) {
+            assertFailsWith<IllegalArgumentException>(ruim) {
+                LabelsDeAtraso.fromYaml(yaml("versao: 1\njustificativas: [\"A\"]\ntardias: []\nignoradas: $ruim\n"))
+            }
+        }
+    }
+
+    @Test
     fun tardiaPrecisaSerJustificativa() {
         assertFailsWith<IllegalArgumentException> {
             LabelsDeAtraso(1, listOf("A"), setOf("LATE_SENT"))

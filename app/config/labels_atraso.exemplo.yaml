@@ -9,3 +9,8 @@ justificativas: ["ONHOLDBY-*", "LATE_SENT", "LATE_REVIEW", "DUEDATE_NEGOTIATED",
 # Subconjunto de justificativas que marca entrega tardia (os dois labels de atraso da spec 4.2).
 # Cada item precisa estar coberto por justificativas.
 tardias: ["LATE_SENT", "LATE_REVIEW"]
+
+# (Opcional) Labels que o time já conhece e que NÃO justificam atraso, como as competências ("skill:*"). A Qualidade dos dados
+# aponta como "sem classificação" todo label recente que não está em justificativas nem aqui. Mesma sintaxe de justificativas
+# ("*" só no fim). Quem edita é o gestor, neste arquivo; o painel só lê.
+ignoradas: ["skill:*"]

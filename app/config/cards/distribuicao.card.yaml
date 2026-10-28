@@ -1,0 +1,46 @@
+# Ficha da Distribuição e do Rebalanceamento (Plano 7b). Estrita: chave desconhecida falha ao carregar.
+# A leitura no banco aplica estes tipos e a exclusão de status (FiltroDeFicha); o JQL só serve à sincronização e ao ensaio.
+# MODO SOMBRA: o painel só sugere; nada é escrito no Jira.
+
+id: distribuicao
+titulo: Distribuição e Rebalanceamento
+instancia: samsung
+
+campos:
+  - OS Version
+  - priority
+  - timeoriginalestimate
+  - timeestimate
+  - timespent
+  - Epic Link
+
+filtrosFixos:
+  project: ["TG-Basic"]
+  issuetype: ["Checklist", "Checklist TG", "Checklist Review"]
+
+filtrosExcluidos:
+  status: ["Cancelled", "Canceled", "Dropped"]
+
+parametros:
+  - nome: squad
+    tipo: squad
+    obrigatorio: false
+
+formula: >-
+  Pendentes: tasks "a fazer" sem responsável ou com o gerente. Para cada pendente, o candidato é cada pessoa da equipe
+  (equipes.yaml) na visão de quem pede e com capacidade de 4 semanas acima do mínimo. Score (menor vence) = carga projetada
+  x produtividade / capacidade + peso do WIP x WIP / limite + penalidade se o WIP está cheio + peso x competências que
+  faltam - bônus se já trabalhou no épico ou componente. Empate: quem recebeu há mais tempo, depois ordem alfabética.
+  Rebalanceamento: quem passa do gatilho de ocupação cede tasks ainda não iniciadas a quem tem a competência e fica pelo
+  menos 20 pp abaixo, em até 10 movimentos. Os fatores de cada candidato saem em ordem alfabética, sem posição.
+
+exemplo: >-
+  squad=[dev.alfa].
+
+aceite:
+  - Modo sombra, sem escrever no Jira nem mudar o responsável.
+  - Fatores dos candidatos em ordem alfabética, sem coluna de posição e sem nota de pessoa.
+  - O líder de squad só vê e decide sobre pessoas do próprio squad.
+  - Cada número abre as mesmas tasks que o formam.
+
+expandChangelog: true
