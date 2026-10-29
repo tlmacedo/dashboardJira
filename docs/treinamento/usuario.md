@@ -97,6 +97,16 @@ Duração: 30 a 45 min. Ao fim, a pessoa sabe abrir o **Meu painel**, achar o qu
 
 **Armadilha comum.** Em produção, quem está fora da sua visão aparece nesta tela como "outra pessoa": é a regra de visão por papel, não um erro. Na demonstração você vê todos, porque o escopo por papel só vale com login.
 
+### Tela `meusDados` — Meus dados
+
+**Pergunta.** O que o painel guarda sobre mim, para que serve e por quanto tempo?
+
+**Onde clicar.** Abra **Meus dados** no menu (todos os papéis têm a tela). "Baixar meus dados (JSON)" gera, no navegador, um arquivo com o mesmo conteúdo da tela.
+
+**Como ler o número.** A tela mostra só o seu registro: quantidades de tasks, alterações e registros de horas, ausências planejadas (sem o motivo), os seus papéis, as categorias tratadas com finalidade e prazo de retenção (24 meses por padrão, a confirmar com o DPO) e os seus acessos dos últimos 90 dias.
+
+**Armadilha comum.** Esperar ver os dados de outra pessoa (a tela não aceita pedir) ou o conteúdo de sinais de Auditoria sobre você (quem quiser esse levantamento pede ao DPO). Para corrigir um dado, ajuste a task no Jira; para pedir eliminação, use o canal do DPO.
+
 ## Outras telas que o seu papel vê
 
 `epicos`, `riscos`, `previsao`, `fluxoDaSemana`, `agingWip`, `bloqueios`, `fechadas`, `negativas`, `cruzamentos`, `tempo`, `esforco`, `checklistReview`, `competencias`, `revisoes` e `cargaTipo`. Cada uma está descrita, com os seus cartões, no [guia do painel](../manual/guia-do-painel.md).

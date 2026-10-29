@@ -27,7 +27,8 @@ internal object ApoioDeDocs {
     /** Lê `nav.ts` na ordem do arquivo (que é a ordem do menu: grupos na ordem do plano visual). */
     fun menu(): List<ItemDoMenu> {
         val nav = texto("app/frontend/src/nav/nav.ts")
-        val regex = Regex("""(?m)^\s*item\('(\w+)', '(\w+)', ([^)]*?)\),?\s*$""")
+        // O 3º argumento é 'all', uma constante (ALTA, LIDERANCA) ou uma lista [...]; podem vir argumentos extras depois (rótulo, módulo).
+        val regex = Regex("""(?m)^\s*item\('(\w+)', '(\w+)', ('all'|\[[^\]]*]|\w+)[^)]*\),?\s*$""")
         return regex.findAll(nav).map { m ->
             val bruto = m.groupValues[3].trim()
             val papeis = when {

@@ -11,16 +11,16 @@ Fora deste bloco: T1 (ativos, já registrados em outra branch), T9 (sessões de 
 - [x] Tarefa 7: perguntas frequentes (`docs/manual/perguntas-frequentes.md` e `docs/manual/faq.md`); `GuiasDocTest`.
 - [x] Tarefa 8: material de treinamento por papel (`docs/treinamento/{usuario,squad-leader,coordenador,gerente,roteiro-da-sessao}.md`, `img/manifesto.yaml`); `TreinamentoDocTest` (9 casos). Sem capturas de tela (ver Rulings).
 
-## Reconferir após o Plano 11
+## Integração do Plano 11 (concluída em 29/10/2026)
 
-O Plano 11 (branch `feat/auditoria-completa-lgpd-plano-11`) ainda não foi mesclado. Os documentos descrevem estes pontos como **previstos / em integração**. Depois da mescla, reconferir e atualizar:
+O Plano 11 foi mesclado na `main` (2d213ba) e a `main` foi mesclada nesta branch. Itens da antiga lista "Reconferir após o Plano 11", todos feitos:
 
-1. **Tela "Meus dados"** (`/api/titular/meus-dados`): item novo do menu para todos os papéis. Se entrar no `nav.ts`, o teste `guiaCitaCadaItemDoMenu` obriga uma seção nova nos dois guias (`guia-do-painel.md`, `panel-guide.md`); acrescentar também ao material de todos os papéis em `docs/treinamento/` e à pergunta 5 do FAQ, se fizer sentido.
-2. **Trava do DPO**: hoje só a Integridade passa por ela (`TravaDpo`, código `AGUARDANDO_ACEITE_DPO`). Se a Auditoria (AU-01 a AU-03) passar a ser barrada e o aceite virar configuração (`DASHBOARD_DPO_ACEITE`), reescrever a seção "Trava do DPO" dos dois guias, a nota da tela `auditoria` e o material do coordenador e do gerente.
-3. **Cartões novos de auditoria e sinais novos de Integridade**: o teste `cadaCartaoDoCatalogoEstaNosGuias` falha até cada cartão novo entrar nas tabelas dos dois guias (a coluna "O que mostra" vem de `pt.json` e `en.json`).
-4. **Retenção por categoria** e **texto da tela "Meus dados"** (pedir correção ou eliminação ao DPO): citar nos guias e no FAQ.
-5. **Seção "A completar depois do Plano 11"** dos dois guias: remover quando tudo acima estiver feito.
-6. **Material do gerente** (Registro de acesso): a consulta à própria tela e ao registro de acesso passa a ser parte do relatório para o DPO.
+1. **Tela "Meus dados"** (`/api/titular/meus-dados`, item `meusDados` do menu, todos os papéis): seção nos dois guias, pergunta 10 do FAQ (pt e en) e a tela `meusDados` nos quatro materiais de treinamento, mais a pergunta 6 do roteiro.
+2. **Trava do DPO**: Auditoria (AU-01 a AU-03, DV-01 e VG-14) e Integridade (IN-01 a IN-08 e VG-13) passam por ela; aceite por configuração (`DASHBOARD_DPO_ACEITE` com referência), fechada por padrão; qualquer estado de sincronização de instância do Jira fecha a porta da demonstração; aviso `ITENS_AGUARDANDO_ACEITE_DPO` à coordenação. Seção "Trava do DPO" dos guias, nota das telas `central`, `auditoria` e `integridade` e materiais da coordenação e do gerente atualizados.
+3. **Cartão novo e sinais novos**: VG-14 entrou nas tabelas dos guias; `ESTIMATIVA_REDUZIDA` e `WORKLOG_RETROATIVO` (Auditoria) e `ESTIMATIVA_AUMENTADA` (catálogo da Integridade) estão citados; a Integridade por pessoa (pontos, taxa, múltiplo e nível) está descrita no material do gerente.
+4. **Retenção por categoria** (`RETENTION_*_MONTHS`, padrão 24 meses) e o texto da tela sobre correção e eliminação: nos guias e no FAQ.
+5. A seção "A completar depois do Plano 11" saiu dos guias; o teste que a ligava ao progresso virou `guiasSemPendenciaDoPlano11`, e `estadoDoJiraEDaTravaBateComOCodigo` agora amarra o novo estado do código.
+6. O expurgo automático de dados fictícios ao ligar a flag está em outro PR, ainda não mesclado: **não consta dos documentos** (nada é prometido).
 
 ## Rulings e divergências do plano
 

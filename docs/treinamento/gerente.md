@@ -2,7 +2,7 @@
 
 Material para o gerente do TG-Basic. É o **único** material que trata da Integridade e do Registro de acesso. Roteiro da sessão (agenda, pré-requisitos e fechamento): [`roteiro-da-sessao.md`](roteiro-da-sessao.md). Para as telas que o gerente divide com a coordenação (Metas e prazos, Fechadas, Divergência, Decisões), veja o [material da coordenação](coordenador.md). Guia completo: [`guia-do-painel.md`](../manual/guia-do-painel.md).
 
-> **Estado de hoje (29/10/2026).** O acesso ao Jira está desligado (`JIRA_LIVE_ENABLED=false`). A sessão usa os **dados de demonstração** fictícios; os números não são os do time. A **Integridade** está atrás da Trava do DPO: fechada em produção até o aceite do encarregado de dados, e aberta apenas na demonstração. Os pontos do Plano 11 (tela "Meus dados", Auditoria atrás da trava) são **previstos** e ainda não estão no painel.
+> **Estado de hoje (29/10/2026).** O acesso ao Jira está desligado (`JIRA_LIVE_ENABLED=false`). A sessão usa os **dados de demonstração** fictícios; os números não são os do time. A **Integridade** e a **Auditoria** estão atrás da Trava do DPO: fechada por padrão até o aceite do encarregado de dados (configuração `DASHBOARD_DPO_ACEITE` com a referência do parecer, ligada só pelo usuário), e aberta apenas na demonstração.
 
 ## Objetivo da sessão
 
@@ -34,7 +34,7 @@ Duração: 30 a 45 min. Ao fim, o gerente sabe começar pela **Central de atenç
 
 **Como ler o número.** Cada alteração é comparada com quem podia fazê-la na data: o Reporter da task, a coordenação, o gerente ou o Squad Leader do responsável, com os papéis vigentes naquele dia. Os limites e as gravidades vêm de `auditoria.yaml`.
 
-**Armadilha comum.** Confundir sinal com culpa. **Indício, não prova.** Hoje esta tela ainda não passa pela Trava do DPO (prevista no Plano 11).
+**Armadilha comum.** Confundir sinal com culpa. **Indício, não prova.** Esta tela também passa pela Trava do DPO (cartões AU-01 a AU-03, DV-01 e VG-14); o histórico campo a campo só abre com a trava aberta. Há dois sinais além dos de data, dono e label: `ESTIMATIVA_REDUZIDA` e `WORKLOG_RETROATIVO`.
 
 ### Tela `integridade` — Integridade
 
@@ -42,11 +42,11 @@ Duração: 30 a 45 min. Ao fim, o gerente sabe começar pela **Central de atenç
 
 **Onde clicar.** IN-02 (Pessoas com indício alto ou médio), IN-05 (Evidências por sinal), IN-07 (Tabela de evidências) e IN-08 (Catálogo de sinais, que explica o que cada sinal procura e o limite configurado). IN-01 e IN-03 abrem as tasks.
 
-**Como ler o número.** São 12 sinais, cada um com gravidade. IN-02 lista as pessoas em ordem alfabética, sem ranking: o nível de indício é motivo de conversa, não nota. IN-06 mostra quantos pontos percentuais o "no prazo" atual está acima do "no prazo pela data original".
+**Como ler o número.** São 12 sinais, cada um com gravidade. IN-02 lista as pessoas em ordem alfabética, sem ranking, com pontos, taxa (pontos por concluída), o múltiplo da taxa em relação à mediana do time e o nível de indício (alto ou médio): o nível é motivo de conversa, não nota. O catálogo de sinais (IN-08) inclui `ESTIMATIVA_AUMENTADA`. IN-06 mostra quantos pontos percentuais o "no prazo" atual está acima do "no prazo pela data original".
 
 **Armadilha comum.** Usar o nível como avaliação de desempenho. **Indício, não prova**: cada sinal é um motivo para conversar e conferir a task no Jira.
 
-**A Trava do DPO.** Sem o aceite do DPO, a tela mostra "Esta tela fica desligada até o encarregado de dados (DPO) aprovar o uso" e nenhum dado é consultado; a resposta do servidor é o código `AGUARDANDO_ACEITE_DPO`. Ela só fica aberta em desenvolvimento, com o Jira desligado e sobre um banco sem dado sincronizado de verdade, ou seja, na demonstração. Em produção está fechada.
+**A Trava do DPO.** Sem o aceite do DPO, a tela mostra "Esta tela fica desligada até o encarregado de dados (DPO) aprovar o uso" e nenhum dado é consultado; a resposta do servidor é o código `AGUARDANDO_ACEITE_DPO`. Ela só abre com o aceite do DPO (`DASHBOARD_DPO_ACEITE`) ou na demonstração: desenvolvimento, Jira desligado e banco sem dado sincronizado de verdade. Qualquer estado de sincronização de uma instância do Jira no banco fecha a porta da demonstração. Sem aceite, em produção está fechada.
 
 ### Tela `registroAcesso` — Registro de acesso
 
@@ -97,6 +97,16 @@ Duração: 30 a 45 min. Ao fim, o gerente sabe começar pela **Central de atenç
 **Como ler o número.** Para cada cartão: o que mostra, como é calculado, a fonte do dado, a tela e quem vê. É gerado do catálogo do backend.
 
 **Armadilha comum.** Procurar dados: o Mapa descreve, não mede.
+
+### Tela `meusDados` — Meus dados
+
+**Pergunta.** O que o painel guarda sobre mim, para que serve e por quanto tempo?
+
+**Onde clicar.** Abra **Meus dados** no menu (todos os papéis têm a tela). "Baixar meus dados (JSON)" gera, no navegador, um arquivo com o mesmo conteúdo da tela.
+
+**Como ler o número.** A tela mostra só o seu registro: quantidades de tasks, alterações e registros de horas, ausências planejadas (sem o motivo), os seus papéis, as categorias tratadas com finalidade e prazo de retenção (24 meses por padrão, a confirmar com o DPO) e os seus acessos dos últimos 90 dias.
+
+**Armadilha comum.** Esperar ver os dados de outra pessoa (a tela não aceita pedir) ou o conteúdo de sinais de Auditoria sobre você (quem quiser esse levantamento pede ao DPO). Para corrigir um dado, ajuste a task no Jira; para pedir eliminação, use o canal do DPO.
 
 ## Outras telas que o seu papel vê
 

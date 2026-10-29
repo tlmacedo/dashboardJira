@@ -2,7 +2,7 @@
 
 Versão em inglês: [`panel-guide.md`](panel-guide.md). Perguntas frequentes: [`perguntas-frequentes.md`](perguntas-frequentes.md). Treinamento por papel: `docs/treinamento/`.
 
-> **Estado de hoje (29/10/2026).** O acesso ao Jira está desligado (`JIRA_LIVE_ENABLED=false`): o painel não fala com nenhum servidor Jira e os números que se veem vêm dos **dados de demonstração fictícios** (`DASHBOARD_DEMO_DATA=true`, só com `DASHBOARD_DEV_MODE=true`). Tudo o que este guia diz sobre números reais vale depois que o usuário ligar a flag e a primeira sincronização rodar. Integridade (e o cartão VG-13 da Central) está atrás da Trava do DPO, fechada em produção até o aceite do encarregado de dados. Os pontos que dependem do Plano 11 (tela "Meus dados", Trava do DPO nos cartões de auditoria) estão marcados como **previstos**.
+> **Estado de hoje (29/10/2026).** O acesso ao Jira está desligado (`JIRA_LIVE_ENABLED=false`): o painel não fala com nenhum servidor Jira e os números que se veem vêm dos **dados de demonstração fictícios** (`DASHBOARD_DEMO_DATA=true`, só com `DASHBOARD_DEV_MODE=true`). Tudo o que este guia diz sobre números reais vale depois que o usuário ligar a flag e a primeira sincronização rodar. Auditoria e Integridade (e os cartões VG-13 e VG-14 da Central) estão atrás da Trava do DPO, fechada por padrão até o aceite do encarregado de dados.
 
 Este guia segue o catálogo de cartões do backend e o menu do painel: cada item do menu tem uma seção, na mesma ordem do menu, e cada cartão citado existe no catálogo com o mesmo nome e os mesmos papéis. Para quem instala o painel, veja [`docs/implantacao.md`](../implantacao.md).
 
@@ -32,11 +32,18 @@ Este guia segue o catálogo de cartões do backend e o menu do painel: cada item
 
 ## Trava do DPO
 
-A Trava do DPO impede que módulos sensíveis sirvam dados reais antes do aceite do encarregado de dados (DPO). Hoje (código na `main`):
+A Trava do DPO impede que a Auditoria e a Integridade sirvam dados reais antes do aceite do encarregado de dados (DPO). Hoje (código na `main`):
 
-- **Integridade** (cartões IN-01 a IN-08 e o VG-13 da Central) passa pela trava. Ela só fica aberta em desenvolvimento com o Jira desligado e sobre um banco sem dado sincronizado de verdade (demonstração). Em produção está **fechada**, e a resposta é o código `AGUARDANDO_ACEITE_DPO` ("Este módulo está fechado até o aceite do DPO").
-- **Auditoria** (AU-01 a AU-03) está prevista para a trava, mas **ainda não é barrada** na `main`.
-- **Previsto no Plano 11, ainda não mesclado:** o aceite do DPO por configuração, a Auditoria atrás da trava e a tela "Meus dados" (`/api/titular/meus-dados`), em que cada pessoa vê o que o painel guarda sobre ela. Esta seção será completada depois da mescla (veja "A completar depois do Plano 11").
+- **O que passa pela trava:** a Auditoria (cartões AU-01 a AU-03, DV-01 e o VG-14 da Central) e a Integridade (cartões IN-01 a IN-08 e o VG-13 da Central). Com a trava fechada as telas mostram "Esta tela fica desligada até o encarregado de dados (DPO) aprovar o uso", nenhum dado é consultado e o servidor responde com o código `AGUARDANDO_ACEITE_DPO`. O histórico campo a campo da gaveta de Auditoria só abre com a trava aberta.
+- **Quando abre:** só com o aceite por configuração (`DASHBOARD_DPO_ACEITE=true` com a referência do parecer, ligado só pelo usuário) ou na demonstração: modo de desenvolvimento, Jira desligado e banco sem dado sincronizado de verdade. Ela é **fechada por padrão**; em produção sem aceite está fechada.
+- **Quando fecha de novo:** qualquer estado de sincronização de uma instância do Jira no banco fecha a porta da demonstração, mesmo que a flag seja desligada depois; só o aceite a mantém aberta.
+- **Aviso à coordenação:** quando algum item fica de fora por causa da trava, a Central mostra "Alguns itens ficam fora desta lista até o encarregado de dados (DPO) aprovar o uso das telas sensíveis que você tem permissão de ver" (código `ITENS_AGUARDANDO_ACEITE_DPO`), sem nomear o módulo.
+
+## Meus dados e proteção de dados
+
+Todos os papéis têm a tela **Meus dados** (`meusDados`, rota `/api/titular/meus-dados`): ela mostra só o registro da própria pessoa, com quantidades de tasks, alterações e registros de horas, ausências planejadas (sem o motivo), papéis, as categorias tratadas com finalidade e prazo, e os acessos dela nos últimos 90 dias. O botão "Baixar meus dados (JSON)" gera o mesmo conteúdo no navegador. A tela não aceita pedir os dados de outra pessoa e não mostra o conteúdo de sinais de Auditoria ou de Integridade sobre a pessoa. Quem saiu do time e não tem papel vigente recebe "sem permissão" e exerce o direito pelo canal do DPO. Para corrigir um dado, corrija no Jira (o painel reflete na sincronização seguinte); para pedir eliminação, o caminho é o canal do DPO. Veja [`docs/lgpd/atendimento-ao-titular.md`](../lgpd/atendimento-ao-titular.md).
+
+**Retenção por categoria.** O padrão é 24 meses para todas as categorias (decisão provisória, a confirmar com o DPO), cada uma com a sua variável, de 1 a 120 meses: `RETENTION_HISTORICO_MONTHS` (issue resolvida antiga, alterações, horas registradas), `RETENTION_ACCESS_LOG_MONTHS` (registro de acesso), `RETENTION_DECISOES_MONTHS` (decisões de distribuição) e `RETENTION_EXECUCOES_MONTHS` (execuções da sincronização e das cópias de segurança). Reter o histórico por pouco tempo também encurta a janela da carga inicial da sincronização.
 
 ## Início
 
@@ -46,7 +53,7 @@ A Trava do DPO impede que módulos sensíveis sirvam dados reais antes do aceite
 
 **Quem vê.** Coordenador, Gerente.
 
-É o início da coordenação e do gerente. Reúne os cartões VG, cada um com o seu número e a gaveta de tasks. O cartão VG-13 (indícios de integridade) só aparece ao gerente e só com a Trava do DPO aberta (ver "Trava do DPO").
+É o início da coordenação e do gerente. Reúne os cartões VG, cada um com o seu número e a gaveta de tasks. O cartão VG-13 (indícios de integridade) só aparece ao gerente, e o VG-14 (itens da Auditoria) à coordenação e ao gerente, ambos só com a Trava do DPO aberta (ver "Trava do DPO"). Se algum item ficar de fora por causa da trava, a coordenação vê um aviso, sem nome de módulo.
 
 **Cartões.**
 
@@ -63,6 +70,7 @@ A Trava do DPO impede que módulos sensíveis sirvam dados reais antes do aceite
 | VG-11 | Quando o backlog termina | O tamanho do backlog e a data em que ele deve terminar pelo ritmo recente, em três níveis de confiança (P50, P85 e P95). Abre as tasks do backlog. | Coordenador, Gerente | sim |
 | VG-12 | Ocupação por squad | A ocupação média e o índice de Jain de cada squad nas próximas 4 semanas. É um indicador do conjunto, sem nota de pessoa. | Coordenador, Gerente | não |
 | VG-13 | Pessoas com indício alto | As evidências de integridade das pessoas com indício alto. É um indício para conferir, nunca uma prova. Só o gerente vê, e só com a trava do DPO aberta. | Gerente | sim |
+| VG-14 | Itens da Auditoria na Central | As alterações sem autorização e as divergências Task × Review que a Central destaca. São indícios para conferir, nunca provas. Só aparecem com a trava do DPO aberta. | Coordenador, Gerente | sim |
 
 **De onde vêm os números.** Ficha `app/config/cards/central.card.yaml` (fórmula, exemplo e aceite).
 
@@ -102,6 +110,17 @@ Início do usuário. Em produção, mostra só o que é seu; o líder do squad p
 **De onde vêm os números.** Esta tela não tem ficha própria; os números vêm dos cartões citados acima e do Mapa de cartões.
 
 **Detalhamento.** Onde a coluna "Abre tasks" diz sim, clique no número para abrir a gaveta de tasks; ela tem o mesmo total do cartão.
+
+
+### `meusDados` — Meus dados
+
+**Pergunta que responde.** O que o painel guarda sobre mim, para que serve e por quanto tempo?
+
+**Quem vê.** Usuário, Squad Leader, Coordenador, Gerente.
+
+Tela do titular (LGPD), para todos os papéis: mostra só o registro da própria pessoa e os acessos dela dos últimos 90 dias, e permite baixar o mesmo conteúdo em JSON. Não aceita pedir os dados de outra pessoa. Quem saiu do time e não tem papel vigente recebe "sem permissão" e procura o canal do DPO. Detalhes na seção "Meus dados e proteção de dados".
+
+**De onde vêm os números.** Esta tela não tem ficha nem cartões: lê o registro da própria pessoa pela rota `/api/titular/meus-dados`.
 
 
 ## Trabalho em curso
@@ -742,7 +761,7 @@ As sugestões são de leitura: a decisão é humana. Quem pode alterar responsá
 
 **Quem vê.** Coordenador, Gerente.
 
-Mostra alterações de vencimento, responsável e labels de atraso para conferir. Indício, não prova: a tela aponta o que merece conversa, nunca uma conclusão sobre pessoas. Hoje ela NÃO está atrás da Trava do DPO; a ligação é prevista no Plano 11 (ver "Trava do DPO").
+Mostra alterações de vencimento, responsável e labels de atraso para conferir. Indício, não prova: a tela aponta o que merece conversa, nunca uma conclusão sobre pessoas. Fica atrás da Trava do DPO: com a trava fechada a tela fica desligada e nada é consultado, e o histórico campo a campo só abre com ela aberta (ver "Trava do DPO"). Além dos sinais de data, dono e label, há dois sinais: estimativa reduzida depois do início (`ESTIMATIVA_REDUZIDA`) e horas registradas com atraso (`WORKLOG_RETROATIVO`).
 
 **Cartões.**
 
@@ -782,7 +801,7 @@ Só mostra e leva ao Jira; não corrige nada.
 
 **Quem vê.** Gerente.
 
-Só o gerente vê. Fica atrás da Trava do DPO: sem o aceite do DPO a tela não consulta dado algum (mostra "Esta tela fica desligada até o encarregado de dados (DPO) aprovar o uso"). Cada sinal é indício, não prova. Toda consulta é registrada no Registro de acesso. Hoje só funciona com dados de demonstração.
+Só o gerente vê. Fica atrás da Trava do DPO: sem o aceite do DPO a tela não consulta dado algum (mostra "Esta tela fica desligada até o encarregado de dados (DPO) aprovar o uso"). Cada sinal é indício, não prova. Toda consulta é registrada no Registro de acesso. Por pessoa, a tela calcula pontos, taxa (pontos por concluída), o múltiplo da taxa em relação à mediana do time e um nível de indício (alto ou médio), em ordem alfabética e sem ranking; o catálogo de sinais (IN-08) inclui `ESTIMATIVA_AUMENTADA`. Sem o aceite do DPO, só funciona com dados de demonstração.
 
 **Cartões.**
 
@@ -903,14 +922,3 @@ Com a flag do Jira desligada (o estado de hoje) a tela mostra "Desligado pela fl
 
 **De onde vêm os números.** Esta tela não tem ficha própria; os números vêm dos cartões citados acima e do Mapa de cartões.
 
-
-## A completar depois do Plano 11
-
-O Plano 11 (auditoria completa e LGPD) está em outra branch e **ainda não foi mesclado**. Quando for, esta seção deve ser revista junto com a lista em `docs/superpowers/progresso/2026-10-29-plano-15-guias-e-treinamento.md`:
-
-- tela **Meus dados** (item novo no menu, para todos os papéis) e o seu texto sobre pedir correção ou eliminação ao DPO;
-- **Trava do DPO** configurável (`DASHBOARD_DPO_ACEITE`) e a Auditoria atrás dela;
-- novos cartões de auditoria e sinais de Integridade;
-- retenção por categoria.
-
-Até lá, nada disso deve ser tratado como disponível.

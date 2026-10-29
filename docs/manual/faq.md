@@ -2,7 +2,7 @@
 
 Portuguese version: [`perguntas-frequentes.md`](perguntas-frequentes.md). Full guide, screen by screen: [`panel-guide.md`](panel-guide.md) (in Portuguese: [`guia-do-painel.md`](guia-do-painel.md)). The terms below are the ones the English screens show.
 
-> **Today's state (2026-10-29).** Jira access is off (flag `JIRA_LIVE_ENABLED=false`): the dashboard shows only fictional demonstration data. The answers about synchronization and real numbers hold after the user turns the flag on. Points that depend on Plan 11 ("My data" screen, DPO gate on Audit) are **planned** and are not in the dashboard yet.
+> **Today's state (2026-10-29).** Jira access is off (flag `JIRA_LIVE_ENABLED=false`): the dashboard shows only fictional demonstration data. The answers about synchronization and real numbers hold after the user turns the flag on. Audit and Integrity sit behind the DPO gate (closed by default until the data protection officer accepts), and every role has the "My data" screen.
 
 ## 1. Why are "On time" and "Adjusted on time" different?
 
@@ -42,3 +42,7 @@ It is a product decision. A ranking turns evidence into judgment, rewards the nu
 ## 9. Who may change assignee, due date and labels?
 
 Only the task Reporter (the PL), the coordinators and the manager, or the Squad Leader of the assignee may change the **assignee**, the **due date** and the **labels that prevent delay**. The lists of coordinators and Squad Leaders come from YAML with validity dates, and the check uses the roles valid on the date of each change. Anyone else who changes these fields raises an alert or an audit entry. The dashboard only reads: Jira is where changes happen, and Audit just shows what changed. Remember: "Evidence, not proof".
+
+## 10. How do I see, correct or ask for deletion of my data?
+
+Open **My data** in the menu (every role has the screen). It shows only what the dashboard stores about you: counts of tasks, changes and logged hours, planned absences (without the reason), roles, the categories processed with purpose and retention period, and your accesses of the last 90 days; "Download my data (JSON)" generates the same content. The screen does not show the content of Audit or Integrity signals about you: anyone who wants that survey asks the DPO. To **correct**, fix the task in Jira; the dashboard reflects it on the next sync. To **delete**, the request goes through the DPO channel (the next sync may bring back whatever still exists in Jira). A former member with no role any more gets "no permission" on the screen and also uses the DPO channel. See [`docs/lgpd/atendimento-ao-titular.md`](../lgpd/atendimento-ao-titular.md) (Portuguese). Retention is 24 months by default, per category (to be confirmed with the DPO).

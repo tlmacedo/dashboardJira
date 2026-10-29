@@ -33,6 +33,7 @@ Em cada tela, comece perguntando "que pergunta esta tela responde?" e deixe a tu
 3. Por que uma pessoa pode aparecer "sem capacidade"? (pergunta 3)
 4. Por que o painel não mostra a task de outra pessoa e não tem ranking? (perguntas 5 e 7)
 5. O que fazer quando um número parece errado? (pergunta 8)
+6. Onde cada pessoa vê o que o painel guarda sobre ela e como pede correção ou eliminação? (tela **Meus dados** e pergunta 10)
 
 Dúvidas que as perguntas acima não cobrirem viram pergunta nova no FAQ (em pt-BR e em inglês, na mesma ordem) e são anotadas no registro da sessão.
 

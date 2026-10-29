@@ -2,7 +2,9 @@ package br.sidia.painel.docs
 
 import br.sidia.painel.TestPaths
 import br.sidia.painel.cards.contrato.catalogoPadrao
+import br.sidia.painel.config.RetencaoSettings
 import br.sidia.painel.config.Settings
+import br.sidia.painel.lgpd.LgpdSettings
 import br.sidia.painel.lgpd.ModuloSensivel
 import br.sidia.painel.lgpd.TravaDpo
 import java.nio.file.Files
@@ -174,14 +176,6 @@ class GuiasDocTest {
         }
     }
 
-    @Test
-    fun guiasDizemOEstadoDoJiraEDaTravaDoDpo() {
-        val pt = guia("pt")
-        for (trecho in listOf("JIRA_LIVE_ENABLED=false", "DASHBOARD_DEMO_DATA=true", "AGUARDANDO_ACEITE_DPO", "Plano 11", "previst", "ainda não")) assertTrue(trecho in pt, "guia pt sem: $trecho")
-        val en = guia("en")
-        for (trecho in listOf("JIRA_LIVE_ENABLED=false", "DASHBOARD_DEMO_DATA=true", "AGUARDANDO_ACEITE_DPO", "Plan 11", "planned", "not merged yet")) assertTrue(trecho in en, "guia en sem: $trecho")
-    }
-
     /** O estado do Jira e da Trava do DPO que os guias afirmam é o que o código faz de fato (não só texto). */
     @Test
     fun estadoDoJiraEDaTravaBateComOCodigo() {
@@ -192,30 +186,39 @@ class GuiasDocTest {
         val producao = TravaDpo(Settings(dashboardDevMode = false), null)
         assertEquals(false, producao.liberada)
         assertEquals(TravaDpo.CODIGO, producao.motivo())
+        // Com o aceite do DPO (configuração, com a referência do parecer) a porta abre mesmo em produção.
+        val comAceite = TravaDpo(Settings(dashboardDevMode = false, lgpd = LgpdSettings(aceiteDpo = true, aceiteRef = "parecer-001")), null)
+        assertEquals(true, comAceite.liberada)
+        // Retenção padrão: 24 meses em todas as categorias, como os guias e o FAQ dizem.
+        assertEquals(RetencaoSettings(24, 24, 24, 24), Settings().retencao)
         val catalogo = catalogoPadrao().cartoes
         val integridade = catalogo.filter { it.moduloSensivel == ModuloSensivel.INTEGRIDADE }.map { it.meta.id }.sorted()
-        assertEquals((1..8).map { "IN-%02d".format(it) } + "VG-13", integridade, "cartões atrás da trava mudaram: revisar guias e treinamento")
-        // A Auditoria ainda não está atrás da trava na main: nenhum cartão a declara.
-        assertTrue(catalogo.none { it.moduloSensivel == ModuloSensivel.AUDITORIA }, "a Auditoria passou a ter trava: atualizar guias e treinamento (Plano 11)")
+        assertEquals((1..8).map { "IN-%02d".format(it) } + "VG-13", integridade, "cartões da Integridade atrás da trava mudaram: revisar guias e treinamento")
+        // A Auditoria também fica atrás da trava (Plano 11): AU-01 a AU-03, DV-01 e VG-14.
+        val auditoria = catalogo.filter { it.moduloSensivel == ModuloSensivel.AUDITORIA }.map { it.meta.id }.sorted()
+        assertEquals(listOf("AU-01", "AU-02", "AU-03", "DV-01", "VG-14"), auditoria, "cartões da Auditoria atrás da trava mudaram: revisar guias e treinamento")
+        // Todo papel tem a tela Meus dados no menu.
+        assertEquals(ApoioDeDocs.todosOsPapeis.toSet(), ApoioDeDocs.menu().first { it.id == "meusDados" }.papeis)
         for (lang in listOf("pt", "en")) {
             val g = guia(lang)
             assertTrue("`${TravaDpo.CODIGO}`" in g, "guia ($lang) sem o código da trava")
-            assertTrue("IN-01" in g && "IN-08" in g && "VG-13" in g, "guia ($lang) não cita os cartões atrás da trava")
-            assertTrue("AU-01" in g && "AU-03" in g, "guia ($lang) não cita a Auditoria")
+            for (id in integridade + auditoria) assertTrue(id in g, "guia ($lang) não cita o cartão $id da trava")
+            assertTrue("`DASHBOARD_DPO_ACEITE=true`" in g && "`ITENS_AGUARDANDO_ACEITE_DPO`" in g, "guia ($lang) sem o aceite por configuração ou o aviso à coordenação")
             assertTrue("JIRA_LIVE_ENABLED=false" in g && "DASHBOARD_DEMO_DATA=true" in g, "guia ($lang) sem o estado da flag")
+            assertTrue("/api/titular/meus-dados" in g && "RETENTION_HISTORICO_MONTHS" in g, "guia ($lang) sem Meus dados ou a retenção")
         }
-        assertTrue("fechada" in guia("pt") && "ainda não é barrada" in guia("pt"))
-        assertTrue("closed" in guia("en") && "not blocked yet" in guia("en"))
+        assertTrue("fechada por padrão" in guia("pt") && "closed by default" in guia("en"))
         // O seletor de papel da demonstração só filtra o menu: o modo dev do servidor é gerente com todos os dados.
         assertTrue("só vale em produção" in guia("pt") && "only applies in production" in guia("en"))
     }
 
     @Test
-    fun secaoDoPlano11MarcadaELigadaAoProgresso() {
-        assertTrue("## A completar depois do Plano 11" in guia("pt"))
-        assertTrue("## To complete after Plan 11" in guia("en"))
-        val progresso = ApoioDeDocs.texto("docs/superpowers/progresso/2026-10-29-plano-15-guias-e-treinamento.md")
-        for (trecho in listOf("Plano 11", "Meus dados", "Reconferir após o Plano 11", guiaPt, guiaEn, faqPt, faqEn, "docs/treinamento/")) assertTrue(trecho in progresso, "progresso sem: $trecho")
+    fun guiasSemPendenciaDoPlano11() {
+        // O Plano 11 foi mesclado: nenhum documento fala dele como futuro nem deixa seção a completar.
+        for (arquivo in listOf(guiaPt, guiaEn, faqPt, faqEn)) {
+            val texto = ApoioDeDocs.texto(arquivo).lowercase()
+            for (resto in listOf("a completar depois", "to complete after", "ainda não foi mesclado", "not merged yet", "previsto no plano 11", "planned in plan 11")) assertTrue(resto !in texto, "$arquivo ainda tem: $resto")
+        }
     }
 
     // ---------------------------------------------------------------------------------------------------------------- FAQ

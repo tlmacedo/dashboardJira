@@ -2,7 +2,7 @@
 
 Portuguese version: [`guia-do-painel.md`](guia-do-painel.md). Frequently asked questions: [`faq.md`](faq.md). Role-based training (in Portuguese): `docs/treinamento/`.
 
-> **Today's state (2026-10-29).** Jira access is off (`JIRA_LIVE_ENABLED=false`): the dashboard talks to no Jira server and the numbers you see come from **fictional demonstration data** (`DASHBOARD_DEMO_DATA=true`, only with `DASHBOARD_DEV_MODE=true`). Everything this guide says about real numbers holds after the user turns the flag on and the first sync has run. Integrity (and card VG-13 of the Attention center) sits behind the DPO gate, which is closed in production until the data protection officer accepts. Points that depend on Plan 11 ("My data" screen, DPO gate on the audit cards) are marked as **planned**.
+> **Today's state (2026-10-29).** Jira access is off (`JIRA_LIVE_ENABLED=false`): the dashboard talks to no Jira server and the numbers you see come from **fictional demonstration data** (`DASHBOARD_DEMO_DATA=true`, only with `DASHBOARD_DEV_MODE=true`). Everything this guide says about real numbers holds after the user turns the flag on and the first sync has run. Audit and Integrity (and cards VG-13 and VG-14 of the Attention center) sit behind the DPO gate, which is closed by default until the data protection officer accepts.
 
 This guide follows the backend card catalog and the dashboard menu: every menu item has a section, in menu order, and every card named exists in the catalog with the same name and the same roles. Screen and term names are the ones shown by the English interface. To install the dashboard, see [`docs/implantacao.md`](../implantacao.md) (Portuguese).
 
@@ -32,11 +32,18 @@ This guide follows the backend card catalog and the dashboard menu: every menu i
 
 ## DPO gate
 
-The DPO gate stops sensitive modules from serving real data before the data protection officer (DPO) accepts. Today (code on `main`):
+The DPO gate stops Audit and Integrity from serving real data before the data protection officer (DPO) accepts. Today (code on `main`):
 
-- **Integrity** (cards IN-01 to IN-08 and VG-13 of the Attention center) goes through the gate. It is open only in development with Jira off and on a database with no truly synchronized data (demonstration). In production it is **closed**, and the answer is the code `AGUARDANDO_ACEITE_DPO` ("This module is closed until the DPO accepts").
-- **Audit** (AU-01 to AU-03) is meant for the gate but is **not blocked yet** on `main`.
-- **Planned in Plan 11, not merged yet:** the DPO acceptance by configuration, Audit behind the gate and the "My data" screen (`/api/titular/meus-dados`), where each person sees what the dashboard stores about them. This section will be completed after the merge (see "To complete after Plan 11").
+- **What goes through the gate:** Audit (cards AU-01 to AU-03, DV-01, and VG-14 of the Attention center) and Integrity (cards IN-01 to IN-08, and VG-13 of the Attention center). With the gate closed the screens show "This screen stays off until the data protection officer (DPO) approves its use", no data is queried and the server answers with the code `AGUARDANDO_ACEITE_DPO`. The field-by-field history in the Audit drawer opens only with the gate open.
+- **When it opens:** only with the acceptance set in the configuration (`DASHBOARD_DPO_ACEITE=true` with the reference of the opinion, turned on only by the user) or in the demonstration: development mode, Jira off and a database with no truly synchronized data. It is **closed by default**; in production without acceptance it is closed.
+- **When it closes again:** any synchronization state of a Jira instance in the database closes the demonstration door, even if the flag is turned off later; only the acceptance keeps it open.
+- **Notice for coordination:** when some item stays out because of the gate, the Attention center shows "Some items stay out of this list until the data protection officer (DPO) approves the use of the sensitive screens you are allowed to see" (code `ITENS_AGUARDANDO_ACEITE_DPO`), without naming the module.
+
+## My data and data protection
+
+Every role has the **My data** screen (`meusDados`, route `/api/titular/meus-dados`): it shows only the person's own record: counts of tasks, changes and logged hours, planned absences (without the reason), roles, the categories processed with purpose and retention, and the person's accesses in the last 90 days. The button "Download my data (JSON)" generates the same content in the browser. The screen does not accept a request for someone else's data and does not show the content of Audit or Integrity signals about the person. A former member with no current role gets "no permission" and exercises the rights through the DPO channel. To correct data, fix it in Jira (the dashboard reflects it on the next sync); to ask for deletion, go through the DPO channel. See [`docs/lgpd/atendimento-ao-titular.md`](../lgpd/atendimento-ao-titular.md).
+
+**Retention by category.** The default is 24 months for every category (a provisional decision, to be confirmed with the DPO), each with its own variable from 1 to 120 months: `RETENTION_HISTORICO_MONTHS` (old resolved tasks, changes, logged hours), `RETENTION_ACCESS_LOG_MONTHS` (access log), `RETENTION_DECISOES_MONTHS` (distribution decisions) and `RETENTION_EXECUCOES_MONTHS` (sync and backup runs). A short historical retention also shortens the window of the first synchronization.
 
 ## Home
 
@@ -46,7 +53,7 @@ The DPO gate stops sensitive modules from serving real data before the data prot
 
 **Who sees it.** Coordinator, Manager.
 
-This is the home of the coordination and the manager. It gathers the VG cards, each with its number and the task drawer. Card VG-13 (integrity evidence) is shown only to the manager and only when the DPO gate is open (see "DPO gate").
+This is the home of the coordination and the manager. It gathers the VG cards, each with its number and the task drawer. Card VG-13 (integrity evidence) is shown only to the manager, and VG-14 (Audit items) to coordination and manager, both only when the DPO gate is open (see "DPO gate"). If some item stays out because of the gate, coordination sees a notice, without a module name.
 
 **Cards.**
 
@@ -63,6 +70,7 @@ This is the home of the coordination and the manager. It gathers the VG cards, e
 | VG-11 | When the backlog ends | The backlog size and the date it should end at the recent pace, at three confidence levels (P50, P85 and P95). It opens the backlog tasks. | Coordinator, Manager | yes |
 | VG-12 | Occupancy per squad | The average occupancy and the Jain index of each squad over the next 4 weeks. It is an indicator of the group, with no grade for a person. | Coordinator, Manager | no |
 | VG-13 | People with a high indication | The integrity evidence of people with a high indication. It is an indication to check, never proof. Only the manager sees it, and only with the DPO lock open. | Manager | yes |
+| VG-14 | Audit items on the Central | The unauthorized changes and Task × Review divergences that the Central highlights. They are indications to check, never proof. They only show with the DPO lock open. | Coordinator, Manager | yes |
 
 **Where the numbers come from.** Sheet `app/config/cards/central.card.yaml` (formula, example and acceptance).
 
@@ -102,6 +110,17 @@ Home of the user. In production it shows only what is yours; the squad leader ca
 **Where the numbers come from.** This screen has no sheet of its own; the numbers come from the cards listed above and from the Card map.
 
 **Drill-down.** Where the "Opens tasks" column says yes, click the number to open the task drawer; it has the same total as the card.
+
+
+### `meusDados` — My data
+
+**Question it answers.** What does the dashboard keep about me, what for, and for how long?
+
+**Who sees it.** User, Squad Leader, Coordinator, Manager.
+
+Data subject screen (LGPD), for every role: it shows only the person's own record and their accesses of the last 90 days, and lets them download the same content as JSON. It does not accept a request for another person's data. A former member with no current role gets "no permission" and goes to the DPO channel. Details in the section "My data and data protection".
+
+**Where the numbers come from.** This screen has no sheet or cards: it reads the person's own record through the route `/api/titular/meus-dados`.
 
 
 ## Work in progress
@@ -742,7 +761,7 @@ Suggestions are read-only: the decision is human. Who may change assignee, due d
 
 **Who sees it.** Coordinator, Manager.
 
-It shows changes to due dates, assignees and delay labels for review. Evidence, not proof: the screen points to what deserves a conversation, never a conclusion about people. Today it is NOT behind the DPO gate; connecting it is planned in Plan 11 (see "DPO gate").
+It shows changes to due dates, assignees and delay labels for review. Evidence, not proof: the screen points to what deserves a conversation, never a conclusion about people. It sits behind the DPO gate: with the gate closed the screen is off and nothing is queried, and the field-by-field history opens only with the gate open (see "DPO gate"). Besides the date, owner and label signals, there are two more: estimate reduced after the start (`ESTIMATIVA_REDUZIDA`) and hours logged late (`WORKLOG_RETROATIVO`).
 
 **Cards.**
 
@@ -782,7 +801,7 @@ It only shows and links to Jira; it fixes nothing.
 
 **Who sees it.** Manager.
 
-Only the manager sees it. It sits behind the DPO gate: without the DPO's acceptance the screen queries no data at all (it shows "This screen stays off until the data protection officer (DPO) approves its use"). Each signal is evidence, not proof. Every query is logged in the Access log. Today it works only with demonstration data.
+Only the manager sees it. It sits behind the DPO gate: without the DPO's acceptance the screen queries no data at all (it shows "This screen stays off until the data protection officer (DPO) approves its use"). Each signal is evidence, not proof. Every query is logged in the Access log. Per person, the screen calculates points, rate (points per completed task), the multiple of the rate against the team median and an evidence level (high or medium), in alphabetical order and without ranking; the signal catalog (IN-08) includes `ESTIMATIVA_AUMENTADA`. Without the DPO's acceptance it works only with demonstration data.
 
 **Cards.**
 
@@ -903,14 +922,3 @@ With the Jira flag off (today's state) the screen shows "Off by flag" and nothin
 
 **Where the numbers come from.** This screen has no sheet of its own; the numbers come from the cards listed above and from the Card map.
 
-
-## To complete after Plan 11
-
-Plan 11 (full audit and data protection) lives on another branch and **has not been merged yet**. When it is, review this section together with the list in `docs/superpowers/progresso/2026-10-29-plano-15-guias-e-treinamento.md`:
-
-- the **My data** screen (a new menu item, for every role) and its text about asking the DPO for correction or deletion;
-- the configurable **DPO gate** (`DASHBOARD_DPO_ACEITE`) and Audit behind it;
-- new audit cards and Integrity signals;
-- retention by category.
-
-Until then, none of this should be treated as available.

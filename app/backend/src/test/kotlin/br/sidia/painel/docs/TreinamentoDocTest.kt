@@ -99,6 +99,20 @@ class TreinamentoDocTest {
     }
 
     @Test
+    fun todoMaterialTemMeusDadosESemPendenciaDoPlano11() {
+        for (arquivo in materiais.keys) {
+            val texto = ApoioDeDocs.texto(arquivo)
+            assertTrue("### Tela `meusDados`" in texto, "$arquivo sem a tela Meus dados")
+            assertTrue("plano 11" !in texto.lowercase(), "$arquivo ainda trata o Plano 11 como futuro")
+        }
+        // A Auditoria está atrás da Trava do DPO: os materiais da coordenação e do gerente dizem isso e citam o código.
+        for (arquivo in listOf("docs/treinamento/coordenador.md", "docs/treinamento/gerente.md")) {
+            val texto = ApoioDeDocs.texto(arquivo)
+            assertTrue("Trava do DPO" in texto && "AGUARDANDO_ACEITE_DPO" in texto && "VG-14" in texto, "$arquivo não descreve a Auditoria atrás da trava")
+        }
+    }
+
+    @Test
     fun materialDizOEstadoDeHoje() {
         for (arquivo in materiais.keys + roteiro) {
             val texto = ApoioDeDocs.texto(arquivo)

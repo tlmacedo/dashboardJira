@@ -2,7 +2,7 @@
 
 Versão em inglês: [`faq.md`](faq.md). Guia completo, tela por tela: [`guia-do-painel.md`](guia-do-painel.md) (em inglês: [`panel-guide.md`](panel-guide.md)). Os termos abaixo são os que as telas mostram.
 
-> **Estado de hoje (29/10/2026).** O acesso ao Jira está desligado (flag `JIRA_LIVE_ENABLED=false`): o painel só mostra dados de demonstração fictícios. As respostas sobre sincronização e sobre números reais valem depois que o usuário ligar a flag. Os pontos que dependem do Plano 11 (tela "Meus dados", Trava do DPO na Auditoria) são **previstos** e ainda não estão no painel.
+> **Estado de hoje (29/10/2026).** O acesso ao Jira está desligado (flag `JIRA_LIVE_ENABLED=false`): o painel só mostra dados de demonstração fictícios. As respostas sobre sincronização e sobre números reais valem depois que o usuário ligar a flag. A Auditoria e a Integridade ficam atrás da Trava do DPO (fechada por padrão até o aceite do encarregado de dados), e todos os papéis têm a tela "Meus dados".
 
 ## 1. Por que "No prazo" e "No prazo ajustado" são diferentes?
 
@@ -42,3 +42,7 @@ Três razões comuns: (1) a sincronização com o Jira roda a cada 10 minutos (p
 ## 9. Quem pode alterar responsável, vencimento e labels?
 
 Só o Reporter da task (o PL), os coordenadores e o gerente, ou o Squad Leader do responsável podem trocar **responsável**, **vencimento** e **labels que evitam atraso**. As listas de coordenadores e Squad Leaders vêm de YAML com vigência por datas, e a conferência usa os papéis vigentes na data de cada alteração. Qualquer outra pessoa que altere esses campos gera alerta ou auditoria. O painel só lê: quem altera é o Jira, e a Auditoria apenas mostra o que mudou. Lembre: "Indício, não prova".
+
+## 10. Como vejo, corrijo ou peço a eliminação dos meus dados?
+
+Abra **Meus dados** no menu (todos os papéis têm a tela). Ela mostra só o que o painel guarda sobre você: quantidades de tasks, alterações e registros de horas, ausências planejadas (sem o motivo), papéis, as categorias tratadas com finalidade e prazo de retenção, e os seus acessos dos últimos 90 dias; "Baixar meus dados (JSON)" gera o mesmo conteúdo. A tela não mostra o conteúdo de sinais de Auditoria ou de Integridade sobre você: quem quiser esse levantamento pede ao DPO. Para **corrigir**, ajuste a task no Jira; o painel reflete na sincronização seguinte. Para **eliminar**, o pedido vai pelo canal do DPO (a próxima sincronização pode trazer de volta o que ainda existir no Jira). Quem saiu do time e não tem mais papel recebe "sem permissão" na tela e também usa o canal do DPO. Veja [`docs/lgpd/atendimento-ao-titular.md`](../lgpd/atendimento-ao-titular.md). A retenção é de 24 meses por padrão, por categoria (a confirmar com o DPO).

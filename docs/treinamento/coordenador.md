@@ -20,7 +20,7 @@ Duração: 30 a 45 min. Ao fim, a coordenação sabe começar pela **Central de 
 
 **Pergunta.** O que pede atenção agora, e onde está?
 
-**Onde clicar.** O cartão VG-09 (Central de atenção) reúne os indicadores que pedem atenção: vencidas, risco, capacidade, atrasos previstos, sem atualização, paradas, sem responsável e bloqueadas. Cada número abre a gaveta com o mesmo total do card de destino. VG-10 (Entregas por semana) abre as tasks entregues em cada semana.
+**Onde clicar.** O cartão VG-09 (Central de atenção) reúne os indicadores que pedem atenção: vencidas, risco, capacidade, atrasos previstos, sem atualização, paradas, sem responsável e bloqueadas. Cada número abre a gaveta com o mesmo total do card de destino. VG-10 (Entregas por semana) abre as tasks entregues em cada semana. VG-14 (Itens da Auditoria na Central) destaca alterações sem autorização e divergências Task × Review, só com a Trava do DPO aberta; quando algum item fica de fora por causa da trava, a Central mostra o aviso "Alguns itens ficam fora desta lista até o encarregado de dados (DPO) aprovar o uso das telas sensíveis que você tem permissão de ver", sem dizer qual módulo.
 
 **Como ler o número.** VG-11 (Quando o backlog termina) é uma previsão por simulação sobre as semanas fechadas, em três níveis de confiança (P50, P85 e P95); com poucas semanas de dado a confiança é baixa. VG-12 (Ocupação por squad) é um indicador do conjunto: verde até 85%, laranja até 110%, vermelho acima.
 
@@ -54,7 +54,7 @@ Duração: 30 a 45 min. Ao fim, a coordenação sabe começar pela **Central de 
 
 **Como ler o número.** Cada alteração é comparada com quem podia fazê-la na data da alteração: o Reporter da task (o PL), a coordenação, o gerente ou o Squad Leader do responsável, com os papéis vigentes naquele dia. Quem não podia gera um sinal.
 
-**Armadilha comum.** Tratar o sinal como prova. **Indício, não prova**: pode haver razão legítima. Converse e confira a task antes de qualquer conclusão. Não há contagem nem ordem por pessoa. Hoje esta tela ainda não está atrás da Trava do DPO; o Plano 11 prevê isso, e então ela poderá ficar fechada até o aceite do encarregado de dados.
+**Armadilha comum.** Tratar o sinal como prova. **Indício, não prova**: pode haver razão legítima. Converse e confira a task antes de qualquer conclusão. Não há contagem nem ordem por pessoa. Esta tela fica atrás da **Trava do DPO**: fechada por padrão, ela mostra "Esta tela fica desligada até o encarregado de dados (DPO) aprovar o uso" e nada é consultado (o servidor responde `AGUARDANDO_ACEITE_DPO`). Ela só abre com o aceite do DPO, ligado pelo usuário, ou na demonstração. O histórico campo a campo da gaveta também só abre com a trava aberta. Além dos sinais de data, dono e label, há `ESTIMATIVA_REDUZIDA` (estimativa reduzida depois do início) e `WORKLOG_RETROATIVO` (horas registradas com atraso).
 
 ### Tela `divergencia` — Divergência Task × Review
 
@@ -95,6 +95,16 @@ Duração: 30 a 45 min. Ao fim, a coordenação sabe começar pela **Central de 
 **Como ler o número.** O Mapa é gerado do catálogo de cartões do backend: é a fonte da verdade quando um texto de guia divergir.
 
 **Armadilha comum.** Procurar aqui os números: o Mapa descreve cartões, não traz dados.
+
+### Tela `meusDados` — Meus dados
+
+**Pergunta.** O que o painel guarda sobre mim, para que serve e por quanto tempo?
+
+**Onde clicar.** Abra **Meus dados** no menu (todos os papéis têm a tela). "Baixar meus dados (JSON)" gera, no navegador, um arquivo com o mesmo conteúdo da tela.
+
+**Como ler o número.** A tela mostra só o seu registro: quantidades de tasks, alterações e registros de horas, ausências planejadas (sem o motivo), os seus papéis, as categorias tratadas com finalidade e prazo de retenção (24 meses por padrão, a confirmar com o DPO) e os seus acessos dos últimos 90 dias.
+
+**Armadilha comum.** Esperar ver os dados de outra pessoa (a tela não aceita pedir) ou o conteúdo de sinais de Auditoria sobre você (quem quiser esse levantamento pede ao DPO). Para corrigir um dado, ajuste a task no Jira; para pedir eliminação, use o canal do DPO.
 
 ## Outras telas que o seu papel vê
 
