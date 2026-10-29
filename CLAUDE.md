@@ -40,6 +40,14 @@ Dashboard de gestão do time TG-Basic sobre tasks do Jira Data Center: fluxo, pr
 | Backend Kotlin/Ktor (pacote `br.sidia.painel`) | `app/backend/` |
 | Frontend React + TypeScript (Vite) | `app/frontend/` |
 | Modelo de variáveis e scripts de subida | `app/.env.example`, `app/iniciar.sh`, `app/iniciar.ps1` |
+| Modelos de configuração (YAML `.exemplo`/`.demo`), pacote e implantação | `app/config/`, `app/scripts/`, `deploy/` |
+| Estado atual e retomada | `HANDOFF.md` |
+| Relatório final do lado "antes da flag" e roteiro do que vem antes e depois | `docs/superpowers/relatorio-final-antes-da-flag.md`, `docs/superpowers/plans/2026-10-28-roteiro-antes-e-depois-da-flag.md` |
+| Progresso e `Ruling:` de cada plano | `docs/superpowers/progresso/` |
+| Guia do painel, perguntas frequentes e treinamento | `docs/manual/`, `docs/treinamento/` |
+| Equivalência por card com o app atual e diferenças esperadas | `docs/analise/equivalencia-por-card.md`, `docs/analise/` |
+| Jira: checklist da 1ª conexão, runbook, matriz e referência pública | `docs/jira/` |
+| Operação, implantação e LGPD | `docs/operacao/`, `docs/implantacao.md`, `docs/lgpd/` |
 | App Python anterior (só referência) | `legacy/` |
 
 ## Estrutura e comandos

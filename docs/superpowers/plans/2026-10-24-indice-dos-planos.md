@@ -1,6 +1,6 @@
 # Índice dos planos do Painel de Squads
 
-Spec mestra: `docs/superpowers/specs/2026-10-24-painel-squads-kotlin-react-design.md`. Cada plano gera software testável sozinho. **Estado em 27/10/2026:** executados e mesclados os planos 1, 2, 3A, 3, **3B (saída do Docker/PostgreSQL)**, **4A** e as Tarefas 1 a 3 do Plano 4; a **Fase 0 (PC da empresa)** e os planos 9, 14 a 16, 4 (Tarefas 4 a 9), 5 a 8 e 10 a 13 estão escritos e aguardam execução. **Todos os planos valem sobre SQLite embutido, sem Docker** (ver o adendo abaixo); os 8, 9, 12 e 13 foram reescritos para isso.
+Spec mestra: `docs/superpowers/specs/2026-10-24-painel-squads-kotlin-react-design.md`. Cada plano gera software testável sozinho. **Estado em 29/10/2026:** o lado "antes da flag" está **executado e mesclado** (roteiro A1 a A16; relatório em `docs/superpowers/relatorio-final-antes-da-flag.md`): planos 1, 2, 3A, 3, 3B, 4A, 4, 5, 6, 7, 9, 10, 11, 12, 17 inteiros, o 8 e o 13 só na parte de código e documentos, e o 15 até a Tarefa 8. **Ficam para depois da flag** (ClineSR e usuário): a **Fase 0 (PC da empresa)**, o **Plano 14** (14a e 14b), a remoção do `legacy/` (Plano 8, T3 passo 5 e T9), a implantação no SO da empresa (Plano 13, T1, T7, T8, T11 a T13), as Tarefas 1 (ativos reais), 9, 10 e 11 do Plano 15 e o **Plano 16** (futuro, só por decisão expressa do usuário). **Todos os planos valem sobre SQLite embutido, sem Docker** (ver o adendo abaixo).
 
 ## Como começar (ClineSR ou outra IA)
 
@@ -33,19 +33,19 @@ A 14a (bloco de sincronização) começa logo depois do 9, quando o usuário lig
 | 3 | `2026-10-24-plano-03-tempo-em-status.md` | — (spec mestra) | Executado (PR #9) |
 | 3B | — (adendo) | `../specs/2026-10-27-spec-fase-3b-saida-do-docker-sqlite.md` | Executado (PRs #18 e #19): SQLite, sem Docker |
 | 4A (12 tarefas) | `2026-10-25-plano-04a-sincronizacao.md` | `../specs/2026-10-25-spec-fase-04a-sincronizacao.md` | Executado (PR #14) |
-| 4 | `2026-10-25-plano-04-auditoria.md` | `../specs/2026-10-25-spec-fase-04-auditoria.md` | Tarefas 1 a 3 na `main` (PR #15); Tarefas 4 a 9 executadas na branch `feat/auditoria-tarefas-4-a-9` (PR pendente) |
-| 5 | `2026-10-25-plano-05-cards-trabalho-e-prazos.md` | `../specs/2026-10-25-spec-fase-05-cards-trabalho-e-prazos.md` | Bloco 5a (Tarefas 1 a 9) executado (PR #33, mesclado); bloco 5b (Tarefas 10 a 14) executado na branch `feat/cards-trabalho-5b` (PR pendente) |
-| 6 | `2026-10-25-plano-06-pessoas-planejamento-ausencias.md` | `../specs/2026-10-25-spec-fase-06-pessoas-planejamento-ausencias.md` | Escrito, aguardando execução |
-| 7 | `2026-10-25-plano-07-checklist-integridade-distribuicao-governanca.md` | `../specs/2026-10-25-spec-fase-07-checklist-integridade-distribuicao-governanca.md` | Bloco 7a (Tarefas 1 a 8) executado na branch `feat/checklist-review-integridade`; 7b aguardando |
-| 8 | `2026-10-25-plano-08-preparacao-final-e-remocao-do-legacy.md` | `../specs/2026-10-25-spec-fase-08-preparacao-final-e-remocao-do-legacy.md` | Escrito, aguardando execução |
-| 9 (12 tarefas) | `2026-10-25-plano-09-ci-e-endurecimento.md` | `../specs/2026-10-25-spec-fase-09-ci-e-endurecimento.md` | Executado (PR #25; CI ativo no GitHub) |
-| 10 (12 tarefas) | `2026-10-25-plano-10-complementos-de-telas-e-filtros.md` | `../specs/2026-10-25-spec-fase-10-complementos-de-telas-e-filtros.md` | Escrito, aguardando execução |
-| 11 (12 tarefas) | `2026-10-25-plano-11-auditoria-completa-e-lgpd.md` | `../specs/2026-10-25-spec-fase-11-auditoria-completa-e-lgpd.md` | Escrito, aguardando execução |
-| 12 (12 tarefas) | `2026-10-25-plano-12-operacao-em-producao.md` | `../specs/2026-10-25-spec-fase-12-operacao-em-producao.md` | Escrito, aguardando execução |
-| 13 (13 tarefas) | `2026-10-25-plano-13-implantacao-real.md` | `../specs/2026-10-25-spec-fase-13-implantacao-real.md` | Escrito, aguardando execução |
+| 4 | `2026-10-25-plano-04-auditoria.md` | `../specs/2026-10-25-spec-fase-04-auditoria.md` | Executado: Tarefas 1 a 3 (PR #15) e Tarefas 4 a 9 (PR #32), mesclados; pendência externa: base legal com o DPO antes de usar a auditoria com dados reais |
+| 5 | `2026-10-25-plano-05-cards-trabalho-e-prazos.md` | `../specs/2026-10-25-spec-fase-05-cards-trabalho-e-prazos.md` | Executado: bloco 5a (Tarefas 1 a 9, PR #33) e bloco 5b (Tarefas 10 a 14, PR #34), mesclados |
+| 6 | `2026-10-25-plano-06-pessoas-planejamento-ausencias.md` | `../specs/2026-10-25-spec-fase-06-pessoas-planejamento-ausencias.md` | Executado: bloco 6a (PR #35) e bloco 6b (PR #39), mesclados; calibração com dados reais no 14b |
+| 7 | `2026-10-25-plano-07-checklist-integridade-distribuicao-governanca.md` | `../specs/2026-10-25-spec-fase-07-checklist-integridade-distribuicao-governanca.md` | Executado: bloco 7a (PR #40) e bloco 7b (PR #43), mesclados; `PAI_CONCLUIDO_COM_FILHAS_ABERTAS` (I-14) fica para o 14b |
+| 8 | `2026-10-25-plano-08-preparacao-final-e-remocao-do-legacy.md` | `../specs/2026-10-25-spec-fase-08-preparacao-final-e-remocao-do-legacy.md` | Executado, exceto a remoção do `legacy/`: T2, T6, T7, T8 (PR #41), endurecimento (PR #42), T3 sem o passo 5 (PR #46), T1, T4 e T5 (PR #49), T10 (PR de fechamento do lado "antes"). **Aguardam o "sim" do usuário:** T3 passo 5 e T9 (remoção do `legacy/`); a captura de tela da T5 espera um navegador |
+| 9 (12 tarefas) | `2026-10-25-plano-09-ci-e-endurecimento.md` | `../specs/2026-10-25-spec-fase-09-ci-e-endurecimento.md` | Executado (PR #25; CI ativo no GitHub; proteção da `main` é ação do usuário) |
+| 10 (12 tarefas) | `2026-10-25-plano-10-complementos-de-telas-e-filtros.md` | `../specs/2026-10-25-spec-fase-10-complementos-de-telas-e-filtros.md` | Executado (PR #44, mesclado) |
+| 11 (12 tarefas) | `2026-10-25-plano-11-auditoria-completa-e-lgpd.md` | `../specs/2026-10-25-spec-fase-11-auditoria-completa-e-lgpd.md` | Executado (PR #45, mesclado); T3 opção A e migração V7 a confirmar pelo usuário; aceite do DPO pendente (trava fechada) |
+| 12 (12 tarefas) | `2026-10-25-plano-12-operacao-em-producao.md` | `../specs/2026-10-25-spec-fase-12-operacao-em-producao.md` | Executado (PR #37, mesclado); canal externo de alertas, cópia de backup fora do servidor e cifragem ficam com a infraestrutura |
+| 13 (13 tarefas) | `2026-10-25-plano-13-implantacao-real.md` | `../specs/2026-10-25-spec-fase-13-implantacao-real.md` | Código e empacotamento executados (T2 a T6, T9 e T10; PR #48, mesclado). **Aguardam a infraestrutura:** T1, T7 (tag), T8 (serviço), T11 a T13 |
 | 14 (15 tarefas: Tarefa 0 dos hooks, 14a e 14b) | `2026-10-25-plano-14-primeira-conexao-validacao-e-calibracao.md` | `../specs/2026-10-25-spec-fase-14-primeira-conexao-validacao-e-calibracao.md` | Tarefa 0 executada (PR #26); 14a e 14b aguardando execução (depois da flag) |
-| 17 (13 tarefas: 17a antes do 5a, 17b depois do 14b) | `2026-10-28-plano-17-cards-de-fluxo-e-gestao.md` | `../specs/2026-10-28-spec-fase-17-cards-de-fluxo-e-gestao.md` | **17a executado** (PR #31; progresso em `../progresso/2026-10-28-plano-17-cards-de-fluxo-e-gestao.md`); **17b executado** na branch `feat/cards-de-fluxo-e-gestao` (PR pendente; rodou antes do 14b por ordem do usuário em 28/10; aceite do gestor card a card pendente) |
-| 15 (11 tarefas) | `2026-10-25-plano-15-identidade-final-ingles-e-entrega.md` | `../specs/2026-10-25-spec-fase-15-identidade-final-ingles-e-entrega.md` | Escrito, aguardando execução |
+| 17 (13 tarefas: 17a antes do 5a, 17b depois do 14b) | `2026-10-28-plano-17-cards-de-fluxo-e-gestao.md` | `../specs/2026-10-28-spec-fase-17-cards-de-fluxo-e-gestao.md` | **17a executado** (PR #31; progresso em `../progresso/2026-10-28-plano-17-cards-de-fluxo-e-gestao.md`); **17b executado** (PR #36, mesclado; rodou antes do 14b por ordem do usuário em 28/10); aceite do gestor card a card pendente |
+| 15 (11 tarefas) | `2026-10-25-plano-15-identidade-final-ingles-e-entrega.md` | `../specs/2026-10-25-spec-fase-15-identidade-final-ingles-e-entrega.md` | Executado até a Tarefa 8: T1 (registro, caminho alternativo) a T4 (PR #38) e T5 a T8 (PR #47). **Aguardam o usuário:** ativos de marca reais (T1), sessões de treinamento (T9), dono da manutenção e checklist de entrega (T10), fechamento (T11) |
 
 ## Fase 4A — Sincronização periódica (depende das Fases 1 a 3)
 Detalhada em `2026-10-25-plano-04a-sincronizacao.md` (12 tarefas): sincronização periódica com a flag `JIRA_LIVE_ENABLED` como única trava (sem autorização por execução), cursor e registro de execuções, ficha de sincronização e JQL com hora, `Syncer` em fluxo com tradução de chaves `JIRAUSER*`, carga inicial e incremental com retomada, reconciliação diária com remoção lógica, agendador único no ciclo do Ktor e retenção agendada (`issue` e `access_log`), status para o gerente e runbook da 1ª sincronização, dados de demonstração e hook alinhado à flag, e vínculos entre issues ("Blocks / is blocked by", tabela `issue_link`, Tarefa 12) que definem o par Task × Review. A Fase 4 depende desta (próximo número de migração livre na execução).
@@ -87,18 +87,20 @@ Detalhada em `2026-10-25-plano-14-primeira-conexao-validacao-e-calibracao.md` (1
 Detalhada em `2026-10-25-plano-15-identidade-final-ingles-e-entrega.md` (11 tarefas): ativos de marca (ponto de parada, com caminho alternativo); logo saneado; fonte com alternativa de sistema; azul `#1329A0` único, moldura do tema Sidia e tema sem piscada; `DESIGN.md` verificado contra os tokens; guia e FAQ em inglês; treinamento por papel; sessões registradas; dono da manutenção e checklist de entrega; fechamento.
 
 ## Migrações
-Desde 26/10 (saída do Docker/PostgreSQL) existe **uma só migração, a `V1__base.sql`**, com o esquema final (as antigas V4 a V6 do 4A estão incorporadas nela). **A próxima é a `V2`.** Os rótulos "V7" a "V13" que ainda aparecem nos planos são apenas nomes de ordem: na execução, confirme o próximo número livre com `ls app/backend/src/main/resources/db/migration` e nunca edite migração já mesclada. A tabela é a sequência esperada, na ordem de execução acima.
+Desde 26/10 (saída do Docker/PostgreSQL) a base é a `V1__base.sql`, com o esquema final (as antigas V4 a V6 do 4A estão incorporadas nela). **Em 29/10/2026 existem sete migrações, `V1` a `V7`; a próxima livre é a `V8`.** Os rótulos "V7" a "V13" que ainda aparecem nos planos antigos são apenas nomes de ordem: na execução, confirme o próximo número livre com `ls app/backend/src/main/resources/db/migration` e nunca edite migração já mesclada. A tabela mostra o que cada migração é e a quem pertence.
 
-| Ordem | Plano | Observação |
+| Migração | Plano | Conteúdo |
 |---|---|---|
-| 1ª | 5a | campos de trabalho (provável `V2`) |
-| 2ª | 6b | worklog por instância |
-| 3ª | 7b | decisão de distribuição |
-| 4ª | 10 | campos do dicionário |
-| 5ª | 11 | condicional (ponto de parada da Tarefa 3, ou remoção de `person`) |
-| 6ª | 8 | condicional (índices de leitura, só se a Tarefa 6 pedir) |
-| 7ª | 12 | execução de backup |
-| 8ª | 16 | escrita no Jira (futuro) |
+| `V1__base` | 1 a 4A | esquema final do banco SQLite |
+| `V2__campos_de_trabalho` | 5a | campos de trabalho (prioridade, estimativas, pontos, épico, flag) |
+| `V3__execucao_de_backup` | 12 | execução de backup (`backup_run`) |
+| `V4__worklog_por_instancia` | 6b | worklog por instância, sem comentário |
+| `V5__decisao_distribuicao` | 7b | decisão de distribuição (modo sombra) |
+| `V6__campos_do_dicionario` | 10 | campos do dicionário em `issue.campos_dicionario` |
+| `V7__dados_para_auditoria_completa` | 11 | valor das estimativas e data de criação do worklog; **zera o cursor da sincronização** (recarga completa) e remove a tabela `person` |
+| próxima: `V8` | 16 (futuro) | escrita no Jira, só por decisão expressa do usuário |
+
+O Plano 8 não criou migração de índices (o perfil de desempenho mostrou que índice não resolve; o cache de leitura resolveu).
 
 Sem migração: 0, 9, 4 (Tarefas 4 a 9), 13, 14 e 15. Blocos em branches paralelas renumeram a migração do PR que mesclar depois, antes do merge. Em SQLite não existe `ALTER COLUMN`: mudança de tipo ou restrição recria a tabela dentro da migração (adendo, seção 2).
 

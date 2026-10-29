@@ -1,6 +1,6 @@
 # Roteiro: tudo que vem antes e depois da mudança da flag do Jira
 
-Data: 28/10/2026. Decisão do usuário (28/10): **o Claude Code implementa tudo que não precisa do Jira real, antes da flag; o ClineSR executa o que só faz sentido depois que o usuário mudar a flag para ligada no `app/.env`.** Este documento é o mapa único dos dois lados. Em caso de conflito vale `CLAUDE.md` > `docs/guia-execucao-outra-ia.md` > este roteiro > specs e planos de cada fase (o roteiro só ordena e divide; o *como* continua nos planos).
+Data: 28/10/2026; **fechado em 29/10/2026** (o lado "antes" está executado: estados reais na seção 1, itens novos na seção 3, reparos esperados na seção 4; relatório em [`../relatorio-final-antes-da-flag.md`](../relatorio-final-antes-da-flag.md)). Decisão do usuário (28/10): **o Claude Code implementa tudo que não precisa do Jira real, antes da flag; o ClineSR executa o que só faz sentido depois que o usuário mudar a flag para ligada no `app/.env`.** Este documento é o mapa único dos dois lados. Em caso de conflito vale `CLAUDE.md` > `docs/guia-execucao-outra-ia.md` > este roteiro > specs e planos de cada fase (o roteiro só ordena e divide; o *como* continua nos planos).
 
 > **Regra que não muda:** a flag é a única trava de acesso ao Jira e **só o usuário a muda**. Nada do lado "antes" acessa o Jira (fixtures, `MockEngine` e dados de demonstração). Nenhuma IA liga a flag.
 
@@ -16,22 +16,26 @@ Cada linha é um PR a partir da `main` atualizada; a seguinte só começa depois
 
 | # | Entrega | Plano / tarefas | Pontos de parada tratados | Estado |
 |---|---|---|---|---|
-| A1 | Contrato do cartão (registro, `Cartao`, gaveta compartilhada, Mapa de cartões) | Plano 17a (T1 a T7) | — | a fazer |
-| A2 | Auditoria (continuação) | Plano 4, T4 a T9 | — | executada na branch `feat/auditoria-tarefas-4-a-9` (PR pendente) |
-| A3 | Cards de trabalho e prazos | Plano 5a (9 tarefas); regra I-06 (coluna "último movimento") | — | executada e mesclada (PR #33) |
-| A4 | Negativas, Riscos, Previsão, Épicos | Plano 5b (5 tarefas) | — | executada na branch `feat/cards-trabalho-5b` (PR pendente) |
-| A5 | Capacidade e planejamento | Plano 6a (9 tarefas) | local dos YAML reais: o documento recomenda a opção padrão; o código não depende | executada na branch `feat/pessoas-planejamento-6a` (PR pendente) |
-| A6 | Worklog, posse, esforço, cobertura | Plano 6b (7 tarefas) | — | a fazer |
-| A7 | Checklist × Review e Integridade | Plano 7a (8 tarefas) | — | a fazer |
-| A8 | Distribuição, Governança, início do gerente/squad/usuário | Plano 7b (10 tarefas); verificação I-12 (labels fora do vocabulário); I-14 só se houver sub-tarefa na ficha (senão, fica para o 14b) | — | a fazer |
-| A9 | Complementos de telas e filtros | Plano 10 (12 tarefas) + I-26 e I-27 | — | a fazer |
-| A10 | Auditoria completa e LGPD | Plano 11 (12 tarefas) | T3 (ampliar dados guardados): **opção recomendada**; Trava do DPO fica **fechada** (fail-closed) | executada na branch `feat/auditoria-completa-lgpd-plano-11` (PR pendente); aceite do DPO pendente (usuário) |
-| A11 | Cards novos de fluxo e gestão | Plano 17b (T8 a T13) | PP5: executado **antes** do 14b por ordem do usuário (risco: calibração só com dados reais; ver seção 4) | executado na branch `feat/cards-de-fluxo-e-gestao` (PR pendente); aceite do gestor pendente |
-| A12 | Preparação final (sem remoção do `legacy/`) | Plano 8, T1 a T8 e T10 | Endereço de escuta: opção recomendada; **T3 passo 5 e T9 (remoção) ficam para a seção 3** | a fazer |
-| A13 | Operação em produção | Plano 12 (12 tarefas) | canal de alertas, local do backup e do YAML: opção recomendada para o código; entrega externa fica na seção 3 | a fazer |
-| A14 | Implantação real (somente a parte de código e empacotamento) | Plano 13, T2 a T6 e T9 a T10 (código, zip e SHA-256, ensaio local) | T1, T7 (tag), T8 (serviço no SO da empresa), T11 a T13: seção 3 | a fazer |
-| A15 | Identidade, inglês e entrega (parte que não depende de ativos do usuário) | Plano 15, T2 a T8 com alternativas de sistema para marca e fonte | T1 (ativos de marca), T9 (sessões), T10 (dono): seção 3 | a fazer |
-| A16 | Fechamento do lado "antes" | Relatório, `HANDOFF.md`, índice e este roteiro atualizados | — | a fazer |
+| A1 | Contrato do cartão (registro, `Cartao`, gaveta compartilhada, Mapa de cartões) | Plano 17a (T1 a T7) | — | **Mesclado (PR #31)** |
+| A2 | Auditoria (continuação) | Plano 4, T4 a T9 | — | **Mesclado (PR #32)** |
+| A3 | Cards de trabalho e prazos | Plano 5a (9 tarefas); regra I-06 (coluna "último movimento") | — | **Mesclado (PR #33)** |
+| A4 | Negativas, Riscos, Previsão, Épicos | Plano 5b (5 tarefas) | — | **Mesclado (PR #34)** |
+| A5 | Capacidade e planejamento | Plano 6a (9 tarefas) | local dos YAML reais: o documento recomenda a opção padrão; o código não depende | **Mesclado (PR #35)** |
+| A6 | Worklog, posse, esforço, cobertura | Plano 6b (7 tarefas) | — | **Mesclado (PR #39)** |
+| A7 | Checklist × Review e Integridade | Plano 7a (8 tarefas) | — | **Mesclado (PR #40)** |
+| A8 | Distribuição, Governança, início do gerente/squad/usuário | Plano 7b (10 tarefas); verificação I-12 (labels fora do vocabulário); I-14 só se houver sub-tarefa na ficha (senão, fica para o 14b) | — | **Mesclado (PR #43)**; I-12 feita (`LABEL_SEM_CLASSIFICACAO`); I-14 NÃO feita (a ficha não tem sub-tarefa): fica para o 14b |
+| A9 | Complementos de telas e filtros | Plano 10 (12 tarefas) + I-26 e I-27 | — | **Mesclado (PR #44)** |
+| A10 | Auditoria completa e LGPD | Plano 11 (12 tarefas) | T3 (ampliar dados guardados): **opção recomendada**; Trava do DPO fica **fechada** (fail-closed) | **Mesclado (PR #45)**; T3 opção A e V7 a confirmar pelo usuário; aceite do DPO pendente (usuário) |
+| A11 | Cards novos de fluxo e gestão | Plano 17b (T8 a T13) | PP5: executado **antes** do 14b por ordem do usuário (risco: calibração só com dados reais; ver seção 4) | **Mesclado (PR #36)**; aceite do gestor pendente |
+| A12 | Preparação final (sem remoção do `legacy/`) | Plano 8, T1 a T8 e T10 | Endereço de escuta: opção recomendada; **T3 passo 5 e T9 (remoção) ficam para a seção 3** | **Mesclado:** T2, T6, T7, T8 (PR #41) e endurecimento (PR #42); T3 sem o passo 5 (PR #46); T1, T4 e T5 (PR #49); T10 no PR de fechamento (A16). T5 só fecha com a rodada de capturas (seção 3) |
+| A13 | Operação em produção | Plano 12 (12 tarefas) | canal de alertas, local do backup e do YAML: opção recomendada para o código; entrega externa fica na seção 3 | **Mesclado (PR #37)** |
+| A14 | Implantação real (somente a parte de código e empacotamento) | Plano 13, T2 a T6 e T9 a T10 (código, zip e SHA-256, ensaio local) | T1, T7 (tag), T8 (serviço no SO da empresa), T11 a T13: seção 3 | **Mesclado (PR #48)** |
+| A15 | Identidade, inglês e entrega (parte que não depende de ativos do usuário) | Plano 15, T2 a T8 com alternativas de sistema para marca e fonte | T1 (ativos de marca), T9 (sessões), T10 (dono): seção 3 | **Mesclado:** T1 (registro, caminho alternativo) a T4 (PR #38) e T5 a T8 (PR #47); T1 real, T9, T10 e T11 na seção 3 |
+| A16 | Fechamento do lado "antes" | Relatório, `HANDOFF.md`, índice e este roteiro atualizados | — | **Neste PR** (branch `docs/fechamento-antes-da-flag`; o PR é aberto pelo orquestrador) |
+
+Auditoria final da `main`: o PR #52 (trava da flag em `scripts/tempo_em_status.py`, provas de root no CI por `sudo -n`, mensagens de configuração sem eco, bundle no CI) está **feito e mesclado**. `legacy/backend/jiradash/jira/client.py` e `teams.py` acessam o Jira sem a trava; por decisão do usuário isso se resolve (remover ou travar) na remoção do `legacy/` (D9). Lacunas Minor da varredura do #52 no arquivo `docs/superpowers/progresso/2026-10-29-auditoria-final.md`.
+
+Fora da tabela: o PR #50 (expurgo automático dos dados fictícios ao ligar a flag e o estado "aguardando a primeira carga do Jira") foi executado depois do Plano 11 por necessidade da ligação da flag; não é uma linha do roteiro original.
 
 **Fora do alcance do "antes" por natureza:** Fase 0 (PC da empresa), Plano 14a/14b (precisam do Jira real), Plano 16 (escrita no Jira: só por decisão expressa do usuário).
 
@@ -41,6 +45,7 @@ Pré-requisitos, nesta ordem:
 1. **Fase 0 concluída no PC da empresa** (`docs/superpowers/plans/2026-10-27-plano-00-pc-da-empresa.md`): JDK 21, Node 22 e pnpm, clone, suíte verde no PC, PowerShell sem bash nem WSL.
 2. **Proteção da `main`** no GitHub exigindo `backend`, `frontend`, `guarda` e `varredura` (`docs/operacao/ci.md`, seção 5) e o segredo `VARREDURA_NOMES`.
 3. **Credenciais do Jira** no `app/.env` do PC (token pessoal da conta de leitura; nunca no repositório).
+3b. **Tetos pequenos da primeira carga, ainda com a flag desligada:** `SYNC_MAX_ITENS=50` e `SYNC_MAX_REQUISICOES=5` no mesmo `app/.env` (os padrões do código são 50000 e 2000: sem os tetos a primeira carga sai sem limite). Só sobem, com o ClineSR, depois da primeira carga conferida (`docs/jira/runbook-sincronizacao.md`, Etapa 1).
 4. **Escrever a linha da flag como ligada em `app/.env`** — a única mudança que libera o Jira. Reiniciar o painel depois.
 5. Avisar o ClineSR que a flag está ligada; a primeira tarefa dele é a conferência do Plano 14a, Tarefa 1.
 
@@ -50,19 +55,36 @@ Cada linha é um PR (ou execução registrada) a partir da `main` atualizada, pe
 
 | # | Entrega | Plano / tarefas | Observações |
 |---|---|---|---|
-| D1 | **Primeira conexão** | Plano 14a, T1 a T6 | Checklist da 1ª conexão em ordem; `serverInfo`, `myself`, campos, uma issue; casador de campos e conferência de status sobre respostas **salvas fora do repositório**; divergências só com agregados; primeiro ciclo de sincronização; cada regra refutada vira correção com teste. Parar nas condições de parada do plano (ex.: `usuariosNaoResolvidos` maior que 0). |
+| D1 | **Primeira conexão** | Plano 14a, T1 a T6 | Checklist da 1ª conexão em ordem; `serverInfo`, `myself`, campos, uma issue; casador de campos e conferência de status sobre respostas **salvas fora do repositório**; divergências só com agregados; primeiro ciclo de sincronização; cada regra refutada vira correção com teste. Parar nas condições de parada do plano (ex.: `usuariosNaoResolvidos` maior que 0). O checklist (`docs/jira/checklist-primeira-conexao.md`) tem hoje os cinco passos e mais passos extras (ver D18). Antes do primeiro ciclo: banco novo ou expurgo automático dos dados fictícios (`docs/jira/checklist-primeira-conexao.md`, seção "O que acontece na subida quando a flag é ligada"). |
 | D2 | **Reparos esperados da 1ª conexão** | Seção 4 deste roteiro | Lista dos pontos que provavelmente exigem ajuste (changelog, vínculo de bloqueio, status e resolução, fuso). |
-| D3 | **Recarga completa** | Plano 14b, T7 | Campos novos dos Planos 5 e 6 entram no `raw`. |
+| D3 | **Recarga completa (obrigatória)** | Plano 14b, T7 | Campos novos dos Planos 5 e 6 entram no `raw`. **A migração V7 zera `sync_state.watermark`**: a primeira carga refaz o changelog e o worklog das issues dos últimos 24 meses para preencher o valor das estimativas e a data de criação dos worklogs; as colunas dos Planos 5a (V2), 6b (V4) e 10 (V6) só ficam completas nas linhas antigas depois dela (aviso `CAMPOS_DO_DICIONARIO_INCOMPLETOS` até lá). Limitada por `SYNC_MAX_REQUISICOES` por execução: pode levar vários ciclos. |
 | D4 | **Validação dos cards** | Plano 14b, T8, T9 | Roteiro por ficha contra totais do Jira (fonte `JIRA_TOTAL`); inclui os cards do 17b. |
 | D5 | **Cards da Sidia (CAT)** | Plano 14b, T10 | Ponto de parada com o usuário (quais cards a Sidia terá). |
 | D6 | **Calibração** | Plano 14b, T11, T12 | Retroteste offline e aplicação **com aprovação** (uma pergunta por heurística). |
 | D7 | **Aceite do gestor** | Plano 14b, T13, T14 | Card a card; fechamento da validação. |
-| D8 | **LGPD: aceite do DPO** | Plano 11 (trava) | A trava só abre com o aceite do DPO; ação do usuário. |
-| D9 | **Equivalência e remoção do `legacy/`** | Plano 8, T3 (passo 5) e T9 | Só depois do "sim" do usuário ao documento de equivalência. |
+| D8 | **LGPD: aceite do DPO** | Plano 11 (trava) | A trava só abre com o aceite do DPO (`DASHBOARD_DPO_ACEITE` com a referência do parecer); ação do usuário. Parecer sobre as sete perguntas de `docs/lgpd/relatorio-para-o-dpo.md`. |
+| D9 | **Equivalência e remoção do `legacy/`** | Plano 8, T3 (passo 5) e T9 | Só depois do "sim" do usuário ao documento de equivalência. **A pergunta pendente está em `docs/analise/equivalencia-por-card.md`, seção "Pergunta pendente ao usuário"** (aprovar e remover, aprovar com ajustes, ou manter). Antes de remover: congelar os valores dos `CompatLegado` de Capacidade, Distribuição e Checklist (hoje pulados sem a pasta; ver D17). |
 | D10 | **Operação: entrega externa** | Plano 12 (pontos de parada) | Canal dos alertas, cópia de backup fora do servidor, cifragem, local dos YAML reais. |
-| D11 | **Implantação real** | Plano 13, T1, T7, T8, T11, T12, T13 | Decisões com a infraestrutura, tag, serviço, homologação e entrada em produção. A flag em produção é decisão separada do usuário. |
+| D11 | **Implantação real** | Plano 13, T1, T7, T8, T11, T12, T13 | Decisões com a infraestrutura, tag, serviço, homologação e entrada em produção. A flag em produção é decisão separada do usuário. T7 passo 5 (tag e release) e T8 (serviço) acrescentam `implantacao/windows/instalar-servico.ps1` e `implantacao/linux/painel.service` à lista de estrutura do `verificar-pacote.*`; T11 a T13 são fumaça, homologação e guia final. |
 | D12 | **Identidade e entrega** | Plano 15, T1, T9, T10, T11 | Ativos de marca, sessões de treinamento, dono da manutenção, fechamento. |
 | D13 | **Futuro** | Plano 16 (escrita no Jira) | Só com ordem expressa do usuário. |
+
+### 3.1 Itens novos surgidos durante o lado "antes"
+
+Não estavam no roteiro de 28/10; vieram dos arquivos de progresso e das revisões. Cada linha diz em que ponto da lista acima entra.
+
+| # | Entrega | Origem | Quando e o que fazer |
+|---|---|---|---|
+| D14 | **Primeira execução dos `.ps1`** | Planos 8 (T7), 12 e 13 | Antes de D11: `app/scripts/montar-pacote.ps1`, `verificar-pacote.ps1`, `painel-cli.ps1` e `deploy/windows/*.ps1` (`atualizar`, `reverter`, `gerar-session-secret`, `ensaio-troca`, `verificar-logs`, `comum`) nunca foram executados (só testes estáticos de ASCII e de lista). Rodar no Windows 11, corrigir o que falhar com teste, e avaliar pôr `ensaio-troca.ps1` no job `guarda-windows`. Os `.sh` equivalentes já foram executados no Linux. |
+| D15 | **Testes que dependem de root** | Plano 13, revisão do PR #48 (M-c) | Opcional: um job do CI com `sudo` para os testes dinâmicos de restauração com a identidade do serviço, hoje pulados no CI comum. |
+| D16 | **Conta do serviço (`PAINEL_USUARIO`) e nome do serviço** | Plano 13, T8 e T10 | Em D11: no Linux, criar a conta sem privilégio do serviço e defini-la em `PAINEL_USUARIO` (padrão `painel`; os scripts recusam uid 0 como conta do serviço e rodam a restauração da reversão com essa identidade); alinhar o nome do serviço (os runbooks do Plano 12 usam `painel-squads`, `atualizar.*` usam `-Servico` padrão `Painel` e `PAINEL_SERVICO` padrão `painel`); no Linux o `fazer_backup` do `atualizar` já roda `backup-agora` com essa identidade (`como_servico`, via `runuser` ou `setpriv`); sem a conta, os scripts falham com mensagem pedindo `PAINEL_USUARIO`. |
+| D17 | **Congelar os `CompatLegado` antes de remover o `legacy/`** | Plano 8, T3 | Em D9: `CompatLegadoCapacidadeTest`, `CompatLegadoDistribuicaoTest` e `CompatLegadoChecklistTest` leem a pasta e são pulados por inteiro sem ela; copiar os valores esperados para dentro dos testes (como `CompatLegadoTempoEmStatusTest` já faz) e só então remover. |
+| D18 | **Checagens extras do checklist da 1ª conexão** | Planos 8 (T8), 11 e 7 | Em D1, além dos cinco passos: conferir os ids de `papeis.yaml`, vocabulário de prioridade e de criticidade, ordem do fluxo e resoluções negativas, formato do worklog (inclusive o `created` de cada registro), formato das estimativas no changelog (`timeoriginalestimate` e `timeestimate` em segundos como texto) e o Reporter como PL. Os nomes exatos estão como `## Passo extra` em `docs/jira/checklist-primeira-conexao.md`. |
+| D19 | **Confirmar `ESTIMATIVA_AUMENTADA` e `ESTIMATIVA_REDUZIDA`** | Plano 11, T4 a T6 | Em D1 e D6: o sinal está ativo no modelo `integridade.exemplo.yaml` e depende do valor da estimativa no changelog; sem os eventos recarregados (D3) aparece `SINAL_SEM_DADO`. Se o servidor mandar só `fromString`/`toString`, os sinais ficam sem dado (`HISTORICO_DE_ESTIMATIVA_INCOMPLETO`) até tratar o formato. Calibrar `estimativaAumento` e, no sinal de estimativa reduzida, a regra de só valer depois de a task iniciar. |
+| D20 | **Rodada de capturas de tela e simulação de daltonismo** | Planos 4 a 17 | Antes de D7: nenhuma tela foi aberta em navegador. Rodar `PAINEL_MOCK=1 pnpm dev` ou a demonstração e seguir a seção 4 de `docs/design/revisao-final.md` (1440 e 390 px, três temas, pt e en); fecha a Tarefa 5 do Plano 8. Gerar também as imagens do treinamento (`docs/treinamento/img/manifesto.yaml`). |
+| D21 | **`testCarga` no PC da empresa** | Plano 8, T6 | Antes de D11: `./gradlew testCarga`, registrar os números e decidir `PAINEL_CACHE_SEG`, `DATABASE_POOL_SIZE` e a memória do serviço. Na VM de referência o p95 da leitura concorrente ficou em 4,1 a 4,3 s contra o orçamento de 4 s. |
+| D22 | **Provedor OIDC real** | Planos 8 e 13 | Em D11: `OIDC_ISSUER`, `OIDC_CLIENT_ID`, `OIDC_REDIRECT_URI`, claim do username e estratégia (`OIDC_USERNAME_ESTRATEGIA`; `OIDC_DOMINIOS_PERMITIDOS` obrigatória em duas delas), autenticação do endpoint do token (hoje `client_secret_post`), proxy da empresa até o provedor (`ClienteHttpOidc.kt`) e `OIDC_HOSTS_PERMITIDOS` se o provedor estiver na intranet. |
+| D23 | **Decisões do lado "antes" a confirmar pelo usuário** | Relatório final, seção (c) | Antes de D3: a T3 do Plano 11 e a V7, o expurgo automático dos dados fictícios e as recusas de banco, a Qualidade dos dados aberta à coordenação, a gaveta da task só do responsável atual, o Squad Leader sem task sem dono, "quem consultou quem" fora do `access_log`. |
 
 ## 4. Reparos esperados depois da flag (lista de apostas)
 
@@ -80,9 +102,21 @@ Lugares onde a suposição feita offline mais provavelmente falha com o servidor
 | R8 | Sub-tarefas usadas e contadas na carga | ficha de campos | Pergunta 16 da referência; ideia I-14 |
 | R9 | Instância Sidia exige ficha própria | Plano 14b, T10 | Decisão do usuário |
 | R10 | Quantidade de abertas muito maior que o previsto (carga inicial lenta) | teto de requisições e itens | Status da sincronização; ideia I-24 |
+| R11 | `key in (...)` com chave apagada responde HTTP 400 ao lote inteiro; o fallback por chave da reconciliação (400 ou 404 numa chave sozinha = ausente) nunca foi visto num servidor real, e pode gastar até 1 + 100 requisições por lote, esgotando `SYNC_MAX_REQUISICOES` todo dia | Plano 4A, revisão final (I1) e re-revisão | Primeira reconciliação: contar execuções "Incompleta (limite)" com 0 issues; sugestão de bisseção do lote |
+| R12 | `timeoriginalestimate` e `timeestimate` no changelog vêm só humanizados (`fromString`/`toString`), sem os segundos em `from`/`to`; `created` do worklog ausente ou em formato diferente de `started` | Planos 11 (T4 a T6) e 8 (T8); avisos `HISTORICO_DE_ESTIMATIVA_INCOMPLETO` e `HISTORICO_DE_WORKLOG_INCOMPLETO` | Passos extras "formato das estimativas no changelog" e "formato do worklog" do checklist |
+| R13 | O endpoint de worklog por issue não existe ou responde 400, 404 ou 405 | `JiraClient.worklogs`: a issue fica como estava, sem apagar o gravado (Plano 6b, T10) | Primeiro ciclo: horas registradas da Carga ficam `—` (indisponível) se ninguém registrou hora na janela |
+| R14 | Criar ou remover vínculo entre issues pode não mudar o `updated` das issues, e o vínculo da chave antiga pode ficar ativo depois de renomear fora da ordem natural | Plano 4A, T12 (não validado) e matriz de compatibilidade | Passo 4 do checklist; `issue_link` antes e depois de uma reconciliação |
+| R15 | Ids e semântica de `Story Points`, `Epic Link` e `Flagged` diferentes ("a confirmar"): o time pode nunca sinalizar `Flagged`; sem `Epic Link` o Épicos e a verificação `SEM_EPICO` ficam indisponíveis | Planos 5a, 5b e 7b (`jira_campos.yaml`, avisos `CAMPOS_DE_TRABALHO_INDISPONIVEIS`) | Passo 2 do checklist (campos) |
+| R16 | Vocabulário real de prioridade e criticidade, ordem do fluxo e resoluções negativas diferentes do modelo (`labelsCriticidade`, `prioridadePadrao`, `status_map.ordem`) | Planos 5a e 7a; passos extras do checklist | Passos extras "vocabulário de prioridade e de criticidade" e "ordem do fluxo e resoluções negativas" |
+| R17 | O Reporter não é o PL, ou vem como `JIRAUSER*` sem tradução (`usuariosNaoResolvidos`) e a autoria de eventos e worklogs cai em `NAO_AUTORIZADO`/`AUTOR_DESCONHECIDO` | Plano 4 (Minor da revisão da Tarefa 3) e passo extra "o Reporter é o PL" | Passo extra do checklist; `usuariosNaoResolvidos` |
+| R18 | Provedor OIDC com claim, estratégia de username ou autenticação do endpoint do token diferentes do suposto; proxy da empresa entre o painel e o provedor; hosts da descoberta em intranet | `OIDC_USERNAME_ESTRATEGIA`, `OIDC_DOMINIOS_PERMITIDOS`, `OIDC_HOSTS_PERMITIDOS`, `ClienteHttpOidc.kt` (Planos 8 e 13) | Homologação (Plano 13, T11), com emissor real |
+| R19 | Desempenho na máquina da empresa pior que na VM de referência (p95 concorrente de 4,1 a 4,3 s contra o orçamento de 4 s); leitura bruta grande (Épicos lê todas as issues do escopo; Tendência reconstrói 12 semanas por pessoa; Bloqueios lê pontas sem índice dedicado; Fluxo da semana sem índice por `resolved`) | Planos 8 (T6), 5b, 6a e 17b (Minor adiados) | `./gradlew testCarga` no PC; ajustar `PAINEL_CACHE_SEG`, `DATABASE_POOL_SIZE`, memória; índices só se o perfil pedir |
+| R20 | Heurísticas e limiares calibrados só offline: esforço (pesos do índice), foco, horas por tipo, pesos e histerese da distribuição, gatilho de rebalanceamento, "faixa mais alta" do Cruzamentos (75% do maior valor), limite de outlier (30 dias corridos), pesos de Riscos (piso de 3 dias úteis; o legado usava 2), caso M-c de Negativas (devolvida com origem DONE) | Planos 5b, 6a, 6b, 7b e 17b | Calibração (D6) com aprovação, uma pergunta por heurística |
+| R21 | Fuso do servidor e do calendário divergentes (Manaus não tem horário de verão, mas o servidor pode ter) deslocam o "dia" de eventos perto da meia-noite, inclusive o worklog retroativo (sempre dias úteis de Manaus) | `SYNC_FUSO_SERVIDOR`, Plano 11 (T4/T5) | Passo 1 do checklist (`myself.timeZone`) e amostra de eventos perto da meia-noite |
+| R22 | Sub-tarefas em uso: `PAI_CONCLUIDO_COM_FILHAS_ABERTAS` (I-14) não foi implementada porque a ficha só lê os três tipos de checklist | Plano 7b, T13 | Pergunta 16 da referência; implementar no 14b se a 1ª conexão confirmar |
 
 ## 5. Como acompanhar
 
 - Estado de cada linha do lado "antes": coluna "Estado" da seção 1, atualizada a cada PR mesclado, e o índice dos planos.
 - Arquivo de progresso de cada plano em `docs/superpowers/progresso/`, com os `Ruling:` adotados no lugar das perguntas.
-- Relatório ao fim do lado "antes": o que foi feito, problemas, decisões tomadas sozinho, o que não foi possível.
+- Relatório ao fim do lado "antes" (escrito em 29/10/2026): [`../relatorio-final-antes-da-flag.md`](../relatorio-final-antes-da-flag.md) traz o que foi feito, os problemas achados pelas revisões, as decisões tomadas sozinho (com a reversão e as que precisam de confirmação), o que não foi possível, os números e a lista de ações do usuário.
