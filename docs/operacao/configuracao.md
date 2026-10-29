@@ -95,10 +95,12 @@ O modelo é `app/.env.example` (copie para `app/.env`, que o git ignora, ou apon
 | `DASHBOARD_ORIGEM_PUBLICA` | vazio | Origem pela qual o navegador acessa o painel (proteção CSRF); `https` em produção |
 | `DATABASE_PATH` | `data/painel.db` | Arquivo SQLite do painel |
 | `DATABASE_POOL_SIZE` | 4 | Conexões do pool (1 a 100) |
-| `PAINEL_CONFIG_DIR` | `config` | Pasta dos YAML de configuração |
-| `PAINEL_STATIC_DIR` | `frontend/dist` | Build do frontend servido em `/` |
+| `PAINEL_CONFIG_DIR` | `config` | Pasta dos YAML de configuração (em produção, caminho absoluto: relativo recusa a subida) |
+| `PAINEL_STATIC_DIR` | `frontend/dist` | Build do frontend servido em `/` (em produção, caminho absoluto) |
+| `DASHBOARD_PORT` | 8080 | Porta em que o painel escuta (1 a 65535) |
+| `DASHBOARD_PROXY_CONFIAVEL` | vazio | Faixas CIDR do proxy reverso da empresa; só elas podem informar `X-Forwarded-*`. Obrigatória em produção |
 | `PAINEL_CACHE_SEG` | 60 | Segundos em que as telas reaproveitam a leitura bruta do banco (issues e histórico); `0` desliga. Fim de sincronização e de retenção invalidam na hora; o recorte por papel é feito depois, então o cache nunca mistura papéis |
-| `PAINEL_HOST` | `127.0.0.1` | Interface em que o painel escuta (porta 8080). O padrão só atende a própria máquina; outra interface exige firewall e gera `AVISO ESCUTA_FORA_DO_LOOPBACK` no `validar-config` |
+| `PAINEL_HOST` | `127.0.0.1` | Interface em que o painel escuta (`DASHBOARD_PORT`). O padrão só atende a própria máquina; outra interface exige firewall e gera `AVISO ESCUTA_FORA_DO_LOOPBACK` no `validar-config`; em produção `0.0.0.0` e `::` são recusados na subida |
 | `JIRA_SAMSUNG_URL`, `JIRA_SAMSUNG_TOKEN` | vazio | Instância `samsung` (Bearer); só ativa com as duas preenchidas |
 | `JIRA_SIDIA_URL`, `JIRA_SIDIA_USER`, `JIRA_SIDIA_TOKEN` | vazio | Instância `sidia` (Basic); só ativa com as três preenchidas |
 | `SYNC_INSTANCIAS`, `SYNC_INTERVALO_MIN`, `SYNC_HORA_RECONCILIACAO`, `SYNC_HORA_RETENCAO`, `SYNC_MAX_ITENS`, `SYNC_MAX_REQUISICOES`, `SYNC_SOBREPOSICAO_MIN`, `SYNC_FUSO_SERVIDOR`, `SYNC_TEMPO_MAX_MIN` | ver `app/README.md` | Intervalos e limites da sincronização (não ligam nada) |

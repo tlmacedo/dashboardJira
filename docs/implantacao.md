@@ -56,9 +56,11 @@ Trocar o pacote por um mais novo não pode apagar nada. Por isso a configuraçã
 | `PAINEL_CONFIG_DIR` | Pasta dos YAML reais (`papeis.yaml`, `equipes.yaml`, `ausencias.yaml`, `calendario.yaml`, `status_map.yaml`...). Em produção os arquivos reais são obrigatórios; os modelos `.exemplo` não valem |
 | `DATABASE_PATH` | Arquivo SQLite do painel (por exemplo `D:\painel\dados\painel.db`). Criado na primeira subida |
 | `PAINEL_ENV_FILE` | Arquivo de variáveis real (nunca no repositório nem no pacote; permissão só da conta do serviço) |
-| `PAINEL_STATIC_DIR` | Build do frontend; o padrão `frontend/dist` (relativo à raiz do pacote) já serve |
+| `PAINEL_STATIC_DIR` | Build do frontend (`<pacote>/frontend/dist`). Em produção, caminho **absoluto** (o padrão relativo `frontend/dist` só vale em desenvolvimento) |
 | `DATABASE_POOL_SIZE` | Conexões do pool (1 a 100; padrão 4). No SQLite só uma grava por vez; mais conexões só aumentam leitores |
 | `PAINEL_HOST` | Interface em que o painel escuta (padrão `127.0.0.1`; veja a seção 7) |
+| `DASHBOARD_PORT` | Porta em que o painel escuta (1 a 65535; padrão 8080) |
+| `DASHBOARD_PROXY_CONFIAVEL` | Faixas CIDR de onde vem a conexão do proxy da empresa (padrão vazio). Só essas conexões podem informar `X-Forwarded-Proto`, `-For` e `-Host`; o `-For` é lido da direita para a esquerda. Proxy na mesma máquina: `127.0.0.1/32,::1/128`. Obrigatória em produção |
 | `PAINEL_CACHE_SEG` | Segundos em que as telas reaproveitam a leitura bruta do banco (padrão 60; `0` desliga). Sem isso, cada requisição relê as issues e o histórico inteiros |
 | `RETENTION_MONTHS` | Meses de dados locais mantidos (6 a 600; padrão 24; o prazo final é do DPO) |
 | `ACCESS_LOG_RETENTION_MONTHS` | Meses do registro de acesso (12 a 600; padrão 24) |
@@ -67,15 +69,15 @@ As demais variáveis (sincronização, logs, métricas, backup) estão em `docs/
 
 ## 5. Rodar o pacote
 
-A pasta de trabalho é a **raiz do pacote**, porque `frontend/dist` e a fonte dos modelos são caminhos relativos. Exige JDK 21.
+Exige JDK 21. Em produção os três caminhos (`PAINEL_CONFIG_DIR`, `DATABASE_PATH`, `PAINEL_STATIC_DIR`) são **absolutos**: um serviço iniciado na pasta errada criaria um banco vazio sem avisar, então caminho relativo recusa a subida (`CAMINHO_RELATIVO`).
 
 Windows 11 (PowerShell):
 
 ```powershell
 $env:PAINEL_CONFIG_DIR = 'D:\painel\config'
 $env:DATABASE_PATH     = 'D:\painel\dados\painel.db'
+$env:PAINEL_STATIC_DIR = 'D:\painel\pacote\painel\frontend\dist'
 $env:PAINEL_ENV_FILE   = 'D:\painel\painel.env'
-Set-Location D:\painel\pacote\painel
 .\bin\painel.bat
 ```
 
@@ -83,8 +85,12 @@ Set-Location D:\painel\pacote\painel
 
 ```sh
 cd /opt/painel/pacote/painel
-PAINEL_CONFIG_DIR=/etc/painel DATABASE_PATH=/var/lib/painel/painel.db PAINEL_ENV_FILE=/etc/painel/painel.env ./bin/painel
+PAINEL_CONFIG_DIR=/etc/painel DATABASE_PATH=/var/lib/painel/painel.db PAINEL_STATIC_DIR=/opt/painel/pacote/painel/frontend/dist PAINEL_ENV_FILE=/etc/painel/painel.env ./bin/painel
 ```
+
+### Guardas de produção
+
+Antes de abrir o banco, `main()` confere a configuração e recusa a subida com **todos** os códigos de uma vez (a mensagem nunca traz valor): `DEMO_EM_PRODUCAO`, `OIDC_ISSUER_SEM_HTTPS`, `REDIRECT_URI_SEM_HTTPS`, `ORIGEM_PUBLICA_AUSENTE` (`DASHBOARD_ORIGEM_PUBLICA` ausente ou sem `https://`), `REDIRECT_URI_FORA_DA_ORIGEM_PUBLICA`, `SESSION_SECRET_CURTO` (ausente, base64 inválido ou menos de 32 bytes), `PROXY_NAO_CONFIGURADO` (`DASHBOARD_PROXY_CONFIAVEL` vazia), `ESCUTA_ABERTA_A_TODAS` (`PAINEL_HOST` vazio, `0.0.0.0` ou `::`) e `CAMINHO_RELATIVO`. Em modo de desenvolvimento não se aplicam.
 
 Os scripts do pacote fixam o **perfil de produção**: sem `DASHBOARD_DEV_MODE` no arquivo de variáveis o painel sobe com o modo desenvolvimento desligado e **falha fechado** (não sobe) se faltar qualquer configuração obrigatória. Antes de subir, `painel validar-config` confere os YAML e as variáveis (veja `docs/operacao/runbook-diario.md`).
 
@@ -115,7 +121,7 @@ Em produção o painel só sobe com o login configurado. Qualquer provedor OpenI
 
 ## 7. Endereço de escuta
 
-O painel escuta em `127.0.0.1:8080` por padrão (`PAINEL_HOST`): só a própria máquina o alcança, e o proxy da empresa, instalado na mesma máquina, encaminha para ele e termina o TLS. Se o proxy estiver em **outra** máquina, defina `PAINEL_HOST` com a interface da rede interna (ou `0.0.0.0`): isso expõe o painel a toda a rede dessa interface, então só com regra de firewall que libere apenas o proxy. O `painel validar-config` avisa (`ESCUTA_FORA_DO_LOOPBACK`) quando a escuta sai do loopback. A porta das métricas (9464) tem variável própria e também escuta só no loopback.
+O painel escuta em `127.0.0.1:8080` por padrão (`PAINEL_HOST`): só a própria máquina o alcança, e o proxy da empresa, instalado na mesma máquina, encaminha para ele e termina o TLS. Se o proxy estiver em **outra** máquina, defina `PAINEL_HOST` com **um** endereço da rede interna (em produção `0.0.0.0` e `::` são recusados: `ESCUTA_ABERTA_A_TODAS`) e `DASHBOARD_PROXY_CONFIAVEL` com o IP do proxy: isso expõe o painel a toda a rede dessa interface, então só com regra de firewall que libere apenas o proxy. O `painel validar-config` avisa (`ESCUTA_FORA_DO_LOOPBACK`) quando a escuta sai do loopback. A porta das métricas (9464) tem variável própria e também escuta só no loopback.
 
 ## 8. Um painel por arquivo de banco
 

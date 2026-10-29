@@ -40,12 +40,20 @@ object Database {
         ).joinToString("&")
     }
 
-    /** Quantas migrações ainda faltam aplicar (0 = esquema em dia). */
-    fun migracoesPendentes(ds: DataSource): Int =
+    /**
+     * Flyway do painel: migrações em `classpath:db/migration` e `clean` DESLIGADO (apagar o banco inteiro não pode ser um
+     * comando disponível em lugar nenhum; o esquema só avança). Todo uso do Flyway no código passa por aqui.
+     */
+    fun flyway(ds: DataSource): Flyway =
         Flyway.configure()
             .dataSource(ds)
             .locations("classpath:db/migration")
+            .cleanDisabled(true)
             .load()
+
+    /** Quantas migrações ainda faltam aplicar (0 = esquema em dia). */
+    fun migracoesPendentes(ds: DataSource): Int =
+        flyway(ds)
             .info()
             .pending()
             .size
@@ -59,10 +67,6 @@ object Database {
 
     /** Aplica as migrações Flyway de `db/migration`. */
     fun migrate(ds: DataSource) {
-        Flyway.configure()
-            .dataSource(ds)
-            .locations("classpath:db/migration")
-            .load()
-            .migrate()
+        flyway(ds).migrate()
     }
 }

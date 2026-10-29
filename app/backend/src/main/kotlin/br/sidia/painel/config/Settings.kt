@@ -52,6 +52,8 @@ data class Settings(
      * implanta e exige firewall; o `validar-config` avisa (`ESCUTA_FORA_DO_LOOPBACK`).
      */
     val host: String = "127.0.0.1",
+    /** `DASHBOARD_PORT`: porta em que o painel escuta (1 a 65535; padrão 8080). O ensaio local usa outra para não colidir. */
+    val porta: Int = 8080,
     /**
      * `PAINEL_CACHE_SEG`: por quantos segundos as telas reaproveitam a leitura bruta do banco (issues e histórico) em vez de
      * relê-la a cada requisição. Vale só quando o painel sobe pelo `main`; os testes não ligam. `0` desliga. Fim de sincronização
@@ -95,7 +97,7 @@ data class Settings(
         "Settings(jiraLiveEnabled=$jiraLiveEnabled, dashboardDevMode=$dashboardDevMode, " +
             "dashboardDemoData=$dashboardDemoData, " +
             "retentionMonths=$retentionMonths, accessLogRetentionMonths=$accessLogRetentionMonths, zone=$zone, configDir=$configDir, " +
-            "databasePath=$databasePath, host=$host, cacheDeLeituraSeg=$cacheDeLeituraSeg, staticDir=$staticDir, " +
+            "databasePath=$databasePath, host=$host, porta=$porta, cacheDeLeituraSeg=$cacheDeLeituraSeg, staticDir=$staticDir, " +
             "databasePoolSize=$databasePoolSize, jiraInstances=$jiraInstances, origemPublica=$origemPublica, " +
             "oidc=${if (oidc != null) "configurado" else "ausente"})"
 
@@ -133,6 +135,10 @@ data class Settings(
                 configDir = caminho(env, "PAINEL_CONFIG_DIR") ?: padrao.configDir,
                 databasePath = caminho(env, "DATABASE_PATH") ?: padrao.databasePath,
                 host = host(env, padrao.host),
+                porta = texto(env, "DASHBOARD_PORT")?.let {
+                    it.toIntOrNull()?.takeIf { n -> n in 1..65535 }
+                        ?: throw IllegalArgumentException("DASHBOARD_PORT inválida (esperado inteiro de 1 a 65535)")
+                } ?: padrao.porta,
                 cacheDeLeituraSeg = texto(env, "PAINEL_CACHE_SEG")?.let {
                     it.toIntOrNull()?.takeIf { n -> n in 0..600 }
                         ?: throw IllegalArgumentException("PAINEL_CACHE_SEG inválido (esperado inteiro de 0 a 600)")
