@@ -88,10 +88,6 @@ data class MetaResposta(
     val aguardandoCargaDoJira: Boolean,
 )
 
-/** Sem banco ou com erro de leitura não há como afirmar que falta a carga: responde falso (a tela não inventa um aviso). */
-private fun semSincronizacaoReal(ds: javax.sql.DataSource?): Boolean =
-    ds != null && runCatching { ds.connection.use { !br.sidia.painel.sync.SincronizacaoReal.existe(it) } }.getOrDefault(false)
-
 private val log = LoggerFactory.getLogger("br.sidia.painel")
 
 fun main(args: Array<String>) {
@@ -268,7 +264,7 @@ fun Application.module(
                     liveEnabled = settings.jiraLiveEnabled,
                     zone = settings.zone.id,
                     banner = banner,
-                    aguardandoCargaDoJira = settings.jiraLiveEnabled && semSincronizacaoReal(context.dataSource),
+                    aguardandoCargaDoJira = settings.jiraLiveEnabled && br.sidia.painel.sync.SincronizacaoReal.aguardandoPrimeiraCarga(context.dataSource),
                 ),
             )
         }

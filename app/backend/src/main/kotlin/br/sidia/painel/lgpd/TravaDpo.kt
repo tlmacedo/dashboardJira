@@ -32,7 +32,7 @@ class TravaDpo(private val settings: Settings, private val dataSource: DataSourc
         val ds = dataSource ?: return false
         return try {
             // A prova de sincronização real é a mesma do expurgo da demonstração (execução real ou linha de estado de instância).
-            ds.connection.use { c -> !SincronizacaoReal.existe(c) }
+            ds.connection.use { c -> !SincronizacaoReal.houveTentativa(c) }
         } catch (e: Exception) {
             false
         }

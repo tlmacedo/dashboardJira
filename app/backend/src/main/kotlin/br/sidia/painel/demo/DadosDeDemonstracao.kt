@@ -153,7 +153,7 @@ class DadosDeDemonstracao(
                 // Depois da primeira sincronização real o expurgo nunca mais apaga nada: o projeto do Jira real pode ter chaves
                 // iguais às da fixture (DEMO-n), e essas issues, vínculos e decisões são dados de verdade. A prova é checada
                 // NA MESMA transação; a primeira subida com a flag roda antes do agendador, então ainda não há sincronização.
-                val resumos = if (br.sidia.painel.sync.SincronizacaoReal.existe(con)) {
+                val resumos = if (br.sidia.painel.sync.SincronizacaoReal.houveTentativa(con)) {
                     emptyList()
                 } else {
                     val apagados = chaves.map { (id, _, lista) -> expurgarInstancia(con, id, lista) }
