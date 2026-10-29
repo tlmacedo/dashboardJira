@@ -44,7 +44,7 @@ Documentos: [trabalho e prazos](diferencas-esperadas-trabalho-e-prazos.md) · [t
 | VG-06 | diferença esperada | `VG-09`, `NG-01` | `CentralCalculatorTest.semAtualizacaoEParadasSaoDoisItensQueNaoSeSomam` | [checklist, integridade e governança](diferencas-esperadas-checklist-integridade-governanca.md): deixou de ser KPI próprio, virou item da Central |
 | VG-07 | diferença esperada | `VG-09`, `NG-04` | `CentralRoutesTest.itensBatemComAsTelasDeDestino` | [checklist, integridade e governança](diferencas-esperadas-checklist-integridade-governanca.md): item da Central, com a flag de impedimento |
 | VG-08 | consistente | `VG-08`, `RI-01` | `CentralRoutesTest.itensBatemComAsTelasDeDestino`, `CompatLegadoTrabalhoTest.riscoComPesosDoLegado` | [trabalho e prazos](diferencas-esperadas-trabalho-e-prazos.md), RI-01 |
-| VG-09 | diferença esperada | `VG-09` | `CentralRoutesTest.semAtualizacaoEParadasSeparadas`, `CentralCalculatorTest.itemQueOPapelNaoVeNaoExisteNoDto` | [checklist, integridade e governança](diferencas-esperadas-checklist-integridade-governanca.md): sem dupla contagem (achado 2), cada número chama o card de destino |
+| VG-09 | diferença esperada | `VG-09` | `CentralRoutesTest.semAtualizacaoEParadasSeparadas`, `CentralCalculatorTest.itemQueOPapelNaoVeNaoExisteNoDto` | [checklist, integridade e governança](diferencas-esperadas-checklist-integridade-governanca.md): sem dupla contagem (achado 2), cada número chama o card de destino; os itens da Auditoria saíram para o `VG-14` (Plano 11) |
 | VG-10 | diferença esperada | `VG-10`, `FE-07` | `CentralCalculatorTest.entregasPorSemanaEmOrdemDeData` | [trabalho e prazos](diferencas-esperadas-trabalho-e-prazos.md), FE-07: semana de Manaus |
 | VG-11 | diferença esperada | `VG-11`, `PV-02` | `CompatLegadoTrabalhoTest.monteCarloSemChegadaComoOLegado` | [trabalho e prazos](diferencas-esperadas-trabalho-e-prazos.md), PV-02: o novo acrescenta a taxa de chegada |
 | VG-12 | diferença esperada | `VG-12` | `CentralCalculatorTest.squadsEmOrdemAlfabeticaSemNotaDePessoa`, `CentralRoutesTest.cartaoPorSquadAlfabeticoSemNotaDePessoa` | [checklist, integridade e governança](diferencas-esperadas-checklist-integridade-governanca.md), Início: ocupação média e Jain, sem nota de pessoa |
@@ -179,7 +179,7 @@ Cards do catálogo que não substituem nenhum id do inventário (spec 6.2 e os p
 
 | Grupo | Cards |
 |---|---|
-| Auditoria de alterações (o legado só tinha a Integridade) | `AU-01`, `AU-02`, `AU-03`, `DV-01` |
+| Auditoria de alterações (o legado só tinha a Integridade; desde o Plano 11 os itens da Auditoria da Central moram no `VG-14`, fora do `VG-09`) | `AU-01`, `AU-02`, `AU-03`, `DV-01`, `VG-14` |
 | Trabalho e prazos | `AB-10`, `FE-13` |
 | Fluxo e gestão | `FX-01`, `FX-02`, `AW-01`, `AW-02`, `BQ-01`, `BQ-02`, `BQ-03`, `BQ-04`, `BQ-05`, `CT-01`, `CT-02`, `CZ-01` |
 | Pessoas e planejamento | `CL-01`, `PL-01`, `VE-01`, `VE-02`, `TD-01`, `PS-01`, `PS-02`, `EF-01`, `EF-02`, `CB-01`, `SI-01`, `CM-01`, `CM-02`, `CM-03`, `RV-01`, `RV-02`, `CG-01`, `CG-02` |
