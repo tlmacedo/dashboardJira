@@ -11,6 +11,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
+import collections.abc
 import tempfile
 
 import tempo_em_status as t
@@ -325,7 +326,7 @@ class TestTravaDaFlag(unittest.TestCase):
         self.addCleanup(pasta.cleanup)
         arquivo = Path(pasta.name) / ".env"
         if conteudo is not None:
-            arquivo.write_text(conteudo, encoding="utf-8")
+            arquivo.write_bytes(conteudo.encode("utf-8"))  # bytes exatos: CRLF e separadores exóticos intactos
         return arquivo
 
     def _rodar(self, arquivo):
@@ -337,11 +338,34 @@ class TestTravaDaFlag(unittest.TestCase):
             chamadas.append(req)
             raise AssertionError("o script tentou abrir conexão")
 
-        class AmbienteProibido(dict):
-            def get(self, chave, *a, **k):
-                if chave == "TOK_TESTE":
-                    raise AssertionError("o script leu a credencial antes da trava")
-                return a[0] if a else None
+        proibidas = {"TOK_TESTE", NOME_FLAG}
+
+        class AmbienteProibido(collections.abc.MutableMapping):
+            """Levanta em qualquer leitura da credencial ou da flag no ambiente, e em qualquer varredura dele.
+
+            O argparse consulta chaves de idioma (gettext); essas são devolvidas vazias.
+            """
+
+            def _negar(self, *a, **k):
+                raise AssertionError("o script leu o ambiente do processo (credencial ou flag)")
+
+            def __getitem__(self, chave):
+                if chave in proibidas:
+                    self._negar()
+                raise KeyError(chave)
+
+            def get(self, chave, padrao=None):
+                if chave in proibidas:
+                    self._negar()
+                return padrao
+
+            def __contains__(self, chave):
+                if chave in proibidas:
+                    self._negar()
+                return False
+
+            __iter__ = __len__ = copy = items = keys = values = _negar
+            __setitem__ = __delitem__ = _negar
 
         err = io.StringIO()
         with mock.patch.object(os, "environ", AmbienteProibido()), \
@@ -417,6 +441,68 @@ class TestTravaDaFlag(unittest.TestCase):
         self._aceita(f"{NOME_FLAG}={VALOR_LIGADO.upper()}\n")  # o app aceita o valor sem diferenciar caixa
         self._aceita(f"{NOME_FLAG}=false\n{NOME_FLAG}={VALOR_LIGADO}\n")
 
+    def test_flag_so_no_ambiente_do_processo_recusa(self):
+        import os
+        from unittest import mock
+        chamadas = []
+        err = io.StringIO()
+        with mock.patch.dict(os.environ, {NOME_FLAG: VALOR_LIGADO, "TOK_TESTE": "x"}), \
+                redirect_stderr(err), redirect_stdout(io.StringIO()):
+            codigo = t.main(["--url", "https://j.exemplo.com", "--jql", "p", "--token-env", "TOK_TESTE"],
+                            abrir=lambda *a, **k: chamadas.append(a), arquivo_env=self._env(None))
+        self.assertEqual((codigo, chamadas), (2, []))
+
+    def test_bom_e_crlf_ligam(self):
+        self._aceita("﻿" + f"{NOME_FLAG}={VALOR_LIGADO}\n")
+        self._aceita(f"{NOME_FLAG}={VALOR_LIGADO}\r\n")
+        self._aceita(f"{NOME_FLAG}=false\r{NOME_FLAG}={VALOR_LIGADO}\r")
+
+    def test_paridade_com_o_arquivo_env_do_app(self):
+        """Tabela do que o ArquivoEnv.kt (readAllLines + trim do Kotlin + booleano) entende; script = app ou mais estrito."""
+        n, v = NOME_FLAG, VALOR_LIGADO
+        tabela = [
+            (f"{n}={v}\n", True),
+            (f"{n}= {v} \n", True),                # nbsp é aparado pelo trim do Kotlin
+            (f"{n}={v} \n", True),                 # Zl aparado
+            (f" {n}={v}\n", True),
+            (f"{n}={v}\x1c\n", True),                   # separadores de arquivo/grupo/registro/unidade aparados
+            (f"{n}={v}\x1f\n", True),
+            (f"{n}=\x1e{v}\n", True),
+            (f"{n}={v}\x0b\n", True),
+            (f"{n}={v}\x0c\n", True),
+            (f"{n}={v}　\n", True),
+            (f'{n}=" {v} "\n', True),
+            (f"{n}=false {n}={v}\n", False),      # Java não quebra linha em U+2028: um valor só
+            (f"{n}=false\x0b{n}={v}\n", False),
+            (f"{n}=false\x0c{n}={v}\n", False),
+            (f"{n}=false\x1c{n}={v}\n", False),
+            (f"{n}=false\x1d{n}={v}\n", False),
+            (f"{n}=false\x1e{n}={v}\n", False),
+            (f"{n}=false\x85{n}={v}\n", False),
+            (f"{n}=false {n}={v}\n", False),
+            (f"{n}={v}\x85\n", False),                  # U+0085 NÃO é aparado pelo Kotlin
+            (f"\x85{n}={v}\n", False),
+            (f"{n}={v}﻿\n", False),                # BOM só vale no começo da linha
+            (f"{n}={v}#c\n", False),
+            (f"{n}={v}\t# c\n", False),                 # só " #" (espaço) começa comentário
+            (f"export\t{n}={v}\n", False),
+            (f"export  {n}={v}\n", True),               # após "export " o resto é aparado
+            (f"{n}=1\n", False), (f"{n}=yes\n", False), (f"{n}=on\n", False), (f"{n}=\n", False),
+            (f"{n.lower()}={v}\n", False),
+            (f"{n}={v}\n{n}=false\n", False),
+            (f"{n}={v}\r{n}=false\r", False),
+        ]
+        for conteudo, esperado in tabela:
+            arquivo = self._env(conteudo)
+            self.assertEqual(t.flag_do_jira_ligada(arquivo), esperado, repr(conteudo))
+
+    def test_bytes_invalidos_em_utf8_recusam(self):
+        pasta = tempfile.TemporaryDirectory()
+        self.addCleanup(pasta.cleanup)
+        arquivo = Path(pasta.name) / ".env"
+        arquivo.write_bytes(f"{NOME_FLAG}={VALOR_LIGADO}\n# \xe9\n".encode("latin-1"))
+        self.assertFalse(t.flag_do_jira_ligada(arquivo))  # o app nem sobe com UTF-8 inválido
+
     def test_arquivo_padrao_e_o_app_env_da_raiz(self):
         esperado = Path(__file__).resolve().parent.parent.parent / "app" / ".env"
         # o módulo é recarregado para ler o valor de fábrica (o setUpModule troca o atributo)
@@ -429,6 +515,50 @@ class TestTravaDaFlag(unittest.TestCase):
             self.assertEqual(fresco.ARQUIVO_ENV, esperado)
         finally:
             fresco.ARQUIVO_ENV = Path(_PASTA_TMP.name) / "env-teste"
+
+
+class TestTravaNoPontoDeRede(unittest.TestCase):
+    """A trava vale também para quem importa as funções públicas (sem passar por main)."""
+
+    def _env(self, conteudo):
+        pasta = tempfile.TemporaryDirectory()
+        self.addCleanup(pasta.cleanup)
+        arquivo = Path(pasta.name) / ".env"
+        if conteudo is not None:
+            arquivo.write_bytes(conteudo.encode("utf-8"))
+        return arquivo
+
+    def test_buscar_issues_recusa_sem_a_flag_e_nao_chama_abrir(self):
+        chamadas = []
+        for conteudo in (None, f"{NOME_FLAG}=false\n"):
+            with self.assertRaises(t.FlagDoJiraDesligada) as ctx:
+                t.buscar_issues("https://j.exemplo.com", "token-secreto", "project = SEGREDO",
+                                abrir=lambda *a, **k: chamadas.append(a), arquivo_env=self._env(conteudo))
+            for proibido in ("token-secreto", "SEGREDO", "j.exemplo.com"):
+                self.assertNotIn(proibido, str(ctx.exception))
+        self.assertEqual(chamadas, [])
+
+    def test_buscar_issues_recusa_ja_na_chamada_nao_so_na_iteracao(self):
+        with self.assertRaises(t.FlagDoJiraDesligada):
+            t.buscar_issues("https://j.exemplo.com", "x", "p", arquivo_env=self._env(None))  # sem list()/next()
+
+    def test_ler_pagina_recusa_sem_a_flag(self):
+        chamadas = []
+        with self.assertRaises(t.FlagDoJiraDesligada):
+            t._ler_pagina(object(), lambda *a, **k: chamadas.append(a), lambda s: None, 3,
+                          arquivo_env=self._env(None))
+        self.assertEqual(chamadas, [])
+
+    def test_buscar_issues_com_a_flag_no_arquivo_temporario_funciona(self):
+        chamadas = []
+
+        def abrir(req, **kw):
+            chamadas.append(req)
+            return io.BytesIO(json.dumps({"startAt": 0, "total": 0, "issues": []}).encode("utf-8"))
+
+        issues = list(t.buscar_issues("https://j.exemplo.com", "x", "p", abrir=abrir,
+                                      arquivo_env=self._env(f"{NOME_FLAG}={VALOR_LIGADO}\n")))
+        self.assertEqual((issues, len(chamadas)), ([], 1))
 
 
 if __name__ == "__main__":

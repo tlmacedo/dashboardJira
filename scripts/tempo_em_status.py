@@ -16,6 +16,7 @@ import argparse
 import csv
 import json
 import os
+import re
 import sys
 import time
 import urllib.error
@@ -134,7 +135,8 @@ def reaberturas(issue, de_status, para_status=None):
                if tr["de"] == de_status and (para_status is None or tr["para"] == para_status))
 
 
-def _ler_pagina(req, abrir, dormir, max_tentativas):
+def _ler_pagina(req, abrir, dormir, max_tentativas, arquivo_env=None):
+    exigir_flag_do_jira(arquivo_env)  # trava também aqui: último ponto antes de chamar ``abrir``
     for tentativa in range(1, max_tentativas + 1):
         try:
             resposta = abrir(req, timeout=60)
@@ -160,8 +162,17 @@ def _ler_pagina(req, abrir, dormir, max_tentativas):
 
 
 def buscar_issues(url, token, jql, abrir=urllib.request.urlopen, dormir=time.sleep,
-                  tamanho_pagina=100, max_tentativas=5):
-    """Gerador de issues do /rest/api/2/search, com paginação e espera em 429."""
+                  tamanho_pagina=100, max_tentativas=5, arquivo_env=None):
+    """Issues do /rest/api/2/search, com paginação e espera em 429.
+
+    A trava da flag vale AQUI (ponto de rede), já na chamada: quem importa a função sem passar por
+    main() também é recusado, antes de montar a requisição ou chamar ``abrir``.
+    """
+    exigir_flag_do_jira(arquivo_env)
+    return _paginas(url, token, jql, abrir, dormir, tamanho_pagina, max_tentativas, arquivo_env)
+
+
+def _paginas(url, token, jql, abrir, dormir, tamanho_pagina, max_tentativas, arquivo_env):
     inicio = 0
     while True:
         consulta = urllib.parse.urlencode({
@@ -172,7 +183,7 @@ def buscar_issues(url, token, jql, abrir=urllib.request.urlopen, dormir=time.sle
         req = urllib.request.Request(
             f"{url.rstrip('/')}/rest/api/2/search?{consulta}",
             headers={"Authorization": f"Bearer {token}", "Accept": "application/json"})
-        pagina = _ler_pagina(req, abrir, dormir, max_tentativas)
+        pagina = _ler_pagina(req, abrir, dormir, max_tentativas, arquivo_env=arquivo_env)
         issues = pagina.get("issues") or []
         yield from issues
         inicio = pagina.get("startAt", inicio) + len(issues)
@@ -228,25 +239,57 @@ def flag_do_jira_ligada(arquivo):
     qualquer outro valor = desligada (falha fechada). Nunca imprime o conteúdo do arquivo.
     """
     try:
-        linhas = Path(arquivo).read_text(encoding="utf-8").splitlines()
+        # UTF-8 estrito, sem BOM implícito: o Java falha em byte inválido e o app nem sobe.
+        texto = Path(arquivo).read_bytes().decode("utf-8")
     except (OSError, UnicodeError, ValueError):
         return False
     valor = None
-    for bruta in linhas:
-        linha = bruta.strip().removeprefix("﻿")
+    # Só \n, \r e \r\n quebram linha (como Files.readAllLines); U+2028, \x0b, \x85 etc. NÃO quebram.
+    for bruta in re.split(r"\r\n|\r|\n", texto):
+        linha = _aparar(bruta).removeprefix("﻿")
         if not linha or linha.startswith("#"):
             continue
-        linha = linha.removeprefix("export ").strip()
+        linha = _aparar(linha.removeprefix("export "))
         nome, igual, resto = linha.partition("=")
-        if not igual or nome.strip() != NOME_FLAG_JIRA:
+        if not igual or _aparar(nome) != NOME_FLAG_JIRA:
             continue
-        resto = resto.strip()
+        resto = _aparar(resto)
         if len(resto) >= 2 and resto[0] in "\"'" and resto[-1] == resto[0]:
             resto = resto[1:-1]
         else:
-            resto = resto.split(" #", 1)[0].strip()
+            resto = _aparar(resto.split(" #", 1)[0])
         valor = resto
-    return valor is not None and valor.strip().lower() == "true"
+    return valor is not None and _minusculas_ascii(_aparar(valor)) == "true"
+
+
+# Os caracteres que o trim() do Kotlin remove (Character.isWhitespace ou isSpaceChar do Java).
+# Atenção: U+0085 NÃO está na lista (o strip() do Python o removeria; o app não).
+_ESPACOS_KOTLIN = (
+    "\t\n\x0b\x0c\r\x1c\x1d\x1e\x1f \xa0 "
+    "           "
+    "    　"
+)
+
+
+def _aparar(texto):
+    return texto.strip(_ESPACOS_KOTLIN)
+
+
+def _minusculas_ascii(texto):
+    """Minúsculas só nas letras ASCII (nenhum caractere exótico vira 't', 'r', 'u' ou 'e')."""
+    return "".join(chr(ord(c) + 32) if "A" <= c <= "Z" else c for c in texto)
+
+
+class FlagDoJiraDesligada(RuntimeError):
+    """A flag de acesso ao Jira não está ligada em app/.env; nenhuma rede foi tocada."""
+
+
+def exigir_flag_do_jira(arquivo_env=None):
+    """Trava no ponto de rede: levanta sem eco de URL, JQL ou token."""
+    if not flag_do_jira_ligada(arquivo_env or ARQUIVO_ENV):
+        raise FlagDoJiraDesligada(
+            f"Recusado: {NOME_FLAG_JIRA} não está ligada em app/.env (ausente = desligada). "
+            "Com a flag desligada nenhum acesso ao Jira é permitido; só o usuário liga a flag.")
 
 
 def main(argv=None, abrir=urllib.request.urlopen, dormir=time.sleep, arquivo_env=None):
@@ -266,13 +309,13 @@ def main(argv=None, abrir=urllib.request.urlopen, dormir=time.sleep, arquivo_env
     args = parser.parse_args(argv)
 
     # TRAVA (regra 1 do projeto): antes de qualquer rede ou leitura de credencial.
-    if not flag_do_jira_ligada(arquivo_env or ARQUIVO_ENV):
-        print(f"Recusado: {NOME_FLAG_JIRA} não está ligada em app/.env (ausente = desligada). "
-              "Com a flag desligada nenhum acesso ao Jira é permitido; só o usuário liga a flag.",
-              file=sys.stderr)
+    try:
+        exigir_flag_do_jira(arquivo_env)
+    except FlagDoJiraDesligada as erro:
+        print(str(erro), file=sys.stderr)
         return 2
 
-    token =os.environ.get(args.token_env)
+    token = os.environ.get(args.token_env)
     if not token:
         print(f"Variável de ambiente {args.token_env} não definida ou vazia.", file=sys.stderr)
         return 1
@@ -280,7 +323,11 @@ def main(argv=None, abrir=urllib.request.urlopen, dormir=time.sleep, arquivo_env
     agora = datetime.now(timezone.utc)
     # Mensagens curtas: sem URL, JQL nem token.
     try:
-        issues = list(buscar_issues(args.url, token, args.jql, abrir=abrir, dormir=dormir))
+        issues = list(buscar_issues(args.url, token, args.jql, abrir=abrir, dormir=dormir,
+                                    arquivo_env=arquivo_env))
+    except FlagDoJiraDesligada as erro:
+        print(str(erro), file=sys.stderr)
+        return 2
     except urllib.error.HTTPError as erro:
         dica = " Verifique o PAT e as permissões." if erro.code in (401, 403) else ""
         print(f"O Jira respondeu com erro HTTP {erro.code}.{dica}", file=sys.stderr)
