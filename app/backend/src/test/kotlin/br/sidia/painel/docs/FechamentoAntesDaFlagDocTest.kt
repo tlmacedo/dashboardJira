@@ -158,17 +158,40 @@ class FechamentoAntesDaFlagDocTest {
         }
     }
 
+
     @Test
-    fun claudeMdMantemAsRegrasEAsDecisoesDeProduto() {
-        // O fechamento só mexe na tabela de caminhos: as regras 1 a 8 e as decisões de produto continuam como estavam.
-        val texto = ApoioDeDocs.texto("CLAUDE.md")
-        val regras = texto.substringAfter("## Regras que valem sempre").substringBefore("## Decisões de produto")
-        for (n in 1..8) assertTrue(Regex("(?m)^$n\\. ").containsMatchIn(regras), "regra $n sumiu do CLAUDE.md")
-        assertTrue("A única trava de acesso ao Jira é a flag `JIRA_LIVE_ENABLED`" in regras)
-        val decisoes = texto.substringAfter("## Decisões de produto").substringBefore("## Onde está cada coisa")
-        for (termo in listOf("Fuso", "Concluída", "Atraso justificado", "Sem ranking de pessoas", "Acesso", "Identidade", "Auditoria", "Ausências e feriados")) {
-            assertTrue(termo in decisoes, "decisão de produto '$termo' sumiu")
+    fun claudeMdMantemOTextoDasRegrasEDasDecisoesDeProduto() {
+        // O fechamento só mexe na tabela de caminhos. As regras 1 a 8 e as "Decisões de produto" são do usuário: o texto completo
+        // fica fixado pelo SHA-256 abaixo. Mudou de propósito (pelo usuário)? Atualize o hash junto, na mesma mudança.
+        val texto = ApoioDeDocs.texto("CLAUDE.md").replace("\r\n", "\n")
+        val bloco = texto.substringAfter("## Regras que valem sempre").substringBefore("## Onde está cada coisa").trim()
+        for (n in 1..8) assertTrue(Regex("(?m)^$n\\. ").containsMatchIn(bloco), "regra $n sumiu do CLAUDE.md")
+        assertTrue("## Decisões de produto" in bloco)
+        val hash = java.security.MessageDigest.getInstance("SHA-256").digest(bloco.toByteArray(Charsets.UTF_8)).joinToString("") { "%02x".format(it) }
+        assertEquals("6d21285e58e6b813b15f3939f3f2f344d2e1af80614ab72dc9a117014d943786", hash, "o texto das regras 1 a 8 ou das decisões de produto do CLAUDE.md mudou")
+    }
+
+    @Test
+    fun nenhumDocumentoDoFechamentoEscreveAFlagComoLigada() {
+        // Todas as formas: nome=valor, nome = valor, nome: valor, valor entre aspas ou crases, "igual a", "com valor", e os valores
+        // true, verdadeiro, 1, on, sim, ligada. As amostras ruins são montadas com o nome da variável por interpolação.
+        val nome = "JIRA_LIVE_ENABLED"
+        val atribuicao = Regex(
+            """$nome[`"']?\s*(=|:|igual a|com valor|valor|ligada com|setada para|em)\s*[`"']?(true|verdadeiro|1|on|sim|ligad[oa])\b""",
+            RegexOption.IGNORE_CASE,
+        )
+        for (doc in listOf(
+            "docs/superpowers/relatorio-final-antes-da-flag.md", "docs/superpowers/plans/2026-10-28-roteiro-antes-e-depois-da-flag.md",
+            "HANDOFF.md", "app/README.md", "PRODUCT.md", "docs/superpowers/plans/2026-10-24-indice-dos-planos.md",
+        )) {
+            val achado = atribuicao.find(ApoioDeDocs.texto(doc))
+            assertTrue(achado == null, "$doc escreve a flag como ligada: '${achado?.value}'")
         }
+        // O detector pega as formas ruins (prova de que o teste morde) e deixa passar a forma desligada.
+        for (ruim in listOf("$nome=true", "$nome = true", "$nome: True", "$nome=\"true\"", "$nome` com valor verdadeiro", "$nome igual a 1")) {
+            assertTrue(atribuicao.containsMatchIn(ruim), "detector não pegou: $ruim")
+        }
+        assertTrue(!atribuicao.containsMatchIn("$nome=false"))
     }
 
     @Test

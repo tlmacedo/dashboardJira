@@ -125,7 +125,7 @@ Medidos em 29/10/2026 sobre `1ad9529`. Migrações, cartões e itens do menu sã
 - 7 migrações (V1 a V7): `V1__base`, `V2__campos_de_trabalho`, `V3__execucao_de_backup`, `V4__worklog_por_instancia`, `V5__decisao_distribuicao`, `V6__campos_do_dicionario`, `V7__dados_para_auditoria_completa`. A próxima livre é a V8.
 - 175 cartões no catálogo (`catalogoPadrao()`) e 43 itens no menu (`nav.ts`).
 - Frontend: 80 arquivos de teste e 718 testes, 0 falhas (`pnpm test`).
-- Backend: 2.679 testes sobre `1ad9529` e 2.701 com os testes de documento deste fechamento (`./gradlew test --rerun-tasks`), 0 falhas, 1 ignorado (`ValidadorDeConfigTest.bancoEmPastaSemEscrita`, que se pula quando o processo roda como root, como nesta máquina).
+- Backend: 2.679 testes sobre `1ad9529` e 2.706 com os testes de documento deste fechamento (`./gradlew test --rerun-tasks`), 0 falhas, 1 ignorado (`ValidadorDeConfigTest.bancoEmPastaSemEscrita`, que se pula quando o processo roda como root, como nesta máquina).
 - Dependência nova de runtime registrada nos arquivos de progresso: `micrometer-registry-prometheus` (Plano 12). O Plano 8 (OIDC e sessão) e o Plano 13 (proxy confiável) não acrescentaram dependência.
 
 ## (f) Lista de ações do usuário, em ordem
