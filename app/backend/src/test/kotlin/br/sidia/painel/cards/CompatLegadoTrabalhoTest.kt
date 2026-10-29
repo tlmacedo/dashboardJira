@@ -17,18 +17,15 @@ import br.sidia.painel.trabalho.rodarTrb1
 import io.ktor.http.HttpStatusCode
 import kotlinx.serialization.json.Json
 import org.junit.jupiter.api.AfterAll
-import org.junit.jupiter.api.Assumptions
-import java.nio.file.Files
-import java.nio.file.Path
 import kotlin.random.Random
 import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
-import kotlin.test.assertTrue
 
 /**
- * Compatibilidade com o app Python anterior (`legacy/backend/jiradash`), conferida no código antes de aceitar:
+ * Compatibilidade com o app Python anterior (`legacy/backend/jiradash`, preservado na tag `legacy-final`), conferida no
+ * código antes de aceitar:
  * - ciclo = resolução menos a PRIMEIRA entrada em status ativo, de espera ou bloqueado (`metrics/core.py`,
  *   `cycle_time_s`), em dias corridos: TG-111 4, TG-112 9, TG-113 13, TG-114 1 -> P50 6,5;
  * - faixas de idade `0-7`, `8-14`, `15-30` e `> 30` em dias corridos desde a primeira entrada ativa ou a criação
@@ -89,37 +86,16 @@ class CompatLegadoTrabalhoTest {
         )
     }
 
-    // ---- Bloco 5b: Previsão e Riscos, conferidos contra legacy/backend/jiradash/metrics (forecast.py e risk.py) ----
+    // ---- Bloco 5b: Previsão e Riscos, conferidos contra legacy/backend/jiradash/metrics (forecast.py e risk.py, na tag legacy-final) ----
 
-    /**
-     * O código-fonte do legado, quando ele ainda existe no repositório; depois da remoção (tag `legacy-final`) devolve
-     * null e SÓ a conferência do texto é pulada: os valores esperados dos testes ficam congelados no próprio teste,
-     * então a prova numérica sobrevive à remoção.
-     */
-    private fun legado(arquivo: String): String? {
-        var dir: Path? = Path.of("").toAbsolutePath()
-        while (dir != null) {
-            val f = dir.resolve("legacy/backend/jiradash/metrics/$arquivo")
-            if (Files.exists(f)) return Files.readString(f)
-            dir = dir.parent
-        }
-        return null
-    }
-
-    /** Confere o texto do legado só quando ele existe. */
-    private fun noLegado(fonte: String?, vararg trechos: String) {
-        if (fonte == null) return
-        trechos.forEach { assertTrue(it in fonte, "o legado mudou: reconferir a conta ($it)") }
-    }
+    // O código do legado (tag `legacy-final`) não está mais no repositório: os trechos Python conferidos antes da remoção
+    // ficam nos comentários e os valores esperados, congelados nos próprios testes.
 
     @Test
     fun monteCarloSemChegadaComoOLegado() {
         // forecast.py::monte_carlo_when com vazão constante: 20 itens a 5 por semana = 4 semanas em todos os percentis.
-        val fonte = legado("forecast.py")
-        noLegado(
-            fonte, "reached = cum >= remaining_items", "max_weeks: int = 104", "MIN_WEEKS = 8",
-            "np.percentile(totals, 15)", "np.percentile(totals, 5)",
-        )
+        // Trechos do legado: `reached = cum >= remaining_items`, `max_weeks: int = 104`, `MIN_WEEKS = 8`,
+        // `np.percentile(totals, 15)` e `np.percentile(totals, 5)`.
         assertEquals(Quando(4, 4, 4), MonteCarlo(Random(42)).quando(List(8) { 5 }, null, 20, 10_000, 104))
         // O limite de semanas e o piso de confiança são os do legado.
         assertEquals(104, RegrasDePrevisao.PADRAO.limiteSemanas)
@@ -132,8 +108,7 @@ class CompatLegadoTrabalhoTest {
     @Test
     fun restanteDadaIdadeComoOLegado() {
         // forecast.py::remaining_given_age: ciclos maiores que a idade, mínimo de 5, P50 e P85 com uma casa decimal.
-        val fonte = legado("forecast.py")
-        noLegado(fonte, "min_n: int = 5", "c > age_days")
+        // Trechos do legado: `min_n: int = 5` e `c > age_days`.
         val ciclos = listOf(2.0, 4.0, 6.0, 8.0, 10.0, 12.0)
         assertEquals(5.0 to 7.8, MonteCarlo(Random(1)).restanteDadaIdade(ciclos, 3.0))
         assertNull(MonteCarlo(Random(1)).restanteDadaIdade(ciclos, 5.0)) // só 4 itens mais longos que 5
@@ -141,14 +116,10 @@ class CompatLegadoTrabalhoTest {
 
     @Test
     fun riscoComPesosDoLegado() {
-        val fonte = legado("risk.py")
         // Os pesos, na ordem em que o legado os soma (idade P85 e P50, parada, vencida, previsão, vence em breve, bloqueada,
         // reaberta, trocas, horas, sem atualização, sem estimativa).
-        // Congelado do risk.py (a ordem de `add(peso, ...)`); com o legado presente, confere também contra o código.
+        // Congelado do risk.py (a ordem de `add(peso, ...)`), conferido contra o código Python antes da remoção.
         val doLegado = listOf(30, 10, 15, 25, 20, 8, 15, 10, 10, 15, 10, 5)
-        if (fonte != null) {
-            assertEquals(doLegado, Regex("""add\((\d+),""").findAll(fonte).map { it.groupValues[1].toInt() }.toList())
-        }
         val novos = RegrasDeRisco.PADRAO.pesos
         val ordem = listOf(
             FatorDeRisco.IDADE_ACIMA_P85, FatorDeRisco.IDADE_ACIMA_P50, FatorDeRisco.PARADA, FatorDeRisco.VENCIDA,
@@ -157,10 +128,8 @@ class CompatLegadoTrabalhoTest {
         )
         assertEquals(ordem.map { novos.getValue(it) }, doLegado)
         // Os limiares: níveis 60 e 30, vence em 3 dias, horas acima de 125%, 3 trocas e 7 dias sem atualização.
-        noLegado(
-            fonte, """LEVELS = [(60, "alto"), (30, "médio"), (0, "baixo")]""", "(rec.due - today).days <= 3",
-            "1.25 * rec.original_estimate_s", "reassign_count(rec) >= 3", "idle > 7", "min(100, sum(",
-        )
+        // Trechos do legado: `LEVELS = [(60, "alto"), (30, "médio"), (0, "baixo")]`, `(rec.due - today).days <= 3`,
+        // `1.25 * rec.original_estimate_s`, `reassign_count(rec) >= 3`, `idle > 7` e `min(100, sum(`.
         val r = RegrasDeRisco.PADRAO
         assertEquals(listOf(60, 30, 3, 1.25, 3, 7), listOf(r.alto, r.medio, r.venceEmDias, r.estouro, r.trocas, r.diasSemAtualizacao))
         assertEquals(listOf("alto", "medio", "baixo"), listOf(60, 30, 29).map(r::nivel))

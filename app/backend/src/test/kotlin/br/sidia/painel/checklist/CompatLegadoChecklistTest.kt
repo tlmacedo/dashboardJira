@@ -1,43 +1,30 @@
 package br.sidia.painel.checklist
 
-import br.sidia.painel.TestPaths
 import br.sidia.painel.integridade.EvidenciaIntegridade
 import br.sidia.painel.integridade.NivelIntegridade
 import br.sidia.painel.integridade.NiveisPorPessoa
 import br.sidia.painel.integridade.RegrasDeIntegridade
 import br.sidia.painel.integridade.SinalIntegridade
-import org.junit.jupiter.api.Assumptions
-import java.nio.file.Files
 import java.time.Instant
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertTrue
 
 /**
  * Compatibilidade com o app Python anterior, conferida no código do legado. A lógica dos alertas do par e dos níveis da
- * Integridade está em `legacy/backend/jiradash/reports.py` (`pair_row` e `integrity_view`), NÃO em `analytics.py`. O teste é
- * pulado se `legacy/` sair do repositório (Fase 8); as regras ficam provadas por `ParesChecklistReviewTest` e `NiveisPorPessoaTest`.
+ * Integridade estava em `legacy/backend/jiradash/reports.py` (`pair_row` e `integrity_view`), NÃO em `analytics.py`,
+ * preservado na tag `legacy-final`. As regras do legado ficam congeladas nos comentários e nos valores esperados abaixo e o
+ * teste roda sem a pasta `legacy/`; elas também são provadas por `ParesChecklistReviewTest` e `NiveisPorPessoaTest`.
  */
 class CompatLegadoChecklistTest {
-    private fun reports(): String {
-        val f = TestPaths.repoDir.resolve("legacy/backend/jiradash/reports.py")
-        Assumptions.assumeTrue(Files.isRegularFile(f), "legacy/ não está no repositório: teste de compatibilidade pulado")
-        return Files.readString(f)
-    }
-
     @Test
     fun alertasDoParComoOLegado() {
-        val py = reports()
-        // As seis regras de `pair_row`, na mesma ordem do legado.
-        val regrasDoLegado = listOf(
-            "due_gap is not None and due_gap > 0",
-            "p.resolved and (not r.resolved or r.resolved > p.resolved)",
-            "p.assignee_id and p.assignee_id == r.assignee_id",
-            "r.resolved and r_active_h < 0.5 and m.reopen_count(p, a.cat_of)",
-            "not r.resolved and r.due and r.due < a.today",
-            "r.due and r.resolved and local(r.resolved).date() > r.due",
-        )
-        for (regra in regrasDoLegado) assertTrue(regra in py, "regra do legado mudou: $regra")
+        // As seis regras de `pair_row`, na mesma ordem do legado (condição Python, na ordem dos alertas abaixo):
+        //   due_gap is not None and due_gap > 0
+        //   p.resolved and (not r.resolved or r.resolved > p.resolved)
+        //   p.assignee_id and p.assignee_id == r.assignee_id
+        //   r.resolved and r_active_h < 0.5 and m.reopen_count(p, a.cat_of)
+        //   not r.resolved and r.due and r.due < a.today
+        //   r.due and r.resolved and local(r.resolved).date() > r.due
         // O painel tem exatamente os seis alertas, um por regra, na mesma ordem.
         assertEquals(
             listOf("REVIEW_VENCE_DEPOIS", "PAI_FECHADO_ANTES", "MESMA_PESSOA", "REVIEW_CURTA_COM_PAI_REABERTO", "REVIEW_VENCIDA", "REVIEW_ATRASADA"),
@@ -47,9 +34,12 @@ class CompatLegadoChecklistTest {
 
     @Test
     fun fechamentoRapidoEPuloDoFluxoSaoExclusivosComoNoLegado() {
-        val py = reports()
-        // No legado é `if life_min < 15 ... elif not started ...`: um fechamento rápido gera um sinal só.
-        assertTrue("if life_min < 15:" in py && "elif not started and r.time_spent_s == 0:" in py, "regra do legado mudou")
+        // No legado é `if life_min < 15: ... elif not started and r.time_spent_s == 0: ...`: um fechamento rápido gera um
+        // sinal só. No painel os dois sinais existem e a exclusividade é provada por `FechamentoRapidoExclusivoTest`.
+        assertEquals(
+            listOf("CRIADA_E_FECHADA_RAPIDO", "PULOU_O_FLUXO"),
+            listOf(SinalIntegridade.CRIADA_E_FECHADA_RAPIDO, SinalIntegridade.PULOU_O_FLUXO).map { it.name },
+        )
     }
 
     private fun evidencias(pessoa: String, g3: Int = 0, g2: Int = 0, g1: Int = 0): List<EvidenciaIntegridade> {
@@ -63,12 +53,13 @@ class CompatLegadoChecklistTest {
 
     @Test
     fun niveisComoOLegado() {
-        val py = reports()
-        // Limiares do legado: alto = 12 pontos, 3x a mediana e 3 graves; médio = 6 pontos e 2x; taxa = pontos / max(concluídas, 8); piso 0,05.
-        for (trecho in listOf(
-            "pts[pid] >= 12 and ratio >= 3 and strong >= 3", "pts[pid] >= 6 and ratio >= 2",
-            "pts[pid] / max(denom[pid], 8)", "base = max(med, 0.05)", "SEVERITY[s] >= 3",
-        )) assertTrue(trecho in py, "regra do legado mudou: $trecho")
+        // Limiares do legado (reports.py::integrity_view): alto = 12 pontos, 3x a mediana e 3 graves; médio = 6 pontos e 2x;
+        // taxa = pontos / max(concluídas, 8); piso 0,05. Trechos Python congelados:
+        //   pts[pid] >= 12 and ratio >= 3 and strong >= 3
+        //   pts[pid] >= 6 and ratio >= 2
+        //   pts[pid] / max(denom[pid], 8)
+        //   base = max(med, 0.05)
+        //   SEVERITY[s] >= 3
         val r = RegrasDeIntegridade.PADRAO
         assertEquals(12, r.pontosAlto)
         assertEquals(3.0, r.multiploAlto, 1e-9)

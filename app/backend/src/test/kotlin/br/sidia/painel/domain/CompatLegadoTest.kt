@@ -9,7 +9,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 
 /**
- * Compatibilidade com o app Python atual (legacy/backend/jiradash/analytics.py::time_in_status).
+ * Compatibilidade com o app Python anterior (legacy/backend/jiradash/analytics.py::time_in_status, na tag legacy-final).
  * Fórmula do legado, conferida no código: tempo corrido por status (status_durations, soma
  * reentradas, da criação até a resolução), categoria "done" fora das somas, eficiência de fluxo =
  * soma dos status "active" ÷ soma de todos os status não concluídos, percentil por interpolação linear.
