@@ -2,6 +2,8 @@
 
 Data: 29/10/2026. Base: `origin/main` em `1ad9529` (PR #48 mesclado), mais este fechamento (linha A16 do [roteiro](plans/2026-10-28-roteiro-antes-e-depois-da-flag.md) e Tarefa 10 do Plano 8). Escopo: o que o Claude Code implementou sem acessar o Jira, entre 28 e 29/10. O relatório da noite anterior (PRs #25 a #30: CI, hooks, changelog, referência do Jira, Plano 17 escrito, roteiro) está em [relatorio-2026-10-28.md](relatorio-2026-10-28.md).
 
+> **Aviso ao usuário (regra 8 do `CLAUDE.md`):** a regra manda avisar antes de usar o modelo Opus, e só em revisão final de código sensível a segurança. Nos PRs #43, #45, #48 e #49 a revisão final foi feita em Opus com você ausente; este aviso é depois do fato. Para objetar: diga na conversa que quer outra revisão dos pontos de segurança desses PRs e/ou edite a regra 8 do `CLAUDE.md` (só você altera o `CLAUDE.md`). As respostas às decisões da seção (c) são registradas na tabela "Confirmações do usuário" do `HANDOFF.md`.
+
 A flag de acesso ao Jira continua desligada em todo o repositório e nenhum teste, script ou documento a liga. Nenhum acesso ao Jira foi feito em todo o projeto. Tudo foi validado contra fixtures, `MockEngine`, dados de demonstração fictícios e SQLite real em arquivo temporário.
 
 Este relatório só afirma o que está nos arquivos de progresso (`docs/superpowers/progresso/`), no código e no CI. Onde o arquivo de progresso não registra achado de revisão, a seção (b) não inventa um.

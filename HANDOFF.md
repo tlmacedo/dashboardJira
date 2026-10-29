@@ -1,5 +1,7 @@
 # Retomada: Painel de Squads (atualizado em 29/10/2026)
 
+> **Aviso ao usuário (regra 8 do `CLAUDE.md`):** a regra manda avisar antes de usar o modelo Opus, e só em revisão final de código sensível a segurança. Nos PRs #43, #45, #48 e #49 a revisão final foi feita em Opus com você ausente, e este aviso é depois do fato. Para objetar: diga na conversa que quer outra revisão (padrão ou sua) dos pontos de segurança desses PRs, e/ou edite a regra 8 do `CLAUDE.md` (só você altera o `CLAUDE.md`); nenhuma IA muda a regra.
+
 ## COMECE AQUI (ClineSR, PC da empresa, clone do GitHub)
 
 1. Clone o projeto (qualquer nome de pasta: o hook **não bloqueia a palavra "jira"**, só URLs e hosts de Jira) e use o Windows 11 com PowerShell. Instale e valide JDK 21, Node 22 e pnpm; **não há Docker nem banco a instalar** (a empresa os bloqueia; o banco é um arquivo SQLite).
@@ -24,7 +26,7 @@ Se o ClineSR mostrar "aborted": quase sempre é clone ou tarefa antigos mandando
 
 ## Como subir
 
-`app/iniciar.sh` (`cd app && sh iniciar.sh`; PowerShell: `app/iniciar.ps1`, com `.\iniciar.ps1`); painel em `http://127.0.0.1:8080`, em modo desenvolvimento (sem login, faixa vermelha). Dados fictícios: `DASHBOARD_DEMO_DATA=true` (só com a flag desligada). Para apagar os dados locais, pare o painel e apague `app/data/painel.db`. Testes: `cd app/backend && ./gradlew test` e `cd app/frontend && pnpm test` (nunca os dois ao mesmo tempo: a máquina fica sob carga). Detalhe e todas as variáveis: `app/README.md`; produção: `docs/implantacao.md`.
+`app/iniciar.sh` (`cd app && sh iniciar.sh`; PowerShell: `app/iniciar.ps1`, com `.\iniciar.ps1`); painel em `http://127.0.0.1:8080`, em modo desenvolvimento (sem login, faixa vermelha). Dados fictícios: `DASHBOARD_DEMO_DATA=true` (só com a flag desligada). Para apagar os dados locais, pare o painel e apague `app/data/painel.db`. Testes: `cd app/backend && ./gradlew test` e `cd app/frontend && pnpm test` (nunca os dois ao mesmo tempo: a máquina fica sob carga). O Gradle do backend já traz `-Xmx3g` em `app/backend/gradle.properties` (sem isso a compilação dos testes estoura a memória); não o reduza. Detalhe e todas as variáveis: `app/README.md`; produção: `docs/implantacao.md`.
 
 ## Primeira conexão (quando o usuário ligar a flag)
 
@@ -44,6 +46,23 @@ Se o ClineSR mostrar "aborted": quase sempre é clone ou tarefa antigos mandando
 ## Ações do usuário pendentes
 
 A lista completa e em ordem está na seção (f) do relatório final. Em resumo: proteção da `main` com os quatro checks obrigatórios (`backend`, `frontend`, `guarda`, `varredura`; `guarda-windows` recomendado, `docs/operacao/ci.md`, seção 5); segredo `VARREDURA_NOMES`; marcar como falso positivo os alertas do GitGuardian em `SettingsTest.kt` e `guard.sh`; ativos de marca; parecer do DPO e depois o aceite; confirmar as decisões da seção (c) do relatório (a T3 do Plano 11 e a V7 primeiro); limpar os worktrees locais antigos em `.claude/worktrees/`; fornecer os YAML reais; Fase 0; por último, a flag.
+
+## Confirmações do usuário (preencha a resposta e a data)
+
+Decisões que as IAs tomaram sozinhas pela regra "(Recomendada)" e que mudam dado guardado, quem vê o quê ou o que sobe. Texto, motivo e reversão de cada uma: `docs/superpowers/relatorio-final-antes-da-flag.md`, seção (c). Resposta esperada: "confirmo" ou "reverter" (e o que fazer). Enquanto estiver "pendente", vale o que o código faz hoje.
+
+| # | Decisão | Resposta | Data |
+|---|---|---|---|
+| 1 | Plano 11, T3 opção A e migração V7 (guarda estimativas e criação do worklog; zera o cursor; remove `person`) | pendente | |
+| 2 | Qualidade dos dados aberta à coordenação | pendente | |
+| 3 | Gaveta da task só pelo responsável atual | pendente | |
+| 4 | `OIDC_DOMINIOS_PERMITIDOS` obrigatória nas estratégias `parte_local_do_email` e `conta_windows` | pendente | |
+| 5 | Aceite do DPO fechado até o parecer | pendente | |
+| 6 | Remoção do `legacy/` (o "sim" ao documento de equivalência) | pendente | |
+| 7 | "Quem consultou quem" fora do `access_log` | pendente | |
+| 8 | Squad Leader sem task sem responsável | pendente | |
+| 9 | Distribuição e Rebalanceamento só em modo sombra | pendente | |
+| 10 | Expurgo automático dos dados fictícios e recusas de banco | pendente | |
 
 ## Regras do contrato do cartão (spec do Plano 17, seção 6)
 

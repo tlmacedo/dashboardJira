@@ -78,6 +78,24 @@ class FechamentoAntesDaFlagDocTest {
     }
 
     @Test
+    fun handoffTemOLugarDasConfirmacoesDoUsuarioEOAvisoDaRegra8() {
+        val handoff = ApoioDeDocs.texto("HANDOFF.md")
+        val tabela = handoff.substringAfter("## Confirmações do usuário").substringBefore("\n## ")
+        val linhas = tabela.lines().filter { Regex("^\\| \\d+ \\|").containsMatchIn(it) }
+        assertEquals((1..10).map { "$it" }, linhas.map { celulas(it)[0] })
+        assertTrue(linhas.all { celulas(it).size == 4 }, "cada confirmação precisa de Decisão, Resposta e Data")
+        // A tabela do HANDOFF tem as mesmas decisões da primeira tabela da seção (c) do relatório.
+        val relatorio = ApoioDeDocs.texto("docs/superpowers/relatorio-final-antes-da-flag.md")
+        val noRelatorio = relatorio.substringAfter("### Precisam de confirmação").substringBefore("### Demais").lines().count { Regex("^\\| \\d+ \\|").containsMatchIn(it) }
+        assertEquals(noRelatorio, linhas.size)
+        for (texto in listOf(handoff.substringBefore("## COMECE AQUI"), relatorio.substringBefore("## (a)"))) {
+            assertTrue("Aviso ao usuário (regra 8" in texto && "Opus" in texto && "objetar" in texto, "aviso da regra 8 fora do topo")
+        }
+        val gradle = ApoioDeDocs.texto("app/backend/gradle.properties")
+        assertTrue("-Xmx3g" in gradle && "-Xmx3g" in handoff, "HANDOFF sem o -Xmx3g do Gradle")
+    }
+
+    @Test
     fun tetosDaPrimeiraCargaVemAntesDeLigarAFlagEBatemComOCodigo() {
         // Os nomes e os padrões vêm do código: sem os tetos pequenos a primeira carga sai com 50000 itens e 2000 requisições.
         val settings = ApoioDeDocs.texto("app/backend/src/main/kotlin/br/sidia/painel/config/Settings.kt")
