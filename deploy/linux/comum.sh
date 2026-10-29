@@ -16,12 +16,158 @@ arquivo_de_variaveis_protegido() {
     modo="$(stat -c '%a' "$1" 2>/dev/null || stat -f '%Lp' "$1")"
     # completa com zeros a esquerda (ex.: 640, 600, 400)
     while [ "${#modo}" -lt 3 ]; do modo="0$modo"; done
-    dono="${modo%??}"
     resto="${modo#?}"
     grupo="${resto%?}"
     outros="${resto#?}"
-    : "$dono"
     [ "$outros" = "0" ] || return 1
     # grupo: so leitura (4) ou nada (0)
     case "$grupo" in 0 | 4) return 0 ;; *) return 1 ;; esac
+}
+
+# ---------------------------------------------------------------------------------------------------------------------
+# Atualizacao e reversao por troca de pasta de versao (Plano 13, T10). Disposicao: <raiz>/<versao>/ (pacote extraido, somente
+# leitura), <raiz>/atual (link simbolico para a versao ativa), dados em PAINEL_DADOS (padrao /var/lib/painel).
+# ---------------------------------------------------------------------------------------------------------------------
+
+erro() {
+    echo "ERRO: $*" >&2
+    exit 1
+}
+
+calcula_sha256() {
+    if command -v sha256sum >/dev/null 2>&1; then
+        sha256sum "$1" | cut -d ' ' -f 1
+    elif command -v shasum >/dev/null 2>&1; then
+        shasum -a 256 "$1" | cut -d ' ' -f 1
+    else
+        erro "precisa de sha256sum ou shasum"
+    fi
+}
+
+# Valor de NOME=valor num arquivo (sem aspas nem CR). Uso: valor_do_arquivo <arquivo> <NOME>
+valor_do_arquivo() {
+    sed -n "s/^$2=//p" "$1" 2>/dev/null | head -n 1 | tr -d '\r' | sed -e 's/^"\(.*\)"$/\1/' -e "s/^'\(.*\)'\$/\1/"
+}
+
+# Confere o SHA-256 do zip contra o arquivo .sha256 ao lado ("<hash>  <nome>"). Uso: confirmar_sha256 <zip>
+confirmar_sha256() {
+    [ -f "$1.sha256" ] || erro "falta o arquivo $(basename "$1").sha256 ao lado do zip"
+    esperado="$(head -n 1 "$1.sha256" | cut -d ' ' -f 1 | tr 'A-F' 'a-f' | tr -d '\r')"
+    nome="$(head -n 1 "$1.sha256" | sed 's/^[^ ]*  *\*\{0,1\}//' | tr -d '\r')"
+    [ "$nome" = "$(basename "$1")" ] || erro "o arquivo .sha256 nao e deste zip"
+    [ "$esperado" = "$(calcula_sha256 "$1")" ] || erro "o SHA-256 do zip nao confere com o arquivo .sha256"
+}
+
+# Versao (AAAA.MM.N) pelo nome painel-AAAA.MM.N.zip. Uso: versao_do_zip <zip>
+versao_do_zip() {
+    base="$(basename "$1")"
+    printf '%s' "$base" | grep -Eq '^painel-[0-9]{4}\.(0[1-9]|1[0-2])\.[1-9][0-9]*\.zip$' || erro "nome do pacote fora do padrao painel-AAAA.MM.N.zip"
+    base="${base#painel-}"
+    printf '%s\n' "${base%.zip}"
+}
+
+# Extrai um zip numa pasta (unzip; sem ele, o jar do JDK, que a maquina ja tem).
+extrair_zip() {
+    if command -v unzip >/dev/null 2>&1; then
+        unzip -q "$1" -d "$2"
+    elif command -v jar >/dev/null 2>&1; then
+        (cd "$2" && jar xf "$1")
+    else
+        erro "precisa de unzip ou do jar do JDK para extrair o pacote"
+    fi
+}
+
+# Extrai o pacote em <raiz>/<versao>.tmp, confere a estrutura e renomeia para <raiz>/<versao>. RECUSA se a pasta da versao ja
+# existir: a versao em uso nunca e sobrescrita. Uso: expandir_pacote <zip> <raiz>
+expandir_pacote() {
+    versao="$(versao_do_zip "$1")"
+    destino="$2/$versao"
+    [ ! -e "$destino" ] || erro "a pasta da versao $versao já existe em $2 (a versao em uso nunca e sobrescrita)"
+    tmp="$destino.tmp"
+    rm -rf "$tmp"
+    mkdir -p "$tmp"
+    if ! extrair_zip "$1" "$tmp"; then
+        rm -rf "$tmp"
+        erro "nao foi possivel extrair o pacote"
+    fi
+    if [ ! -f "$tmp/painel-$versao/bin/painel" ]; then
+        rm -rf "$tmp"
+        erro "pacote sem painel-$versao/bin/painel"
+    fi
+    mv "$tmp/painel-$versao" "$destino"
+    rmdir "$tmp"
+}
+
+# Aponta <raiz>/atual para <raiz>/<versao> (link relativo, troca de uma vez). Uso: trocar_atual <raiz> <versao>
+trocar_atual() {
+    [ -d "$1/$2" ] || erro "a pasta da versao $2 nao existe em $1"
+    rm -f "$1/atual.novo"
+    ln -s "$2" "$1/atual.novo"
+    if ! mv -T "$1/atual.novo" "$1/atual" 2>/dev/null; then
+        rm -f "$1/atual"
+        mv "$1/atual.novo" "$1/atual"
+    fi
+}
+
+# Para o servico e espera o fim do processo (a trava <banco>.lock some com ele). Uso: parar_painel <servico>
+parar_painel() {
+    systemctl stop "$1"
+    n=0
+    while systemctl is-active --quiet "$1"; do
+        n=$((n + 1))
+        [ "$n" -le 60 ] || erro "o servico $1 nao parou em 60 s"
+        sleep 1
+    done
+}
+
+iniciar_painel() {
+    systemctl start "$1"
+}
+
+# Religa a versao ainda atual depois de uma falha antes da troca.
+religar_painel() {
+    iniciar_painel "$1"
+}
+
+baixar() {
+    if command -v curl >/dev/null 2>&1; then
+        curl -fsS --max-time 3 "$1"
+    elif command -v wget >/dev/null 2>&1; then
+        wget -q -T 3 -O - "$1"
+    else
+        erro "precisa de curl ou wget"
+    fi
+}
+
+# Espera GET <url>/api/health responder {"ok":true}. Uso: esperar_saude <url> <segundos>
+esperar_saude() {
+    n=0
+    while [ "$n" -lt "$2" ]; do
+        corpo="$(baixar "$1/api/health" 2>/dev/null || true)"
+        case "$corpo" in *'"ok":true'*) return 0 ;; esac
+        n=$((n + 1))
+        sleep 1
+    done
+    return 1
+}
+
+# Backup do banco pelo mecanismo do Plano 12 (painel backup-agora, da versao ATUAL). Imprime o nome do arquivo da copia.
+# Uso: fazer_backup <raiz> <arquivo de variaveis>
+fazer_backup() {
+    saida="$(PAINEL_ENV_FILE="$2" "$1/atual/bin/painel" backup-agora)" || { echo "$saida" >&2; return 1; }
+    nome="$(printf '%s\n' "$saida" | sed -n 's/^BACKUP OK \([^ ]*\) .*$/\1/p' | head -n 1)"
+    [ -n "$nome" ] || { echo "$saida" >&2; return 1; }
+    printf '%s\n' "$nome"
+}
+
+# Fumaca minima depois de iniciar: a saude responde e /api/meta informa a versao esperada; se existir fumaca.sh ao lado
+# (Tarefa 11), ela tambem roda. Uso: conferir_fumaca <url> <versao>
+conferir_fumaca() {
+    esperar_saude "$1" 30 || return 1
+    meta="$(baixar "$1/api/meta" 2>/dev/null || true)"
+    case "$meta" in *"\"versao\":\"$2\""*) ;; *) echo "a versao publicada em /api/meta nao e $2" >&2; return 1 ;; esac
+    if [ -f "${AQUI:-.}/fumaca.sh" ]; then
+        sh "${AQUI:-.}/fumaca.sh" "$1" "$2" || return 1
+    fi
+    return 0
 }

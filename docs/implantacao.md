@@ -162,7 +162,10 @@ Os testes automáticos do projeto usam só fixtures e `MockEngine`, mesmo com a 
 | Assunto | Onde |
 |---|---|
 | Serviço do sistema operacional, logs, prontidão (`/api/health/pronto`), métricas, alertas, backup consistente do SQLite e restauração testada | Plano 12, documentos em `docs/operacao/` |
-| Atualização, reversão ensaiada, proxy, TLS, cofre de segredos, conta de serviço e firewall | Plano 13 |
+| Atualização com backup antes (`deploy/windows/atualizar.ps1`, `deploy/linux/atualizar.sh`) | `docs/implantacao/atualizacao.md` |
+| Reversão, com ou sem o banco, e o ensaio da troca (`ensaio-troca`) | `docs/implantacao/reversao.md` e `docs/implantacao/atualizacao.md` |
+| Segredos, permissão do arquivo de variáveis e verificação de logs | `docs/implantacao/segredos.md` |
+| Proxy, TLS, serviço do sistema operacional, conta sem privilégio e firewall | Plano 13 (Tarefa 8, depois da decisão com a infraestrutura) |
 
 **Regra de reversão:** o esquema do banco só avança, por migração. Toda migração nova precisa ser compatível com o pacote anterior **ou** ter backup feito antes da atualização; reverter é voltar a pasta do pacote anterior (e, se a migração não for compatível, restaurar o backup).
 

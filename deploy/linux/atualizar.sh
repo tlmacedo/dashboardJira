@@ -1,0 +1,95 @@
+#!/bin/sh
+# Atualiza o painel para uma nova versao por troca de pasta, com backup antes (Plano 13, T10). NAO reverte sozinho.
+# Uso (como root):  sh deploy/linux/atualizar.sh /opt/painel /caminho/painel-2026.11.1.zip [--sem-servico]
+#
+# Ordem (cada passo imprime "OK <passo>"):
+#   1. confere o SHA-256 do zip contra o .sha256 ao lado;
+#   2. extrai numa pasta nova <raiz>/<versao> (o pacote em uso fica intacto; recusa se a pasta da versao ja existir);
+#   3. registra a versao atual em <dados>/versao-anterior.txt;
+#   4. PARA o servico e espera o fim do processo (a trava <banco>.lock some);
+#   5. BACKUP do banco (painel backup-agora, Plano 12); se falhar, religa a versao atual e aborta;
+#   6. troca o link <raiz>/atual para a versao nova;
+#   7. INICIA o servico e espera /api/health (as migracoes rodam na subida);
+#   8. fumaca (a saude responde e /api/meta informa a versao nova).
+# Falha no 7 ou no 8: imprime "FALHOU: execute reverter" com o comando exato e sai com 1. NAO ha reversao automatica: depois
+# de uma migracao, restaurar o banco e decisao humana (ver docs/implantacao/reversao.md).
+# --sem-servico pula 4, 5, 7 e 8 (so serve ao ensaio da troca de pasta).
+# Variaveis opcionais: PAINEL_DADOS (/var/lib/painel), PAINEL_ENV_FILE (/etc/painel/painel.env), PAINEL_SERVICO (painel),
+# PAINEL_URL (http://127.0.0.1:8080). Precisa de unzip (ou do jar do JDK), curl (ou wget) e sha256sum.
+set -eu
+
+AQUI="$(cd "$(dirname "$0")" && pwd)"
+. "$AQUI/comum.sh"
+
+uso() {
+    echo "uso: sh atualizar.sh <raiz do painel> <painel-AAAA.MM.N.zip> [--sem-servico]" >&2
+    exit 2
+}
+
+RAIZ=""
+ZIP=""
+SEM_SERVICO=0
+for argumento in "$@"; do
+    case "$argumento" in
+        --sem-servico) SEM_SERVICO=1 ;;
+        -*) uso ;;
+        *)
+            if [ -z "$RAIZ" ]; then RAIZ="$argumento"; elif [ -z "$ZIP" ]; then ZIP="$argumento"; else uso; fi
+            ;;
+    esac
+done
+[ -n "$RAIZ" ] && [ -n "$ZIP" ] || uso
+DADOS="${PAINEL_DADOS:-/var/lib/painel}"
+ARQUIVO_ENV="${PAINEL_ENV_FILE:-/etc/painel/painel.env}"
+SERVICO="${PAINEL_SERVICO:-painel}"
+URL="${PAINEL_URL:-http://127.0.0.1:8080}"
+[ -d "$RAIZ" ] || erro "pasta do painel nao encontrada"
+[ -f "$ZIP" ] || erro "zip nao encontrado"
+
+falhou_depois_da_troca() {
+    echo "FALHOU: $1" >&2
+    echo "FALHOU: execute reverter -> sh $AQUI/reverter.sh $RAIZ   (acrescente --restaurar-banco se a versao nova trouxe migracao sem volta)" >&2
+    exit 1
+}
+
+confirmar_sha256 "$ZIP"
+echo "OK sha256"
+VERSAO="$(versao_do_zip "$ZIP")"
+
+expandir_pacote "$ZIP" "$RAIZ"
+echo "OK extraido em $RAIZ/$VERSAO"
+
+ANTERIOR=""
+if [ -L "$RAIZ/atual" ]; then
+    ANTERIOR="$(basename "$(readlink "$RAIZ/atual")")"
+    mkdir -p "$DADOS"
+    printf 'versao=%s\n' "$ANTERIOR" > "$DADOS/versao-anterior.txt"
+    echo "OK versao anterior registrada ($ANTERIOR)"
+fi
+
+if [ "$SEM_SERVICO" -eq 0 ]; then
+    parar_painel "$SERVICO"
+    echo "OK servico parado"
+    if [ -n "$ANTERIOR" ]; then
+        if ! COPIA="$(fazer_backup "$RAIZ" "$ARQUIVO_ENV")"; then
+            echo "FALHOU: o backup antes da troca nao foi feito; religando a versao atual (nada foi trocado)" >&2
+            religar_painel "$SERVICO" || true
+            exit 1
+        fi
+        printf 'backup=%s\n' "$COPIA" >> "$DADOS/versao-anterior.txt"
+        echo "OK backup $COPIA"
+    fi
+fi
+
+trocar_atual "$RAIZ" "$VERSAO"
+echo "OK atual aponta para $VERSAO"
+
+if [ "$SEM_SERVICO" -eq 0 ]; then
+    iniciar_painel "$SERVICO" || falhou_depois_da_troca "o servico nao iniciou"
+    esperar_saude "$URL" 120 || falhou_depois_da_troca "/api/health nao respondeu em 120 s"
+    echo "OK servico iniciado e saudavel"
+    conferir_fumaca "$URL" "$VERSAO" || falhou_depois_da_troca "a fumaca nao passou"
+    echo "OK fumaca"
+fi
+
+echo "ATUALIZACAO_OK $VERSAO"
