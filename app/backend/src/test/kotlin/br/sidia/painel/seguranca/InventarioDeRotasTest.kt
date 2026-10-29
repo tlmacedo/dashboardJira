@@ -3,14 +3,29 @@ package br.sidia.painel.seguranca
 import br.sidia.painel.AppContext
 import br.sidia.painel.BancoEmArquivo
 import br.sidia.painel.cards.MODULOS_DA_API
+import br.sidia.painel.cards.PREFIXOS_SENSIVEIS
+import br.sidia.painel.cards.contrato.catalogoPadrao
 import br.sidia.painel.cards.rotaSensivel
 import br.sidia.painel.comCsrf
+import br.sidia.painel.config.Settings
+import br.sidia.painel.integridade.Int2
+import br.sidia.painel.lgpd.LgpdSettings
 import br.sidia.painel.module
+import br.sidia.painel.security.AtribuicaoPapel
 import br.sidia.painel.security.Authenticator
+import br.sidia.painel.security.OidcAuthenticator
+import br.sidia.painel.security.OidcSettings
+import br.sidia.painel.security.Pessoa
 import br.sidia.painel.security.Principal
 import br.sidia.painel.security.ROTAS_PUBLICAS
 import br.sidia.painel.security.Role
+import br.sidia.painel.security.RoleDirectory
+import br.sidia.painel.security.SegredosDaSessao
+import br.sidia.painel.security.EmissorOidcFalso
+import br.sidia.painel.security.Vigencia
 import br.sidia.painel.security.principalFor
+import br.sidia.painel.testContextComBanco
+import io.ktor.client.statement.bodyAsText
 import br.sidia.painel.trabalho.Trb1
 import br.sidia.painel.trabalho.novoContextoTrb1
 import io.ktor.client.HttpClient
@@ -116,6 +131,9 @@ class InventarioDeRotasTest {
         /** Rotas públicas de `/api` (as de `/auth` só existem com o autenticador OIDC e são cobertas em `OidcTest`). */
         private val PUBLICAS_DA_API = setOf("GET /api/health", "GET /api/health/pronto", "GET /api/meta")
 
+        /** Nós do próprio painel que não são rotas de dados: os curingas de 404 da API e a casca estática da SPA. */
+        private val DO_FRAMEWORK = setOf("* /api/{...}", "GET /{...}", "HEAD /{...}")
+
         private val USUARIOS = mapOf(
             Role.USUARIO to "ana", Role.SQUAD_LEADER to "lider.alfa", Role.COORDENADOR to "coord.um", Role.GERENTE to "gerente.exemplo",
         )
@@ -129,34 +147,45 @@ class InventarioDeRotasTest {
     }
 
     /** Sobe o painel com o autenticador por cabeçalho e entrega a lista real de rotas `(método, modelo)` e um cliente. */
-    private fun rodar(bloco: suspend (rotas: List<Pair<String, String>>, http: HttpClient, c: AppContext) -> Unit) {
-        val c = novoContextoTrb1(banco).also { ctx = it }
+    private fun rodar(
+        contexto: AppContext? = null,
+        diretorio: RoleDirectory = Trb1.papeis,
+        bloco: suspend (rotas: List<Pair<String, String>>, http: HttpClient, c: AppContext) -> Unit,
+    ) {
+        val c = (contexto ?: novoContextoTrb1(banco)).also { ctx = it }
         val raizes = mutableListOf<Route>()
         testApplication {
             application {
                 module(c.settings, c, object : Authenticator {
                     override suspend fun authenticate(call: ApplicationCall): Principal? =
-                        call.request.headers["X-Teste-Usuario"]?.let { principalFor(it, Trb1.papeis, HOJE) }
+                        call.request.headers["X-Teste-Usuario"]?.let { principalFor(it, diretorio, HOJE) }
                 })
                 raizes += routing { }
             }
             startApplication()
-            bloco(rotasReais(raizes.single()), client, c)
+            bloco(todasAsRotas(raizes.single()), client, c)
         }
     }
 
-    private fun folhas(r: Route, acc: MutableList<String>) {
-        val filhos = (r as RoutingNode).children
-        if (filhos.isEmpty()) acc.add(r.toString()) else filhos.forEach { folhas(it, acc) }
+    /** Toda FOLHA da árvore (com método, ou `handle {}` sem método: `*`). Handler em nó interno não é visível pela API pública do Ktor. */
+    private fun comAtendimento(r: Route, acc: MutableList<String>) {
+        val no = r as RoutingNode
+        if (no.children.isEmpty()) acc.add(r.toString())
+        no.children.forEach { comAtendimento(it, acc) }
     }
 
-    /** Folhas `(método, modelo)` da árvore de rotas sob `/api`, sem o curinga `/api/{...}` que devolve 404. */
-    private fun rotasReais(raiz: Route): List<Pair<String, String>> {
-        val folhas = mutableListOf<String>().also { folhas(raiz, it) }
-        return folhas.filter { it.startsWith("/api/") && "(method:" in it }
-            .map { it.substringAfter("(method:").substringBefore(")") to it.substringBefore("/(method:").replace("/(requireRole)", "") }
-            .sortedBy { "${it.second} ${it.first}" }
+    /** Pares `(método, modelo)` de TODA a árvore (dentro e fora de `/api`); `*` quando o nó não tem método. */
+    private fun todasAsRotas(raiz: Route): List<Pair<String, String>> {
+        val nos = mutableListOf<String>().also { comAtendimento(raiz, it) }
+        return nos.map {
+            val metodo = if ("(method:" in it) it.substringAfter("(method:").substringBefore(")") else "*"
+            metodo to it.substringBefore("/(method:").replace("/(requireRole)", "")
+        }.sortedBy { "${it.second} ${it.first}" }
     }
+
+    /** As rotas de dados sob `/api` (as que têm método e não são o curinga). */
+    private fun rotasReais(raiz: Route): List<Pair<String, String>> =
+        todasAsRotas(raiz).filter { it.second.startsWith("/api/") && it.first != "*" }
 
     private fun caminhoDeExemplo(modelo: String) = modelo.replace("{key}", "TG-111").replace("{id}", "TS-03")
 
@@ -185,8 +214,10 @@ class InventarioDeRotasTest {
 
     @Test
     fun inventarioConhecido() = rodar { rotas, _, _ ->
+        // TODA a árvore: rota fora de /api (seria tratada como casca estática pública) e folha com `handle {}` sem método
+        // também aparecem aqui e reprovam se não estiverem declaradas.
         val reais = rotas.map { "${it.first} ${it.second}" }.toSet()
-        val esperadas = INVENTARIO.map { it.chave }.toSet() + PUBLICAS_DA_API
+        val esperadas = INVENTARIO.map { it.chave }.toSet() + PUBLICAS_DA_API + DO_FRAMEWORK
         assertEquals(INVENTARIO.size, INVENTARIO.map { it.chave }.toSet().size, "entrada repetida no inventário")
         assertEquals(
             emptySet(), reais - esperadas,
@@ -202,7 +233,7 @@ class InventarioDeRotasTest {
 
     @Test
     fun postSoOndeEsperado() = rodar { rotas, _, _ ->
-        val mutantes = rotas.filter { it.first != "GET" }.map { "${it.first} ${it.second}" }
+        val mutantes = rotas.map { "${it.first} ${it.second}" }.filter { !it.startsWith("GET ") && it !in DO_FRAMEWORK }
         assertEquals(listOf("POST /api/distribuicao/decisao"), mutantes, "método que altera estado fora da lista: $mutantes")
     }
 
@@ -226,7 +257,13 @@ class InventarioDeRotasTest {
                 // Modelo da rota, nunca a chave digitada; só o cartão resolvido mantém o id.
                 val esperado = if (e.modelo == "/api/cartoes/{id}/tasks") "/api/cartoes/TS-03/tasks" else e.modelo
                 assertEquals(esperado, rotulo, "${e.chave}: rótulo no access_log")
-                if (status != HttpStatusCode.Forbidden) passou += papel
+                // Quem passa da trava recebe o status "de sucesso" da rota (200; 400 só no POST de corpo vazio e na rota de
+                // tasks sem segmento): nunca 401, 5xx nem outro erro disfarçado de "passou".
+                val semErro = if (e.metodo == "POST" || e.modelo == "/api/cartoes/{id}/tasks") HttpStatusCode.BadRequest else HttpStatusCode.OK
+                if (status != HttpStatusCode.Forbidden) {
+                    assertEquals(semErro, status, "${e.chave} como $papel: fora da trava de papel o status esperado é $semErro")
+                    passou += papel
+                }
             }
             if (e.papeis != null) assertEquals(e.papeis, passou, "${e.chave}: papéis que passam da trava (observados x declarados)")
         }
@@ -262,7 +299,7 @@ class InventarioDeRotasTest {
 
     @Test
     fun modulosDaApiSincronizadosComAsRotasReais() = rodar { rotas, _, _ ->
-        val modulosReais = rotas.map { it.second.split('/')[2] }.toSet() - "health"
+        val modulosReais = rotas.filter { it.second.startsWith("/api/") && it.first != "*" }.map { it.second.split('/')[2] }.toSet() - "health"
         assertEquals(
             modulosReais, MODULOS_DA_API,
             "MODULOS_DA_API (rótulo da negação antes do roteador) precisa listar exatamente os módulos reais de /api",
@@ -281,6 +318,108 @@ class InventarioDeRotasTest {
             for (proibido in listOf("bruno", "Alfa", "SINAL-X")) {
                 assertFalse(proibido in filtros, "${e.chave}: rota sensível não grava '$proibido' (filtros: $filtros)")
             }
+        }
+    }
+
+    @Test
+    fun quemTemMaisDeUmPapelPassaPelaUniaoDeles() {
+        // Pessoa com USUARIO (Alfa) e COORDENADOR ao mesmo tempo: passa onde QUALQUER dos dois passa, e só aí.
+        val duplo = Pessoa(
+            "duplo.papel", "duplo.papel",
+            listOf(AtribuicaoPapel(Role.USUARIO, Vigencia(null, null), "Alfa"), AtribuicaoPapel(Role.COORDENADOR, Vigencia(null, null))),
+        )
+        val base = listOf("ana", "bruno", "carla").map { Pessoa(it, it, listOf(AtribuicaoPapel(Role.USUARIO, Vigencia(null, null), if (it == "carla") "Beta" else "Alfa"))) } +
+            listOf(
+                Pessoa("lider.alfa", "lider.alfa", listOf(AtribuicaoPapel(Role.SQUAD_LEADER, Vigencia(null, null), "Alfa"))),
+                Pessoa("coord.um", "coord.um", listOf(AtribuicaoPapel(Role.COORDENADOR, Vigencia(null, null)))),
+                Pessoa("gerente.exemplo", "gerente.exemplo", listOf(AtribuicaoPapel(Role.GERENTE, Vigencia(null, null)))),
+                duplo,
+            )
+        val diretorio = RoleDirectory(base)
+        val c = testContextComBanco(
+            Settings(dashboardDevMode = false, lgpd = LgpdSettings(true, "TESTE-TRB1")), banco, diretorio, Trb1.relogio,
+            statusMap = Trb1.statusMap, calendar = Trb1.calendario,
+        )
+        Trb1.carregar(requireNotNull(c.dataSource), Trb1.issues())
+        rodar(c, diretorio) { _, http, _ ->
+            val uniao = setOf(Role.USUARIO, Role.COORDENADOR)
+            for (e in INVENTARIO.filter { it.papeis != null }) {
+                val esperado = if (e.papeis!!.any { it in uniao }) setOf(HttpStatusCode.OK, HttpStatusCode.BadRequest) else setOf(HttpStatusCode.Forbidden)
+                val status = chamar(http, e, caminhoDeExemplo(e.modelo), "duplo.papel").status
+                assertTrue(status in esperado, "${e.chave} com USUARIO+COORDENADOR: $status, esperado $esperado")
+            }
+        }
+    }
+
+    @Test
+    fun rotasDeLoginSoExistemComOidcEMantemAsPublicas() {
+        val emissor = EmissorOidcFalso()
+        val segredo = java.util.Base64.getEncoder().encodeToString(ByteArray(48) { (it * 5 + 1).toByte() })
+        val cfg = OidcSettings(
+            issuer = emissor.issuer, clientId = emissor.clientId, clientSecret = "segredo-do-cliente-ficticio-1",
+            redirectUri = "https://painel.exemplo.invalid/auth/callback", sessao = SegredosDaSessao.de(segredo, null),
+            duracaoDaSessao = java.time.Duration.ofHours(8),
+        )
+        val settings = Settings(dashboardDevMode = false, oidc = cfg)
+        val c = testContextComBanco(settings, banco).also { ctx = it }
+        val autenticador = OidcAuthenticator(cfg, c.roles, java.time.Clock.systemUTC(), emissor.cliente(), null)
+        val raizes = mutableListOf<Route>()
+        testApplication {
+            application {
+                module(settings, c, autenticador)
+                raizes += routing { }
+            }
+            startApplication()
+        }
+        val auth = todasAsRotas(raizes.single()).filter { it.second.startsWith("/auth") }.map { "${it.first} ${it.second}" }.toSet()
+        assertEquals(setOf("GET /auth/login", "GET /auth/callback", "POST /auth/logout"), auth)
+        // Toda rota de /auth é pública declarada em ROTAS_PUBLICAS (e nenhuma outra de /auth existe).
+        assertEquals(auth.map { it.substringAfter(' ') }.toSet(), ROTAS_PUBLICAS.filter { it.startsWith("/auth") }.toSet())
+    }
+
+    @Test
+    fun rotasDeConteudoSensivelNaoGravamAlvoNoAccessLog() {
+        // Cenário INT-2: o bruno tem indício ALTO, então a Central do gerente traz INDICIO_ALTO (conteúdo sensível). Com o
+        // modo de desenvolvimento a trava do DPO fica aberta.
+        val c = novoContextoTrb1(banco, Int2.issues(), Settings(dashboardDevMode = true))
+        rodar(c) { _, http, ctxDoTeste ->
+            val query = "?pessoa=bruno&squad=Alfa&sinal=SINAL-X&segmento=pessoa:bruno&total=7"
+            fun filtrosGravados() = ultimaLinha(ctxDoTeste).third.orEmpty()
+            fun naoGrava(rotulo: String) {
+                val f = filtrosGravados()
+                for (proibido in listOf("bruno", "Alfa", "SINAL-X", "INDICIO", "total")) {
+                    assertFalse(proibido in f, "$rotulo: rota sensível não grava '$proibido' (filtros: $f)")
+                }
+            }
+            // Controle: uma rota NÃO sensível grava os mesmos filtros (o teste não é vazio).
+            chamar(http, INVENTARIO.single { it.modelo == "/api/cards/riscos" }, "/api/cards/riscos", "gerente.exemplo", query)
+            assertTrue("bruno" in filtrosGravados() && "Alfa" in filtrosGravados(), "controle: ${filtrosGravados()}")
+
+            // Central: a marca só liga quando a resposta traz item sensível; confirma a precondição do cenário.
+            val central = INVENTARIO.single { it.modelo == "/api/central" }
+            val resp = chamar(http, central, "/api/central", "gerente.exemplo", query)
+            assertEquals(HttpStatusCode.OK, resp.status)
+            assertTrue("INDICIO_ALTO" in resp.bodyAsText(), "o cenário precisa devolver o item sensível")
+            naoGrava("/api/central")
+
+            // Cartões sensíveis reais pelo detalhamento: IN-01 (integridade), AU-01, DV-01 e VG-14 (auditoria/divergência) e VG-13.
+            val tasks = INVENTARIO.single { it.modelo == "/api/cartoes/{id}/tasks" }
+            for (cartao in listOf("IN-01", "AU-01", "DV-01", "VG-14", "VG-13")) {
+                chamar(http, tasks, "/api/cartoes/$cartao/tasks", "gerente.exemplo", query + "&segmento=INDICIO_ALTO")
+                assertEquals("/api/cartoes/$cartao/tasks", ultimaLinha(ctxDoTeste).second, cartao)
+                naoGrava(cartao)
+            }
+        }
+    }
+
+    @Test
+    fun todoPrefixoSensivelCorrespondeARotaOuCartaoReal() = rodar { _, _, _ ->
+        // Sem prefixo fantasma: cada um é prefixo de uma rota do inventário ou de um cartão do catálogo.
+        val cartoes = catalogoPadrao().cartoes.map { "/api/cartoes/${it.meta.id}".lowercase() }
+        for (prefixo in PREFIXOS_SENSIVEIS) {
+            val deRota = INVENTARIO.any { it.modelo.lowercase().startsWith(prefixo) }
+            val deCartao = prefixo.startsWith("/api/cartoes/") && cartoes.any { it.startsWith(prefixo) }
+            assertTrue(deRota || deCartao, "prefixo sensível sem rota nem cartão correspondente: $prefixo")
         }
     }
 

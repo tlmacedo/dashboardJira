@@ -293,9 +293,9 @@ private fun filtrosAuditados(call: ApplicationCall): Map<String, String> {
  * Plano 11: "quem consultou quem" não se guarda). A decisão usa o caminho NORMALIZADO e sem diferenciar caixa, mais o atributo
  * [ROTA_SENSIVEL] posto pela própria rota/cartão resolvido. Um módulo novo que passe pela trava acrescenta o seu prefixo aqui.
  */
-private val PREFIXOS_SENSIVEIS = listOf(
+internal val PREFIXOS_SENSIVEIS = listOf(
     "/api/integridade", "/api/cartoes/in-", "/api/governanca/acessos", "/api/auditoria", "/api/cards/task-review", "/api/cartoes/au-",
-    "/api/cartoes/dv-", "/api/cartoes/vg-14", "/api/drill/auditoria", "/api/drill/integridade", "/api/drill/task-review",
+    "/api/cartoes/dv-", "/api/cartoes/vg-14",
     // O direito de acesso do titular: a consulta não grava parâmetro nenhum (nem a tentativa de escolher outra pessoa).
     "/api/titular",
 )
