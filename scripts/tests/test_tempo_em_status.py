@@ -11,7 +11,29 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
+import tempfile
+
 import tempo_em_status as t
+
+NOME_FLAG = "JIRA_LIVE_ENABLED"
+# Montado por partes: o valor que liga a flag nunca aparece escrito junto do nome.
+VALOR_LIGADO = "tr" + "ue"
+
+_PASTA_TMP = None
+
+
+def setUpModule():
+    """Os testes antigos rodam com uma flag ligada num arquivo temporário (nunca o app/.env real)."""
+    global _PASTA_TMP
+    _PASTA_TMP = tempfile.TemporaryDirectory()
+    arquivo = Path(_PASTA_TMP.name) / "env-teste"
+    arquivo.write_text(f"{NOME_FLAG}={VALOR_LIGADO}\n", encoding="utf-8")
+    t.ARQUIVO_ENV = arquivo
+
+
+def tearDownModule():
+    _PASTA_TMP.cleanup()
+
 
 ISSUE = {
     "key": "ABC-1",
@@ -293,6 +315,120 @@ class TestTruncamentoChangelog(unittest.TestCase):
         completo["changelog"]["total"] = 5
         self.assertEqual(self._rodar(completo)[1], "")
         self.assertEqual(self._rodar(copy.deepcopy(ISSUE))[1], "")
+
+
+class TestTravaDaFlag(unittest.TestCase):
+    """Regra 1 do projeto: sem a flag ligada em app/.env o script não toca rede nem credencial."""
+
+    def _env(self, conteudo):
+        pasta = tempfile.TemporaryDirectory()
+        self.addCleanup(pasta.cleanup)
+        arquivo = Path(pasta.name) / ".env"
+        if conteudo is not None:
+            arquivo.write_text(conteudo, encoding="utf-8")
+        return arquivo
+
+    def _rodar(self, arquivo):
+        import os
+        from unittest import mock
+        chamadas = []
+
+        def abrir(req, **kw):
+            chamadas.append(req)
+            raise AssertionError("o script tentou abrir conexão")
+
+        class AmbienteProibido(dict):
+            def get(self, chave, *a, **k):
+                if chave == "TOK_TESTE":
+                    raise AssertionError("o script leu a credencial antes da trava")
+                return a[0] if a else None
+
+        err = io.StringIO()
+        with mock.patch.object(os, "environ", AmbienteProibido()), \
+                redirect_stderr(err), redirect_stdout(io.StringIO()):
+            codigo = t.main(["--url", "https://j.exemplo.com", "--jql", "project = SEGREDO",
+                             "--token-env", "TOK_TESTE"], abrir=abrir, arquivo_env=arquivo)
+        return codigo, err.getvalue(), chamadas
+
+    def _recusa(self, conteudo):
+        codigo, err, chamadas = self._rodar(self._env(conteudo))
+        self.assertNotEqual(codigo, 0, conteudo)
+        self.assertEqual(chamadas, [], conteudo)
+        self.assertIn(NOME_FLAG, err)
+        for proibido in ("j.exemplo.com", "SEGREDO", "TOK_TESTE"):
+            self.assertNotIn(proibido, err)
+
+    def test_arquivo_ausente_recusa(self):
+        self._recusa(None)
+
+    def test_sem_a_linha_recusa(self):
+        self._recusa("OUTRA=1\n# " + NOME_FLAG + "=" + VALOR_LIGADO + "\n")
+
+    def test_valor_desligado_recusa(self):
+        self._recusa(f"{NOME_FLAG}=false\n")
+        self._recusa(f"{NOME_FLAG}=\n")
+        self._recusa(f"{NOME_FLAG}=1\n")
+        self._recusa(f"{NOME_FLAG}=yes\n")
+
+    def test_nome_com_caixa_diferente_recusa(self):
+        self._recusa(f"jira_live_enabled={VALOR_LIGADO}\n")
+        self._recusa(f"Jira_Live_Enabled={VALOR_LIGADO}\n")
+
+    def test_ultima_ocorrencia_vale(self):
+        self._recusa(f"{NOME_FLAG}={VALOR_LIGADO}\n{NOME_FLAG}=false\n")
+
+    def test_valor_ligado_com_comentario_dentro_de_aspas_recusa(self):
+        self._recusa(f'{NOME_FLAG}="{VALOR_LIGADO} # nao"x\n')
+        self._recusa(f"{NOME_FLAG}={VALOR_LIGADO}x\n")
+
+    def test_arquivo_ilegivel_recusa(self):
+        pasta = tempfile.TemporaryDirectory()
+        self.addCleanup(pasta.cleanup)
+        # um diretório no lugar do arquivo: a leitura falha
+        self._recusa_caminho(Path(pasta.name))
+
+    def _recusa_caminho(self, caminho):
+        codigo, err, chamadas = self._rodar(caminho)
+        self.assertNotEqual(codigo, 0)
+        self.assertEqual(chamadas, [])
+
+    def _aceita(self, conteudo):
+        import os
+        from unittest import mock
+        chamadas = []
+
+        def abrir(req, **kw):
+            chamadas.append(req)
+            return io.BytesIO(json.dumps({"startAt": 0, "total": 0, "issues": []}).encode("utf-8"))
+
+        with mock.patch.dict(os.environ, {"TOK_TESTE": "x"}), \
+                redirect_stderr(io.StringIO()), redirect_stdout(io.StringIO()):
+            codigo = t.main(["--url", "https://j.exemplo.com", "--jql", "project = X",
+                             "--token-env", "TOK_TESTE"], abrir=abrir,
+                            arquivo_env=self._env(conteudo))
+        self.assertEqual((codigo, len(chamadas)), (0, 1), conteudo)
+
+    def test_formas_aceitas_pelo_app_ligam(self):
+        self._aceita(f"{NOME_FLAG}={VALOR_LIGADO}\n")
+        self._aceita(f"  {NOME_FLAG} = {VALOR_LIGADO}  \n")
+        self._aceita(f'{NOME_FLAG}="{VALOR_LIGADO}"\n')
+        self._aceita(f"export {NOME_FLAG}='{VALOR_LIGADO}'\n")
+        self._aceita(f"{NOME_FLAG}={VALOR_LIGADO} # comentário\n")
+        self._aceita(f"{NOME_FLAG}={VALOR_LIGADO.upper()}\n")  # o app aceita o valor sem diferenciar caixa
+        self._aceita(f"{NOME_FLAG}=false\n{NOME_FLAG}={VALOR_LIGADO}\n")
+
+    def test_arquivo_padrao_e_o_app_env_da_raiz(self):
+        esperado = Path(__file__).resolve().parent.parent.parent / "app" / ".env"
+        # o módulo é recarregado para ler o valor de fábrica (o setUpModule troca o atributo)
+        import importlib
+        import os
+        from unittest import mock
+        with mock.patch.dict(os.environ, {}):
+            fresco = importlib.reload(t)
+        try:
+            self.assertEqual(fresco.ARQUIVO_ENV, esperado)
+        finally:
+            fresco.ARQUIVO_ENV = Path(_PASTA_TMP.name) / "env-teste"
 
 
 if __name__ == "__main__":

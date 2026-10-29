@@ -4,6 +4,9 @@
 Lê as issues pelo REST do Jira Data Center (``/rest/api/2/search`` com
 ``expand=changelog``) e calcula tudo localmente, só com a biblioteca padrão.
 
+TRAVA: o script só consulta o Jira com a flag de acesso ao Jira ligada em ``app/.env``
+(a mesma lida pelo painel); sem ela, sai com código 2 antes de qualquer rede.
+
 O cálculo é nosso (não vem do Jira) e foi validado apenas com fixtures no
 formato do REST; não foi validado contra um Jira real. Confira algumas issues
 de histórico conhecido antes de confiar nos números.
@@ -18,6 +21,7 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
+from pathlib import Path
 from datetime import datetime, timedelta, timezone
 
 AJUDA_CSV = """\
@@ -211,7 +215,41 @@ def linhas_csv(issues, agora, status_inicio, status_fim):
     return linhas
 
 
-def main(argv=None, abrir=urllib.request.urlopen, dormir=time.sleep):
+NOME_FLAG_JIRA = "JIRA_LIVE_ENABLED"
+# Única fonte da flag: o app/.env da raiz do repositório (nunca o ambiente do processo).
+ARQUIVO_ENV = Path(__file__).resolve().parent.parent / "app" / ".env"
+
+
+def flag_do_jira_ligada(arquivo):
+    """Lê SÓ a linha da flag do arquivo, igual ao painel (ArquivoEnv/Settings).
+
+    Nome exato (com caixa), a última ocorrência vale, aspas e comentário final opcionais, valor
+    "true" sem diferenciar caixa (como o app). Arquivo ausente, ilegível, sem a linha ou com
+    qualquer outro valor = desligada (falha fechada). Nunca imprime o conteúdo do arquivo.
+    """
+    try:
+        linhas = Path(arquivo).read_text(encoding="utf-8").splitlines()
+    except (OSError, UnicodeError, ValueError):
+        return False
+    valor = None
+    for bruta in linhas:
+        linha = bruta.strip().removeprefix("﻿")
+        if not linha or linha.startswith("#"):
+            continue
+        linha = linha.removeprefix("export ").strip()
+        nome, igual, resto = linha.partition("=")
+        if not igual or nome.strip() != NOME_FLAG_JIRA:
+            continue
+        resto = resto.strip()
+        if len(resto) >= 2 and resto[0] in "\"'" and resto[-1] == resto[0]:
+            resto = resto[1:-1]
+        else:
+            resto = resto.split(" #", 1)[0].strip()
+        valor = resto
+    return valor is not None and valor.strip().lower() == "true"
+
+
+def main(argv=None, abrir=urllib.request.urlopen, dormir=time.sleep, arquivo_env=None):
     parser = argparse.ArgumentParser(
         description="Calcula tempo em status, passagens, tempo de ciclo e reaberturas "
                     "a partir do changelog do Jira (REST).",
@@ -227,7 +265,14 @@ def main(argv=None, abrir=urllib.request.urlopen, dormir=time.sleep):
                         help="status em que o tempo de ciclo termina (padrão: Done)")
     args = parser.parse_args(argv)
 
-    token = os.environ.get(args.token_env)
+    # TRAVA (regra 1 do projeto): antes de qualquer rede ou leitura de credencial.
+    if not flag_do_jira_ligada(arquivo_env or ARQUIVO_ENV):
+        print(f"Recusado: {NOME_FLAG_JIRA} não está ligada em app/.env (ausente = desligada). "
+              "Com a flag desligada nenhum acesso ao Jira é permitido; só o usuário liga a flag.",
+              file=sys.stderr)
+        return 2
+
+    token =os.environ.get(args.token_env)
     if not token:
         print(f"Variável de ambiente {args.token_env} não definida ou vazia.", file=sys.stderr)
         return 1
