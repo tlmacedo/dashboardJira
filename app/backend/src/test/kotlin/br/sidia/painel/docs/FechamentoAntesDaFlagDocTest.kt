@@ -77,6 +77,30 @@ class FechamentoAntesDaFlagDocTest {
         assertTrue(!Regex("""\d[\d.]*\s+testes""").containsMatchIn(texto), "HANDOFF cita contagem de testes, que não é amarrada")
     }
 
+    @Test
+    fun tetosDaPrimeiraCargaVemAntesDeLigarAFlagEBatemComOCodigo() {
+        // Os nomes e os padrões vêm do código: sem os tetos pequenos a primeira carga sai com 50000 itens e 2000 requisições.
+        val settings = ApoioDeDocs.texto("app/backend/src/main/kotlin/br/sidia/painel/config/Settings.kt")
+        assertTrue("\"SYNC_MAX_ITENS\"" in settings && "\"SYNC_MAX_REQUISICOES\"" in settings)
+        val padroes = ApoioDeDocs.texto("app/backend/src/main/kotlin/br/sidia/painel/sync/SyncSettings.kt")
+        assertTrue("maxItens: Int = 50_000" in padroes && "maxRequisicoes: Int = 2_000" in padroes)
+
+        val teto = "SYNC_MAX_ITENS=50"
+        val reqs = "SYNC_MAX_REQUISICOES=5"
+        // HANDOFF: o passo dos tetos vem antes do passo em que o usuário liga a flag.
+        val handoff = ApoioDeDocs.texto("HANDOFF.md").substringAfter("## Primeira conexão")
+        assertTrue(teto in handoff && reqs in handoff && "50000" in handoff && "2000" in handoff)
+        assertTrue(handoff.indexOf(teto) < handoff.indexOf("liga a flag à mão"), "HANDOFF: tetos depois de ligar a flag")
+        // Relatório (f): o item dos tetos vem antes do item "mudar a flag".
+        val f = ApoioDeDocs.texto("docs/superpowers/relatorio-final-antes-da-flag.md").substringAfter("## (f)")
+        assertTrue(f.indexOf(teto) in 0 until f.indexOf("mudar a flag"), "relatório (f): tetos depois de mudar a flag")
+        // Roteiro, seção 2: idem.
+        val s2 = ApoioDeDocs.texto("docs/superpowers/plans/2026-10-28-roteiro-antes-e-depois-da-flag.md").substringAfter("## 2.").substringBefore("## 3.")
+        assertTrue(s2.indexOf(teto) in 0 until s2.indexOf("Escrever a linha da flag"), "roteiro seção 2: tetos depois da flag")
+        // Em nenhum documento o teto aparece só depois da flag: o runbook manda defini-los com a flag desligada.
+        assertTrue("Ainda com `JIRA_LIVE_ENABLED=false`" in ApoioDeDocs.texto("docs/jira/runbook-sincronizacao.md"))
+    }
+
     // ------------------------------------------------------------------------------------------------------ product e claude.md
 
     /**

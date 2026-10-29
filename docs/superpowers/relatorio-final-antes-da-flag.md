@@ -138,4 +138,5 @@ Medidos em 29/10/2026 sobre `1ad9529`. Migrações, cartões e itens do menu sã
 8. **Fornecer os YAML reais** em `app/config/` ou em `PAINEL_CONFIG_DIR` (papéis com ao menos um gerente, equipes, ausências, status, vínculos, calendário e os demais obrigatórios em produção listados em `app/README.md`), a partir dos modelos `.exemplo`. Ficam fora do git.
 9. **Fase 0 no PC da empresa** (`docs/superpowers/plans/2026-10-27-plano-00-pc-da-empresa.md`): JDK 21, Node 22 com pnpm, clone, suíte verde, PowerShell sem bash nem WSL.
 10. **Credenciais do Jira** no `app/.env` do PC (token pessoal da conta de leitura, nunca no repositório).
-11. **Por último, mudar a flag à mão** em `app/.env` (a linha da flag com valor verdadeiro), reiniciar o painel e avisar o ClineSR, que começa pelo Plano 14a, Tarefa 1. Só o usuário muda a flag.
+11. **Definir os tetos pequenos da primeira carga, ainda com a flag desligada:** `SYNC_MAX_ITENS=50` e `SYNC_MAX_REQUISICOES=5` no `app/.env` (os padrões do código são 50000 e 2000; sem os tetos a primeira carga sai sem limite). Só sobem depois da primeira carga conferida (`docs/jira/runbook-sincronizacao.md`, Etapa 1).
+12. **Por último, mudar a flag à mão** em `app/.env` (a linha da flag com valor verdadeiro), reiniciar o painel e avisar o ClineSR, que começa pelo Plano 14a, Tarefa 1. Só o usuário muda a flag.

@@ -28,11 +28,12 @@ Se o ClineSR mostrar "aborted": quase sempre é clone ou tarefa antigos mandando
 
 ## Primeira conexão (quando o usuário ligar a flag)
 
-1. O **usuário** liga a flag à mão no `app/.env` e avisa. Nenhuma IA a liga. Ver "A regra da flag".
-2. Siga `docs/jira/checklist-primeira-conexao.md` (cinco passos mais os passos extras: ids de `papeis.yaml`, vocabulário de prioridade e criticidade, ordem do fluxo e resoluções negativas, formato do worklog, formato das estimativas no changelog, Reporter como PL), o runbook `docs/jira/runbook-sincronizacao.md` (Etapa 1 com `SYNC_MAX_ITENS=50` e `SYNC_MAX_REQUISICOES=5`) e o Plano 14a. Para diagnosticar conexão e rede (o usuário roda): `docs/jira/diagnostico-conexao.ps1`.
-3. Na primeira subida com a flag ligada o painel **apaga sozinho só as linhas fictícias** da demonstração (antes de qualquer tentativa de sincronização) e mostra "Aguardando a primeira carga do Jira"; banco com issues e sem tentativa de sincronização é recusado (`BANCO_DESCONHECIDO_SEM_SINCRONIZACAO`).
-4. **A migração V7 zerou o cursor da sincronização**: a primeira carga é uma recarga completa (changelog e worklog dos últimos 24 meses), em vários ciclos se for preciso. Até lá os sinais de estimativa e de worklog retroativo aparecem sem dado.
-5. Os pontos onde a suposição offline mais provavelmente falha (R1 a R22) estão na seção 4 do roteiro; as regras reversíveis a conferir (usernames entre aspas no JQL, `resolved < dia seguinte`, `key in (...)` com chave apagada, tipo e direção do vínculo Blocks, fuso do `updated`) estão em `docs/jira/matriz-compatibilidade.md`.
+1. **Antes de ligar a flag, ainda desligada:** o `app/.env` deve ter as credenciais da instância e os **tetos pequenos** `SYNC_MAX_ITENS=50` e `SYNC_MAX_REQUISICOES=5` (os padrões do código são 50000 e 2000: sem os tetos a primeira carga sai sem limite). Eles só sobem depois da primeira carga conferida (runbook, Etapa 1).
+2. Só então o **usuário** liga a flag à mão no `app/.env` e avisa. Nenhuma IA a liga. Ver "A regra da flag".
+3. Siga `docs/jira/checklist-primeira-conexao.md` (cinco passos mais os passos extras: ids de `papeis.yaml`, vocabulário de prioridade e criticidade, ordem do fluxo e resoluções negativas, formato do worklog, formato das estimativas no changelog, Reporter como PL), o runbook `docs/jira/runbook-sincronizacao.md` e o Plano 14a. Para diagnosticar conexão e rede (o usuário roda): `docs/jira/diagnostico-conexao.ps1`.
+4. Na primeira subida com a flag ligada o painel **apaga sozinho só as linhas fictícias** da demonstração (antes de qualquer tentativa de sincronização) e mostra "Aguardando a primeira carga do Jira"; banco com issues e sem tentativa de sincronização é recusado (`BANCO_DESCONHECIDO_SEM_SINCRONIZACAO`).
+5. **A migração V7 zerou o cursor da sincronização**: a primeira carga é uma recarga completa (changelog e worklog dos últimos 24 meses), em vários ciclos se for preciso. Até lá os sinais de estimativa e de worklog retroativo aparecem sem dado.
+6. Os pontos onde a suposição offline mais provavelmente falha (R1 a R22) estão na seção 4 do roteiro; as regras reversíveis a conferir (usernames entre aspas no JQL, `resolved < dia seguinte`, `key in (...)` com chave apagada, tipo e direção do vínculo Blocks, fuso do `updated`) estão em `docs/jira/matriz-compatibilidade.md`.
 
 ## A regra da flag
 

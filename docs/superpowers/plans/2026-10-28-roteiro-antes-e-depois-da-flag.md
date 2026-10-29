@@ -43,6 +43,7 @@ Pré-requisitos, nesta ordem:
 1. **Fase 0 concluída no PC da empresa** (`docs/superpowers/plans/2026-10-27-plano-00-pc-da-empresa.md`): JDK 21, Node 22 e pnpm, clone, suíte verde no PC, PowerShell sem bash nem WSL.
 2. **Proteção da `main`** no GitHub exigindo `backend`, `frontend`, `guarda` e `varredura` (`docs/operacao/ci.md`, seção 5) e o segredo `VARREDURA_NOMES`.
 3. **Credenciais do Jira** no `app/.env` do PC (token pessoal da conta de leitura; nunca no repositório).
+3b. **Tetos pequenos da primeira carga, ainda com a flag desligada:** `SYNC_MAX_ITENS=50` e `SYNC_MAX_REQUISICOES=5` no mesmo `app/.env` (os padrões do código são 50000 e 2000: sem os tetos a primeira carga sai sem limite). Só sobem, com o ClineSR, depois da primeira carga conferida (`docs/jira/runbook-sincronizacao.md`, Etapa 1).
 4. **Escrever a linha da flag como ligada em `app/.env`** — a única mudança que libera o Jira. Reiniciar o painel depois.
 5. Avisar o ClineSR que a flag está ligada; a primeira tarefa dele é a conferência do Plano 14a, Tarefa 1.
 
