@@ -318,7 +318,7 @@ Pergunte **cada uma** como pergunta separada, com as opções "Confirmo" (Recome
 | 9 | Distribuição e Rebalanceamento só em modo sombra | Garante que nada é escrito no Jira | Plano 16, só por ordem expressa |
 | 10 | Expurgo automático dos dados fictícios e recusas de banco na subida com a flag ligada | Muda dado guardado e pode parar a subida | Procedimento manual (parar o painel, backup e apagar `app/data/painel.db`) |
 
-Texto, motivo e reversão completos: `docs/superpowers/relatorio-final-antes-da-flag.md`, seção (c). Registro: tabela do `HANDOFF.md` (coluna Resposta e Data), em PR de documentação. A confirmação 5 (aceite do DPO fechado até o parecer) é coberta por B10 e B11; a 4 (`OIDC_DOMINIOS_PERMITIDOS` obrigatória), pelo grupo C. A 6 (remoção do app antigo) é tratada fora deste documento; **não a pergunte agora**.
+Texto, motivo e reversão completos: `docs/superpowers/relatorio-final-antes-da-flag.md`, seção (c). Registro: tabela do `HANDOFF.md` (coluna Resposta e Data), em PR de documentação. A confirmação 5 (aceite do DPO fechado até o parecer) é coberta por B10 e B11; a 4 (`OIDC_DOMINIOS_PERMITIDOS` obrigatória), pelo grupo C. A 6 (remoção do app antigo) está **feita em 29/10/2026 por decisão do usuário**; o código fica na tag `legacy-final`. Não a pergunte.
 
 ### Grupo C: podem esperar (não bloqueiam a primeira subida nem a flag)
 
