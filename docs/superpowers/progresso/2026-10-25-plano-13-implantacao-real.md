@@ -15,6 +15,7 @@ T1 (decisões com a infraestrutura), T7 passo 5 (tag e release), T8 (instalar o 
 
 ## Rulings
 
+- Ruling (T3): plugin próprio (`instalarProxyConfiavel`, `createApplicationPlugin` + `mutableOriginConnectionPoint` do `ktor-server-core`) em vez do `XForwardedHeaders`, porque o módulo `ktor-server-forwarded-header` não está no cache offline do Gradle e a lista CIDR é código próprio de qualquer jeito. Só é instalado quando `DASHBOARD_PROXY_CONFIAVEL` não é vazia. O `access_log` do painel não grava IP hoje, então "IP no access_log" ficou como `call.request.origin.remoteAddress` já resolvido (o ponto de uso futuro).
 - Ruling (T2): a variável da claim já existe (`OIDC_CLAIM_USERNAME`, Plano 8); só se acrescentou `OIDC_USERNAME_ESTRATEGIA` e `OidcSettings.estrategiaUsername`. Sem resposta do usuário sobre o provedor (T1), o padrão `claim_direto` é o do Plano 8 e nada muda para quem não definir a variável — custo se errado: nenhum; a troca é só a variável.
 - Ruling (T2): o motivo `USERNAME_ILEGIVEL` (401) vale quando a estratégia não consegue extrair o username (claim sem o formato esperado). O `USUARIO_INVALIDO` do Plano 8 continua para username extraído fora de `[a-z0-9._-]{1,64}`: por isso `ana.silva@outro.invalid` com `claim_direto` é recusado com 401 (antes do 403 que o plano previa) e nunca abre sessão nem vira `ana.silva`. `CONTA_WINDOWS` e `PARTE_LOCAL_DO_EMAIL` exigem as duas partes não vazias.
 

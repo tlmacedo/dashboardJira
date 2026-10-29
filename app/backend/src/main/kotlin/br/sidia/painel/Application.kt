@@ -47,6 +47,7 @@ import br.sidia.painel.security.DevAuthenticator
 import br.sidia.painel.security.InicioDaRotacao
 import br.sidia.painel.security.OidcAuthenticator
 import br.sidia.painel.security.criarClienteHttpOidc
+import br.sidia.painel.security.instalarProxyConfiavel
 import br.sidia.painel.security.rotasDeLogin
 import br.sidia.painel.security.installAccessControl
 import br.sidia.painel.sync.Agendador
@@ -193,6 +194,8 @@ fun Application.module(
     val lacoDeAlertas = avaliador?.let { LacoDeAlertas(it) }
     monitor.subscribe(ApplicationStarted) { app -> lacoDeAlertas?.iniciar(app) }
     monitor.subscribe(ApplicationStopping) { runBlocking { lacoDeAlertas?.parar() } }
+    // Cabeçalhos X-Forwarded-* só de conexão do proxy da empresa (DASHBOARD_PROXY_CONFIAVEL); vazia = nenhum é aceito.
+    if (settings.proxyConfiavel.isNotEmpty()) instalarProxyConfiavel(settings.proxyConfiavel)
     install(ContentNegotiation) { json() }
     // Id de requisição e uma linha de log por requisição, com o modelo da rota (ver LogDeRequisicao.kt).
     instalarLogDeRequisicao()

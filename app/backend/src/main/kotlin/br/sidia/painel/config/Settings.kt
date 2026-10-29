@@ -3,6 +3,7 @@ package br.sidia.painel.config
 import br.sidia.painel.jira.INSTANCIAS_CONHECIDAS
 import br.sidia.painel.jira.JiraAuthKind
 import br.sidia.painel.operacao.OperacaoSettings
+import br.sidia.painel.security.FaixaCidr
 import br.sidia.painel.security.OidcSettings
 import br.sidia.painel.sync.SyncSettings
 import java.nio.file.InvalidPathException
@@ -77,6 +78,11 @@ data class Settings(
     val outrosSegredos: List<String> = emptyList(),
     /** SSO/OIDC (`OIDC_*` e `SESSION_SECRET`). Obrigatório em produção; nulo só em desenvolvimento (sem login). Sem segredos no `toString`. */
     val oidc: OidcSettings? = null,
+    /**
+     * `DASHBOARD_PROXY_CONFIAVEL`: faixas CIDR (separadas por vírgula) de onde vem o proxy reverso da empresa. Só as conexões
+     * dessas faixas podem informar `X-Forwarded-Proto/-For/-Host`; vazia = nenhum proxy confiável (cabeçalhos ignorados).
+     */
+    val proxyConfiavel: List<FaixaCidr> = emptyList(),
 ) {
     /** Valores que nunca podem aparecer em log (tokens das instâncias); registrados na máscara de log na subida. */
     fun valoresSecretos(): List<String> = jiraInstances.values.flatMap {
@@ -146,8 +152,19 @@ data class Settings(
                 outrosSegredos = listOfNotNull(texto(env, "OIDC_CLIENT_SECRET")),
                 // Falha fechada: em produção sem OIDC (ou sem SESSION_SECRET) o painel não sobe.
                 oidc = OidcSettings.fromEnv(env, dashboardDevMode),
+                proxyConfiavel = proxyConfiavel(env),
             )
         }
+
+        /** `DASHBOARD_PROXY_CONFIAVEL`: lista de CIDR separada por vírgula; vazia = nenhum. A mensagem cita só o NOME da variável. */
+        private fun proxyConfiavel(env: Map<String, String>): List<FaixaCidr> =
+            texto(env, "DASHBOARD_PROXY_CONFIAVEL")?.split(',')?.map { it.trim() }?.filter { it.isNotEmpty() }?.map {
+                try {
+                    FaixaCidr.parse(it)
+                } catch (e: IllegalArgumentException) {
+                    throw IllegalArgumentException("DASHBOARD_PROXY_CONFIAVEL inválida (esperado faixas CIDR separadas por vírgula)")
+                }
+            }.orEmpty()
 
         /**
          * `DASHBOARD_ORIGEM_PUBLICA`: normaliza para `esquema://host[:porta]` em minúsculas, sem barra final. Fora do modo dev
