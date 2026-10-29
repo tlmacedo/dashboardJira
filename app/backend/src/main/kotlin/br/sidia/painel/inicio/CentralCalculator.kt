@@ -50,6 +50,8 @@ interface FontesDaCentral {
 
     /** Os módulos sensíveis (nomes de `ModuloSensivel`) fechados pela trava do DPO para quem pergunta; os itens deles ficam fora. */
     suspend fun modulosBloqueados(): List<String> = emptyList()
+    /** P50 e P85 do ciclo (dias úteis) das concluídas dos últimos 30 dias (VG-03); nulo se indisponível ou sem concluídas. */
+    suspend fun ciclo30d(): FaixaDaCentral? = null
 
     /** Avisos de dados; um `bloqueante` torna os números dependentes indisponíveis. */
     suspend fun avisos(): List<AvisoDto>
@@ -87,6 +89,8 @@ class CentralCalculator(private val fontes: FontesDaCentral) {
         val vg10 = fontes.valoresDe("VG-10")
         val vg13 = fontes.valoresDe("VG-13")
         val vg14 = fontes.valoresDe("VG-14")
+        val vg02 = fontes.valoresDe("VG-02")
+        val vg03 = fontes.valoresDe("VG-03")
 
         fun n(valor: Int?): Int? = valor.takeUnless { bloqueado }
         val universoPrazo = n(vg04["universo"])
@@ -98,6 +102,9 @@ class CentralCalculator(private val fontes: FontesDaCentral) {
             vg04["noPrazoAjustado"]?.let {
                 kpi("NO_PRAZO_AJUSTADO", n(it), universoPrazo, estadoDeMeta(n(it), universoPrazo), "metas", "VG-04", "noPrazoAjustado")
             },
+            // VG-02 e VG-03 (Plano 10): resultado dos últimos 30 dias, com o mesmo período no número e na gaveta.
+            vg02["atual"]?.let { kpi("CONCLUIDAS_30D", n(it), null, estadoDeContagem(n(it), "neutro"), "fechadas", "VG-02", "atual") },
+            vg03["ciclo"]?.let { kpi("CICLO_30D", n(it), null, estadoDeContagem(n(it), "neutro"), "fechadas", "VG-03", "ciclo") },
         )
 
         val universoEstimativa = if (bloqueado) null else fontes.universoDeEstimativa()
@@ -123,6 +130,11 @@ class CentralCalculator(private val fontes: FontesDaCentral) {
         }
 
         val modulosFechados = fontes.modulosBloqueados()
+        val concluidas30d = vg02["atual"]?.let { atual ->
+            val anterior = vg02["anterior"]
+            KpiComVariacaoDto(n(atual), n(anterior), variacao = if (bloqueado || anterior == null || anterior == 0) null else (atual - anterior) * 100.0 / anterior)
+        }
+        val ciclo30d = if (bloqueado || (vg03["ciclo"] ?: 0) == 0) null else fontes.ciclo30d()
         val previsao = if (bloqueado) null else fontes.previsao()
         val avisosDeIntegridade = if (itens.any { it.item == ItemCentral.INDICIO_ALTO.name }) AVISOS_FIXOS_DE_INTEGRIDADE else emptyList()
         // Só o código e os módulos: nada dos itens que ficaram fora (nem quantos eram).
@@ -136,6 +148,8 @@ class CentralCalculator(private val fontes: FontesDaCentral) {
             backlogTermina = previsao?.termina,
             backlog = previsao?.backlog,
             confiancaDoBacklog = previsao?.confianca,
+            concluidas30d = concluidas30d,
+            ciclo30d = ciclo30d,
             squads = if (bloqueado) emptyList() else fontes.squads().sortedBy { it.squad },
             avisos = avisos + avisosDeIntegridade + avisoDeModulosFechados,
         )

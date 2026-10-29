@@ -115,7 +115,7 @@ describe('tela Meus dados', () => {
     // Erro: mensagem e "Tentar de novo", sem botão de download.
     simular({ [API]: { status: 500 } })
     renderizarTela(<MeusDados />, '/meus-dados')
-    expect(await screen.findByRole('alert')).toHaveTextContent('500')
+    expect(await screen.findByRole('alert')).toHaveTextContent('Não foi possível carregar os dados.')
     expect(screen.getByRole('button', { name: 'Tentar de novo' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Baixar meus dados (JSON)' })).toBeNull()
     cleanup()

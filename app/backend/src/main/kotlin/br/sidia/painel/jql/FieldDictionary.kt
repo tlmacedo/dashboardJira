@@ -20,6 +20,8 @@ class FieldDef(
     val purpose: String,
     knownValues: List<String> = emptyList(),
     val customId: String? = null,
+    /** Campo usado como filtro e agrupamento nos cards (`filtro: true` no YAML; Plano 10). */
+    val filtro: Boolean = false,
 ) {
     /** Valores conhecidos (vocabulário). Lista vazia significa texto livre, sem vocabulário fechado. */
     val knownValues: List<String> = java.util.List.copyOf(knownValues)
@@ -37,9 +39,9 @@ class FieldDef(
 
     override fun equals(other: Any?): Boolean =
         other is FieldDef && name == other.name && type == other.type && instance == other.instance &&
-            purpose == other.purpose && knownValues == other.knownValues && customId == other.customId
+            purpose == other.purpose && knownValues == other.knownValues && customId == other.customId && filtro == other.filtro
 
-    override fun hashCode(): Int = listOf(name, type, instance, purpose, knownValues, customId).hashCode()
+    override fun hashCode(): Int = listOf(name, type, instance, purpose, knownValues, customId, filtro).hashCode()
 
     override fun toString(): String = "FieldDef(name=$name, type=$type, instance=$instance, customId=$customId)"
 
@@ -87,6 +89,12 @@ class FieldDictionary(fields: List<FieldDef>) {
 
     fun has(name: String): Boolean = achar(name) != null
 
+    /** Todos os campos, na ordem do YAML. */
+    fun todos(): List<FieldDef> = campos
+
+    /** Instâncias que têm ao menos um campo, em ordem alfabética. */
+    fun instancias(): List<String> = campos.map { it.instance }.distinct().sorted()
+
     /** Valores conhecidos do campo; lista vazia significa texto livre. Lança se o campo não existir. */
     fun allowedValues(name: String): List<String> = get(name).knownValues
 
@@ -107,7 +115,7 @@ class FieldDictionary(fields: List<FieldDef>) {
                         "$path: tipo desconhecido '${c.tipo}' no campo '${c.nome}' (esperado: ${FieldType.entries.joinToString()})",
                     )
                 try {
-                    FieldDef(c.nome, tipo, c.instancia, c.finalidade, c.valores, c.customId)
+                    FieldDef(c.nome, tipo, c.instancia, c.finalidade, c.valores, c.customId, c.filtro)
                 } catch (e: IllegalArgumentException) {
                     throw IllegalArgumentException("$path: ${e.message}", e)
                 }
@@ -132,4 +140,5 @@ private data class CampoYaml(
     val finalidade: String,
     val valores: List<String> = emptyList(),
     val customId: String? = null,
+    val filtro: Boolean = false,
 )

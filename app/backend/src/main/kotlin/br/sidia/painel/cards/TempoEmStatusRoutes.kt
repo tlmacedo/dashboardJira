@@ -4,6 +4,7 @@ import br.sidia.painel.AppContext
 import br.sidia.painel.cards.fluxo.Eixo
 import br.sidia.painel.cards.fluxo.Medida
 import br.sidia.painel.db.AccessLog
+import br.sidia.painel.operacao.modeloDaRota
 import br.sidia.painel.domain.IssueTimeline
 import br.sidia.painel.domain.ORDEM_NATURAL_DE_CHAVES
 import br.sidia.painel.domain.StatusCategory
@@ -90,7 +91,7 @@ internal val EXTRAS_DE_AUDITORIA = AttributeKey<Map<String, String>>("painel.aud
  * Resposta de erro de requisição: só o status, nunca corpo (nada de eco de valores nem de detalhes). Com [codigo],
  * o corpo é o `ErroDto` com esse código estável (a tela monta o texto por ele); nunca leva o valor recebido.
  */
-internal class ErroHttp(val status: HttpStatusCode, val codigo: String? = null) :
+internal class ErroHttp(val status: HttpStatusCode, val codigo: String? = null, val params: Map<String, String> = emptyMap()) :
     RuntimeException(status.toString(), null, false, false)
 
 internal class Filtros(
@@ -199,7 +200,7 @@ suspend fun registrarNegacaoSemPapel(auditoria: AccessLog, ctx: AppContext, call
     try {
         withContext(Dispatchers.IO) {
             auditoria.record(
-                principal.userId.ifBlank { ID_NEUTRO }, rotaParaRegistro(call.request.path()),
+                principal.userId.ifBlank { ID_NEUTRO }, rotuloDaRota(call),
                 filtrosAuditados(call) + ("resultado" to HttpStatusCode.Forbidden.value.toString()),
                 ctx.clock.instant(),
             )
@@ -212,40 +213,65 @@ suspend fun registrarNegacaoSemPapel(auditoria: AccessLog, ctx: AppContext, call
 }
 
 /**
- * Rota como vai para o `access_log`: o PADRÃO, sem a chave de issue do caminho (a auditoria guarda rota e quantidade,
- * nunca chaves). Hoje só o histórico da auditoria leva a chave no caminho.
+ * Rótulo da rota no `access_log`: SEMPRE o MODELO da rota casada (`/api/tarefa/{key}`, `/api/cartoes/{id}/tasks`), nunca o
+ * caminho digitado (ele pode levar chave de issue ou id de pessoa). Sem rota casada (negação antes do roteador, como CSRF ou
+ * falta de papel): o rótulo fixo `desconhecida`.
  */
-internal fun rotaParaRegistro(caminho: String): String {
-    val normal = normalizarCaminho(caminho)
-    return if (normal.startsWith("/api/auditoria/historico/", ignoreCase = true)) "/api/auditoria/historico/{key}" else normal
+internal fun rotuloDaRota(call: ApplicationCall): String {
+    call.attributes.getOrNull(ROTULO_RESOLVIDO)?.let { return it }
+    val modelo = modeloDaRota(call)
+    if (modelo != "desconhecida") return modelo
+    // Antes do roteador (CSRF, falta de papel): só o MÓDULO, se estiver na lista fechada; o resto do caminho nunca vai.
+    val s = segmentosNormalizados(call.request.path())
+    val modulo = s.getOrNull(1)?.lowercase(java.util.Locale.ROOT)
+    return if (s.getOrNull(0).equals("api", ignoreCase = true) && modulo in MODULOS_DA_API) "/api/$modulo" else "desconhecida"
 }
+
+/** Primeiro segmento após `/api/` das rotas do painel: lista fechada, sem nenhum valor vindo do pedido. */
+private val MODULOS_DA_API = setOf(
+    "auditoria", "cards", "cartoes", "central", "distribuicao", "filtros", "governanca", "integridade", "me", "meta",
+    "meu-painel", "operacao", "rebalanceamento", "squad", "sync", "tarefa", "titular",
+)
+
+/**
+ * Rótulo com o id de um cartão RESOLVIDO no catálogo (lista fechada), como `/api/cartoes/IN-02/tasks`: mantém o rastro de
+ * quem abriu as tasks de qual cartão. Cartão não resolvido não põe nada aqui (fica o modelo `{id}`, nunca o texto digitado).
+ */
+internal val ROTULO_RESOLVIDO = AttributeKey<String>("painel.auditoria.rotulo")
 
 /**
  * Caminho como o roteador o enxerga e como a auditoria deve guardá-lo: percent-decode repetido (até 3 vezes, para `%252D`),
  * sem `;parametros`, sem barras duplas, `.` nem `..`. Um caminho codificado (`/api/%69ntegridade`) vira o mesmo texto do normal
  * e nunca escapa da máscara nem do rastro de quem consultou. Caixa preservada (a comparação ignora caixa onde importa).
  */
-internal fun normalizarCaminho(caminho: String): String {
-    var atual = caminho.substringBefore('?')
-    repeat(3) {
-        val decodificado = try {
-            java.net.URLDecoder.decode(atual.replace("+", "%2B"), Charsets.UTF_8)
-        } catch (e: IllegalArgumentException) {
-            return@repeat
-        }
-        if (decodificado == atual) return@repeat
-        atual = decodificado
-    }
+internal fun normalizarCaminho(caminho: String): String = "/" + segmentosNormalizados(caminho).joinToString("/")
+
+/**
+ * Separa o caminho em segmentos ANTES de decodificar e decodifica cada um (até 3 vezes). Uma barra que só aparece depois de
+ * decodificar (`%2F`) não separa segmentos: vira `_` dentro do mesmo segmento, que continua sendo um só.
+ */
+internal fun segmentosNormalizados(caminho: String): List<String> {
     val segmentos = ArrayDeque<String>()
-    for (bruto in atual.replace('\\', '/').split('/')) {
-        val s = bruto.substringBefore(';').filter { !it.isISOControl() }
+    // `\` cru NÃO separa segmentos (o Ktor o trata como caractere do segmento): vira `_`, como a barra que só aparece decodificada.
+    for (bruto in caminho.substringBefore('?').split('/')) {
+        var atual = bruto.substringBefore(';')
+        repeat(3) {
+            val decodificado = try {
+                java.net.URLDecoder.decode(atual.replace("+", "%2B"), Charsets.UTF_8)
+            } catch (e: IllegalArgumentException) {
+                return@repeat
+            }
+            if (decodificado == atual) return@repeat
+            atual = decodificado
+        }
+        val s = atual.replace('/', '_').replace('\\', '_').substringBefore(';').filter { !it.isISOControl() }
         when (s) {
             "", "." -> Unit
             ".." -> segmentos.removeLastOrNull()
             else -> segmentos.addLast(s)
         }
     }
-    return "/" + segmentos.joinToString("/")
+    return segmentos.toList()
 }
 
 /** Posta pela rota que atende um módulo sensível, mesmo antes de o caminho dizer: o registro mascara o achado. */
@@ -336,7 +362,9 @@ internal suspend inline fun <reified T : Any> ApplicationCall.executar(
         corpo = withContext(Dispatchers.IO) { bloco() }
     } catch (e: ErroHttp) {
         status = e.status
-        codigoDoErro = e.codigo
+        // Todo 400 sai com um código (a tela monta o texto por ele): sem código próprio, é filtro inválido.
+        codigoDoErro = e.codigo ?: if (e.status == HttpStatusCode.BadRequest) CODIGO_FILTRO_INVALIDO else null
+        paramsDoErro = e.params
     } catch (e: BloqueadoPeloDpoException) {
         // Módulo sensível fechado pela trava do DPO: 403 com o código estável, sem dado; a consulta fica no `access_log`.
         status = HttpStatusCode.Forbidden
@@ -346,13 +374,13 @@ internal suspend inline fun <reified T : Any> ApplicationCall.executar(
     } catch (e: CancellationException) {
         throw e
     } catch (e: Exception) {
-        log.error("Falha ao montar a resposta de {} ({})", rotaParaRegistro(request.path()), e.javaClass.simpleName)
+        log.error("Falha ao montar a resposta de {} ({})", rotuloDaRota(this), e.javaClass.simpleName)
         status = HttpStatusCode.InternalServerError
     }
     try {
         withContext(Dispatchers.IO) {
             auditoria.record(
-                principal.userId, rotaParaRegistro(request.path()),
+                principal.userId, rotuloDaRota(this@executar),
                 filtrosAuditados(this@executar) + (attributes.getOrNull(EXTRAS_DE_AUDITORIA).orEmpty()) +
                     listOfNotNull(motivoDoBloqueio?.let { "motivo" to it }) + ("resultado" to status.value.toString()),
                 ctx.clock.instant(),

@@ -64,13 +64,13 @@ private fun valorParaOHistorico(campo: String, valor: String): String =
     if (campo == "timeoriginalestimate") valor.toLongOrNull()?.let { String.format(Locale.ROOT, "%.1f", it / 3600.0) } ?: valor else valor
 
 /** Histórico campo a campo; chave fora do padrão é 400 e issue inexistente (ou removida) é 404. */
-private fun historico(ctx: AppContext, chave: String): HistoricoDto {
+internal fun historico(ctx: AppContext, chave: String, instancia: String = INSTANCIA_AUDITORIA): HistoricoDto {
     try {
         JqlValues.issueKey(chave)
     } catch (e: InvalidJqlValueException) {
         throw ErroHttp(HttpStatusCode.BadRequest)
     }
-    val issue = SqliteAuditStore(requireNotNull(ctx.dataSource)).issue(INSTANCIA_AUDITORIA, chave) ?: throw ErroHttp(HttpStatusCode.NotFound)
+    val issue = SqliteAuditStore(requireNotNull(ctx.dataSource)).issue(instancia, chave) ?: throw ErroHttp(HttpStatusCode.NotFound)
     val deteccao = contextoDeDeteccao(ctx)
     val t = AuditTimeline(issue, ctx.statusMap)
     val linhas = issue.events.sortedBy { it.at }.map { e ->

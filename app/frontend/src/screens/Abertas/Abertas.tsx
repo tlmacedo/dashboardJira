@@ -7,6 +7,7 @@ import { baixarCsv } from '../../shared/csv'
 import { Filtros, resumoDosFiltros, useFiltrosDaUrl } from '../../shared/Filtros'
 import { dataCurta, inteiro, numero } from '../../shared/format'
 import { GavetaDeTasks } from '../../shared/GavetaDeTasks'
+import { PorCampo } from '../../shared/PorCampo'
 import { TabelaOrdenavel, type Coluna } from '../../shared/TabelaOrdenavel'
 import { temBloqueio, useCard } from '../../shared/useCard'
 import type { AbertasDto, LinhaAberta } from './api'
@@ -67,7 +68,7 @@ export function Abertas() {
         titulo={t('nav.abertas')}
         pergunta={t('abertas.pergunta')}
         filtros={
-          <Filtros key={sp.toString()} campos={['squad', 'pessoa', 'tipo', 'prioridade', 'os', 'unit']} valor={sp} aoAplicar={aplicar} />
+          <Filtros key={sp.toString()} campos={['squad', 'pessoa', 'tipo', 'prioridade', 'os', 'campos', 'unit']} valor={sp} aoAplicar={aplicar} />
         }
         consulta={consulta}
         avisos={dto?.avisos}
@@ -184,6 +185,8 @@ export function Abertas() {
                 />
               </Cartao>
             </div>
+
+            <PorCampo cartaoId="AB-10" agrupamentos={dto.porCampo ?? []} indisponivel={bloqueado} aoAbrir={(seg, titulo) => abrir('AB-10', seg, titulo)} />
 
             <Cartao
               id="AB-09"

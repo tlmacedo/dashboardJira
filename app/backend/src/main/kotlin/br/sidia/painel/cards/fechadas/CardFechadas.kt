@@ -11,6 +11,8 @@ import br.sidia.painel.cards.contrato.FonteDoDado
 import br.sidia.painel.cards.contrato.GrupoDeCartao
 import br.sidia.painel.cards.contrato.Natureza
 import br.sidia.painel.cards.linhaDe
+import br.sidia.painel.cards.avisoDeCamposIncompletos
+import br.sidia.painel.cards.camposDeFiltroDe
 import br.sidia.painel.cards.metaDeTrabalho
 import br.sidia.painel.domain.TimeUnitMode
 import br.sidia.painel.sync.FiltroDeFicha
@@ -44,7 +46,10 @@ object CardFechadas : CardDeLeitura<FechadasDto> {
         val candidatas = e.store.candidatasNoPrazo(INSTANCIA_TRABALHO, ficha, de, ate, e.filtros.os)
             .filter { e.escopo.permiteAtual(it) && e.filtros.aceita(it) }
         val analise = FechadasCalculator(ctx.calendar, ctx.statusMap, ctx.labelsDeAtraso)
-            .analisar(resolvidas, candidatas, comEventoDeStatus, de, ate, e.agora, e.filtros.unit, e.escopo.visiveis)
+            .analisar(
+                resolvidas, candidatas, comEventoDeStatus, de, ate, e.agora, e.filtros.unit, e.escopo.visiveis, camposDeFiltroDe(ctx),
+            )
+            .let { a -> avisoDeCamposIncompletos(ctx)?.let { v -> FechadasAnalise(a.dto.copy(avisos = a.dto.avisos + v), a.segmentos, a.ciclos, a.leads, a.diaDaResolucao) } ?: a }
         val unidade = if (e.filtros.unit == TimeUnitMode.UTIL) "dias úteis" else "dias corridos"
         fun numero(v: Double?) = String.format(Locale.ROOT, "%.1f", v ?: 0.0)
         return ResultadoDeCard(analise.dto) { segmento ->
@@ -108,5 +113,8 @@ internal fun cartoesDeFechadas(): List<CartaoRegistrado> {
             }
         },
         cartao(12, Natureza.FLUXO, comChangelog, { it == "concluidas" }) { mapOf("concluidas" to it.concluidas) },
+        cartao(13, Natureza.FLUXO, issue, { it.startsWith("campo:") }) { dto ->
+            dto.porCampo.flatMap { a -> a.grupos.map { "campo:${a.slug}:${it.valor ?: br.sidia.painel.cards.AgrupamentoPorCampos.SEM_VALOR}" to it.n } }.toMap()
+        },
     )
 }

@@ -7,6 +7,7 @@ import br.sidia.painel.domain.ORDEM_NATURAL_DE_CHAVES
 import br.sidia.painel.domain.StatusCategory
 import br.sidia.painel.domain.StatusMap
 import br.sidia.painel.domain.Transition
+import br.sidia.painel.domain.TimelineBuilder
 import br.sidia.painel.domain.classificar
 import br.sidia.painel.time.BusinessCalendar
 import br.sidia.painel.trabalho.Fluxo
@@ -132,6 +133,19 @@ class NegativasCalculator(
         }
         concluidas.forEach { motivo("concluidas", it, "Resolvida em ${dia(requireNotNull(it.resolved))}") }
 
+        // --- NE-09: o status onde cada task das quatro listas ficou MAIS tempo (na unidade pedida) ---
+        val negativas = (reabertas.values.map { it.s } + devolvidas.values.map { it.s } + canceladas + comAtraso).distinctBy { it.key }
+        val porMaiorTempo = LinkedHashMap<String, MutableList<IssueSnapshot>>()
+        for (s in negativas) {
+            val dias = LinkedHashMap<String, Double>()
+            for (iv in TimelineBuilder.intervals(s.timeline, agora, map)) {
+                dias.merge(iv.status, if (unit == "util") cal.businessDays(iv.start, iv.end) else cal.calendarDays(iv.start, iv.end), Double::plus)
+            }
+            val maior = dias.maxByOrNull { it.value } ?: continue
+            porMaiorTempo.getOrPut(maior.key) { mutableListOf() } += s
+            motivo("maiorTempo:${maior.key}", s, "Maior tempo em ${maior.key}: ${String.format(java.util.Locale.ROOT, "%.1f", maior.value)} dia(s)")
+        }
+
         // --- Contagem por pessoa (posse no instante do evento) ---
         val porPessoa = HashMap<String, Triple<MutableList<IssueSnapshot>, MutableList<IssueSnapshot>, MutableList<IssueSnapshot>>>()
         fun lista(p: String) = porPessoa.getOrPut(p) { Triple(mutableListOf(), mutableListOf(), mutableListOf()) }
@@ -155,6 +169,7 @@ class NegativasCalculator(
         segmentos["taxa:devolucao"] = segmentos.getValue("devolvidas")
         segmentos["taxa:atraso"] = segmentos.getValue("concluidasComAtraso")
         segmentos["taxa:atrasoSemJustificativa"] = segmentos.getValue("atrasadasSemJustificativa")
+        for (status in porMaiorTempo.keys.sortedBy { it.lowercase() }) segmentos["maiorTempo:$status"] = ordenar(porMaiorTempo.getValue(status))
         for (p in porPessoa.keys.sorted()) {
             val (r, d, a) = porPessoa.getValue(p)
             segmentos["pessoa:$p:reabertas"] = ordenar(r)
@@ -194,6 +209,7 @@ class NegativasCalculator(
             taxaAtraso = taxa(segmentos.getValue("concluidasComAtraso").size),
             taxaAtrasoSemJustificativa = taxa(segmentos.getValue("atrasadasSemJustificativa").size),
             limiteDaTaxa = LIMITE_DA_TAXA,
+            maiorTempoPorStatus = porMaiorTempo.keys.sortedBy { it.lowercase() }.map { br.sidia.painel.cards.ContagemGrupoDto(it, porMaiorTempo.getValue(it).size) },
             porResponsavel = porPessoa.keys.sorted().map { p ->
                 val (r, d, a) = porPessoa.getValue(p)
                 NegativaPessoaDto(p, r.size, d.size, a.size)

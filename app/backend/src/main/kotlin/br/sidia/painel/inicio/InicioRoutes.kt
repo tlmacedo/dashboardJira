@@ -85,6 +85,18 @@ internal class FontesDoPainel(
         return PrevisaoDaCentral(dto.backlog, dto.termina, dto.confianca)
     }
 
+    /** P50 e P85 do ciclo das concluídas dos últimos 30 dias: o mesmo período e o mesmo cálculo do card Fechadas (VG-03 abre FE-03). */
+    override suspend fun ciclo30d(): FaixaDaCentral? {
+        val parametros = Parameters.build {
+            append("de", hoje.minusDays(29).toString())
+            append("ate", hoje.toString())
+        }
+        val dto = br.sidia.painel.cards.fechadas.CardFechadas.calcularSeguro(
+            montarEntrada(ctx, SqliteWorkStore(ds), principal, parametros, br.sidia.painel.cards.fechadas.CardFechadas.periodoPadraoDias),
+        ).dto
+        return dto.ciclo?.let { FaixaDaCentral(it.p50, it.p85, it.n) }
+    }
+
     override suspend fun squads(): List<CartaoSquadDto> {
         val carga: CargaDto = dtoDe(CardCarga)
         val regras = ctx.regrasPlanejamento

@@ -108,7 +108,7 @@ export function Previsao() {
       <CardPage
         titulo={t('nav.previsao')}
         pergunta={t('previsao.pergunta')}
-        filtros={<Filtros key={sp.toString()} campos={['squad', 'pessoa', 'tipo', 'prioridade', 'os', 'unit']} valor={sp} aoAplicar={aplicar} />}
+        filtros={<Filtros key={sp.toString()} campos={['squad', 'pessoa', 'tipo', 'prioridade', 'os', 'campos', 'unit']} valor={sp} aoAplicar={aplicar} />}
         consulta={consulta}
         avisos={dto?.avisos}
         aoExportar={exportar}

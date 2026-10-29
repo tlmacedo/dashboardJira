@@ -63,7 +63,7 @@ export function FluxoDaSemana() {
       <CardPage
         titulo={t('nav.fluxoDaSemana')}
         pergunta={t('fluxo.pergunta')}
-        filtros={<Filtros key={sp.toString()} campos={['squad', 'pessoa', 'tipo', 'prioridade', 'os']} valor={sp} aoAplicar={aplicar} />}
+        filtros={<Filtros key={sp.toString()} campos={['squad', 'pessoa', 'tipo', 'prioridade', 'os', 'campos']} valor={sp} aoAplicar={aplicar} />}
         consulta={consulta}
         avisos={dto?.avisos}
         aoExportar={exportar}

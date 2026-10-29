@@ -133,7 +133,7 @@ export function Metas() {
         pergunta={t('metas.pergunta')}
         filtros={
           <>
-            <Filtros key={sp.toString()} campos={['periodo', 'squad', 'pessoa', 'tipo', 'prioridade', 'os', 'unit']} valor={sp} aoAplicar={aplicar} />
+            <Filtros key={sp.toString()} campos={['periodo', 'squad', 'pessoa', 'tipo', 'prioridade', 'os', 'campos', 'unit']} valor={sp} aoAplicar={aplicar} />
             <div role="group" aria-label={t('metas.granularidade')} className="seg seg--claro controle-granularidade">
               {GRANULARIDADES.map((g) => (
                 <button key={g} type="button" aria-pressed={granularidadeAtual === g} onClick={() => trocarGranularidade(g)}>

@@ -71,6 +71,13 @@ object Trb1 {
     /** customId de `OS Version` usado nas issues do cenário. */
     const val CUSTOM_OS_VERSION = "customfield_12416"
 
+    /** Os seis campos do dicionário com `filtro: true`, com os ids fictícios usados nas issues do cenário (Plano 10). */
+    val camposDeFiltro: List<br.sidia.painel.sync.CampoDeFiltro> = listOf(
+        "Checklist Type", "SKU Type", "Model Name", "Model Category", "TG Request Type", "Carrier Code",
+    ).mapIndexed { i, nome ->
+        br.sidia.painel.sync.CampoDeFiltro(nome, br.sidia.painel.sync.CamposDoDicionario.slugDe(nome), "customfield_${90001 + i}")
+    }
+
     /** `"10-05T12"` -> `2026-10-05T12:00:00Z`; com minutos, `"10-05T12:15"` -> `2026-10-05T12:15:00Z`. */
     fun t(mmddhh: String): Instant = Instant.parse(if (mmddhh.length > 8) "2026-$mmddhh:00Z" else "2026-$mmddhh:00:00Z")
 
@@ -110,6 +117,8 @@ object Trb1 {
         epico: String? = null,
         osVersion: String? = null,
         flagged: Boolean = false,
+        /** Valores dos campos do dicionário (nome -> valor), gravados nos ids fictícios de [camposDeFiltro]. */
+        campos: Map<String, String> = emptyMap(),
     ): IssueDeTeste {
         val json = buildJsonObject {
             put("key", key)
@@ -133,6 +142,7 @@ object Trb1 {
                 epico?.let { put("customfield_10003", it) }
                 osVersion?.let { o -> putJsonObject(CUSTOM_OS_VERSION) { put("value", o) } }
                 if (flagged) putJsonArray("customfield_10004") { add(buildJsonObject { put("value", "Impediment") }) }
+                for (c in camposDeFiltro) campos[c.nome]?.let { v -> putJsonObject(c.customId!!) { put("value", v) } }
             }
         }
         return IssueDeTeste(json, eventos)
@@ -192,7 +202,7 @@ object Trb1 {
         instancia: String = INSTANCIA,
     ): SqliteIssueStore {
         val store = SqliteIssueStore(ds)
-        for (i in issues) store.upsert(i.json, i.eventos, instancia, CUSTOM_OS_VERSION, null, agora, ids)
+        for (i in issues) store.upsert(i.json, i.eventos, instancia, CUSTOM_OS_VERSION, null, agora, ids, camposDeFiltro = camposDeFiltro)
         return store
     }
 }

@@ -35,6 +35,8 @@ Legenda de "Pessoal?": `sim` identifica uma pessoa (username do Jira); `indireto
 | `issue.epic_key` | chave do épico | não | card de épicos | Jira | todos os papéis | enquanto a issue existir; RETENTION_HISTORICO_MONTHS | a definir pelo DPO |
 | `issue.flagged` | marcada com impedimento | não | card de bloqueios | Jira | todos os papéis | enquanto a issue existir; RETENTION_HISTORICO_MONTHS | a definir pelo DPO |
 | `issue.components` | componentes (lista) | não | filtros e cards | Jira | todos os papéis | enquanto a issue existir; RETENTION_HISTORICO_MONTHS | a definir pelo DPO |
+| `issue.campos_dicionario` | JSON com os campos do dicionário de filtros (por exemplo Model Name, SKU Type): valores de campos de produto escolhidos em configuração, sem texto livre de pessoa | não | filtros e agrupamentos por campo | Jira | todos os papéis, conforme a visão | enquanto a issue existir; RETENTION_HISTORICO_MONTHS | a definir pelo DPO |
+| `issue.campos_dicionario_em` | quando os campos do dicionário foram gravados | não | saber se a linha já foi completada | painel | ninguém (interno) | enquanto a issue existir; RETENTION_HISTORICO_MONTHS | a definir pelo DPO |
 | `change_event.id` | número interno da linha | não | chave interna | painel | ninguém (interno) | RETENTION_HISTORICO_MONTHS | a definir pelo DPO |
 | `change_event.changelog_id` | id estável do item do histórico | não | gravar sem duplicar | painel | ninguém (interno) | RETENTION_HISTORICO_MONTHS | a definir pelo DPO |
 | `change_event.issue_id` | issue do evento | não | ligar o evento à issue | painel | ninguém (interno) | RETENTION_HISTORICO_MONTHS | a definir pelo DPO |
@@ -109,7 +111,7 @@ Legenda de "Pessoal?": `sim` identifica uma pessoa (username do Jira); `indireto
 | `decisao_distribuicao.versao_regras` | versão das regras | não | registro de decisões | painel | COORDENADOR, GERENTE | RETENTION_DECISOES_MONTHS | a definir pelo DPO |
 | `decisao_distribuicao.chave_sugestao` | assinatura da sugestão (evita decisão dupla) | não | impedir decisão repetida | painel | ninguém (interno) | RETENTION_DECISOES_MONTHS | a definir pelo DPO |
 
-A tabela `person` (jira_ref e nome) foi **removida** pela migração V6 do Plano 11: não tinha uso e guardava nome de pessoa sem finalidade. O painel também não guarda os valores de `fromString` e `toString` do changelog, só o valor bruto dos campos permitidos.
+A tabela `person` (jira_ref e nome) foi **removida** pela migração V7 do Plano 11: não tinha uso e guardava nome de pessoa sem finalidade. O painel também não guarda os valores de `fromString` e `toString` do changelog, só o valor bruto dos campos permitidos.
 
 ## Arquivos de configuração com dados de pessoas
 

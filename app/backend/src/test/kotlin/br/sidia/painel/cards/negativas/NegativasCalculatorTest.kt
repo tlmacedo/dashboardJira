@@ -60,6 +60,28 @@ class NegativasCalculatorTest {
         calculadora(map).analisar(todas(), resolvidas(), abertas(), de, ate, visiveis, Trb1.agora)
 
     @Test
+    fun maiorTempoPorStatusNasNegativas() {
+        val a = analise()
+        val uniao = (
+            a.segmentos.getValue("reabertas") + a.segmentos.getValue("devolvidas") + a.segmentos.getValue("canceladas") +
+                a.segmentos.getValue("concluidasComAtraso")
+            ).map { it.key }.toSet()
+        val grupos = a.dto.maiorTempoPorStatus
+        assertTrue(uniao.isNotEmpty())
+        // Cada task das quatro listas cai em exatamente um status (aquele onde ficou mais tempo), em ordem alfabética.
+        assertEquals(uniao.size, grupos.sumOf { it.n })
+        assertEquals(grupos.map { it.valor }.sortedBy { it!!.lowercase() }, grupos.map { it.valor })
+        for (g in grupos) {
+            val seg = a.segmentos.getValue("maiorTempo:${g.valor}")
+            assertEquals(g.n, seg.size, g.valor)
+            // A linha da gaveta diz qual é o status e quantos dias.
+            assertTrue(seg.all { a.motivos.getValue("maiorTempo:${g.valor}").getValue(it.key).startsWith("Maior tempo em ${g.valor}:") })
+        }
+        // Os segmentos são só estes; a lista vazia (sem negativas) não inventa grupo.
+        assertEquals(grupos.size, a.segmentos.keys.count { it.startsWith("maiorTempo:") })
+    }
+
+    @Test
     fun contagens() {
         val d = analise().dto
         assertEquals(1, d.reabertas)

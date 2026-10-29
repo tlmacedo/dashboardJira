@@ -27,6 +27,30 @@
 .tabela tbody th {
   font-weight: 600;
 }
+/* Tabela virtual (acima de 200 linhas): janela com altura fixa, cabeçalho fixo e linhas de altura fixa. */
+.tabela-virtual {
+  overflow-y: auto;
+  border: 1px solid var(--line);
+}
+.tabela-virtual:focus-within {
+  outline: 2px solid var(--focus);
+  outline-offset: -2px;
+}
+.tabela--virtual {
+  table-layout: fixed;
+  outline: none;
+}
+.tabela--virtual td,
+.tabela--virtual tbody th {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+.tabela--virtual tr[aria-selected='true'] {
+  background: var(--soft);
+  box-shadow: inset 3px 0 0 var(--primary);
+}
 .tabela tbody tr:hover {
   background: var(--soft);
 }

@@ -23,6 +23,7 @@ import br.sidia.painel.jql.CardSpecs
 import br.sidia.painel.jql.FieldDictionary
 import br.sidia.painel.security.Role
 import br.sidia.painel.security.RoleDirectory
+import br.sidia.painel.sync.PreenchimentoDeCampos
 import br.sidia.painel.sync.VinculosConfig
 import br.sidia.painel.time.BusinessCalendar
 import com.charleskorn.kaml.UnknownPropertyException
@@ -200,6 +201,15 @@ class AppContext(
             } catch (e: Throwable) {
                 trava?.close()
                 throw e
+            }
+            // Linhas gravadas antes dos campos do dicionário: preenche do `raw` local (nunca fala com o Jira). Falha aqui não impede a subida.
+            ds?.let {
+                try {
+                    val n = PreenchimentoDeCampos(it).preencherTudo(campos)
+                    if (n > 0) log.info("Campos do dicionário preenchidos do raw em {} issues", n)
+                } catch (e: Exception) {
+                    log.warn("Preenchimento dos campos do dicionário falhou ({})", e.javaClass.simpleName)
+                }
             }
             return AppContext(
                 settings, calendario, papeis, ds, jira, mapaDeStatus, campos, fichas, vinculos, labelsDeAtraso, regrasAuditoria, clock,

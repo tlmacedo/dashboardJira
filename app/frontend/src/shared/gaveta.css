@@ -69,6 +69,51 @@
   overflow: auto;
   flex: 1;
 }
+/* Gaveta da task (Plano 10): seções empilhadas; quando aberta por cima da lista, fica acima dela. */
+.gaveta-fundo--tarefa {
+  z-index: 50;
+}
+.tarefa-secao {
+  margin: 0 0 18px;
+}
+.tarefa-secao h3 {
+  font-size: 14px;
+  margin: 0 0 6px;
+}
+.tarefa-dl {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 4px 14px;
+  margin: 0;
+}
+.tarefa-dl dt {
+  color: var(--text2);
+  font-size: 12.5px;
+}
+.tarefa-dl dd {
+  margin: 0;
+}
+.tarefa-par {
+  display: contents;
+}
+.tarefa-labels {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.tarefa-cat {
+  color: var(--text2);
+  font-size: 12.5px;
+}
+.gaveta-avisos {
+  margin: 0 0 12px;
+  padding-left: 18px;
+  font-size: 12.5px;
+  color: var(--text2);
+}
 @keyframes gaveta-aparecer {
   from {
     opacity: 0;

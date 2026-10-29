@@ -1,7 +1,7 @@
 package br.sidia.painel.http
 
 import br.sidia.painel.AppContext
-import br.sidia.painel.cards.rotaParaRegistro
+import br.sidia.painel.cards.rotuloDaRota
 import br.sidia.painel.db.AccessLog
 import br.sidia.painel.security.principalOuNulo
 import io.ktor.http.HttpHeaders
@@ -102,7 +102,7 @@ suspend fun registrarNegacaoCsrf(auditoria: AccessLog, ctx: AppContext, call: Ap
         withContext(Dispatchers.IO) {
             auditoria.record(
                 call.principalOuNulo()?.userId?.takeIf { it.isNotBlank() } ?: ID_ANONIMO,
-                rotaParaRegistro(call.request.path()),
+                rotuloDaRota(call),
                 mapOf("motivo" to codigo),
                 ctx.clock.instant(),
             )

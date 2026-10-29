@@ -85,10 +85,12 @@ internal fun montarEntrada(
     ctx: AppContext, store: WorkStore, principal: Principal, params: Parameters, periodoPadraoDias: Int?,
 ): EntradaDeCard {
     val hoje = hoje(ctx)
-    val filtros = FiltrosDeCard.ler(params, hoje, periodoPadraoDias)
+    val filtros = FiltrosDeCard.ler(params, hoje, periodoPadraoDias, camposDeFiltro = camposDeFiltroDe(ctx))
     // A equipe cadastrada (equipes.yaml) também existe: quem não tem task ainda precisa aparecer nos cards de pessoas.
     val escopo = escopoDe(principal, ctx, hoje, filtros, store.pessoas(INSTANCIA_TRABALHO) + ctx.equipes.todos.map { it.id })
-    return EntradaDeCard(principal, filtros, escopo, ctx.clock.instant(), hoje, ctx, store, params)
+    // O filtro por campo do dicionário vale para TODA leitura do card (e do drill, que usa esta mesma entrada).
+    val leitura = if (filtros.campos.isEmpty()) store else WorkStoreFiltradoPorCampos(store, filtros.campos)
+    return EntradaDeCard(principal, filtros, escopo, ctx.clock.instant(), hoje, ctx, leitura, params)
 }
 
 /**

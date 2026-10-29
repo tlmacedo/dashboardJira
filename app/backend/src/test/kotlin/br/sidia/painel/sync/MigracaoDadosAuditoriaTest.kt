@@ -15,7 +15,7 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /**
- * A migração `V6__dados_para_auditoria_completa` (Plano 11, T3 opção A) e a gravação dos dados novos: criação do worklog, valor
+ * A migração `V7__dados_para_auditoria_completa` (Plano 11, T3 opção A) e a gravação dos dados novos: criação do worklog, valor
  * das estimativas e regravação só dos eventos de estimativa ainda sem valor. SQLite real em arquivo; nenhuma rede.
  */
 class MigracaoDadosAuditoriaTest {
@@ -42,7 +42,7 @@ class MigracaoDadosAuditoriaTest {
 
     @Test
     fun cursorZeradoPelaMigracao() {
-        val ds = ate("5")
+        val ds = ate("6")
         exec(ds, "INSERT INTO sync_state(instance, watermark, ultima_reconciliacao) VALUES ('samsung', 1000, 2000), ('sidia', 3000, NULL)")
         exec(ds, "INSERT INTO issue(key, instance, project, created) VALUES ('TG-1', 'samsung', 'TG', 1)")
         Flyway.configure().dataSource(ds).locations("classpath:db/migration").load().migrate()
@@ -56,7 +56,7 @@ class MigracaoDadosAuditoriaTest {
 
     @Test
     fun migracaoAcrescentaCriadoEmSemPerderWorklog() {
-        val ds = ate("5")
+        val ds = ate("6")
         exec(ds, "INSERT INTO issue(id, key, instance, project, created) VALUES (1, 'TG-1', 'samsung', 'TG', 1)")
         exec(ds, "INSERT INTO worklog(issue_id, author_ref, started, seconds, instance, jira_id) VALUES (1, 'ana', 5, 60, 'samsung', '9')")
         Flyway.configure().dataSource(ds).locations("classpath:db/migration").load().migrate()
@@ -66,7 +66,7 @@ class MigracaoDadosAuditoriaTest {
 
     @Test
     fun tabelaPersonRemovidaQuandoSemUso() {
-        val ds = ate("5")
+        val ds = ate("6")
         assertTrue(consulta(ds, "SELECT count(*) FROM sqlite_master WHERE name = 'person'") { it.next(); it.getInt(1) } == 1)
         Flyway.configure().dataSource(ds).locations("classpath:db/migration").load().migrate()
         assertEquals(0, consulta(ds, "SELECT count(*) FROM sqlite_master WHERE name = 'person'") { it.next(); it.getInt(1) })

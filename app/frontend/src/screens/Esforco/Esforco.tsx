@@ -78,7 +78,7 @@ export function Esforco() {
         pergunta={t('esforco.pergunta')}
         filtros={
           <Filtros
-            key={sp.toString()} campos={['periodo', 'squad', 'pessoa', 'tipo', 'prioridade', 'os', 'unit']} valor={sp} aoAplicar={aplicar}
+            key={sp.toString()} campos={['periodo', 'squad', 'pessoa', 'tipo', 'prioridade', 'os', 'campos', 'unit']} valor={sp} aoAplicar={aplicar}
             pessoas={dto?.pessoas.map((p) => p.pessoa)}
             extras={
               <div role="group" aria-label={t('esforco.granularidade')} className="seg seg--claro">

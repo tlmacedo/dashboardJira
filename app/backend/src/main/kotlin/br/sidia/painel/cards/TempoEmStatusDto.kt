@@ -67,6 +67,10 @@ data class AvisoDto(
         const val HISTORICO_DE_ESTIMATIVA_INCOMPLETO = "HISTORICO_DE_ESTIMATIVA_INCOMPLETO"
         /** Worklogs gravados sem a data de criação (antes da nova carga): não geram sinal (`n`). Informativo. */
         const val HISTORICO_DE_WORKLOG_INCOMPLETO = "HISTORICO_DE_WORKLOG_INCOMPLETO"
+        /** Alguma lista de opções de filtro passou do limite e foi cortada (`lista`, `limite`). */
+        const val OPCOES_TRUNCADAS = "OPCOES_TRUNCADAS"
+        /** Issues cujos campos do dicionário vieram só do `raw` antigo: a reconciliação completa os completa (`n`). */
+        const val CAMPOS_DO_DICIONARIO_INCOMPLETOS = "CAMPOS_DO_DICIONARIO_INCOMPLETOS"
         const val BLOQUEANTE = "bloqueante"
         const val INFORMATIVO = "informativo"
 

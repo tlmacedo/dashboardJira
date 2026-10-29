@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useLang } from '../../i18n/LangProvider'
 import { Cartao, type EstadoDoCartao } from '../../shared/Cartao'
 import { CardPage } from '../../shared/CardPage'
+import { ContagensEmBarras } from '../../shared/ContagensEmBarras'
 import { baixarCsv } from '../../shared/csv'
 import { Filtros, resumoDosFiltros, useFiltrosDaUrl } from '../../shared/Filtros'
 import { dataCurta, inteiro, percentual } from '../../shared/format'
@@ -74,7 +75,7 @@ export function Negativas() {
       <CardPage
         titulo={t('nav.negativas')}
         pergunta={t('negativas.pergunta')}
-        filtros={<Filtros key={sp.toString()} campos={['periodo', 'squad', 'pessoa', 'tipo', 'prioridade', 'os']} valor={sp} aoAplicar={aplicar} />}
+        filtros={<Filtros key={sp.toString()} campos={['periodo', 'squad', 'pessoa', 'tipo', 'prioridade', 'os', 'campos']} valor={sp} aoAplicar={aplicar} />}
         consulta={consulta}
         avisos={dto?.avisos}
         aoExportar={exportar}
@@ -127,6 +128,19 @@ export function Negativas() {
                 )
               })}
             </div>
+
+            {(dto.maiorTempoPorStatus ?? []).length > 0 && (
+              <Cartao id="NE-09" variante="tabela" nivelDoTitulo={2} idDoTitulo="h-ne-maior" titulo={t('negativas.maiorTempo')}>
+                <ContagensEmBarras
+                  barras
+                  rotulo={t('negativas.maiorTempo')}
+                  cabecalho={t('negativas.col.status')}
+                  indisponivel={bloqueado}
+                  itens={(dto.maiorTempoPorStatus ?? []).map((g) => ({ chave: g.valor ?? '-', rotulo: g.valor ?? '—', n: g.n }))}
+                  aoAbrir={(status) => abrir('NE-09', `maiorTempo:${status}`, `${t('negativas.maiorTempo')}: ${status}`)}
+                />
+              </Cartao>
+            )}
 
             <Cartao id="NE-10" variante="tabela" nivelDoTitulo={2} idDoTitulo="h-ne-pessoa" titulo={t('negativas.porPessoa')}>
               {dto.porResponsavel.length === 0 ? (

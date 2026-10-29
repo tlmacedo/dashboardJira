@@ -338,7 +338,7 @@ class ContratoDeCartoesTest {
         val linhas = linhasDoAccessLog()
         assertEquals(4, linhas.size, linhas.toString())
         assertEquals(
-            listOf("/api/cartoes/TS-01/tasks", "/api/cartoes/TS-01/tasks", "/api/cartoes/TS-01/tasks", "/api/cartoes/ZZ-99/tasks"),
+            listOf("/api/cartoes/TS-01/tasks", "/api/cartoes/TS-01/tasks", "/api/cartoes/TS-01/tasks", "/api/cartoes/{id}/tasks"), // ZZ-99 não resolve: {id}
             linhas.map { it.second },
         )
         assertTrue("\"segmento\":\"analisadas\"" in linhas[0].third && "200" in linhas[0].third, linhas[0].third)

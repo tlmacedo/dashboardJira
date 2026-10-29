@@ -151,6 +151,43 @@ describe('tela Central de atenção', () => {
     expect(within(lista).getAllByText('—').length).toBeGreaterThan(0)
   })
 
+  const COM_30D: CentralDto = {
+    ...DTO,
+    kpis: [
+      ...DTO.kpis,
+      { ...item('CONCLUIDAS_30D', 12, 'neutro', 'fechadas', 'VG-02'), segmento: 'atual' },
+      { ...item('CICLO_30D', 9, 'neutro', 'fechadas', 'VG-03'), segmento: 'ciclo' },
+    ],
+    concluidas30d: { atual: 12, anterior: 8, variacao: 50 },
+    ciclo30d: { p50: 2, p85: 5.5, n: 9 },
+  }
+
+  it('concluidas30dMostraVariacaoEAbreAGaveta', async () => {
+    const mock = simular({ [API]: { status: 200, corpo: COM_30D }, '/api/cartoes/VG-02/tasks': { status: 200, corpo: gaveta(12, 'card.vg02.titulo') } })
+    renderizarTela(<Central />, '/central')
+    const cartao = await screen.findByRole('button', { name: /Concluídas \(30 dias\)/ })
+    expect(cartao).toHaveTextContent('12')
+    expect(cartao.closest('article')).toHaveTextContent('+50,0% em relação aos 30 dias anteriores (8)')
+    await userEvent.click(cartao)
+    expect(await screen.findByRole('dialog')).toBeInTheDocument()
+    expect(mock.mock.calls.some((c) => String(c[0]).includes('/api/cartoes/VG-02/tasks') && String(c[0]).includes('segmento=atual'))).toBe(true)
+  })
+
+  it('semBaseNaoInventaVariacao', async () => {
+    simular({ [API]: { status: 200, corpo: { ...COM_30D, concluidas30d: { atual: 3, anterior: 0, variacao: null } } } })
+    renderizarTela(<Central />, '/central')
+    const cartao = await screen.findByRole('button', { name: /Concluídas \(30 dias\)/ })
+    expect(cartao.closest('article')).toHaveTextContent('sem base de comparação')
+  })
+
+  it('cicloMostraP50ComP85NoRodape', async () => {
+    simular({ [API]: { status: 200, corpo: COM_30D } })
+    renderizarTela(<Central />, '/central')
+    const cartao = await screen.findByRole('button', { name: /Ciclo P50/ })
+    expect(cartao).toHaveTextContent('2,0')
+    expect(cartao.closest('article')).toHaveTextContent('P85: 5,5 dias úteis · 9 tasks')
+  })
+
   it('semPermissaoMostraMensagemDePapel', async () => {
     simular({ [API]: { status: 403 } })
     renderizarTela(<Central />, '/central')

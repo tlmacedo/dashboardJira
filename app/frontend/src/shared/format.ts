@@ -15,6 +15,13 @@ export function percentual(fracao: number, lang: Lang): string {
   return `${Math.round(fracao * 100).toLocaleString(locale(lang))}%`
 }
 
+/** Data e hora de um instante ISO no fuso do painel (America/Manaus), no formato do idioma; texto ilegível volta como veio. */
+export function dataHora(iso: string, lang: Lang): string {
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return iso
+  return new Intl.DateTimeFormat(locale(lang), { timeZone: 'America/Manaus', dateStyle: 'short', timeStyle: 'short' }).format(d)
+}
+
 /**
  * Data e hora curtas de um instante ISO (UTC) NO FUSO DE MANAUS, qualquer que seja o fuso do navegador: os filtros de período
  * (`de`/`ate`) são dias de Manaus, então a hora mostrada tem de ser a mesma régua.

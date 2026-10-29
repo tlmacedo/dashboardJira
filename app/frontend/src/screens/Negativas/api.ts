@@ -25,4 +25,6 @@ export type NegativasDto = {
   porResponsavel: NegativaPessoa[]
   unit: 'util' | 'corrido' | string
   avisos: Aviso[]
+  /** NE-09: tasks das listas negativas por status de MAIOR tempo (valor, alfabético). */
+  maiorTempoPorStatus?: { valor: string | null; n: number }[]
 }

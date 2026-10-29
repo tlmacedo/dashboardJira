@@ -11,6 +11,7 @@ import br.sidia.painel.trabalho.RespTrb
 import br.sidia.painel.trabalho.Trb1
 import io.ktor.http.HttpStatusCode
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.double
 import kotlinx.serialization.json.int
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -87,6 +88,39 @@ class CentralRoutesTest {
             assertEquals(inteiro(carga, "tasksAcimaDaCapacidade"), c.item("ACIMA_DA_CAPACIDADE")?.n, u)
             assertEquals(inteiro(carga, "tasksComFolga"), c.item("COM_FOLGA")?.n, u)
             assertEquals(inteiro(cli.get(u, "/api/cards/metas"), "noPrazo"), c.kpis.first { it.item == "NO_PRAZO" }.n, u)
+        }
+    }
+
+    @Test
+    fun concluidas30dECicloBatemComFechadasEComAGaveta() = rodar { cli ->
+        for (u in listOf("gerente.exemplo", "coord.um")) {
+            val c = dto(cli.get(u, rota))
+            val fech = cli.get(u, "/api/cards/fechadas?de=2026-10-01&ate=2026-10-30")
+            // O mesmo período nos dois lados: os 30 dias até hoje (30/10, Manaus).
+            assertEquals(inteiro(fech, "concluidas"), c.concluidas30d?.atual, u)
+            assertEquals(c.concluidas30d?.atual, c.kpis.first { it.item == "CONCLUIDAS_30D" }.n, u)
+            val anterior = cli.get(u, "/api/cards/fechadas?de=2026-09-01&ate=2026-09-30")
+            assertEquals(inteiro(anterior, "concluidas"), c.concluidas30d?.anterior, u)
+            val ciclo = Json.parseToJsonElement(fech.corpo).jsonObject["ciclo"]
+            if (ciclo == null || ciclo is kotlinx.serialization.json.JsonNull) {
+                assertEquals(null, c.ciclo30d, u)
+            } else {
+                assertEquals(ciclo.jsonObject.getValue("n").jsonPrimitive.int, c.ciclo30d?.n, u)
+                assertEquals(ciclo.jsonObject.getValue("p50").jsonPrimitive.double, c.ciclo30d?.p50, u)
+                assertEquals(ciclo.jsonObject.getValue("p85").jsonPrimitive.double, c.ciclo30d?.p85, u)
+            }
+            // O número e a gaveta (itensBatemComAsTelasDeDestino confere o laço de todos os kpis).
+            val g = cli.get(u, "/api/cartoes/VG-02/tasks?segmento=atual")
+            assertEquals(c.concluidas30d?.atual, inteiro(g, "total"), u)
+            val gc = cli.get(u, "/api/cartoes/VG-03/tasks?segmento=ciclo")
+            assertEquals(c.kpis.first { it.item == "CICLO_30D" }.n, inteiro(gc, "total"), u)
+        }
+    }
+
+    @Test
+    fun usuarioESquadLeaderNaoVeemOsCartoesDaCentral() = rodar { cli ->
+        for (u in listOf("ana", "lider.alfa")) {
+            assertEquals(HttpStatusCode.Forbidden, cli.get(u, "/api/cartoes/VG-02/tasks?segmento=atual").status, u)
         }
     }
 

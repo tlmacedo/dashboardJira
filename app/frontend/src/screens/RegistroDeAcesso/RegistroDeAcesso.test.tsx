@@ -33,7 +33,7 @@ describe('tela Registro de acesso', () => {
     expect(linhas[0]).toHaveTextContent('gerente.exemplo')
     expect(linhas[0]).toHaveTextContent('✓ 200')
     expect(linhas[1]).toHaveTextContent('▲ 403')
-    expect(String(mock.mock.calls[0][0])).toContain('de=2026-10-24')
+    expect(mock.mock.calls.map((c) => String(c[0])).find((u) => !u.startsWith('/api/filtros')) ?? '').toContain('de=2026-10-24')
     expect(screen.getByText(/Sem contagem nem ordem por pessoa/)).toBeInTheDocument()
     // Nenhum cabeçalho ordena a tabela (sem "quem mais consultou").
     for (const c of within(tabela).getAllByRole('columnheader')) expect(c.querySelector('button')).toBeNull()
