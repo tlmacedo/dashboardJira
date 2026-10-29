@@ -76,14 +76,18 @@ if [ "$RESTAURAR" -eq 1 ]; then
     # TOCTOU: BACKUP_DIR e gravavel pela conta do servico, que poderia trocar a copia por um link para um arquivo so do root
     # ENTRE a validacao e o uso. Por isso a copia e lida UMA vez (cp -P nao segue links) para uma pasta temporaria 0700 so do
     # root, FORA de BACKUP_DIR, e dai em diante tudo (conferencia e restauracao) usa so o temporario, nunca o caminho original.
-    PASTA_SEGURA="$(mktemp -d)"
-    chmod 700 "$PASTA_SEGURA"
+    # A pasta temporaria fica DENTRO de <raiz> (so do root; nunca o TMPDIR do ambiente). Modo 755 e copia 644: a conta do servico
+    # precisa LER a copia para conferi-la, mas nao pode escrever nem trocar nada ali (a pasta e do root).
+    PASTA_SEGURA="$(mktemp -d -p "$RAIZ")"
+    chmod 755 "$PASTA_SEGURA"
     trap 'rm -rf "$PASTA_SEGURA"' EXIT
     COPIA_SEGURA="$PASTA_SEGURA/copia.db"
     cp -P -- "$COPIA" "$COPIA_SEGURA" || erro "nao foi possivel copiar a copia de seguranca"
     [ -f "$COPIA_SEGURA" ] && [ ! -L "$COPIA_SEGURA" ] || erro "a copia de seguranca e um link simbolico (recusada)"
-    # Confere a copia ANTES de mexer no banco atual (restaura num temporario e compara tabela a tabela).
-    if ! PAINEL_ENV_FILE="$ARQUIVO_ENV" "$RAIZ/$ANTERIOR/bin/painel" verificar-restauracao "$COPIA_SEGURA" | grep -q "RESTAURACAO OK"; then
+    chmod 644 "$COPIA_SEGURA"
+    # Confere a copia ANTES de mexer no banco atual (restaura num temporario e compara tabela a tabela), COMO A CONTA DO SERVICO:
+    # o programa abre o banco vivo e cria arquivos temporarios, e nada disso pode ser feito pelo root na pasta do servico.
+    if ! como_servico env PAINEL_ENV_FILE="$ARQUIVO_ENV" "$RAIZ/$ANTERIOR/bin/painel" verificar-restauracao "$COPIA_SEGURA" | grep -q "RESTAURACAO OK"; then
         erro "a copia nao passou em verificar-restauracao; nada foi alterado"
     fi
     echo "OK copia conferida"
@@ -98,17 +102,23 @@ if [ "$RESTAURAR" -eq 1 ]; then
     BANCO="$(valor_do_arquivo "$ARQUIVO_ENV" DATABASE_PATH)"
     [ -n "$BANCO" ] || erro "DATABASE_PATH nao esta definido no arquivo de variaveis"
     DATA="$(date +%Y%m%d-%H%M%S)"
-    # Nada e apagado: o banco atual e os auxiliares do WAL saem juntos para o lado, com a data.
-    for sufixo in "" "-wal" "-shm"; do
-        if [ -e "$BANCO$sufixo" ]; then
-            mv "$BANCO$sufixo" "$BANCO$sufixo.migrado-$DATA"
-        fi
-    done
-    # Restaura SO a partir do temporario conferido. O destino e criado com O_EXCL (noclobber): se a conta do servico plantar um
-    # link no lugar do banco, a escrita recusa em vez de seguir o link como root.
-    ( set -C; cat -- "$COPIA_SEGURA" > "$BANCO" ) || erro "nao foi possivel criar o banco restaurado (o destino ja existe?)"
-    chown --reference="$BANCO.migrado-$DATA" "$BANCO" 2>/dev/null || true
-    chmod --reference="$BANCO.migrado-$DATA" "$BANCO" 2>/dev/null || true
+    # TUDO o que toca a pasta do banco roda COMO A CONTA DO SERVICO (como_servico): o root nao escreve, move, muda dono nem modo ali,
+    # entao um link plantado so alcanca o que o proprio servico ja alcanca, e o banco ja nasce com o dono certo.
+    #  1. nada e apagado: o banco atual e os auxiliares do WAL saem juntos para o lado, com a data (mv renomeia o proprio item);
+    #  2. o banco restaurado e criado so a partir do temporario conferido (entrada padrao), com O_EXCL (noclobber);
+    #  3. confere que o resultado e um arquivo comum, nao um link, e copia o modo do anterior (tudo como o servico).
+    como_servico sh -c '
+        set -eu
+        banco="$1"; data="$2"
+        for sufixo in "" "-wal" "-shm"; do
+            if [ -e "$banco$sufixo" ] || [ -L "$banco$sufixo" ]; then
+                mv -- "$banco$sufixo" "$banco$sufixo.migrado-$data"
+            fi
+        done
+        ( set -C; cat > "$banco" )
+        [ -f "$banco" ] && [ ! -L "$banco" ] || exit 1
+        chmod --reference="$banco.migrado-$data" "$banco" 2>/dev/null || true
+    ' _ "$BANCO" "$DATA" < "$COPIA_SEGURA" || erro "nao foi possivel restaurar o banco como a conta do servico"
     echo "OK banco restaurado (o anterior ficou em $BANCO.migrado-$DATA; o que foi gravado depois do backup so existe la)"
 fi
 

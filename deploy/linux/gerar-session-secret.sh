@@ -26,6 +26,7 @@ else
     SEGREDO="$(head -c 48 /dev/urandom | base64 | tr -d '\n')"
 fi
 
+# O temporario nasce NA MESMA pasta do painel.env (/etc/painel, so do root): o root nunca escreve em pasta do servico aqui.
 TMP="$(mktemp "$ARQUIVO.XXXXXX")"
 trap 'rm -f "$TMP"' EXIT
 chmod 600 "$TMP"

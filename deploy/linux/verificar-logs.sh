@@ -13,6 +13,7 @@ LOG="${2:-}"
 SERVICO="${PAINEL_SERVICO:-painel}"
 [ -f "$ARQUIVO" ] || { echo "ERRO: arquivo de variaveis nao encontrado" >&2; exit 2; }
 
+# So LE os logs (nunca escreve nem muda nada fora da propria pasta temporaria, que o mktemp cria com modo 0700).
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
 if [ -n "$LOG" ]; then

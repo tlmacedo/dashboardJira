@@ -280,7 +280,10 @@ class ScriptsDeImplantacaoTest {
         val envFile = pasta.resolve("painel.env")
         Files.write(envFile, listOf("BACKUP_DIR=$backups", "DATABASE_PATH=$banco"))
         Files.writeString(raiz.resolve("versao-anterior.txt"), registro)
-        return CenarioDeReversao(raiz, marcador, mapOf("PAINEL_ENV_FILE" to envFile.toString()), pasta)
+        // O reverter roda o painel e a restauração com a identidade do serviço; nos testes é o próprio usuário que os executa.
+        return CenarioDeReversao(
+            raiz, marcador, mapOf("PAINEL_ENV_FILE" to envFile.toString(), "PAINEL_USUARIO" to System.getProperty("user.name")), pasta,
+        )
     }
 
     private fun reverterComRegistro(registro: String, vararg extras: String): Triple<Int, String, Boolean> {
@@ -398,18 +401,85 @@ class ScriptsDeImplantacaoTest {
         }
     }
 
+    // ---------------------------------------------------------------- L1: root nunca opera dentro da pasta do servico
+
+    private fun souRootComUsuarioNobody(): Boolean {
+        if (System.getProperty("user.name") != "root") return false
+        return runCatching { rodar(listOf("id", "-u", "nobody")).first == 0 }.getOrDefault(false)
+    }
+
+    @Test
+    fun restauracaoEFeitaComAIdentidadeDoServicoEOBancoNasceComODonoCerto() {
+        org.junit.jupiter.api.Assumptions.assumeTrue(shell() != null && souRootComUsuarioNobody(), "precisa de root e do usuário nobody")
+        val pasta = Files.createTempDirectory("painel-l1-")
+        try {
+            val c = montarCenarioDeReversao(pasta, "versao=2026.11.1\nbackup=painel-bom.db\n")
+            val alvo = pasta.resolve("alvo-so-do-root.txt").also { Files.writeString(it, "ALVO-INTOCAVEL") }
+            // o "atacante" já plantou um link no lugar do banco, apontando para um arquivo só do root
+            val dados = pasta.resolve("dados")
+            Files.createSymbolicLink(dados.resolve("painel.db"), alvo)
+            // pastas atravessáveis pelo usuário do serviço; a pasta de dados é DELE (como em produção)
+            rodar(listOf("chmod", "-R", "a+rX", pasta.toString()))
+            rodar(listOf("chown", "nobody", dados.toString()))
+            Files.setPosixFilePermissions(alvo, java.nio.file.attribute.PosixFilePermissions.fromString("rw-------"))
+            val uidNobody = rodar(listOf("id", "-u", "nobody")).second.trim().toInt()
+            val antes = Files.getAttribute(alvo, "unix:uid") as Int to Files.getPosixFilePermissions(alvo)
+            val (codigo, saida) = rodar(
+                listOf(shell()!!, reverter, c.raiz.toString(), "--restaurar-banco", "--sem-servico"),
+                c.env + ("PAINEL_USUARIO" to "nobody"),
+            )
+            assertEquals(0, codigo, saida)
+            val banco = dados.resolve("painel.db")
+            assertTrue(Files.isRegularFile(banco, java.nio.file.LinkOption.NOFOLLOW_LINKS), "o banco restaurado é um arquivo comum, não um link")
+            assertEquals("copia", Files.readString(banco).trim())
+            assertEquals(uidNobody, Files.getAttribute(banco, "unix:uid") as Int, "o banco nasce com o dono do serviço (nenhum chown como root)")
+            // o alvo do link plantado NÃO foi tocado: conteúdo, dono e modo
+            assertEquals("ALVO-INTOCAVEL", Files.readString(alvo))
+            assertEquals(antes, Files.getAttribute(alvo, "unix:uid") as Int to Files.getPosixFilePermissions(alvo))
+            // o link antigo foi guardado ao lado (nada apagado)
+            val guardados = Files.list(dados).use { s -> s.map { it.fileName.toString() }.filter { it.startsWith("painel.db.migrado-") }.toList() }
+            assertEquals(1, guardados.size, guardados.toString())
+        } finally {
+            pasta.toFile().deleteRecursively()
+        }
+    }
+
+    @Test
+    fun rootNuncaTocaCaminhosDaPastaDoServico() {
+        val s = ler("deploy/linux/reverter.sh")
+        // nenhuma escrita/chown/chmod/mv do root sobre o banco: tudo vai dentro do script executado com a identidade do serviço
+        assertFalse(Regex("(?m)^\\s*(chown|chmod|mv|cp|cat)\\b[^\\n]*\\\$BANCO").containsMatchIn(s), "root operando sobre \$BANCO fora do script do serviço")
+        assertTrue("como_servico" in s && "PAINEL_USUARIO" in ler("deploy/linux/comum.sh"))
+        // pasta temporária SÓ do root (dentro da raiz), nunca o TMPDIR do ambiente
+        assertTrue("mktemp -d -p \"\$RAIZ\"" in s)
+        assertTrue("mktemp -d -p \"\$RAIZ\"" in ler("deploy/linux/atualizar.sh"))
+        // backup e conferência rodam com a identidade do serviço (a cópia nasce com o dono certo, nenhum -wal/-shm de root)
+        val c = ler("deploy/linux/comum.sh")
+        assertTrue(Regex("fazer_backup\\(\\) \\{[^}]*como_servico", RegexOption.DOT_MATCHES_ALL).containsMatchIn(c))
+        assertTrue(Regex("como_servico[^\\n]*verificar-restauracao").containsMatchIn(s))
+    }
+
+    @Test
+    fun powerShellNaoSegueLinkNemUsaAclPorCaminho() {
+        val p = ler("deploy/windows/reverter.ps1")
+        assertTrue("FileMode]::CreateNew" in p, "o banco restaurado é criado com CreateNew (recusa qualquer coisa já existente, inclusive link)")
+        assertTrue("SetAccessControl" in p && "Set-Acl -LiteralPath \$banco" !in p, "ACL pelo handle, não pelo caminho")
+        assertTrue("[System.IO.File]::Move(" in p, "mover o banco antigo renomeia o próprio item")
+        assertFalse(Regex("Move-Item -LiteralPath \"\\\$banco").containsMatchIn(p))
+    }
+
     @Test
     fun reverterCopiaUmaVezParaPastaTemporariaERestauraDeLa() {
         val s = ler("deploy/linux/reverter.sh")
         assertTrue("cp -P --" in s && "mktemp -d" in s && "trap" in s)
         // a conferência e a restauração usam o temporário, nunca o caminho original reaberto
         assertTrue(Regex("verificar-restauracao \"\\\$COPIA_SEGURA\"").containsMatchIn(s))
-        assertTrue(Regex("cat -- \"\\\$COPIA_SEGURA\" > \"\\\$BANCO\"").containsMatchIn(s) && "set -C" in s, "restaura do temporário, com O_EXCL no destino")
+        assertTrue("< \"\$COPIA_SEGURA\"" in s && "set -C" in s, "restaura do temporário (entrada padrão), com O_EXCL no destino")
         assertFalse(Regex("cp [^\\n]*\"\\\$COPIA\" \"\\\$BANCO\"").containsMatchIn(s), "nunca relê o caminho original para restaurar")
         val p = ler("deploy/windows/reverter.ps1")
         assertTrue("\$copiaSegura" in p && "finally" in p)
         assertTrue(Regex("verificar-restauracao \\\$copiaSegura").containsMatchIn(p))
-        assertTrue(Regex("File\\]::Copy\\(\\\$copiaSegura, \\\$banco, \\\$false\\)").containsMatchIn(p), ".ps1 restaura do temporário sem sobrescrever")
+        assertTrue(Regex("OpenRead\\(\\\$copiaSegura\\)").containsMatchIn(p), ".ps1 restaura do temporário conferido")
         assertFalse(Regex("File\\]::Copy\\(\\\$copia,").containsMatchIn(p), ".ps1 não relê o original para restaurar")
     }
 

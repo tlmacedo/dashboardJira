@@ -94,14 +94,28 @@ if ($RestaurarBanco) {
     $banco = Ler-ValorDoArquivo -Arquivo $arquivoEnv -Nome 'DATABASE_PATH'
     if ($banco -eq '') { throw 'DATABASE_PATH nao esta definido no arquivo de variaveis' }
     $data = Get-Date -Format 'yyyyMMdd-HHmmss'
-    # Nada e apagado: o banco atual e os auxiliares do WAL saem juntos para o lado, com a data.
+    # No Windows nao ha como rodar esta parte "como o servico" sem a senha da conta, entao o administrador NAO segue links:
+    #  1. nada e apagado: o banco atual e os auxiliares do WAL saem juntos para o lado, com a data; File.Move renomeia o PROPRIO
+    #     item (um link plantado e movido como link, nunca seguido). Entrada de pasta/juncao e recusada;
+    #  2. o banco restaurado e criado com FileMode.CreateNew (falha se QUALQUER coisa ja existir ali, inclusive link) a partir do
+    #     temporario conferido, e a ACL e copiada pelo HANDLE aberto (SetAccessControl), nunca por caminho (Set-Acl seguiria o link).
+    # Risco residual: a pasta de dados e do servico, que poderia plantar um link ENTRE o File.Move e o CreateNew; o CreateNew recusa
+    # (nao segue) e a reversao falha sem escrever em lugar nenhum.
     foreach ($sufixo in @('', '-wal', '-shm')) {
-        if (Test-Path -LiteralPath "$banco$sufixo") { Move-Item -LiteralPath "$banco$sufixo" -Destination "$banco$sufixo.migrado-$data" }
+        $item = Get-Item -LiteralPath "$banco$sufixo" -Force -ErrorAction SilentlyContinue
+        if ($item) {
+            if ($item.PSIsContainer) { throw 'o banco ou seus arquivos auxiliares sao uma pasta (recusado)' }
+            [System.IO.File]::Move("$banco$sufixo", "$banco$sufixo.migrado-$data")
+        }
     }
-    # Restaura SO a partir do temporario conferido. File.Copy sem sobrescrever recusa se o destino ja existir (inclusive um link
-    # plantado no lugar do banco), em vez de seguir o link como administrador.
-    [System.IO.File]::Copy($copiaSegura, $banco, $false)
-    try { Set-Acl -LiteralPath $banco -AclObject (Get-Acl -LiteralPath "$banco.migrado-$data") } catch { Write-Host 'AVISO: confira a permissao do banco restaurado (a ACL do anterior nao foi copiada)' }
+    $destino = New-Object System.IO.FileStream($banco, [System.IO.FileMode]::CreateNew, [System.IO.FileAccess]::Write, [System.IO.FileShare]::None)
+    try {
+        $origem = [System.IO.File]::OpenRead($copiaSegura)
+        try { $origem.CopyTo($destino) } finally { $origem.Dispose() }
+        try { $destino.SetAccessControl([System.IO.File]::GetAccessControl("$banco.migrado-$data")) } catch { Write-Host 'AVISO: confira a permissao do banco restaurado (a ACL do anterior nao foi copiada)' }
+    } finally {
+        $destino.Dispose()
+    }
     Write-Host "OK banco restaurado (o anterior ficou em $banco.migrado-$data; o que foi gravado depois do backup so existe la)"
 }
 

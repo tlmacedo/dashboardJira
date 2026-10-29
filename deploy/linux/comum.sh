@@ -151,10 +151,38 @@ esperar_saude() {
     return 1
 }
 
-# Backup do banco pelo mecanismo do Plano 12 (painel backup-agora, da versao ATUAL). Imprime o nome do arquivo da copia.
+# REGRA DE DESENHO (classe de falhas "root operando em pasta do servico"): o root NUNCA escreve, move, apaga, muda dono/modo nem
+# segue caminho dentro de pastas que a conta do servico controla (dados, backups, logs). Tudo o que precisa acontecer la roda COM
+# A IDENTIDADE DO SERVICO (como_servico): o arquivo ja nasce com o dono certo e um link plantado so alcanca o que o proprio servico
+# ja alcanca. O usuario do servico vem do AMBIENTE do root que roda o script (PAINEL_USUARIO, padrao "painel"), nunca de um arquivo
+# ou pasta que o servico escreva. O root so mexe em <raiz> (so dele) e nas pastas temporarias criadas dentro de <raiz>.
+usuario_do_servico() {
+    printf '%s' "${PAINEL_USUARIO:-painel}"
+}
+
+# Roda o comando como a conta do servico quando o script esta rodando como root; sem ser root nao ha privilegio a baixar e roda direto.
+# Uso: como_servico <comando> [argumentos...]
+como_servico() {
+    if [ "$(id -u)" -ne 0 ]; then
+        "$@"
+        return
+    fi
+    usuario="$(usuario_do_servico)"
+    id -u "$usuario" >/dev/null 2>&1 || erro "o usuario do servico ($usuario) nao existe (defina PAINEL_USUARIO)"
+    if command -v runuser >/dev/null 2>&1; then
+        runuser -u "$usuario" -- "$@"
+    elif command -v setpriv >/dev/null 2>&1; then
+        setpriv --reuid="$usuario" --regid="$usuario" --init-groups -- "$@"
+    else
+        erro "precisa de runuser ou setpriv para rodar como o usuario do servico"
+    fi
+}
+
+# Backup do banco pelo mecanismo do Plano 12 (painel backup-agora, da versao ATUAL), COMO A CONTA DO SERVICO (a copia nasce com o
+# dono certo e nenhum -wal/-shm de root fica na pasta do banco). Imprime o nome do arquivo da copia.
 # Uso: fazer_backup <raiz> <arquivo de variaveis>
 fazer_backup() {
-    saida="$(PAINEL_ENV_FILE="$2" "$1/atual/bin/painel" backup-agora)" || { echo "$saida" >&2; return 1; }
+    saida="$(como_servico env PAINEL_ENV_FILE="$2" "$1/atual/bin/painel" backup-agora)" || { echo "$saida" >&2; return 1; }
     nome="$(printf '%s\n' "$saida" | sed -n 's/^BACKUP OK \([^ ]*\) .*$/\1/p' | head -n 1)"
     [ -n "$nome" ] || { echo "$saida" >&2; return 1; }
     printf '%s\n' "$nome"

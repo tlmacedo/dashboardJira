@@ -63,6 +63,6 @@ printf '#!/bin/sh\nif [ "$1" = verificar-restauracao ]; then rm -f "%s"; ln -s "
 chmod +x "$T/app/2026.11.1/bin/painel"
 printf 'BACKUP_DIR=%s\nDATABASE_PATH=%s\n' "$T/backups" "$T/dados/painel.db" > "$T/painel.env"
 printf 'versao=2026.11.1\nbackup=copia.db\n' > "$T/app/versao-anterior.txt"
-PAINEL_ENV_FILE="$T/painel.env" sh "$AQUI/reverter.sh" "$T/app" --restaurar-banco --sem-servico > /dev/null
+PAINEL_USUARIO="$(id -un)" PAINEL_ENV_FILE="$T/painel.env" sh "$AQUI/reverter.sh" "$T/app" --restaurar-banco --sem-servico > /dev/null
 [ "$(cat "$T/dados/painel.db")" = "copia-valida" ] || erro "a restauracao nao veio da copia validada (TOCTOU)"
 echo "TOCTOU_OK"

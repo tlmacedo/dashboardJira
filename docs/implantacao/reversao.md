@@ -34,6 +34,20 @@ Termina com `REVERSAO_OK <versao>`. Com `-RestaurarBanco`, rode `painel backup-a
 
 **Como conferir:** `REVERSAO_OK`; `atual` aponta para a versão anterior; o rodapé do painel mostra a versão anterior; `painel verificar-restauracao` dá `RESTAURACAO OK`.
 
+## Regra de desenho: o root nunca opera dentro da pasta do serviço
+
+A conta do serviço escreve em `dados/`, nos backups e nos logs; por isso um link plantado ali nunca pode ser seguido por quem tem privilégio. Os scripts de Linux seguem uma regra única: **root/administrador só mexe em `<raiz>` (só dele) e em pastas temporárias criadas DENTRO de `<raiz>` (`mktemp -d -p`), nunca no `TMPDIR` do ambiente**; tudo o que precisa acontecer nas pastas do serviço roda **com a identidade do serviço** (`como_servico`, via `runuser`; na falta dele, `setpriv`):
+
+- `painel backup-agora` (na atualização) e `painel verificar-restauracao` (na reversão) rodam como o serviço: a cópia e quaisquer `-wal`/`-shm` nascem com o dono certo;
+- a restauração do banco (mover o banco antigo e os `-wal`/`-shm` para `*.migrado-<data>`, criar o novo com `O_EXCL` a partir da entrada padrão, copiar o modo do anterior) é um único script executado como o serviço; o root não faz `chown`, `chmod`, `mv` nem escrita ali;
+- o usuário do serviço vem de `PAINEL_USUARIO` (padrão `painel`), uma variável do ambiente de quem roda o script como root — nunca de um arquivo ou pasta que o serviço escreva.
+
+`gerar-session-secret` e `verificar-logs` não violam a regra: o primeiro só mexe em `/etc/painel` (pasta do root); o segundo só LÊ logs (não escreve nem muda nada fora da própria pasta temporária). `verificar-pacote` roda com o usuário comum do operador.
+
+**Endurecimento do sistema (recomendado):** mantenha `fs.protected_hardlinks=1` e `fs.protected_symlinks=1` (o padrão nas distribuições atuais; `sysctl fs.protected_hardlinks fs.protected_symlinks`): impedem que a conta do serviço use hard links e links simbólicos em pastas com *sticky bit* (como `/tmp`) para enganar um processo com privilégio.
+
+**Windows.** Não há como rodar a restauração "como o serviço" sem a senha da conta, então o `reverter.ps1` faz o equivalente seguro: `File.Move` (renomeia o próprio item, nunca segue link), `FileMode.CreateNew` (falha se qualquer coisa já existir, inclusive link) e ACL copiada pelo handle aberto (`SetAccessControl`), nunca por caminho. **Risco residual:** o serviço poderia plantar um link entre o `File.Move` e o `CreateNew`; o `CreateNew` recusa (não segue) e a reversão falha sem escrever em lugar nenhum. O `Fazer-Backup` do `atualizar.ps1` roda o `painel.bat` como administrador (sem como-serviço); o risco é o do próprio programa e fica registrado como pendência para quando a conta do serviço for definida (T8).
+
 ## Se a atualização falhou no meio
 
 | Onde falhou | Estado | O que fazer |

@@ -12,7 +12,7 @@ Atualizar é trocar a pasta da versão: o pacote novo é extraído ao lado do qu
 | Registro da atualização | `C:\Painel\app\versao-anterior.txt` | `/opt/painel/versao-anterior.txt` |
 | Pacotes recebidos | `C:\Painel\recebidos\` | onde o operador deixar o zip e o `.sha256` |
 
-No Linux, `PAINEL_ENV_FILE`, `PAINEL_SERVICO` e `PAINEL_URL` mudam os padrões (`/etc/painel/painel.env`, `painel`, `http://127.0.0.1:8080`). No Windows os parâmetros `-Servico` (padrão `Painel`) e `-Url` fazem o mesmo.
+No Linux, `PAINEL_USUARIO` (padrão `painel`) é a conta do serviço: o backup e a conferência de restauração rodam com essa identidade (veja a regra de desenho em [reversão](reversao.md)); `PAINEL_ENV_FILE`, `PAINEL_SERVICO` e `PAINEL_URL` mudam os padrões (`/etc/painel/painel.env`, `painel`, `http://127.0.0.1:8080`). No Windows os parâmetros `-Servico` (padrão `Painel`) e `-Url` fazem o mesmo.
 
 ## Antes de atualizar
 
