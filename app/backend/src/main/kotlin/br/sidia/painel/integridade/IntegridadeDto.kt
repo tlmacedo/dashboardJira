@@ -32,7 +32,8 @@ data class ContagemDeSinalDto(val sinal: String, val gravidade: Int, val ativo: 
 
 /**
  * Pessoa com indício ALTO ou MEDIO (as demais não saem na lista, para a API não carregar os pontos de quem está normal).
- * [evidencias] é quantas evidências a pessoa tem no recorte; sem posição nem nota.
+ * Traz a pontuação da pessoa: [pontos], [concluidas], [taxa] (pontos ÷ max(concluídas, mínimo do YAML)), [multiplo] (taxa ÷ mediana do
+ * time) e [graves]; [evidencias] é quantas evidências ela tem no recorte. Sem posição nem ranking: a lista é alfabética.
  */
 @Serializable
 data class NivelPessoaDto(

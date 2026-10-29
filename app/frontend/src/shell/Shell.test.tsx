@@ -12,6 +12,7 @@ type MetaSimulado = {
   liveEnabled: boolean
   zone: string
   banner: string | null
+  aguardandoCargaDoJira?: boolean
   versao?: string
   rotuloDeVersao?: string
 }
@@ -106,6 +107,24 @@ describe('casca', () => {
     // o seletor de papel só existe depois que a resposta (devMode:true) foi processada
     expect(screen.getByRole('button', { name: 'Gerente' })).toBeInTheDocument()
     expect(screen.queryByRole('status')).toBeNull()
+  })
+
+  it('mostraOAvisoDeAguardandoAPrimeiraCargaDoJira', async () => {
+    simularMeta({ devMode: false, liveEnabled: true, zone: MANAUS, banner: null, aguardandoCargaDoJira: true })
+    const { container } = renderizar()
+    await esperarMeta(container)
+    const aviso = await screen.findByText(/aguardando a primeira carga do Jira/i)
+    expect(aviso).toBeInTheDocument()
+    // Não é tela vazia: o conteúdo da rota continua montado e nada fala em dados fictícios.
+    expect(screen.getByText('conteúdo')).toBeInTheDocument()
+    expect(screen.queryByText(/fictícios/i)).toBeNull()
+  })
+
+  it('semOAvisoQuandoJaHaCargaOuAFlagEstaDesligada', async () => {
+    simularMeta({ devMode: true, liveEnabled: false, zone: MANAUS, banner: null, aguardandoCargaDoJira: false })
+    const { container } = renderizar()
+    await esperarMeta(container)
+    expect(screen.queryByText(/aguardando a primeira carga/i)).toBeNull()
   })
 
   it('trocaDeTemaGravaNaRaiz', async () => {

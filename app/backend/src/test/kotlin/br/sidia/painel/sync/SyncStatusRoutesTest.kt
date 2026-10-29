@@ -208,7 +208,7 @@ class SyncStatusRoutesTest {
         rodar(c) { get ->
             val r = get(null, "/api/meta")
             assertEquals(HttpStatusCode.OK, r.status)
-            assertTrue(r.corpo.startsWith("""{"devMode":false,"liveEnabled":false,"zone":"America/Manaus","banner":null,"versao":"""), r.corpo)
+            assertTrue(r.corpo.startsWith("""{"devMode":false,"liveEnabled":false,"zone":"America/Manaus","banner":null,"aguardandoCargaDoJira":false,"versao":"""), r.corpo)
         }
     }
 }

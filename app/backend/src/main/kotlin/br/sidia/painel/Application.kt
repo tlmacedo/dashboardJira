@@ -88,6 +88,8 @@ data class MetaResposta(
     val liveEnabled: Boolean,
     val zone: String,
     val banner: String?,
+    /** Flag do Jira ligada e nenhuma sincronização real ainda: a tela mostra "aguardando a primeira carga", não um painel vazio. */
+    val aguardandoCargaDoJira: Boolean,
     /** Versão do pacote e rótulo para a tela. Só isto: commit e data de build nunca saem numa rota pública. */
     val versao: String,
     val rotuloDeVersao: String,
@@ -286,6 +288,7 @@ fun Application.module(
                     liveEnabled = settings.jiraLiveEnabled,
                     zone = settings.zone.id,
                     banner = banner,
+                    aguardandoCargaDoJira = settings.jiraLiveEnabled && br.sidia.painel.sync.SincronizacaoReal.aguardandoPrimeiraCarga(context.dataSource),
                     versao = versao.versao,
                     rotuloDeVersao = versao.rotulo,
                 ),

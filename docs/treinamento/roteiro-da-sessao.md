@@ -2,7 +2,7 @@
 
 Roteiro comum às sessões por papel. O conteúdo de cada sessão está no material do papel: [Usuário](usuario.md), [Squad Leader](squad-leader.md), [Coordenação](coordenador.md) e [Gerente](gerente.md). Perguntas frequentes: [`perguntas-frequentes.md`](../manual/perguntas-frequentes.md) (inglês: [`faq.md`](../manual/faq.md)).
 
-> **Estado de hoje (29/10/2026).** O acesso ao Jira está desligado (`JIRA_LIVE_ENABLED=false`). As sessões usam **só dados de demonstração** fictícios (`DASHBOARD_DEMO_DATA=true`, com `DASHBOARD_DEV_MODE=true`); nenhum número da sessão é do time. Quando o usuário ligar a flag, o roteiro continua o mesmo, mas a pessoa que conduz deve avisar que, a partir daí, os números são reais e a conversa sobre eles tem outra seriedade.
+> **Estado de hoje (29/10/2026).** O acesso ao Jira está desligado (`JIRA_LIVE_ENABLED=false`). As sessões usam **só dados de demonstração** fictícios (`DASHBOARD_DEMO_DATA=true`, com `DASHBOARD_DEV_MODE=true`); nenhum número da sessão é do time. Quando o usuário ligar a flag, o roteiro continua o mesmo, mas a pessoa que conduz deve avisar que, a partir daí, os números são reais e a conversa sobre eles tem outra seriedade. Quando a flag for ligada, a primeira subida apaga sozinha os dados fictícios (só enquanto não houve nenhuma tentativa de sincronização), o painel mostra "Aguardando a primeira carga do Jira" até a primeira carga concluir, e o escopo por papel só vale com dados reais e login.
 
 ## Pré-requisitos
 

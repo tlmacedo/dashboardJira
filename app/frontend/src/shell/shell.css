@@ -165,7 +165,7 @@ button {
 .seg {
   display: flex;
   flex-wrap: wrap;
-  border: 1px solid var(--menu-line);
+  border: 1px solid var(--menu-line-control);
   border-radius: 7px;
   overflow: hidden;
 }
@@ -216,6 +216,10 @@ h1 {
   border-radius: 7px;
   padding: 6px 10px;
   cursor: pointer;
+}
+/* No rodapé do menu o botão tem fundo --surface: o texto não pode herdar a cor do menu (branco no tema Sidia). */
+.foot .btn {
+  color: var(--text);
 }
 /* Busca rápida por chave (I-26): uma linha discreta no topo do conteúdo. */
 .busca-chave {
@@ -323,7 +327,7 @@ h1 {
     top: 12px;
     background: transparent;
     color: var(--menu-text);
-    border-color: var(--menu-line);
+    border-color: var(--menu-line-control);
   }
   .menu-nav {
     overflow: visible;

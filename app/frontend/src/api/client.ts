@@ -5,6 +5,8 @@ export type Meta = {
   liveEnabled: boolean
   zone: string
   banner: string | null
+  /** Flag do Jira ligada e nenhuma sincronização real ainda. */
+  aguardandoCargaDoJira?: boolean
   /** Versão do pacote (`AAAA.MM.N`) e o rótulo para a tela (`v2026.11.1`, ou `dev`); ausentes em painel antigo. */
   versao?: string
   rotuloDeVersao?: string

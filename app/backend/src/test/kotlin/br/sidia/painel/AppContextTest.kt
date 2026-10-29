@@ -510,7 +510,7 @@ class AppContextTest {
         val meta = client.get("/api/meta")
         assertEquals(HttpStatusCode.OK, meta.status)
         assertEquals(
-            """{"devMode":true,"liveEnabled":false,"zone":"America/Manaus","banner":"MODO DESENVOLVIMENTO","versao":"${VersaoDoPacote.atual.versao}","rotuloDeVersao":"${VersaoDoPacote.atual.rotulo}"}""",
+            """{"devMode":true,"liveEnabled":false,"zone":"America/Manaus","banner":"MODO DESENVOLVIMENTO","aguardandoCargaDoJira":false,"versao":"${VersaoDoPacote.atual.versao}","rotuloDeVersao":"${VersaoDoPacote.atual.rotulo}"}""",
             meta.bodyAsText(),
         )
     }
@@ -541,7 +541,7 @@ class AppContextTest {
         val doContexto = Settings(dashboardDevMode = true, zone = ZoneId.of("America/Sao_Paulo"))
         application { module(divergente, testContext(doContexto)) }
         assertEquals(
-            """{"devMode":true,"liveEnabled":false,"zone":"America/Sao_Paulo","banner":"MODO DESENVOLVIMENTO","versao":"${VersaoDoPacote.atual.versao}","rotuloDeVersao":"${VersaoDoPacote.atual.rotulo}"}""",
+            """{"devMode":true,"liveEnabled":false,"zone":"America/Sao_Paulo","banner":"MODO DESENVOLVIMENTO","aguardandoCargaDoJira":false,"versao":"${VersaoDoPacote.atual.versao}","rotuloDeVersao":"${VersaoDoPacote.atual.rotulo}"}""",
             client.get("/api/meta").bodyAsText(),
         )
     }
