@@ -165,7 +165,7 @@ Para o cálculo de tempo em status, filtre no cliente os itens com `field == "st
 
 ## 5. Script de tempo em status
 
-O script `scripts/tempo_em_status.py` é o caminho retroativo sem app: lê o changelog pelo REST (seção 4) e calcula localmente. Ele usa só a biblioteca padrão do Python 3. Calcula:
+O script `scripts/tempo_em_status.py` é o caminho retroativo sem app: lê o changelog pelo REST (seção 4) e calcula localmente. Ele usa só a biblioteca padrão do Python 3. **Trava:** ele só roda com a flag de acesso ao Jira ligada em `app/.env` (a mesma lida pelo painel; só o usuário a liga); sem ela, recusa com código 2 antes de qualquer acesso à rede. Calcula:
 
 - o tempo em cada status, por issue;
 - as passagens por status (quantas vezes a issue entrou em cada um);

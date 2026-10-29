@@ -4,6 +4,9 @@
 Lê as issues pelo REST do Jira Data Center (``/rest/api/2/search`` com
 ``expand=changelog``) e calcula tudo localmente, só com a biblioteca padrão.
 
+TRAVA: o script só consulta o Jira com a flag de acesso ao Jira ligada em ``app/.env``
+(a mesma lida pelo painel); sem ela, sai com código 2 antes de qualquer rede.
+
 O cálculo é nosso (não vem do Jira) e foi validado apenas com fixtures no
 formato do REST; não foi validado contra um Jira real. Confira algumas issues
 de histórico conhecido antes de confiar nos números.
@@ -13,11 +16,13 @@ import argparse
 import csv
 import json
 import os
+import re
 import sys
 import time
 import urllib.error
 import urllib.parse
 import urllib.request
+from pathlib import Path
 from datetime import datetime, timedelta, timezone
 
 AJUDA_CSV = """\
@@ -130,7 +135,8 @@ def reaberturas(issue, de_status, para_status=None):
                if tr["de"] == de_status and (para_status is None or tr["para"] == para_status))
 
 
-def _ler_pagina(req, abrir, dormir, max_tentativas):
+def _ler_pagina(req, abrir, dormir, max_tentativas, arquivo_env=None):
+    exigir_flag_do_jira(arquivo_env)  # trava também aqui: último ponto antes de chamar ``abrir``
     for tentativa in range(1, max_tentativas + 1):
         try:
             resposta = abrir(req, timeout=60)
@@ -156,8 +162,18 @@ def _ler_pagina(req, abrir, dormir, max_tentativas):
 
 
 def buscar_issues(url, token, jql, abrir=urllib.request.urlopen, dormir=time.sleep,
-                  tamanho_pagina=100, max_tentativas=5):
-    """Gerador de issues do /rest/api/2/search, com paginação e espera em 429."""
+                  tamanho_pagina=100, max_tentativas=5, arquivo_env=None):
+    """Issues do /rest/api/2/search, com paginação e espera em 429.
+
+    A trava da flag vale AQUI (ponto de rede), já na chamada: quem importa a função sem passar por
+    main() também é recusado, antes de montar a requisição ou chamar ``abrir``.
+    """
+    exigir_flag_do_jira(arquivo_env)
+    return _paginas(url, token, jql, abrir, dormir, tamanho_pagina, max_tentativas, arquivo_env)
+
+
+def _paginas(url, token, jql, abrir, dormir, tamanho_pagina, max_tentativas, arquivo_env):
+    exigir_flag_do_jira(arquivo_env)  # defesa em profundidade: antes de montar a requisição
     inicio = 0
     while True:
         consulta = urllib.parse.urlencode({
@@ -168,7 +184,7 @@ def buscar_issues(url, token, jql, abrir=urllib.request.urlopen, dormir=time.sle
         req = urllib.request.Request(
             f"{url.rstrip('/')}/rest/api/2/search?{consulta}",
             headers={"Authorization": f"Bearer {token}", "Accept": "application/json"})
-        pagina = _ler_pagina(req, abrir, dormir, max_tentativas)
+        pagina = _ler_pagina(req, abrir, dormir, max_tentativas, arquivo_env=arquivo_env)
         issues = pagina.get("issues") or []
         yield from issues
         inicio = pagina.get("startAt", inicio) + len(issues)
@@ -211,7 +227,73 @@ def linhas_csv(issues, agora, status_inicio, status_fim):
     return linhas
 
 
-def main(argv=None, abrir=urllib.request.urlopen, dormir=time.sleep):
+NOME_FLAG_JIRA = "JIRA_LIVE_ENABLED"
+# Única fonte da flag: o app/.env da raiz do repositório (nunca o ambiente do processo).
+ARQUIVO_ENV = Path(__file__).resolve().parent.parent / "app" / ".env"
+
+
+def flag_do_jira_ligada(arquivo):
+    """Lê SÓ a linha da flag do arquivo, igual ao painel (ArquivoEnv/Settings).
+
+    Nome exato (com caixa), a última ocorrência vale, aspas e comentário final opcionais, valor
+    "true" sem diferenciar caixa (como o app). Arquivo ausente, ilegível, sem a linha ou com
+    qualquer outro valor = desligada (falha fechada). Nunca imprime o conteúdo do arquivo.
+    """
+    try:
+        # UTF-8 estrito, sem BOM implícito: o Java falha em byte inválido e o app nem sobe.
+        texto = Path(arquivo).read_bytes().decode("utf-8")
+    except (OSError, UnicodeError, ValueError):
+        return False
+    valor = None
+    # Só \n, \r e \r\n quebram linha (como Files.readAllLines); U+2028, \x0b, \x85 etc. NÃO quebram.
+    for bruta in re.split(r"\r\n|\r|\n", texto):
+        linha = _aparar(bruta).removeprefix("﻿")
+        if not linha or linha.startswith("#"):
+            continue
+        linha = _aparar(linha.removeprefix("export "))
+        nome, igual, resto = linha.partition("=")
+        if not igual or _aparar(nome) != NOME_FLAG_JIRA:
+            continue
+        resto = _aparar(resto)
+        if len(resto) >= 2 and resto[0] in "\"'" and resto[-1] == resto[0]:
+            resto = resto[1:-1]
+        else:
+            resto = _aparar(resto.split(" #", 1)[0])
+        valor = resto
+    return valor is not None and _minusculas_ascii(_aparar(valor)) == "true"
+
+
+# Os caracteres que o trim() do Kotlin remove (Character.isWhitespace ou isSpaceChar do Java).
+# Atenção: U+0085 NÃO está na lista (o strip() do Python o removeria; o app não).
+_ESPACOS_KOTLIN = (
+    "\t\n\x0b\x0c\r\x1c\x1d\x1e\x1f \xa0 "
+    "           "
+    "    　"
+)
+
+
+def _aparar(texto):
+    return texto.strip(_ESPACOS_KOTLIN)
+
+
+def _minusculas_ascii(texto):
+    """Minúsculas só nas letras ASCII (nenhum caractere exótico vira 't', 'r', 'u' ou 'e')."""
+    return "".join(chr(ord(c) + 32) if "A" <= c <= "Z" else c for c in texto)
+
+
+class FlagDoJiraDesligada(RuntimeError):
+    """A flag de acesso ao Jira não está ligada em app/.env; nenhuma rede foi tocada."""
+
+
+def exigir_flag_do_jira(arquivo_env=None):
+    """Trava no ponto de rede: levanta sem eco de URL, JQL ou token."""
+    if not flag_do_jira_ligada(arquivo_env or ARQUIVO_ENV):
+        raise FlagDoJiraDesligada(
+            f"Recusado: {NOME_FLAG_JIRA} não está ligada em app/.env (ausente = desligada). "
+            "Com a flag desligada nenhum acesso ao Jira é permitido; só o usuário liga a flag.")
+
+
+def main(argv=None, abrir=urllib.request.urlopen, dormir=time.sleep, arquivo_env=None):
     parser = argparse.ArgumentParser(
         description="Calcula tempo em status, passagens, tempo de ciclo e reaberturas "
                     "a partir do changelog do Jira (REST).",
@@ -227,6 +309,13 @@ def main(argv=None, abrir=urllib.request.urlopen, dormir=time.sleep):
                         help="status em que o tempo de ciclo termina (padrão: Done)")
     args = parser.parse_args(argv)
 
+    # TRAVA (regra 1 do projeto): antes de qualquer rede ou leitura de credencial.
+    try:
+        exigir_flag_do_jira(arquivo_env)
+    except FlagDoJiraDesligada as erro:
+        print(str(erro), file=sys.stderr)
+        return 2
+
     token = os.environ.get(args.token_env)
     if not token:
         print(f"Variável de ambiente {args.token_env} não definida ou vazia.", file=sys.stderr)
@@ -235,7 +324,11 @@ def main(argv=None, abrir=urllib.request.urlopen, dormir=time.sleep):
     agora = datetime.now(timezone.utc)
     # Mensagens curtas: sem URL, JQL nem token.
     try:
-        issues = list(buscar_issues(args.url, token, args.jql, abrir=abrir, dormir=dormir))
+        issues = list(buscar_issues(args.url, token, args.jql, abrir=abrir, dormir=dormir,
+                                    arquivo_env=arquivo_env))
+    except FlagDoJiraDesligada as erro:
+        print(str(erro), file=sys.stderr)
+        return 2
     except urllib.error.HTTPError as erro:
         dica = " Verifique o PAT e as permissões." if erro.code in (401, 403) else ""
         print(f"O Jira respondeu com erro HTTP {erro.code}.{dica}", file=sys.stderr)

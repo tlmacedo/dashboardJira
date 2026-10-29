@@ -196,6 +196,17 @@ class CiWorkflowTest {
     }
 
     @Test
+    fun frontendVerificaOOrcamentoDoBundleDepoisDoBuild() {
+        val cmds = comandos("frontend")
+        val build = cmds.indexOfFirst { it.contains("pnpm build") }
+        val orcamento = cmds.indexOfFirst { it.contains("node scripts/orcamento-bundle.mjs") }
+        assertTrue(orcamento >= 0, "O job frontend precisa rodar orcamento-bundle.mjs")
+        assertTrue(orcamento > build, "O orçamento do bundle vem depois do build")
+        val passo = passos("frontend").first { texto(it.get<YamlNode>("run"))?.contains("orcamento-bundle.mjs") == true }
+        assertEquals("app/frontend", texto(passo.get<YamlNode>("working-directory")))
+    }
+
+    @Test
     fun guardaRodaOsDoisTestesDeHook() {
         val cmds = comandos("guarda").joinToString("\n")
         assertTrue(cmds.contains("sh .claude/hooks/test-guard.sh"))
