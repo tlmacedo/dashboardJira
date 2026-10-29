@@ -10,14 +10,83 @@
 #        valor de segredo;
 #     b) modo desenvolvimento: GET /api/health responde {"ok":true}; o processo é encerrado no fim.
 # O arquivo de variáveis dos testes NÃO tem a chave do acesso ao Jira (linha ausente = desligado) e o script nunca a liga.
+# Com um ZIP (painel-AAAA.MM.N.zip, com o painel-AAAA.MM.N.zip.sha256 ao lado) confere ANTES de extrair: nome, tamanho
+# (no máximo 200 MB), SHA-256, pasta raiz e nomes proibidos; depois extrai numa pasta temporária e roda as conferências
+# acima sobre o conteúdo extraído. Precisa de unzip e de sha256sum (ou shasum).
 set -eu
 
 AQUI="$(cd "$(dirname "$0")" && pwd)"
 APP="$(cd "$AQUI/.." && pwd)"
-PACOTE="${1:-$APP/pacote/painel}"
-PACOTE="$(cd "$PACOTE" 2>/dev/null && pwd)" || { echo "FALHA: pacote não encontrado (rode: sh scripts/montar-pacote.sh)" >&2; exit 1; }
+ALVO="${1:-$APP/pacote/painel}"
+ZIPTMP=""
+trap 'rm -rf "$ZIPTMP"' EXIT
 
 falhar() { echo "FALHA: $*" >&2; exit 1; }
+
+# Nome proibido (já em minúsculas) num componente de caminho; $2 é a entrada inteira, para a mensagem.
+confere_nome() {
+    case "$1" in
+        .env.example) ;;
+        .env | *.env | .env.*) falhar "arquivo de variáveis (.env, painel.env) dentro do pacote: $2" ;;
+        *.db | *.db-wal | *.db-shm | *.lock | *.rotacao) falhar "arquivo de banco ou de trava (.db, .db-wal, .db-shm, *.lock) dentro do pacote: $2" ;;
+        *.pem | *.key | *.p12 | *.pfx | *.jks | *.keystore) falhar "chave ou certificado dentro do pacote: $2" ;;
+        papeis.yaml | equipes.yaml | ausencias.yaml | squads.yaml | status_map.yaml | jira_campos.yaml | calendario.yaml | vinculos.yaml | labels_atraso.yaml | auditoria.yaml)
+            falhar "configuração real (não é modelo) dentro do pacote: $2" ;;
+        filtros_status_tool.txt) falhar "arquivo de filtros do Jira (Filtros_Status_tool.txt) dentro do pacote: $2" ;;
+        legacy | node_modules | .git) falhar "pasta proibida (legacy, node_modules, .git) dentro do pacote: $2" ;;
+    esac
+}
+
+calcula_sha256() {
+    if command -v sha256sum >/dev/null 2>&1; then
+        sha256sum "$1" | cut -d ' ' -f 1
+    elif command -v shasum >/dev/null 2>&1; then
+        shasum -a 256 "$1" | cut -d ' ' -f 1
+    else
+        falhar "precisa de sha256sum ou shasum para conferir o SHA-256"
+    fi
+}
+
+case "$ALVO" in
+    *.zip | *.ZIP)
+        echo "== Zip =="
+        command -v unzip >/dev/null 2>&1 || falhar "precisa de unzip para verificar o zip"
+        [ -f "$ALVO" ] || falhar "zip não encontrado: $ALVO"
+        ZIP="$(cd "$(dirname "$ALVO")" && pwd)/$(basename "$ALVO")"
+        NOME="$(basename "$ZIP")"
+        printf '%s' "$NOME" | grep -Eq '^painel-[0-9]{4}\.(0[1-9]|1[0-2])\.[1-9][0-9]*\.zip$' \
+            || falhar "nome do pacote fora do padrão painel-AAAA.MM.N.zip"
+        TAMANHO="$(wc -c < "$ZIP" | tr -d ' ')"
+        [ "$TAMANHO" -le 209715200 ] || falhar "o zip passa de 200 MB (limite do pacote)"
+        [ -f "$ZIP.sha256" ] || falhar "falta o arquivo $NOME.sha256 ao lado do zip"
+        ESPERADO="$(head -n 1 "$ZIP.sha256" | cut -d ' ' -f 1 | tr 'A-F' 'a-f' | tr -d '\r')"
+        NOME_NO_ARQUIVO="$(head -n 1 "$ZIP.sha256" | sed 's/^[^ ]*  *\*\{0,1\}//' | tr -d '\r')"
+        [ "$NOME_NO_ARQUIVO" = "$NOME" ] || falhar "o arquivo .sha256 não é deste zip"
+        [ "$ESPERADO" = "$(calcula_sha256 "$ZIP")" ] || falhar "o SHA-256 do zip não confere com o arquivo .sha256"
+        echo "ok: SHA-256 confere"
+        ZIPTMP="$(mktemp -d)"
+        RAIZ="${NOME%.zip}"
+        unzip -Z1 "$ZIP" > "$ZIPTMP/entradas.txt"
+        while IFS= read -r entrada; do
+            [ -n "$entrada" ] || continue
+            case "$entrada" in
+                "$RAIZ"/*) ;;
+                *) falhar "entrada fora da pasta raiz $RAIZ/: $entrada" ;;
+            esac
+            resto="${entrada%/}"
+            while [ -n "$resto" ]; do
+                componente="${resto##*/}"
+                confere_nome "$(printf '%s' "$componente" | tr 'A-Z' 'a-z')" "$entrada"
+                case "$resto" in */*) resto="${resto%/*}" ;; *) resto="" ;; esac
+            done
+        done < "$ZIPTMP/entradas.txt"
+        echo "ok: nenhuma entrada proibida"
+        unzip -q "$ZIP" -d "$ZIPTMP/extraido"
+        ALVO="$ZIPTMP/extraido/$RAIZ"
+        ;;
+esac
+
+PACOTE="$(cd "$ALVO" 2>/dev/null && pwd)" || { echo "FALHA: pacote não encontrado (rode: sh scripts/montar-pacote.sh)" >&2; exit 1; }
 
 # ---------------------------------------------------------------- 1. conteúdo
 echo "== Conteúdo =="
@@ -36,6 +105,10 @@ if [ -d "$PACOTE/config" ]; then
     proibido="$(find "$PACOTE/config" -type f ! -name '*.exemplo.yaml' ! -name '*.demo.yaml' ! -path "$PACOTE/config/cards/*.card.yaml" -print -quit)"
     [ -z "$proibido" ] || falhar "configuração real (não é modelo) dentro do pacote: ${proibido#"$PACOTE"/}"
 fi
+# Nomes proibidos em QUALQUER lugar do pacote (a mesma lista usada para as entradas do zip).
+find "$PACOTE" -mindepth 1 | while IFS= read -r caminho; do
+    confere_nome "$(printf '%s' "${caminho##*/}" | tr 'A-Z' 'a-z')" "${caminho#"$PACOTE"/}"
+done
 
 # ---------------------------------------------------------------- 2. estrutura
 echo "== Estrutura =="
@@ -43,6 +116,11 @@ echo "== Estrutura =="
 [ -f "$PACOTE/bin/painel.bat" ] || falhar "falta bin/painel.bat"
 ls "$PACOTE"/lib/painel-*.jar >/dev/null 2>&1 || falhar "falta o jar do painel em lib/"
 [ -f "$PACOTE/frontend/dist/index.html" ] || falhar "falta frontend/dist/index.html"
+[ -f "$PACOTE/config/papeis.exemplo.yaml" ] || falhar "falta config/papeis.exemplo.yaml"
+[ -f "$PACOTE/VERSAO.txt" ] || falhar "falta VERSAO.txt"
+[ -f "$PACOTE/docs/implantacao.md" ] || falhar "falta docs/implantacao.md"
+[ -f "$PACOTE/implantacao/windows/atualizar.ps1" ] || falhar "falta implantacao/windows/atualizar.ps1"
+[ -f "$PACOTE/implantacao/linux/atualizar.sh" ] || falhar "falta implantacao/linux/atualizar.sh"
 
 # ---------------------------------------------------------------- 3. fumaça
 echo "== Fumaça =="
@@ -66,7 +144,7 @@ limpar() {
         sleep 1
         kill -9 "$PID" 2>/dev/null || true
     fi
-    rm -rf "$TMP"
+    rm -rf "$TMP" "$ZIPTMP"
 }
 trap limpar EXIT INT TERM
 

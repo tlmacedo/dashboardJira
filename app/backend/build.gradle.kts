@@ -59,6 +59,8 @@ kotlin {
 
 application {
     mainClass.set("br.sidia.painel.ApplicationKt")
+    // UTF-8 em qualquer sistema (no Windows o padrão da JVM de 21 já é UTF-8, mas o Java de 17 para trás usava ANSI).
+    applicationDefaultJvmArgs = listOf("-Dfile.encoding=UTF-8")
 }
 
 // `./gradlew run` roda a partir de app/ para que config/, frontend/dist, data/ e o arquivo de variáveis (caminhos relativos) existam.
@@ -70,7 +72,7 @@ tasks.named<JavaExec>("run") {
 // variáveis sobe com o modo de desenvolvimento DESLIGADO. `./gradlew run` e `iniciar.*` seguem em modo dev
 // (o `run` usa applicationDefaultJvmArgs, que não recebe esta propriedade).
 tasks.startScripts {
-    defaultJvmOpts = listOf("-Dpainel.perfil=producao")
+    defaultJvmOpts = listOf("-Dpainel.perfil=producao", "-Dfile.encoding=UTF-8")
 }
 
 // Grava versao, commit e construidaEm em build/generated/versao/versao.properties, que entra nos recursos do main
@@ -94,6 +96,31 @@ sourceSets.main {
     resources.srcDir(layout.buildDirectory.dir("generated/versao"))
 }
 tasks.processResources { dependsOn(gerarVersaoProperties) }
+
+// Zip reprodutível do pacote de produção (Plano 13, T6): `painel-<versao>.zip`, com a pasta raiz `painel-<versao>/`, a partir
+// de app/pacote/painel, que o script `montar-pacote` já montou e filtrou (só modelos de configuração, nunca arquivo real).
+// Mesma entrada e mesmo -PconstruidaEm = mesmo SHA-256. Use pelo script: `scripts/montar-pacote.* <versao>`.
+tasks.register<Zip>("montarPacote") {
+    group = "distribution"
+    description = "Gera app/pacote/painel-<versao>.zip a partir de app/pacote/painel (exige -Pversao=AAAA.MM.N)."
+    val pastaDoPacote = rootProject.layout.projectDirectory.dir("../pacote/painel")
+    archiveFileName.set("painel-$versaoDoPacote.zip")
+    destinationDirectory.set(rootProject.layout.projectDirectory.dir("../pacote"))
+    isPreserveFileTimestamps = false
+    isReproducibleFileOrder = true
+    filePermissions { unix("rw-r--r--") }
+    dirPermissions { unix("rwxr-xr-x") }
+    from(pastaDoPacote) {
+        into("painel-$versaoDoPacote")
+        filesMatching(listOf("bin/painel", "**/*.sh")) { permissions { unix("rwxr-xr-x") } }
+    }
+    doFirst {
+        if (versaoDoPacote == "0.0.0-dev") throw GradleException("montarPacote exige -Pversao=AAAA.MM.N")
+        val pasta = pastaDoPacote.asFile
+        if (!pasta.resolve("frontend/dist/index.html").isFile) throw GradleException("falta frontend/dist/index.html em ${pasta.name}: monte o pacote com scripts/montar-pacote")
+        if (!pasta.resolve("bin/painel").isFile) throw GradleException("falta bin/painel em ${pasta.name}: monte o pacote com scripts/montar-pacote")
+    }
+}
 
 tasks.test {
     // A carga na escala da spec (tag "carga") tem tarefa própria: `testCarga`. A suíte padrão não a executa.

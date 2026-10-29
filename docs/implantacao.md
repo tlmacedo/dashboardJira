@@ -14,6 +14,8 @@ lib/            os jars
 frontend/dist/  as telas
 config/         SÓ os modelos *.exemplo.yaml (e *.demo.yaml) e as fichas de cards/
 .env.example    modelo das variáveis; nunca um arquivo real
+implantacao/    scripts de atualização, reversão e segredos (windows/, linux/) e o modelo do arquivo de variáveis (modelos/)
+docs/           este guia e os documentos de implantação
 VERSAO.txt      versão, commit curto e data da montagem
 LEIA-ME.txt     como rodar
 ```
@@ -46,6 +48,25 @@ Cada comando parte da pasta `app/` do repositório. No PowerShell 5.1 não exist
 4. o pacote em modo desenvolvimento não responder `{"ok":true}` em `GET /api/health`.
 
 A verificação usa a porta 8080 e pastas temporárias, nunca liga a chave do Jira (o arquivo de variáveis de teste não tem essa linha) e aborta com aviso se a porta já estiver em uso.
+
+### 3.1 Versão, zip e SHA-256
+
+Para entregar o pacote a outra máquina, passe a versão (`AAAA.MM.N`: ano, mês de 01 a 12 e número do pacote no mês, a partir de 1; qualquer outro formato é recusado):
+
+| Windows 11 (PowerShell) | `sh` |
+|---|---|
+| `powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\montar-pacote.ps1 -Versao 2026.11.1` | `sh scripts/montar-pacote.sh 2026.11.1` |
+
+Além da pasta, sai `app/pacote/painel-2026.11.1.zip` (pasta raiz `painel-2026.11.1/`; mesma entrada e mesma data de build dão o mesmo SHA-256) e o `painel-2026.11.1.zip.sha256` ao lado, no formato `<sha256-em-minúsculas>  painel-2026.11.1.zip` (dois espaços, aceito por `sha256sum -c`). O script já roda a verificação do zip e termina com `PACOTE_OK painel-2026.11.1.zip <sha256>`. Sem a versão, o painel se identifica como `dev`. A versão aparece no rodapé da tela e em `GET /api/meta` (`versao`, `rotuloDeVersao`); o commit e a data de build ficam no `VERSAO.txt` do pacote e no log da subida, nunca na rota pública.
+
+Conferir um zip recebido (copiado de outra máquina, com o `.sha256` junto):
+
+| Windows 11 (PowerShell) | `sh` (precisa de `unzip`) |
+|---|---|
+| `powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\verificar-pacote.ps1 C:\caminho\painel-2026.11.1.zip` | `sh scripts/verificar-pacote.sh /caminho/painel-2026.11.1.zip` |
+| ou só o hash: `(Get-FileHash .\painel-2026.11.1.zip -Algorithm SHA256).Hash.ToLower()` | ou `sha256sum -c painel-2026.11.1.zip.sha256` |
+
+Com o zip, a verificação confere, **antes de extrair**: o nome (`painel-AAAA.MM.N.zip`), o tamanho (no máximo 200 MB), o SHA-256 contra o `.sha256`, que toda entrada está sob a pasta raiz `painel-AAAA.MM.N/` e que nenhuma entrada tem nome proibido (`.env`, `painel.env`, `*.db`, `*.db-wal`, `*.db-shm`, `*.lock`, chaves e certificados, `papeis.yaml`, `equipes.yaml`, `ausencias.yaml`, `squads.yaml`, `status_map.yaml`, `jira_campos.yaml`, `calendario.yaml`, `vinculos.yaml`, `labels_atraso.yaml`, `auditoria.yaml`, `Filtros_Status_tool.txt`, `legacy/`, `node_modules/`, `.git/`). Depois extrai numa pasta temporária e roda as conferências acima sobre o conteúdo.
 
 ## 4. Pastas e variáveis: tudo o que é real fica FORA do pacote
 
