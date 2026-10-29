@@ -168,7 +168,10 @@ como_servico() {
         return
     fi
     usuario="$(usuario_do_servico)"
+    # Nome comum de conta (nada de numero, traco inicial, espaco) e NUNCA uid 0: "baixar privilegio" para root nao baixa nada.
+    printf '%s' "$usuario" | grep -Eq '^[A-Za-z_][A-Za-z0-9_.-]*$' || erro "PAINEL_USUARIO invalido (esperado o nome da conta do servico)"
     id -u "$usuario" >/dev/null 2>&1 || erro "o usuario do servico ($usuario) nao existe (defina PAINEL_USUARIO)"
+    [ "$(id -u "$usuario")" -ne 0 ] || erro "o usuario do servico nao pode ser root (uid 0): defina PAINEL_USUARIO com a conta sem privilegio"
     if command -v runuser >/dev/null 2>&1; then
         runuser -u "$usuario" -- "$@"
     elif command -v setpriv >/dev/null 2>&1; then

@@ -76,15 +76,29 @@ if [ "$RESTAURAR" -eq 1 ]; then
     # TOCTOU: BACKUP_DIR e gravavel pela conta do servico, que poderia trocar a copia por um link para um arquivo so do root
     # ENTRE a validacao e o uso. Por isso a copia e lida UMA vez (cp -P nao segue links) para uma pasta temporaria 0700 so do
     # root, FORA de BACKUP_DIR, e dai em diante tudo (conferencia e restauracao) usa so o temporario, nunca o caminho original.
-    # A pasta temporaria fica DENTRO de <raiz> (so do root; nunca o TMPDIR do ambiente). Modo 755 e copia 644: a conta do servico
-    # precisa LER a copia para conferi-la, mas nao pode escrever nem trocar nada ali (a pasta e do root).
+    # A pasta temporaria fica DENTRO de <raiz> (so do root; nunca o TMPDIR do ambiente). Como root: pasta 0750 e copia 0640, do
+    # grupo da conta do servico (ela le pelo grupo para conferir a copia, nao escreve nem troca nada, e nenhum outro usuario local
+    # le o banco, que tem dados pessoais). Sem ser root: pasta 0700 do proprio usuario.
     PASTA_SEGURA="$(mktemp -d -p "$RAIZ")"
-    chmod 755 "$PASTA_SEGURA"
     trap 'rm -rf "$PASTA_SEGURA"' EXIT
     COPIA_SEGURA="$PASTA_SEGURA/copia.db"
-    cp -P -- "$COPIA" "$COPIA_SEGURA" || erro "nao foi possivel copiar a copia de seguranca"
+    : > "$COPIA_SEGURA"
+    if [ "$(id -u)" -eq 0 ]; then
+        GRUPO_DO_SERVICO="$(id -g "$(usuario_do_servico)")"
+        chgrp "$GRUPO_DO_SERVICO" "$PASTA_SEGURA" "$COPIA_SEGURA"
+        chmod 750 "$PASTA_SEGURA"
+        chmod 640 "$COPIA_SEGURA"
+    else
+        chmod 700 "$PASTA_SEGURA"
+    fi
+    # A copia original e lida COMO A CONTA DO SERVICO (um FIFO plantado travaria um root; um link so alcanca o que o servico alcanca)
+    # para o arquivo que o root acabou de criar em <raiz>. O limite de tempo evita travar a reversao num arquivo especial.
+    if command -v timeout >/dev/null 2>&1; then
+        como_servico timeout 1800 cat -- "$COPIA" > "$COPIA_SEGURA" || erro "nao foi possivel ler a copia de seguranca"
+    else
+        como_servico cat -- "$COPIA" > "$COPIA_SEGURA" || erro "nao foi possivel ler a copia de seguranca"
+    fi
     [ -f "$COPIA_SEGURA" ] && [ ! -L "$COPIA_SEGURA" ] || erro "a copia de seguranca e um link simbolico (recusada)"
-    chmod 644 "$COPIA_SEGURA"
     # Confere a copia ANTES de mexer no banco atual (restaura num temporario e compara tabela a tabela), COMO A CONTA DO SERVICO:
     # o programa abre o banco vivo e cria arquivos temporarios, e nada disso pode ser feito pelo root na pasta do servico.
     if ! como_servico env PAINEL_ENV_FILE="$ARQUIVO_ENV" "$RAIZ/$ANTERIOR/bin/painel" verificar-restauracao "$COPIA_SEGURA" | grep -q "RESTAURACAO OK"; then

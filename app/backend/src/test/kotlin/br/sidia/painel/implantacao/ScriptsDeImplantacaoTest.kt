@@ -262,10 +262,16 @@ class ScriptsDeImplantacaoTest {
 
     private fun montarCenarioDeReversao(pasta: Path, registro: String): CenarioDeReversao {
         val raiz = pasta.resolve("app").also { Files.createDirectories(it) }
-        val marcador = pasta.resolve("EXECUTOU")
+        val marcas = pasta.resolve("marcas").also { Files.createDirectories(it) }
+        val marcador = marcas.resolve("EXECUTOU")
         fun painelQueMarca(dir: Path) {
             Files.createDirectories(dir.resolve("bin"))
-            Files.writeString(dir.resolve("bin/painel"), "#!/bin/sh\necho x > '$marcador'\necho RESTAURACAO OK\n")
+            Files.writeString(
+                dir.resolve("bin/painel"),
+                "#!/bin/sh\necho x > '$marcador'\n" +
+                    "if [ \"\$1\" = verificar-restauracao ]; then stat -c '%a %G' \"\$2\" \"\$(dirname \"\$2\")\" > '${marcas.resolve("modos")}'; fi\n" +
+                    "echo RESTAURACAO OK\n",
+            )
             dir.resolve("bin/painel").toFile().setExecutable(true)
         }
         painelQueMarca(raiz.resolve("2026.11.1"))
@@ -280,10 +286,15 @@ class ScriptsDeImplantacaoTest {
         val envFile = pasta.resolve("painel.env")
         Files.write(envFile, listOf("BACKUP_DIR=$backups", "DATABASE_PATH=$banco"))
         Files.writeString(raiz.resolve("versao-anterior.txt"), registro)
-        // O reverter roda o painel e a restauração com a identidade do serviço; nos testes é o próprio usuário que os executa.
-        return CenarioDeReversao(
-            raiz, marcador, mapOf("PAINEL_ENV_FILE" to envFile.toString(), "PAINEL_USUARIO" to System.getProperty("user.name")), pasta,
-        )
+        // O reverter roda o painel e a restauração com a identidade do serviço. Como root (aqui) a conta do serviço é "nobody" (o
+        // reverter recusa uid 0) e as pastas ficam atravessáveis por ela; sem ser root (CI) é o próprio usuário, sem baixar privilégio.
+        val usuario = if (souRootComUsuarioNobody()) "nobody" else System.getProperty("user.name")
+        if (usuario == "nobody") {
+            rodar(listOf("chmod", "-R", "a+rX", pasta.toString()))
+            rodar(listOf("chmod", "777", marcas.toString(), backups.toString()))
+            rodar(listOf("chown", "nobody", banco.parent.toString()))
+        }
+        return CenarioDeReversao(raiz, marcador, mapOf("PAINEL_ENV_FILE" to envFile.toString(), "PAINEL_USUARIO" to usuario), pasta)
     }
 
     private fun reverterComRegistro(registro: String, vararg extras: String): Triple<Int, String, Boolean> {
@@ -445,6 +456,67 @@ class ScriptsDeImplantacaoTest {
     }
 
     @Test
+    fun usuarioDoServicoNuncaPodeSerRootNemUid0() {
+        org.junit.jupiter.api.Assumptions.assumeTrue(shell() != null && souRootComUsuarioNobody(), "precisa de root e do usuário nobody")
+        for (usuario in listOf("root", "0", "00", "-x", "a b", "")) {
+            val pasta = Files.createTempDirectory("painel-uid0-")
+            try {
+                val c = montarCenarioDeReversao(pasta, "versao=2026.11.1\nbackup=painel-bom.db\n")
+                val (codigo, saida) = rodar(
+                    listOf(shell()!!, reverter, c.raiz.toString(), "--restaurar-banco", "--sem-servico"),
+                    c.env + ("PAINEL_USUARIO" to usuario),
+                )
+                // "" cai no padrão "painel" (inexistente aqui): também recusa; nenhum caso executa o painel
+                assertTrue(codigo != 0, "'$usuario': $saida")
+                assertFalse(Files.exists(c.marcador), "'$usuario' chegou a executar o painel: $saida")
+            } finally {
+                pasta.toFile().deleteRecursively()
+            }
+        }
+        assertTrue("uid 0" in ler("deploy/linux/comum.sh") || "uid do servico" in ler("deploy/linux/comum.sh"))
+    }
+
+    @Test
+    fun pastaEcopiaTemporariasSoSaoLegiveisPeloGrupoDoServico() {
+        org.junit.jupiter.api.Assumptions.assumeTrue(shell() != null && souRootComUsuarioNobody(), "precisa de root e do usuário nobody")
+        val pasta = Files.createTempDirectory("painel-modos-")
+        try {
+            val c = montarCenarioDeReversao(pasta, "versao=2026.11.1\nbackup=painel-bom.db\n")
+            val grupo = rodar(listOf("id", "-gn", "nobody")).second.trim()
+            val (codigo, saida) = rodar(listOf(shell()!!, reverter, c.raiz.toString(), "--restaurar-banco", "--sem-servico"), c.env)
+            assertEquals(0, codigo, saida)
+            // o painel falso (que roda como o serviço) anotou modo e grupo da cópia e da pasta durante a conferência
+            val modos = Files.readAllLines(pasta.resolve("marcas/modos"))
+            assertEquals("640 $grupo", modos[0], "cópia: 0640 do grupo do serviço (outros não leem o banco)")
+            assertEquals("750 $grupo", modos[1], "pasta: 0750 do grupo do serviço")
+        } finally {
+            pasta.toFile().deleteRecursively()
+        }
+    }
+
+    @Test
+    fun fifoPlantadoNoLugarDaCopiaNaoTravaAReversao() {
+        Ferramentas.exigir(shell() != null, "sem sh")
+        val pasta = Files.createTempDirectory("painel-fifo-")
+        try {
+            val c = montarCenarioDeReversao(pasta, "versao=2026.11.1\nbackup=painel-fifo.db\n")
+            val fifo = pasta.resolve("backups/painel-fifo.db")
+            val mk = ProcessBuilder("mkfifo", fifo.toString()).start()
+            org.junit.jupiter.api.Assumptions.assumeTrue(mk.waitFor() == 0, "sem mkfifo")
+            val pb = ProcessBuilder(listOf(shell()!!, reverter, c.raiz.toString(), "--restaurar-banco", "--sem-servico")).redirectErrorStream(true)
+            pb.environment().putAll(c.env)
+            val p = pb.start()
+            val concluiu = p.waitFor(20, TimeUnit.SECONDS)
+            if (!concluiu) p.destroyForcibly()
+            assertTrue(concluiu, "a reversão travou lendo um FIFO plantado")
+            assertTrue(p.exitValue() != 0)
+            assertFalse(Files.exists(c.marcador), "não pode chegar a executar o painel")
+        } finally {
+            pasta.toFile().deleteRecursively()
+        }
+    }
+
+    @Test
     fun rootNuncaTocaCaminhosDaPastaDoServico() {
         val s = ler("deploy/linux/reverter.sh")
         // nenhuma escrita/chown/chmod/mv do root sobre o banco: tudo vai dentro do script executado com a identidade do serviço
@@ -471,7 +543,8 @@ class ScriptsDeImplantacaoTest {
     @Test
     fun reverterCopiaUmaVezParaPastaTemporariaERestauraDeLa() {
         val s = ler("deploy/linux/reverter.sh")
-        assertTrue("cp -P --" in s && "mktemp -d" in s && "trap" in s)
+        // a cópia original é lida COMO O SERVIÇO (um FIFO plantado travaria o root) para um arquivo criado pelo root em <raiz>
+        assertTrue(Regex("como_servico[^\\n]*cat -- \"\\\$COPIA\" > \"\\\$COPIA_SEGURA\"").containsMatchIn(s) && "mktemp -d" in s && "trap" in s)
         // a conferência e a restauração usam o temporário, nunca o caminho original reaberto
         assertTrue(Regex("verificar-restauracao \"\\\$COPIA_SEGURA\"").containsMatchIn(s))
         assertTrue("< \"\$COPIA_SEGURA\"" in s && "set -C" in s, "restaura do temporário (entrada padrão), com O_EXCL no destino")
