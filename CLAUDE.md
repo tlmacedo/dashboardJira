@@ -37,6 +37,7 @@ Dashboard de gestão do time TG-Basic sobre tasks do Jira Data Center: fluxo, pr
 | Pesquisa e guias originais | `docs/guia/`, `reports/`, `research_notes/` |
 | Specs e planos | `docs/superpowers/` (índice dos planos: `docs/superpowers/plans/2026-10-24-indice-dos-planos.md`; specs por fase: `docs/superpowers/specs/2026-10-25-spec-fase-*.md`) |
 | Guia para outra IA (ClineSR) | `docs/guia-execucao-outra-ia.md`, `.clinerules/`, `docs/ferramentas-claude-para-o-cline/` |
+| Primeiros passos do ClineSR (antes da 1ª subida e da flag) | `docs/primeiros-passos-clinesr.md` |
 | Backend Kotlin/Ktor (pacote `br.sidia.painel`) | `app/backend/` |
 | Frontend React + TypeScript (Vite) | `app/frontend/` |
 | Modelo de variáveis e scripts de subida | `app/.env.example`, `app/iniciar.sh`, `app/iniciar.ps1` |
