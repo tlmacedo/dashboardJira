@@ -16,7 +16,7 @@ Cada item da auditoria do projeto (`docs/superpowers/cobertura-do-projeto.md`) t
 
 ## M1: gaveta universal da task
 
-- **Mudou:** `GET /api/tarefa/{key}` (status, datas, histórico, tempo por status, posse, fatores de risco, campos do dicionário) e a `TarefaDrawer`/página `/detalhe` ("Abrir em nova aba"). A chave em qualquer lista abre a gaveta; a `GavetaDeTasks` é a única lista de drill. Chave fora da visão responde 404 (não confirma a existência); histórico só para coordenação e gerente.
+- **Mudou:** `GET /api/tarefa/{key}` (status, datas, histórico, tempo por status, posse, fatores de risco, campos do dicionário) e a `TarefaDrawer`/página `/detalhe` ("Abrir em nova aba"). A chave em qualquer lista abre a gaveta; a `GavetaDeTasks` é a única lista de drill. A visão segue só o responsável **atual** (Ruling de 28/10: quem já teve a task e a passou adiante recebe 404, `TarefaRoutesTest.exDonoNaoVeMaisATask`). Chave fora da visão responde 404 sem corpo (não confirma a existência); histórico só para coordenação e gerente, da mesma instância da task. A rota gravada no `access_log` é sempre o modelo `/api/tarefa/{key}` (`RotaParaRegistroTest.tarefaGravaSempreOModelo`).
 - **Link para o Jira:** só aparece com a flag de acesso ligada pelo usuário, montado da URL da instância configurada, sem credenciais; com a flag desligada não há link (abri-lo seria acesso ao Jira).
 - **Prova:** `TarefaRoutesTest.tarefaVisivelDevolveTudo`, `TarefaRoutesTest.tarefaForaDaVisao404`, `TarefaRoutesTest.historicoSoParaCoordenacaoEGerente`, `TarefaRoutesTest.semLinkComFlagDesligada`; frontend: `TarefaDrawer.test.tsx`, `Detalhe.test.tsx`.
 - **Diferença contra o app atual:** o app atual não tem gaveta nem detalhe por task; só tabelas com a chave em texto.
@@ -47,12 +47,12 @@ Cada item da auditoria do projeto (`docs/superpowers/cobertura-do-projeto.md`) t
 ## M5: tabela virtual e estados de tela
 
 - **Mudou:** `TabelaVirtual` (renderiza só as linhas visíveis acima de um limiar, teclado, ordenação sem mudar a contagem, CSV com tudo) e `EstadoDaTela` (carregando, vazio, erro com "tentar de novo", sem permissão, sessão expirada, filtro inválido, dados incompletos com link para a Qualidade só para o gerente). As telas com estado próprio (Auditoria, Integridade, Sincronização e outras) ficam fora do teste em tabela.
-- **Prova:** `FichasDoMenuTest.centralEAuditoriaTemFicha` (fichas de todas as telas); frontend: `TabelaVirtual.test.tsx`, `EstadoDaTela.test.tsx`, `estados.test.tsx`.
+- **Prova (só frontend; não há prova de backend para este item):** `TabelaVirtual.test.tsx` (`renderizaSoAsLinhasVisiveis`, `csvExportaTudo` com o `exportarTasksCsv` real), `EstadoDaTela.test.tsx`, `estados.test.tsx`.
 - **Diferença contra o app atual:** o app atual renderizava a tabela inteira e mostrava erro técnico em texto.
 
 ## M7: mensagens por código, datas e números por idioma
 
-- **Mudou:** todo 400/403/404 sai como `ErroDto(codigo, params)` e todo aviso por código; o frontend traduz por `erros.<COD>` e `cardpage.aviso.<COD>` em pt e en, e código sem tradução vira "Aviso do servidor (código X)" (nunca a mensagem em português solta). Datas e números seguem o idioma.
+- **Mudou:** todo 400 sai como `ErroDto(codigo, params)` e todo aviso por código (o 404 da gaveta e o 403 de `exigirPapel` respondem **sem corpo**, de propósito: não confirmam a existência da task nem explicam a negativa); o frontend traduz por `erros.<COD>` e `cardpage.aviso.<COD>` em pt e en, e código sem tradução vira "Aviso do servidor (código X)" (nunca a mensagem em português solta). Datas e números seguem o idioma.
 - **Prova:** `CodigosDeMensagemTest.todoCodigoTemTraducaoPtEEn`, `CodigosDeMensagemTest.codigosConhecidosCobremOsEmitidos`, `CodigosDeMensagemTest.respostas400SaoErroDto`; frontend: `mensagens.test.ts`.
 - **Diferença contra o app atual:** o app atual devolvia 400 com texto em português no corpo.
 

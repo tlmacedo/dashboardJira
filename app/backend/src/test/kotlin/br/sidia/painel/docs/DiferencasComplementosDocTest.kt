@@ -44,6 +44,16 @@ class DiferencasComplementosDocTest {
     }
 
     @Test
+    fun cadaItemTemUmaProva() {
+        // Cada seção "## <item>" traz ao menos uma prova: `Classe.metodo` do backend ou um arquivo de teste do frontend.
+        val secoes = documento().split(Regex("(?m)^## ")).drop(1)
+        val semProva = secoes.filter { it.lineSequence().first().trim().let { t -> itens.any { i -> t.startsWith(i) } } }
+            .filterNot { Regex("""`[A-Z]\w*Test\.\w+`|\.test\.tsx?`""").containsMatchIn(it) }
+            .map { it.lineSequence().first() }
+        assertTrue(semProva.isEmpty(), "seções sem prova: $semProva")
+    }
+
+    @Test
     fun documentoTrazAsDiferencasContraOAppAtual() {
         val texto = documento().lowercase()
         for (tema in listOf("sku type", "gaveta", "flag", "link para o jira", "app atual", "v6", "vg-02", "ne-09", "filtros_rapidos")) {
