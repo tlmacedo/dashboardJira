@@ -75,6 +75,7 @@ class RelatorioFinalDocTest {
     @Test
     fun limitesDizemOQueNaoFoiPossivelEPorQue() {
         val texto = secao("d").lowercase()
+        // "legacy/" é a pasta do app Python removido (código na tag legacy-final), citada na seção (d).
         for (tema in listOf(
             "captura", "leitor de tela", ".ps1", "legacy/", "tag", "serviço", "firewall", "proxy", "certificado",
             "dpo", "ativos de marca", "gitguardian", "restauração", "fase 0", "plano 14",

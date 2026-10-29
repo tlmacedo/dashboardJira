@@ -1,6 +1,6 @@
 # Trabalho e prazos (Abertas, Negligenciadas, Fechadas e Metas): diferenças esperadas em relação ao app atual
 
-Blocos 5a (cartões `AB`, `NG`, `FE` e `MT`) e 5b (`NE`, `RI`, `PV` e `EP`, na última parte deste documento) do Plano 5. Compara os cartões do app Python (`legacy/`, inventário em `docs/analise/relatorio-cards-app-atual.md`) com as telas novas. Diferença listada aqui é intencional; qualquer outra divergência é defeito. Exemplos usam o cenário fictício TRB-1 (pessoas `ana`, `bruno` e `carla`; relógio de sexta 30/10/2026; feriados 12/10 e 02/11). Nada foi conferido no Jira real: a primeira conexão segue `docs/jira/checklist-primeira-conexao.md`.
+Blocos 5a (cartões `AB`, `NG`, `FE` e `MT`) e 5b (`NE`, `RI`, `PV` e `EP`, na última parte deste documento) do Plano 5. Compara os cartões do app Python (`legacy/`, na tag `legacy-final`; inventário em `docs/analise/relatorio-cards-app-atual.md`) com as telas novas. Diferença listada aqui é intencional; qualquer outra divergência é defeito. Exemplos usam o cenário fictício TRB-1 (pessoas `ana`, `bruno` e `carla`; relógio de sexta 30/10/2026; feriados 12/10 e 02/11). Nada foi conferido no Jira real: a primeira conexão segue `docs/jira/checklist-primeira-conexao.md`.
 
 Legenda: **igual** (mesma conta do legado, conferida no código), **diferença esperada** (com o motivo) e **novo** (o app atual não tinha).
 
@@ -141,5 +141,5 @@ Compara os cartões `NE`, `RI`, `PV` e `EP` do app Python com as telas novas. Ex
 ## Como foi conferido
 
 - `ConsistenciaEntreTelasTest`: o mesmo "no prazo" em Auditoria, Fechadas e Metas (inclusive com cancelada e Epic no cenário), a TG-120 no dia 15/10 de Manaus, e a mesma semana em Fechadas e Tempo em status.
-- `CompatLegadoTrabalhoTest`: ciclo corrido P50 de 6,5, faixas de idade e faixas de entrega contra o vencimento, conforme `legacy/backend/jiradash/metrics/core.py`, `analytics.py` e `reports.py`; no 5b, o Monte Carlo sem chegada (20 itens a 5 por semana = 4 semanas), o restante dada a idade (mínimo de 5) e os pesos e limiares do risco, lidos de `forecast.py` e `risk.py` (o teste é pulado se `legacy/` deixar de existir na Fase 8).
+- `CompatLegadoTrabalhoTest`: ciclo corrido P50 de 6,5, faixas de idade e faixas de entrega contra o vencimento, conforme `legacy/backend/jiradash/metrics/core.py`, `analytics.py` e `reports.py` (na tag `legacy-final`); no 5b, o Monte Carlo sem chegada (20 itens a 5 por semana = 4 semanas), o restante dada a idade (mínimo de 5) e os pesos e limiares do risco, lidos de `forecast.py` e `risk.py`. Os valores do legado estão congelados no teste, que roda sem a pasta `legacy/`.
 - Limite: a captura visual das telas não foi feita neste ambiente (sem navegador); fica para a revisão do usuário. Nada foi conferido no Jira real.

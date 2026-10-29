@@ -1,6 +1,6 @@
 # Equivalência por card: app legado × painel novo
 
-Conferência do Plano 8, Tarefa 3. Para cada card do inventário do app Python (`legacy/`, em `docs/analise/relatorio-cards-app-atual.md`) este documento diz **qual(is) card(s) do catálogo do painel novo o substituem**, **se a conta é a mesma** e **onde está a prova**. É a base do "sim" do usuário para a remoção do `legacy/` (Plano 8, Tarefa 9): sem esse "sim", nada em `legacy/` é tocado.
+Conferência do Plano 8, Tarefa 3. Para cada card do inventário do app Python (`legacy/`, em `docs/analise/relatorio-cards-app-atual.md`) este documento diz **qual(is) card(s) do catálogo do painel novo o substituem**, **se a conta é a mesma** e **onde está a prova**. Foi a base do "sim" do usuário para a remoção do `legacy/` (Plano 8, Tarefa 9), dado em 29/10/2026; a pasta saiu do repositório e o código antigo está na tag `legacy-final`.
 
 - Data: 2026-10-29. Escrito só a partir dos documentos de diferenças esperadas, do inventário e dos testes; nenhum dado real foi lido e nenhum servidor Jira foi acessado.
 - A coluna **Card(s) novo(s)** traz ids do catálogo (`GET /api/cartoes/catalogo`), entre crases. A primeira coluna traz o id **do inventário legado**, sem crases. Atenção: alguns ids coincidem de propósito (a mesma pergunta continua com o mesmo id), mas outros foram reaproveitados para um card **diferente** (o `AU-01` e o `SI-01` do catálogo são cards novos; o `AU-01` e o `SI-01` do legado estão em `DC-01` e `SY-nn`).
@@ -169,7 +169,7 @@ Documentos: [trabalho e prazos](diferencas-esperadas-trabalho-e-prazos.md) · [t
 
 Resumo: 5 equivalentes, 29 consistentes, 107 diferenças esperadas, 1 não migrado (contados por id do inventário; as linhas agrupadas contam um por id).
 
-**Prova histórica.** Os `CompatLegado*Test` conferem o texto das fórmulas em `legacy/` só enquanto a pasta existe (a tag `legacy-final` guarda o código original). Nas 5 linhas "equivalente" os valores esperados do legado estão congelados dentro dos próprios testes (`CompatLegadoTest`, `CompatLegadoTempoEmStatusTest`, `CompatLegadoTrabalhoTest`), então a prova numérica sobrevive à remoção. Os `CompatLegadoCapacidadeTest`, `CompatLegadoDistribuicaoTest` e `CompatLegadoChecklistTest` são pulados por inteiro sem o `legacy/`: a Tarefa 9 deve congelar os valores deles (ou registrar a prova como histórica) antes de remover a pasta.
+**Prova histórica.** A tag `legacy-final` guarda o código original em `legacy/`. Todos os `CompatLegado*Test` (`CompatLegadoTest`, `CompatLegadoTempoEmStatusTest`, `CompatLegadoTrabalhoTest`, `CompatLegadoCapacidadeTest`, `CompatLegadoDistribuicaoTest` e `CompatLegadoChecklistTest`) têm os valores e as fórmulas do legado congelados dentro deles (as fórmulas em Python ficam nos comentários) e rodam sem a pasta, sem nenhum teste pulado: a prova numérica sobrevive à remoção.
 
 Nenhum card do inventário ficou sem destino, exceto o SI-02. As diferenças esperadas são todas decisões registradas nos documentos da última coluna (fuso, dias úteis, regra única de "no prazo", escopo por papel, ausência de ranking de pessoas).
 
@@ -185,14 +185,14 @@ Cards do catálogo que não substituem nenhum id do inventário (spec 6.2 e os p
 | Pessoas e planejamento | `CL-01`, `PL-01`, `VE-01`, `VE-02`, `TD-01`, `PS-01`, `PS-02`, `EF-01`, `EF-02`, `CB-01`, `SI-01`, `CM-01`, `CM-02`, `CM-03`, `RV-01`, `RV-02`, `CG-01`, `CG-02` |
 | Início, Meu painel e Configuração | `VG-13`, `MP-06`, `CF-01` |
 
-## Pergunta pendente ao usuário (remoção do `legacy/`)
+## Resposta do usuário (remoção do `legacy/`)
 
-Este documento é o ponto de parada obrigatório do Plano 8 (Tarefa 3, passo 5; roteiro D9). Sem o "sim" expresso do usuário, nada em `legacy/` é removido ou alterado, a Tarefa 9 não é executada e a pendência segue no `HANDOFF.md`. Quem responde é só o usuário, na conversa.
+Este documento foi o ponto de parada obrigatório do Plano 8 (Tarefa 3, passo 5; roteiro D9). **Resposta: sim, remover.** Em 29/10/2026, na conversa, o usuário mandou: "Delete o /legacy". A Tarefa 9 foi executada em PR próprio: a pasta saiu do repositório e o código antigo ficou na tag `legacy-final`.
 
-Resumo para decidir: 5 equivalentes, 29 consistentes, 107 diferenças esperadas, 1 não migrado (SI-02, "como ligar ao Jira", substituído pelo checklist da primeira conexão). Só as 5 linhas "equivalente" têm comparação numérica com o legado (`CompatLegado*Test`); as 29 "consistente" não têm, e a decisão de aprovar considera isso.
+Resumo que embasou a decisão: 5 equivalentes, 29 consistentes, 107 diferenças esperadas, 1 não migrado (SI-02, "como ligar ao Jira", substituído pelo checklist da primeira conexão). Só as 5 linhas "equivalente" têm comparação numérica com o legado (`CompatLegado*Test`); as 29 "consistente" não têm, e a decisão considerou isso.
 
-Opções:
+Opções apresentadas e a escolhida:
 
-1. Aprovar e remover o `legacy/` na Tarefa 9 (Recomendada): o código antigo fica na tag `legacy-final` e o repositório deixa de ter duas implementações.
-2. Aprovar com ajustes (indicar quais): o executor aplica os ajustes a este documento e pergunta de novo antes da Tarefa 9.
-3. Ainda não; manter o `legacy/`: a Tarefa 9 fica de fora do PR e a pendência vai ao `HANDOFF.md`.
+1. Aprovar e remover o `legacy/` na Tarefa 9 (Recomendada): **escolhida em 29/10/2026**. O código antigo fica na tag `legacy-final` e o repositório deixa de ter duas implementações.
+2. Aprovar com ajustes (indicar quais): não escolhida.
+3. Ainda não; manter o `legacy/`: não escolhida.

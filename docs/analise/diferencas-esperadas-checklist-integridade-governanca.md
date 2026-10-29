@@ -1,6 +1,6 @@
 # Diferenças esperadas: Checklist × Review, Integridade e Governança
 
-Este documento lista, por bloco, onde o painel novo (Kotlin + React) responde diferente do app Python anterior (`legacy/`) e do projeto irmão bscbi-web, e por quê. Cada diferença é uma decisão, não um defeito. Quem comparar números do legado com os do painel deve começar aqui.
+Este documento lista, por bloco, onde o painel novo (Kotlin + React) responde diferente do app Python anterior (`legacy/`, na tag `legacy-final`) e do projeto irmão bscbi-web, e por quê. Cada diferença é uma decisão, não um defeito. Quem comparar números do legado com os do painel deve começar aqui.
 
 ## Seção 7a: Checklist × Review e Integridade
 
@@ -85,7 +85,7 @@ Os cartões do bloco, com os ids do inventário (`docs/analise/relatorio-cards-a
 
 ### Distribuição e Rebalanceamento (modo sombra)
 
-O painel **só sugere**. A decisão (**DI-05** e **RB-03**: aprovar, trocar com motivo obrigatório, rejeitar) é gravada **somente no painel**, na tabela `decisao_distribuicao` (retenção longa, como a auditoria), e **nada é escrito no Jira** (`SemEscritaNoJiraTest`). A unicidade vem de `chave_sugestao` (repetida = 409 `JA_DECIDIDA`; sugestão que mudou = 409 `SUGESTAO_MUDOU`). O servidor recalcula a sugestão do ator e nunca confia no que a tela mandou. Conferido contra `legacy/backend/jiradash/distribution/engine.py` em `CompatLegadoDistribuicaoTest`.
+O painel **só sugere**. A decisão (**DI-05** e **RB-03**: aprovar, trocar com motivo obrigatório, rejeitar) é gravada **somente no painel**, na tabela `decisao_distribuicao` (retenção longa, como a auditoria), e **nada é escrito no Jira** (`SemEscritaNoJiraTest`). A unicidade vem de `chave_sugestao` (repetida = 409 `JA_DECIDIDA`; sugestão que mudou = 409 `SUGESTAO_MUDOU`). O servidor recalcula a sugestão do ator e nunca confia no que a tela mandou. Conferido contra `legacy/backend/jiradash/distribution/engine.py` (na tag `legacy-final`) em `CompatLegadoDistribuicaoTest`.
 
 | Assunto | Legado | Painel | Por quê |
 |---|---|---|---|

@@ -51,7 +51,7 @@ O usuário pediu que o frontend siga a identidade visual da Sidia. Temas dispon�
 
 ## Evidence on Hand
 
-- App Python anterior com 21 telas e manual com capturas: `legacy/docs/manual/` (referência; sai do repositório só com o "sim" do usuário ao documento de equivalência).
+- App Python anterior com 21 telas e manual com capturas: preservados na tag `legacy-final` (a pasta do app saiu do repositório em 29/10/2026, com o "sim" do usuário ao documento de equivalência).
 - Documento de engenharia reversa do bscbi-web e catálogo de filtros do TG-Basic (vocabulário de campos).
 - Referência local da documentação pública do Jira Data Center (JQL, filtros, REST, gestão): `docs/jira/referencia/`. Nenhum exemplo dela foi testado em servidor real.
 - Guia do painel, perguntas frequentes e treinamento por papel: `docs/manual/guia-do-painel.md`, `docs/manual/perguntas-frequentes.md`, `docs/treinamento/`.

@@ -26,7 +26,7 @@ Siglas da coluna "Onde": **C** = `CLAUDE.md` · **R** = `.clinerules/00-regras-d
 | 2.2 | `Filtros_Status_tool.txt` tem usernames reais: nunca editar, commitar nem copiar nomes dele | R, G |
 | 2.3 | Fixtures, testes, docs e commits só com nomes fictícios (`ana.silva`, `bruno`, domínio `.invalid`) | R |
 | 2.4 | Antes de qualquer push: varrer `git log main..HEAD` e `git diff main..HEAD` por e-mails, usernames reais, hosts internos, tokens e senhas; conferir a visibilidade (o repositório é **público** por decisão do usuário em 26/10: nada novo com dado real entra); `git status` sem arquivos protegidos | G, H, W (`fim-de-branch.md`) |
-| 2.5 | Nunca `git add -A` (o usuário mantém `legacy/.env.example` modificado fora de commit) nem `git add -f` | G, K |
+| 2.5 | Nunca `git add -A` nem `git add -f` | G, K |
 | 2.6 | Token, senha e URL com credencial nunca em `toString`, log, erro, resposta HTTP, relatório nem no terminal (mesmo com a flag `true`) | G, P4A (Decisão 10) |
 | 2.7 | Banco, log e `raw` sem dados pessoais (`displayName`, e-mail, avatar, `accountId`, texto livre) | G |
 | 2.8 | A flag do Jira vale só no `app/.env` (terminal e sistema são ignorados); o `.env` real nunca vai para arquivo versionado | C, G |
@@ -82,7 +82,7 @@ Siglas da coluna "Onde": **C** = `CLAUDE.md` · **R** = `.clinerules/00-regras-d
 
 | # | Regra | Onde |
 |---|---|---|
-| 7.1 | Stack Kotlin/Ktor + SQLite + React/Vite; `legacy/` só referência | C |
+| 7.1 | Stack Kotlin/Ktor + SQLite + React/Vite; o app Python antigo foi removido (tag `legacy-final`) | C |
 | 7.2 | Fuso America/Manaus; dias úteis por padrão; relógio e calendário injetados | C, G |
 | 7.3 | Concluída = categoria done **e** `resolution`; divergência vai para Qualidade dos dados | C |
 | 7.4 | "No prazo" e "no prazo ajustado" lado a lado | C |

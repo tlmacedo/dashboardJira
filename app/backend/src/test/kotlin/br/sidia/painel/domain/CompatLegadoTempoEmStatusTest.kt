@@ -9,7 +9,7 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 /**
- * Compatibilidade do Tempo em status com o app Python (`legacy/backend/jiradash/analytics.py::time_in_status` e
+ * Compatibilidade do Tempo em status com o app Python (`legacy/backend/jiradash/analytics.py::time_in_status`, tag `legacy-final`, e
  * `metrics/core.py::status_durations`/`pct`), SÓ em `unit = CORRIDO` (o padrão do painel novo são dias úteis; a
  * diferença está em `docs/analise/diferencas-esperadas-tempo-em-status.md`).
  *

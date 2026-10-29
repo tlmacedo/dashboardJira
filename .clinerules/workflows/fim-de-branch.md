@@ -8,7 +8,7 @@ O procedimento completo, com os comandos para Windows 11 PowerShell e sh, as con
 4. **Merge** (seção 5, lista de 7 condições): a IA **mescla por conta própria** (`gh pr merge --squash --delete-branch`) **somente se todas as condições forem verdadeiras**, por decisão do usuário em 27/10/2026. Faltando qualquer uma, não mescla: pergunta (`/perguntar-ao-usuario.md`). Nunca `--admin`, nunca push direto na `main`.
 5. **Volta à main** (seção 6): `git checkout main`, `git pull --ff-only origin main`, suíte na `main`; a branch local já foi apagada pelo merge (se sobrar e a PR estiver `MERGED`, `git branch -D`, nunca `-d` após squash); só então começar o próximo plano.
 
-- `git status`: nada pendente além do que o usuário mantém fora de commit (`legacy/.env.example`).
+- `git status`: nada pendente além do que o usuário mantém fora de commit (hoje, nada).
 - Suíte completa. macOS/Linux: `cd app/backend && ./gradlew test`; `cd app/frontend && pnpm vitest run && pnpm build`. Windows PowerShell: `cd app\backend; .\gradlew.bat test`; `cd app\frontend; pnpm vitest run; if ($LASTEXITCODE -eq 0) { pnpm build }`. Anote os números. Se algo falhar, pare: volte a `/executar-plano.md`.
 - `/revisar-tarefa.md` sobre `git diff main..HEAD`, sem Critical nem Important em aberto.
 

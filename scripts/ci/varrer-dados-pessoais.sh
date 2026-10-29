@@ -4,7 +4,7 @@
 # Uso: sh scripts/ci/varrer-dados-pessoais.sh [--base <ref>] [--arvore]
 #   modo PR (padrão, --base origin/main): olha só as linhas ADICIONADAS por `git diff <base>...HEAD` e as
 #     mensagens de `git log <base>..HEAD`. E-mail de autor nunca é varrido. Localmente rode antes `git fetch origin main`.
-#   --arvore: olha todos os arquivos versionados (`git ls-files`); docs/superpowers/ e legacy/ ficam fora do conteúdo.
+#   --arvore: olha todos os arquivos versionados (`git ls-files`); docs/superpowers/ fica fora do conteúdo.
 #
 # Saída: uma linha `ACHADO <categoria> <arquivo>:<linha>` por achado (mensagem de commit: `commit:<hash curto>`;
 # arquivo proibido: linha 0) e, por fim, `VARREDURA OK` ou `VARREDURA FALHOU: <n> achado(s)`.
@@ -92,7 +92,7 @@ if [ "$arvore" = 1 ]; then
   git -c core.quotepath=off ls-files > "$tmp/arquivos"
   while IFS= read -r arq; do
     [ -f "$arq" ] || continue
-    case "$arq" in docs/superpowers/* | legacy/*) continue ;; esac
+    case "$arq" in docs/superpowers/*) continue ;; esac
     grep -qI '' "$arq" 2>/dev/null || continue # binário ou vazio
     awk -v f="$arq" -v locf="$tmp/loc" -v txtf="$tmp/txt" '{ print f ":" FNR >> locf; print $0 >> txtf }' "$arq"
   done < "$tmp/arquivos"
