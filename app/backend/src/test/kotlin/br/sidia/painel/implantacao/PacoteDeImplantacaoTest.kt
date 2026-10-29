@@ -197,6 +197,56 @@ class PacoteDeImplantacaoTest {
     }
 
     @Test
+    fun entradaComPontoPontoBarraInvertidaOuCaminhoAbsolutoRecusa() {
+        Ferramentas.exigir(temFerramentas(), "sem sh/unzip/sha256sum neste ambiente")
+        val casos = mapOf(
+            raiz + "../escapou.txt" to "..",
+            raiz + "a/../../b.txt" to "..",
+            raiz + "a\\b.txt" to "barra invertida",
+            "/etc/x" to "caminho absoluto",
+            "C:/x" to "caminho absoluto",
+        )
+        for ((entrada, esperado) in casos) {
+            val (codigo, saida) = verificarZip(mapOf(raiz + "VERSAO.txt" to "x", entrada to "x"))
+            assertEquals(1, codigo, "$entrada: $saida")
+            assertTrue(esperado in saida, "$entrada deveria citar '$esperado': $saida")
+        }
+    }
+
+    @Test
+    fun zipPequenoQueExpandeParaGigabytesRecusa() {
+        Ferramentas.exigir(temFerramentas(), "sem sh/unzip/sha256sum neste ambiente")
+        val pasta = Files.createTempDirectory("painel-zip-grande-")
+        try {
+            val nome = "painel-2026.11.1.zip"
+            val zip = pasta.resolve(nome)
+            ZipOutputStream(Files.newOutputStream(zip)).use { z ->
+                z.putNextEntry(ZipEntry(raiz + "grande.bin"))
+                val bloco = ByteArray(1024 * 1024)
+                repeat(520) { z.write(bloco) } // 520 MB de zeros: poucos KB comprimidos
+                z.closeEntry()
+            }
+            assertTrue(Files.size(zip) < 5 * 1024 * 1024, "o zip em si é pequeno")
+            Files.writeString(pasta.resolve("$nome.sha256"), "${sha256(Files.readAllBytes(zip))}  $nome\n")
+            val p = ProcessBuilder(sh(), scripts.resolve("verificar-pacote.sh").toString(), zip.toString()).redirectErrorStream(true).start()
+            val saida = p.inputStream.bufferedReader().readText()
+            assertTrue(p.waitFor(120, TimeUnit.SECONDS))
+            assertEquals(1, p.exitValue(), saida)
+            assertTrue("500 MB" in saida, saida)
+        } finally {
+            pasta.toFile().deleteRecursively()
+        }
+    }
+
+    @Test
+    fun verificarPacotePowerShellTemModoEstritoELimites() {
+        val ps = script("verificar-pacote.ps1")
+        assertTrue("Set-StrictMode -Version Latest" in ps)
+        assertTrue("524288000" in ps && "524288000" in script("verificar-pacote.sh"), "limite de 500 MB extraídos nos dois")
+        for (t in listOf(ps, script("verificar-pacote.sh"))) assertTrue("'..'" in t || "\"..\"" in t || "\"\\.\\.\"" in t, "recusa .. nos dois")
+    }
+
+    @Test
     fun entradaForaDaPastaRaizRecusa() {
         Ferramentas.exigir(temFerramentas(), "sem sh/unzip/sha256sum neste ambiente")
         val (codigo, saida) = verificarZip(mapOf("outra-pasta/VERSAO.txt" to "x"))

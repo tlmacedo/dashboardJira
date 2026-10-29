@@ -67,8 +67,17 @@ case "$ALVO" in
         ZIPTMP="$(mktemp -d)"
         RAIZ="${NOME%.zip}"
         unzip -Z1 "$ZIP" > "$ZIPTMP/entradas.txt"
+        # Tamanho TOTAL extraido (um zip pequeno pode expandir para gigabytes): no maximo 500 MB.
+        EXTRAIDO="$(unzip -Zt "$ZIP" | sed -n 's/.* \([0-9][0-9]*\) bytes uncompressed.*/\1/p' | head -n 1)"
+        [ -n "$EXTRAIDO" ] || falhar "nao foi possivel medir o tamanho extraido do zip"
+        [ "$EXTRAIDO" -le 524288000 ] || falhar "o tamanho extraido do zip passa de 500 MB"
         while IFS= read -r entrada; do
             [ -n "$entrada" ] || continue
+            # Nada de barra invertida (no Windows vira separador) nem de caminho absoluto ou unidade no nome da entrada.
+            case "$entrada" in
+                *'\'*) falhar "entrada com barra invertida no nome: $entrada" ;;
+                /* | [A-Za-z]:*) falhar "entrada com caminho absoluto: $entrada" ;;
+            esac
             case "$entrada" in
                 "$RAIZ"/*) ;;
                 *) falhar "entrada fora da pasta raiz $RAIZ/: $entrada" ;;
@@ -76,6 +85,7 @@ case "$ALVO" in
             resto="${entrada%/}"
             while [ -n "$resto" ]; do
                 componente="${resto##*/}"
+                [ "$componente" != ".." ] || falhar "entrada com '..' no caminho: $entrada"
                 confere_nome "$(printf '%s' "$componente" | tr 'A-Z' 'a-z')" "$entrada"
                 case "$resto" in */*) resto="${resto%/*}" ;; *) resto="" ;; esac
             done

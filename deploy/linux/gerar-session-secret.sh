@@ -35,8 +35,11 @@ if [ -n "$ATUAL" ]; then
     printf 'SESSION_SECRET_ANTERIOR=%s\n' "$ATUAL" >> "$TMP"
 fi
 printf 'SESSION_SECRET=%s\n' "$SEGREDO" >> "$TMP"
-# Grava por cima do arquivo original (mesmo dono, mesma permissao).
-cat "$TMP" > "$ARQUIVO"
+# Troca o arquivo de uma vez (mv no mesmo diretorio e atomico: uma queda no meio nunca deixa o painel.env truncado), com o mesmo
+# dono e a mesma permissao do original.
+chown --reference="$ARQUIVO" "$TMP" 2>/dev/null || true
+chmod --reference="$ARQUIVO" "$TMP" 2>/dev/null || true
+mv -f "$TMP" "$ARQUIVO"
 
 if [ -n "$ATUAL" ]; then
     echo "SESSION_SECRET_ROTACIONADO"

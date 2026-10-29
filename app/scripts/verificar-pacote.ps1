@@ -13,6 +13,7 @@
 # Com um ZIP (painel-AAAA.MM.N.zip, com o painel-AAAA.MM.N.zip.sha256 ao lado) confere ANTES de extrair: nome, tamanho
 # (no maximo 200 MB), SHA-256, pasta raiz e nomes proibidos; depois extrai numa pasta temporaria e roda as conferencias
 # acima sobre o conteudo extraido.
+Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 $aqui = Split-Path -Parent $MyInvocation.MyCommand.Path
 $app = Split-Path -Parent $aqui
@@ -58,10 +59,22 @@ if ($alvo -like '*.zip') {
     $raiz = $nomeDoZip.Substring(0, $nomeDoZip.Length - 4)
     Add-Type -AssemblyName System.IO.Compression.FileSystem
     $arquivoZip = [System.IO.Compression.ZipFile]::OpenRead($zip)
-    try { $entradas = @($arquivoZip.Entries | ForEach-Object { $_.FullName }) } finally { $arquivoZip.Dispose() }
+    try {
+        $entradas = @($arquivoZip.Entries | ForEach-Object { $_.FullName })
+        # Tamanho TOTAL extraido (um zip pequeno pode expandir para gigabytes): no maximo 500 MB.
+        $extraido = [long]0
+        foreach ($e in $arquivoZip.Entries) { $extraido += $e.Length }
+    } finally { $arquivoZip.Dispose() }
+    if ($extraido -gt 524288000) { Falhar 'o tamanho extraido do zip passa de 500 MB' }
     foreach ($entrada in $entradas) {
+        # Nada de barra invertida (no Windows vira separador) nem de caminho absoluto ou unidade no nome da entrada.
+        if ($entrada.Contains('\')) { Falhar "entrada com barra invertida no nome: $entrada" }
+        if ($entrada.StartsWith('/') -or $entrada -match '^[A-Za-z]:') { Falhar "entrada com caminho absoluto: $entrada" }
         if (-not $entrada.StartsWith("$raiz/")) { Falhar "entrada fora da pasta raiz $raiz/: $entrada" }
-        foreach ($componente in ($entrada.TrimEnd('/') -split '/')) { ConfereNome $componente $entrada }
+        foreach ($componente in ($entrada.TrimEnd('/') -split '/')) {
+            if ($componente -eq '..') { Falhar "entrada com '..' no caminho: $entrada" }
+            ConfereNome $componente $entrada
+        }
     }
     Write-Host 'ok: nenhuma entrada proibida'
     $zipTmp = Join-Path ([System.IO.Path]::GetTempPath()) ('painel-zip-' + [Guid]::NewGuid().ToString('N'))

@@ -19,7 +19,9 @@ class ViolacaoDeProducao(val codigos: List<String>) : IllegalStateException("Sub
  * `DOMINIO_DO_USERNAME_AUSENTE`, `PROXY_NAO_CONFIGURADO`, `ESCUTA_ABERTA_A_TODAS`, `CAMINHO_RELATIVO`.
  *
  * Mais `TRAVA_DPO_NAO_DECLARADA` (por último): `DASHBOARD_DPO_ACEITE=true` sem `DASHBOARD_DPO_ACEITE_REF`. Aceite ausente ou
- * false NÃO recusa nada: a trava do DPO fica fechada e o painel sobe.
+ * false NÃO recusa nada: a trava do DPO fica fechada e o painel sobe. Observação: pelo `main()` este código raramente aparece,
+ * porque `LgpdSettings.fromEnv` (dentro de `Settings.fromEnv`) já recusa esse caso antes, com outra mensagem; a guarda existe
+ * como defesa em profundidade para quem monta `Settings` sem passar por `fromEnv`, e é provada diretamente nos testes.
  */
 object GuardasDeProducao {
     fun verificar(s: Settings, env: Map<String, String>) {

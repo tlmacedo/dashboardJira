@@ -62,7 +62,7 @@ class SegredosDeImplantacaoTest {
         assertEquals("", v["OIDC_CLIENT_SECRET"])
         for (m in Regex("https?://([^/\\s:?#]+)").findAll(modelo)) assertTrue(m.groupValues[1].endsWith(".invalid"), "host real no modelo: ${m.value}")
         // caminhos absolutos (a produção recusa relativo)
-        for (nome in listOf("DATABASE_PATH", "PAINEL_CONFIG_DIR", "PAINEL_STATIC_DIR")) {
+        for (nome in listOf("DATABASE_PATH", "PAINEL_CONFIG_DIR", "PAINEL_STATIC_DIR", "BACKUP_DIR")) {
             val valor = v[nome] ?: error("falta $nome")
             assertTrue(Regex("^([A-Za-z]:\\\\|/)").containsMatchIn(valor), "$nome deve ser absoluto: $valor")
         }
@@ -153,7 +153,8 @@ class SegredosDeImplantacaoTest {
             assertTrue("LOG_LIMPO" in t && "LOG_COM_SEGREDO" in t)
             assertTrue("SECRET" in t && "PASSWORD" in t && "TOKEN" in t)
         }
-        assertTrue("journalctl -u painel --no-pager" in sh)
+        assertTrue("journalctl -u \"\$SERVICO\" --no-pager" in sh && "PAINEL_SERVICO" in sh, "nome da unidade parametrizável")
+        assertTrue("LOG_NAO_LIDO" in sh && "LOG_NAO_LIDO" in ps)
         assertTrue("\\logs\\" in ps || "logs" in ps)
         val imprime = Regex("Write-(Host|Output)|Out-Host")
         for (l in ps.lines().filter { "\$valor" in it }) assertFalse(imprime.containsMatchIn(l), "verificar-logs.ps1 imprime o valor: $l")
@@ -194,8 +195,12 @@ class SegredosDeImplantacaoTest {
             val env = pasta.resolve("painel.env")
             Files.write(env, listOf("DASHBOARD_DEV_MODE=false", "SESSION_SECRET=", "OIDC_CLIENT_ID=painel"))
             val script = repo.resolve("deploy/linux/gerar-session-secret.sh").toString()
+            val permissao = java.nio.file.attribute.PosixFilePermissions.fromString("rw-r-----")
+            Files.setPosixFilePermissions(env, permissao)
             val (c1, s1) = rodar(sh()!!, script, env.toString())
             assertEquals(0, c1, s1)
+            assertEquals(permissao, Files.getPosixFilePermissions(env), "o arquivo troca de conteúdo mas mantém a permissão (troca atômica)")
+            assertEquals(listOf("painel.env"), Files.list(pasta).use { s -> s.map { it.fileName.toString() }.toList() }, "nenhum temporário sobra")
             assertTrue("SESSION_SECRET_GERADO" in s1)
             val linhas = Files.readAllLines(env)
             val valor = linhas.single { it.startsWith("SESSION_SECRET=") }.removePrefix("SESSION_SECRET=")
@@ -239,6 +244,33 @@ class SegredosDeImplantacaoTest {
             assertEquals(1, c2, s2)
             assertTrue("LOG_COM_SEGREDO SESSION_SECRET" in s2)
             assertFalse(vazado in s2, "o valor não pode sair na tela")
+        } finally {
+            pasta.toFile().deleteRecursively()
+        }
+    }
+
+    @Test
+    fun verificarLogsNaoDaLimpoSemTerLidoNadaEAchaValorEntreAspas() {
+        Ferramentas.exigir(sh() != null, "sem sh neste ambiente")
+        val pasta = Files.createTempDirectory("painel-logs2-")
+        try {
+            val env = pasta.resolve("painel.env")
+            Files.write(env, listOf("SESSION_SECRET=\"valor-ficticio-entre-aspas-99\"", "OIDC_CLIENT_SECRET='outro-ficticio-aspas-simples'"))
+            val script = repo.resolve("deploy/linux/verificar-logs.sh").toString()
+            // log vazio: nada foi conferido, então NÃO pode haver "LOG_LIMPO"
+            val vazio = pasta.resolve("vazio.log").also { Files.writeString(it, "") }
+            val (c0, s0) = rodar(sh()!!, script, env.toString(), vazio.toString())
+            assertEquals(3, c0, s0)
+            assertTrue("LOG_NAO_LIDO" in s0 && "LOG_LIMPO" !in s0, s0)
+            // valores entre aspas são procurados SEM as aspas
+            val sujo = pasta.resolve("sujo.log").also { Files.writeString(it, "x valor-ficticio-entre-aspas-99 y\noutro-ficticio-aspas-simples\n") }
+            val (c1, s1) = rodar(sh()!!, script, env.toString(), sujo.toString())
+            assertEquals(1, c1, s1)
+            assertTrue("LOG_COM_SEGREDO SESSION_SECRET" in s1 && "LOG_COM_SEGREDO OIDC_CLIENT_SECRET" in s1, s1)
+            assertFalse("valor-ficticio" in s1 || "outro-ficticio" in s1)
+            // sem permissão/sem journal: arquivo de log inexistente
+            val (c2, _) = rodar(sh()!!, script, env.toString(), pasta.resolve("nao-existe.log").toString())
+            assertEquals(2, c2)
         } finally {
             pasta.toFile().deleteRecursively()
         }
