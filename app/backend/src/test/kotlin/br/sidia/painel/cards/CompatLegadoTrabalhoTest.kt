@@ -91,32 +91,41 @@ class CompatLegadoTrabalhoTest {
 
     // ---- Bloco 5b: Previsão e Riscos, conferidos contra legacy/backend/jiradash/metrics (forecast.py e risk.py) ----
 
-    /** O código-fonte do legado, quando ele ainda existe no repositório (a Fase 8 o remove: o teste é então pulado). */
-    private fun legado(arquivo: String): String {
+    /**
+     * O código-fonte do legado, quando ele ainda existe no repositório; depois da remoção (tag `legacy-final`) devolve
+     * null e SÓ a conferência do texto é pulada: os valores esperados dos testes ficam congelados no próprio teste,
+     * então a prova numérica sobrevive à remoção.
+     */
+    private fun legado(arquivo: String): String? {
         var dir: Path? = Path.of("").toAbsolutePath()
         while (dir != null) {
             val f = dir.resolve("legacy/backend/jiradash/metrics/$arquivo")
             if (Files.exists(f)) return Files.readString(f)
             dir = dir.parent
         }
-        Assumptions.assumeTrue(false, "legacy/ não existe mais: conferência com o código do app anterior pulada")
-        error("inalcançável")
+        return null
+    }
+
+    /** Confere o texto do legado só quando ele existe. */
+    private fun noLegado(fonte: String?, vararg trechos: String) {
+        if (fonte == null) return
+        trechos.forEach { assertTrue(it in fonte, "o legado mudou: reconferir a conta ($it)") }
     }
 
     @Test
     fun monteCarloSemChegadaComoOLegado() {
         // forecast.py::monte_carlo_when com vazão constante: 20 itens a 5 por semana = 4 semanas em todos os percentis.
         val fonte = legado("forecast.py")
-        assertTrue("reached = cum >= remaining_items" in fonte, "o legado mudou: reconferir a conta")
-        assertTrue("max_weeks: int = 104" in fonte)
+        noLegado(
+            fonte, "reached = cum >= remaining_items", "max_weeks: int = 104", "MIN_WEEKS = 8",
+            "np.percentile(totals, 15)", "np.percentile(totals, 5)",
+        )
         assertEquals(Quando(4, 4, 4), MonteCarlo(Random(42)).quando(List(8) { 5 }, null, 20, 10_000, 104))
         // O limite de semanas e o piso de confiança são os do legado.
         assertEquals(104, RegrasDePrevisao.PADRAO.limiteSemanas)
-        assertTrue("MIN_WEEKS = 8" in fonte)
         assertEquals(8, RegrasDePrevisao.PADRAO.minSemanasConfianca)
         assertEquals(10_000, RegrasDePrevisao.PADRAO.sorteios)
         // quantos: P85 = 15º percentil e P95 = 5º, como monte_carlo_how_many.
-        assertTrue("np.percentile(totals, 15)" in fonte && "np.percentile(totals, 5)" in fonte)
         assertEquals(Triple(20, 20, 20), MonteCarlo(Random(42)).quantos(listOf(5), 4, 10_000))
     }
 
@@ -124,7 +133,7 @@ class CompatLegadoTrabalhoTest {
     fun restanteDadaIdadeComoOLegado() {
         // forecast.py::remaining_given_age: ciclos maiores que a idade, mínimo de 5, P50 e P85 com uma casa decimal.
         val fonte = legado("forecast.py")
-        assertTrue("min_n: int = 5" in fonte && "c > age_days" in fonte)
+        noLegado(fonte, "min_n: int = 5", "c > age_days")
         val ciclos = listOf(2.0, 4.0, 6.0, 8.0, 10.0, 12.0)
         assertEquals(5.0 to 7.8, MonteCarlo(Random(1)).restanteDadaIdade(ciclos, 3.0))
         assertNull(MonteCarlo(Random(1)).restanteDadaIdade(ciclos, 5.0)) // só 4 itens mais longos que 5
@@ -135,7 +144,11 @@ class CompatLegadoTrabalhoTest {
         val fonte = legado("risk.py")
         // Os pesos, na ordem em que o legado os soma (idade P85 e P50, parada, vencida, previsão, vence em breve, bloqueada,
         // reaberta, trocas, horas, sem atualização, sem estimativa).
-        val doLegado = Regex("""add\((\d+),""").findAll(fonte).map { it.groupValues[1].toInt() }.toList()
+        // Congelado do risk.py (a ordem de `add(peso, ...)`); com o legado presente, confere também contra o código.
+        val doLegado = listOf(30, 10, 15, 25, 20, 8, 15, 10, 10, 15, 10, 5)
+        if (fonte != null) {
+            assertEquals(doLegado, Regex("""add\((\d+),""").findAll(fonte).map { it.groupValues[1].toInt() }.toList())
+        }
         val novos = RegrasDeRisco.PADRAO.pesos
         val ordem = listOf(
             FatorDeRisco.IDADE_ACIMA_P85, FatorDeRisco.IDADE_ACIMA_P50, FatorDeRisco.PARADA, FatorDeRisco.VENCIDA,
@@ -144,9 +157,10 @@ class CompatLegadoTrabalhoTest {
         )
         assertEquals(ordem.map { novos.getValue(it) }, doLegado)
         // Os limiares: níveis 60 e 30, vence em 3 dias, horas acima de 125%, 3 trocas e 7 dias sem atualização.
-        assertTrue("""LEVELS = [(60, "alto"), (30, "médio"), (0, "baixo")]""" in fonte)
-        assertTrue("(rec.due - today).days <= 3" in fonte && "1.25 * rec.original_estimate_s" in fonte)
-        assertTrue("reassign_count(rec) >= 3" in fonte && "idle > 7" in fonte && "min(100, sum(" in fonte)
+        noLegado(
+            fonte, """LEVELS = [(60, "alto"), (30, "médio"), (0, "baixo")]""", "(rec.due - today).days <= 3",
+            "1.25 * rec.original_estimate_s", "reassign_count(rec) >= 3", "idle > 7", "min(100, sum(",
+        )
         val r = RegrasDeRisco.PADRAO
         assertEquals(listOf(60, 30, 3, 1.25, 3, 7), listOf(r.alto, r.medio, r.venceEmDias, r.estouro, r.trocas, r.diasSemAtualizacao))
         assertEquals(listOf("alto", "medio", "baixo"), listOf(60, 30, 29).map(r::nivel))
