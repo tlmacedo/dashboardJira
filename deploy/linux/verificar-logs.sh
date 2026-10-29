@@ -22,7 +22,9 @@ else
     FONTE="$TMP/journal.txt"
     journalctl -u "$SERVICO" --no-pager > "$FONTE" 2>/dev/null || : > "$FONTE"
 fi
-if [ ! -s "$FONTE" ]; then
+# Linhas "-- ..." sao marcadores do journal ("-- No entries --", "-- Logs begin at ..."), nao registros: sem nenhum registro de
+# verdade (ou com "No journal files were opened due to insufficient permissions") nada foi conferido.
+if ! grep -v -e '^-- ' -e 'insufficient permissions' "$FONTE" | grep -q .; then
     echo "LOG_NAO_LIDO"
     exit 3
 fi

@@ -85,10 +85,32 @@ object GuardasDeProducao {
      * "todas as interfaces". Só literais IP numéricos são interpretados (nunca há consulta de nome); fora `localhost`, qualquer
      * nome é recusado porque poderia apontar para qualquer endereço.
      */
+    /**
+     * Valor numérico de um IPv4 em 1 a 4 partes decimais, como o JDK o interpreta (`a.b.c.d`; com menos partes a última ocupa os
+     * bytes restantes: `127.1` = 127.0.0.1). Nulo se alguma parte estourar a faixa. Nunca chama o resolvedor.
+     */
+    private fun valorIpv4(texto: String): Long? {
+        val partes = texto.split('.').map { it.toBigIntegerOrNull() ?: return null }
+        val n = partes.size
+        var total = java.math.BigInteger.ZERO
+        for ((i, p) in partes.withIndex()) {
+            val ultima = i == n - 1
+            val limite = if (ultima) java.math.BigInteger.ONE.shiftLeft(8 * (5 - n)) else java.math.BigInteger.valueOf(256)
+            if (p >= limite) return null
+            total = if (ultima) total.add(p) else total.add(p.shiftLeft(8 * (3 - i)))
+        }
+        return total.toLong()
+    }
+
     private fun classificarEscuta(host: String): Escuta {
         val h = host.trim().removeSurrounding("[", "]")
         if (h.isEmpty()) return Escuta.TODAS
-        val literal = IPV4_NUMERICO.matches(h) || (':' in h && IPV6_LITERAL.matches(h))
+        if (IPV4_NUMERICO.matches(h)) {
+            // O formato é validado AQUI, antes do JDK: um valor fora de faixa (ex.: 999.0.0.0) viraria nome e consultaria o DNS.
+            val valor = valorIpv4(h) ?: return Escuta.NAO_LITERAL
+            return if (valor == 0L) Escuta.TODAS else Escuta.ESPECIFICA
+        }
+        val literal = ':' in h && IPV6_LITERAL.matches(h)
         if (!literal) return if (h.equals("localhost", ignoreCase = true)) Escuta.ESPECIFICA else Escuta.NAO_LITERAL
         val endereco = try {
             java.net.InetAddress.getByName(h)

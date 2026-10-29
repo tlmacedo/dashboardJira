@@ -124,6 +124,18 @@ class GuardasDeProducaoTest {
     }
 
     @Test
+    fun formatoNumericoInvalidoNaoVaiAoResolvedorDeNomes() {
+        // octeto fora de faixa: o JDK trataria como nome e consultaria o DNS; a guarda valida o formato antes e recusa
+        for (ruim in listOf("999.0.0.0", "256.1.1.1", "1.2.3.256", "4294967296", "0.0.0.4294967296", "1.16777216", "1.2.65536", "0.0.0.0.0")) {
+            assertEquals(listOf("ESCUTA_NAO_LITERAL"), codigos(settingsValidas().copy(host = ruim)), ruim)
+        }
+        // formas numéricas curtas válidas continuam sendo interpretadas como o JDK as interpreta
+        assertEquals(listOf("ESCUTA_ABERTA_A_TODAS"), codigos(settingsValidas().copy(host = "0.0.0")))
+        assertEquals(emptyList(), codigos(settingsValidas().copy(host = "1.65535")))
+        assertEquals(emptyList(), codigos(settingsValidas().copy(host = "127.1")))
+    }
+
+    @Test
     fun enderecosEspecificosEoLoopbackSobem() {
         for (ok in listOf("127.0.0.1", "::1", "0:0:0:0:0:0:0:1", "10.0.0.7", "192.0.2.10", "2001:db8::5", "localhost", "LOCALHOST")) {
             assertEquals(emptyList(), codigos(settingsValidas().copy(host = ok)), ok)

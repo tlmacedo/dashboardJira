@@ -166,6 +166,10 @@ function Test-PastaDaVersaoValida {
     $item = Get-Item -LiteralPath $pasta
     if ($item.Attributes -band [System.IO.FileAttributes]::ReparsePoint) { return $false }
     if (-not (Test-CaminhoDentroDe $item.FullName $App)) { return $false }
+    # "bin" e "bin\painel.bat" tambem tem de ser proprios (uma juncao em bin levaria a execucao para fora da pasta da versao).
+    $bin = Join-Path $pasta 'bin'
+    if (-not (Test-Path -LiteralPath (Join-Path $pasta 'bin') -PathType Container)) { return $false }
+    if ((Get-Item -LiteralPath $bin).Attributes -band [System.IO.FileAttributes]::ReparsePoint) { return $false }
     $bat = Join-Path $pasta 'bin\painel.bat'
     if (-not (Test-Path -LiteralPath $bat -PathType Leaf)) { return $false }
     if ((Get-Item -LiteralPath $bat).Attributes -band [System.IO.FileAttributes]::ReparsePoint) { return $false }

@@ -212,6 +212,8 @@ pasta_da_versao_valida() {
     base="$(cd "$1" && pwd -P)"
     real="$(cd "$1/$2" && pwd -P)"
     [ "$real" = "$base/$2" ] || erro "a pasta da versao $2 sai de $1"
+    # "bin" e "bin/painel" tambem tem de ser proprios (um link em bin levaria a execucao para fora da pasta da versao).
+    [ -d "$real/bin" ] && [ ! -L "$real/bin" ] || erro "a versao $2 nao tem uma pasta bin propria"
     [ -f "$real/bin/painel" ] && [ ! -L "$real/bin/painel" ] || erro "a versao $2 nao tem bin/painel proprio"
 }
 

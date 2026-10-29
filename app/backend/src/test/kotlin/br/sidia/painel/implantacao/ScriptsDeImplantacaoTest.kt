@@ -305,6 +305,45 @@ class ScriptsDeImplantacaoTest {
     }
 
     @Test
+    fun versaoComBinQueELinkOuBackupQueELinkNaoEExecutada() {
+        Ferramentas.exigir(shell() != null, "sem sh")
+        // N1: a pasta é própria, mas "bin" é um link para fora
+        run {
+            val pasta = Files.createTempDirectory("painel-reversao-")
+            try {
+                val c = montarCenarioDeReversao(pasta, "versao=2026.11.3\nbackup=painel-bom.db\n")
+                val v = c.raiz.resolve("2026.11.3").also { Files.createDirectories(it) }
+                Files.createSymbolicLink(v.resolve("bin"), pasta.resolve("outro/bin"))
+                val (codigo, saida) = rodar(listOf(shell()!!, reverter, c.raiz.toString(), "--restaurar-banco", "--sem-servico"), c.env)
+                assertTrue(codigo != 0, saida)
+                assertFalse(Files.exists(c.marcador), "bin que é link não pode ser executado: $saida")
+            } finally {
+                pasta.toFile().deleteRecursively()
+            }
+        }
+        // N2: a cópia de backup é um link simbólico (mesmo para dentro de BACKUP_DIR)
+        run {
+            val pasta = Files.createTempDirectory("painel-reversao-")
+            try {
+                val c = montarCenarioDeReversao(pasta, "versao=2026.11.1\nbackup=painel-link.db\n")
+                Files.createSymbolicLink(pasta.resolve("backups/painel-link.db"), pasta.resolve("backups/painel-bom.db"))
+                val (codigo, saida) = rodar(listOf(shell()!!, reverter, c.raiz.toString(), "--restaurar-banco", "--sem-servico"), c.env)
+                assertTrue(codigo != 0 && "link" in saida, saida)
+                assertFalse(Files.exists(c.marcador), "cópia que é link não pode chegar à conferência: $saida")
+            } finally {
+                pasta.toFile().deleteRecursively()
+            }
+        }
+    }
+
+    @Test
+    fun powerShellTambemRecusaBinELinkECopiaLink() {
+        val c = ler("deploy/windows/comum.ps1")
+        assertTrue(Regex("(?s)function Test-PastaDaVersaoValida.*?bin.*?ReparsePoint").containsMatchIn(c))
+        assertTrue("(Join-Path \$pasta 'bin')" in c, "o .ps1 confere o próprio bin")
+    }
+
+    @Test
     fun registroApontandoParaPastaComLinkNaoEExecutado() {
         Ferramentas.exigir(shell() != null, "sem sh")
         val (codigo, saida, executou) = reverterComRegistro("versao=2026.11.2\nbackup=painel-bom.db\n")

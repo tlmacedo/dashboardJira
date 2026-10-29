@@ -70,6 +70,7 @@ if [ "$RESTAURAR" -eq 1 ]; then
         COPIA="$PASTA_DE_BACKUP/$NOME_DO_BACKUP"
     fi
     [ -f "$COPIA" ] || erro "a copia de seguranca nao foi encontrada"
+    [ ! -L "$COPIA" ] || erro "a copia de seguranca e um link simbolico (recusada)"
     # A copia (resolvida, sem links) tem de estar DENTRO de BACKUP_DIR.
     caminho_dentro_de "$COPIA" "$PASTA_DE_BACKUP" || erro "a copia de seguranca esta fora de BACKUP_DIR"
     # Confere a copia ANTES de mexer no banco atual (restaura num temporario e compara tabela a tabela).

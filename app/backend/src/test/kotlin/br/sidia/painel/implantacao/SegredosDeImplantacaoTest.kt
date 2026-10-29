@@ -262,6 +262,11 @@ class SegredosDeImplantacaoTest {
             val (c0, s0) = rodar(sh()!!, script, env.toString(), vazio.toString())
             assertEquals(3, c0, s0)
             assertTrue("LOG_NAO_LIDO" in s0 && "LOG_LIMPO" !in s0, s0)
+            // só marcadores do journal ("-- No entries --"): também não foi lido nada
+            val marcador = pasta.resolve("marcador.log").also { Files.writeString(it, "-- No entries --\n-- Logs begin at x --\n") }
+            val (cm, sm) = rodar(sh()!!, script, env.toString(), marcador.toString())
+            assertEquals(3, cm, sm)
+            assertTrue("LOG_NAO_LIDO" in sm && "LOG_LIMPO" !in sm, sm)
             // valores entre aspas são procurados SEM as aspas
             val sujo = pasta.resolve("sujo.log").also { Files.writeString(it, "x valor-ficticio-entre-aspas-99 y\noutro-ficticio-aspas-simples\n") }
             val (c1, s1) = rodar(sh()!!, script, env.toString(), sujo.toString())
