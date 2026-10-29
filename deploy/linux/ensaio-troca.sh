@@ -14,9 +14,7 @@ trap 'rm -rf "$ENSAIO"' EXIT
 RAIZ="$ENSAIO/app"
 RECEBIDOS="$ENSAIO/recebidos"
 FONTE="$ENSAIO/fonte"
-mkdir -p "$RAIZ" "$RECEBIDOS" "$FONTE" "$ENSAIO/dados"
-PAINEL_DADOS="$ENSAIO/dados"
-export PAINEL_DADOS
+mkdir -p "$RAIZ" "$RECEBIDOS" "$FONTE"
 
 # Pacote de mentira: zip com a pasta raiz painel-<versao>/ (zip, ou o jar do JDK quando o zip nao existe) e o .sha256.
 criar_pacote() {

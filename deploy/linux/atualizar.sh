@@ -5,16 +5,16 @@
 # Ordem (cada passo imprime "OK <passo>"):
 #   1. confere o SHA-256 do zip contra o .sha256 ao lado;
 #   2. extrai numa pasta nova <raiz>/<versao> (o pacote em uso fica intacto; recusa se a pasta da versao ja existir);
-#   3. registra a versao atual em <dados>/versao-anterior.txt;
-#   4. PARA o servico e espera o fim do processo (a trava <banco>.lock some);
-#   5. BACKUP do banco (painel backup-agora, Plano 12); se falhar, religa a versao atual e aborta;
+#   3. PARA o servico e espera o fim do processo (a trava <banco>.lock some);
+#   4. BACKUP do banco (painel backup-agora, Plano 12); se falhar, religa a versao atual, remove a pasta extraida e aborta;
+#   5. registra a versao anterior e o nome do backup em <raiz>/versao-anterior.txt (pasta que so root escreve; so depois do backup);
 #   6. troca o link <raiz>/atual para a versao nova;
 #   7. INICIA o servico e espera /api/health (as migracoes rodam na subida);
 #   8. fumaca (a saude responde e /api/meta informa a versao nova).
 # Falha no 7 ou no 8: imprime "FALHOU: execute reverter" com o comando exato e sai com 1. NAO ha reversao automatica: depois
 # de uma migracao, restaurar o banco e decisao humana (ver docs/implantacao/reversao.md).
-# --sem-servico pula 4, 5, 7 e 8 (so serve ao ensaio da troca de pasta).
-# Variaveis opcionais: PAINEL_DADOS (/var/lib/painel), PAINEL_ENV_FILE (/etc/painel/painel.env), PAINEL_SERVICO (painel),
+# --sem-servico pula 3, 4, 7 e 8 (so serve ao ensaio da troca de pasta).
+# Variaveis opcionais: PAINEL_ENV_FILE (/etc/painel/painel.env), PAINEL_SERVICO (painel),
 # PAINEL_URL (http://127.0.0.1:8080). Precisa de unzip (ou do jar do JDK), curl (ou wget) e sha256sum.
 set -eu
 
@@ -39,7 +39,6 @@ for argumento in "$@"; do
     esac
 done
 [ -n "$RAIZ" ] && [ -n "$ZIP" ] || uso
-DADOS="${PAINEL_DADOS:-/var/lib/painel}"
 ARQUIVO_ENV="${PAINEL_ENV_FILE:-/etc/painel/painel.env}"
 SERVICO="${PAINEL_SERVICO:-painel}"
 URL="${PAINEL_URL:-http://127.0.0.1:8080}"
@@ -62,23 +61,30 @@ echo "OK extraido em $RAIZ/$VERSAO"
 ANTERIOR=""
 if [ -L "$RAIZ/atual" ]; then
     ANTERIOR="$(basename "$(readlink "$RAIZ/atual")")"
-    mkdir -p "$DADOS"
-    printf 'versao=%s\n' "$ANTERIOR" > "$DADOS/versao-anterior.txt"
-    echo "OK versao anterior registrada ($ANTERIOR)"
+    validar_versao "$ANTERIOR"
 fi
 
+COPIA=""
 if [ "$SEM_SERVICO" -eq 0 ]; then
     parar_painel "$SERVICO"
     echo "OK servico parado"
     if [ -n "$ANTERIOR" ]; then
         if ! COPIA="$(fazer_backup "$RAIZ" "$ARQUIVO_ENV")"; then
-            echo "FALHOU: o backup antes da troca nao foi feito; religando a versao atual (nada foi trocado)" >&2
+            echo "FALHOU: o backup antes da troca nao foi feito; religando a versao atual (nada foi trocado; a pasta $VERSAO extraida foi removida)" >&2
             religar_painel "$SERVICO" || true
+            # A pasta foi criada por ESTA execucao (expandir_pacote recusa uma que ja exista): remover e seguro e permite repetir.
+            rm -rf "${RAIZ:?}/$VERSAO"
             exit 1
         fi
-        printf 'backup=%s\n' "$COPIA" >> "$DADOS/versao-anterior.txt"
+        nome_de_backup_valido "$COPIA" || erro "o backup devolveu um nome inesperado"
         echo "OK backup $COPIA"
     fi
+fi
+
+# O registro so e gravado depois do backup (uma falha nao perde o registro da atualizacao anterior), na pasta que so root escreve.
+if [ -n "$ANTERIOR" ]; then
+    gravar_registro "$RAIZ" "$ANTERIOR" "$COPIA"
+    echo "OK versao anterior registrada ($ANTERIOR)"
 fi
 
 trocar_atual "$RAIZ" "$VERSAO"

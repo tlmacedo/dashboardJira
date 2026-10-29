@@ -157,7 +157,7 @@ class PacoteDeImplantacaoTest {
 
     @Test
     fun provaNegativaConfigRealNoZip() {
-        assumeTrue(temFerramentas(), "sem sh/unzip/sha256sum neste ambiente")
+        Ferramentas.exigir(temFerramentas(), "sem sh/unzip/sha256sum neste ambiente")
         for (real in listOf("config/papeis.yaml", "papeis.yaml", "dados/equipes.yaml", "Filtros_Status_tool.txt", "legacy/app.py", "node_modules/x/index.js")) {
             val (codigo, saida) = verificarZip(mapOf(raiz + "VERSAO.txt" to "versao=2026.11.1", raiz + real to "x"))
             assertEquals(1, codigo, "$real: $saida")
@@ -168,7 +168,7 @@ class PacoteDeImplantacaoTest {
 
     @Test
     fun provaNegativaEnvFalsoNoZip() {
-        assumeTrue(temFerramentas(), "sem sh/unzip/sha256sum neste ambiente")
+        Ferramentas.exigir(temFerramentas(), "sem sh/unzip/sha256sum neste ambiente")
         for (env in listOf(".env", "painel.env", "config/producao.ENV")) {
             val (codigo, saida) = verificarZip(mapOf(raiz + "VERSAO.txt" to "versao=2026.11.1", raiz + env to "SEGREDO=1"))
             assertEquals(1, codigo, "$env: $saida")
@@ -178,7 +178,7 @@ class PacoteDeImplantacaoTest {
 
     @Test
     fun checksumErradoOuAusenteRecusa() {
-        assumeTrue(temFerramentas(), "sem sh/unzip/sha256sum neste ambiente")
+        Ferramentas.exigir(temFerramentas(), "sem sh/unzip/sha256sum neste ambiente")
         val minimo = mapOf(raiz + "VERSAO.txt" to "versao=2026.11.1")
         val (c1, s1) = verificarZip(minimo, hash = "0".repeat(64))
         assertEquals(1, c1)
@@ -190,7 +190,7 @@ class PacoteDeImplantacaoTest {
 
     @Test
     fun nomeDoZipForaDoPadraoRecusa() {
-        assumeTrue(temFerramentas(), "sem sh/unzip/sha256sum neste ambiente")
+        Ferramentas.exigir(temFerramentas(), "sem sh/unzip/sha256sum neste ambiente")
         val (codigo, saida) = verificarZip(mapOf("painel-2026.13.1/VERSAO.txt" to "x"), nome = "painel-2026.13.1.zip")
         assertEquals(1, codigo)
         assertTrue("nome do pacote" in saida, saida)
@@ -198,7 +198,7 @@ class PacoteDeImplantacaoTest {
 
     @Test
     fun entradaForaDaPastaRaizRecusa() {
-        assumeTrue(temFerramentas(), "sem sh/unzip/sha256sum neste ambiente")
+        Ferramentas.exigir(temFerramentas(), "sem sh/unzip/sha256sum neste ambiente")
         val (codigo, saida) = verificarZip(mapOf("outra-pasta/VERSAO.txt" to "x"))
         assertEquals(1, codigo)
         assertTrue("pasta raiz" in saida, saida)

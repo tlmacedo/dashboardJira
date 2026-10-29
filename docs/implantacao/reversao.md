@@ -22,7 +22,7 @@ Reverter é voltar o ponteiro `atual` para a versão anterior (a de `versao-ante
 
 O que o script faz:
 
-1. Lê `versao-anterior.txt` e recusa se não houver (nenhuma atualização registrada) ou se a pasta da versão anterior não existir mais.
+1. Lê `versao-anterior.txt` (em `C:\Painel\app\` / `/opt/painel/`, pasta só de administradores/root) e recusa se não houver (nenhuma atualização registrada). **Valida tudo o que lê antes de usar como caminho**, porque o que está nesse arquivo vira um programa executado com privilégio: a `versao` tem de ser `AAAA.MM.N` e uma pasta de verdade (nem link nem junção) diretamente dentro da pasta de versões, com `bin/painel` próprio; o `backup=` tem de ser só um nome de arquivo (sem `/`, `\`, `..`, espaço, controle nem traço inicial) e a cópia resolvida tem de ficar dentro de `BACKUP_DIR`. O `--backup`/`-Backup` informado na linha de comando passa pela mesma regra de pasta. Qualquer falha recusa antes de executar qualquer coisa.
 2. Com `-RestaurarBanco`: **confere a cópia** com `painel verificar-restauracao` (Plano 12) **antes** de tocar em qualquer coisa; se não der `RESTAURACAO OK`, para e nada muda.
 3. Para o serviço.
 4. Com `-RestaurarBanco`: o banco atual e os `-wal` e `-shm` saem **juntos** para o lado, como `painel.db.migrado-<data>`, `painel.db-wal.migrado-<data>` e `painel.db-shm.migrado-<data>`; **nada é apagado**. Depois a cópia é colocada no lugar.

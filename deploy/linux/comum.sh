@@ -171,3 +171,56 @@ conferir_fumaca() {
     fi
     return 0
 }
+
+# ---------------------------------------------------------------------------------------------------------------------
+# Registro da versao anterior. FICA EM <raiz>/versao-anterior.txt (pasta que so root escreve), NAO na pasta de dados do servico:
+# o reverter executa como root o <raiz>/<versao>/bin/painel, entao quem escreve o registro decide o que roda como root.
+# Mesmo assim tudo o que e lido dele e validado (defesa em profundidade).
+# ---------------------------------------------------------------------------------------------------------------------
+
+# Uma unica linha, sem caracteres de controle. Uso: texto_de_uma_linha <texto>
+texto_de_uma_linha() {
+    [ "$(printf '%s' "$1" | wc -l | tr -d ' ')" = "0" ] || return 1
+    printf '%s' "$1" | LC_ALL=C grep -q '[[:cntrl:]]' && return 1
+    return 0
+}
+
+# Versao AAAA.MM.N (nada de .., barras, espacos, traco inicial). Uso: validar_versao <versao>
+validar_versao() {
+    texto_de_uma_linha "$1" && printf '%s' "$1" | grep -Eq '^[0-9]{4}\.(0[1-9]|1[0-2])\.[1-9][0-9]*$' \
+        || erro "versao invalida no registro da versao anterior"
+}
+
+# Nome de arquivo de backup do registro: so o nome (sem barras, sem .., sem traco inicial, sem espaco nem controle).
+nome_de_backup_valido() {
+    texto_de_uma_linha "$1" || return 1
+    case "$1" in -* | *..*) return 1 ;; esac
+    printf '%s' "$1" | grep -Eq '^[A-Za-z0-9][A-Za-z0-9._-]*$'
+}
+
+# O caminho resolvido (sem links) esta DENTRO da pasta indicada? Uso: caminho_dentro_de <arquivo> <pasta>
+caminho_dentro_de() {
+    dir="$(cd "$2" 2>/dev/null && pwd -P)" || return 1
+    pai="$(cd "$(dirname "$1")" 2>/dev/null && pwd -P)" || return 1
+    case "$pai/" in "$dir"/*) return 0 ;; *) return 1 ;; esac
+}
+
+# Confere que <raiz>/<versao> e uma pasta de verdade (nao um link), dentro de <raiz>, com bin/painel. Uso: pasta_da_versao_valida <raiz> <versao>
+pasta_da_versao_valida() {
+    validar_versao "$2"
+    [ -d "$1/$2" ] && [ ! -L "$1/$2" ] || erro "a pasta da versao $2 nao e uma pasta propria de $1"
+    base="$(cd "$1" && pwd -P)"
+    real="$(cd "$1/$2" && pwd -P)"
+    [ "$real" = "$base/$2" ] || erro "a pasta da versao $2 sai de $1"
+    [ -f "$real/bin/painel" ] && [ ! -L "$real/bin/painel" ] || erro "a versao $2 nao tem bin/painel proprio"
+}
+
+# Grava o registro de forma atomica (temporario + mv). Uso: gravar_registro <raiz> <versao-anterior> [<nome-do-backup>]
+gravar_registro() {
+    tmp="$1/versao-anterior.txt.novo"
+    {
+        printf 'versao=%s\n' "$2"
+        [ -z "${3:-}" ] || printf 'backup=%s\n' "$3"
+    } > "$tmp"
+    mv -f "$tmp" "$1/versao-anterior.txt"
+}

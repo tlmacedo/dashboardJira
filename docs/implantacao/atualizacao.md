@@ -8,10 +8,11 @@ Atualizar é trocar a pasta da versão: o pacote novo é extraído ao lado do qu
 |---|---|---|
 | Versões extraídas | `C:\Painel\app\<versao>\` (somente leitura para a conta do serviço) | `/opt/painel/<versao>/` |
 | Versão ativa | `C:\Painel\app\atual` (junção) | `/opt/painel/atual` (link simbólico) |
-| Dados | `C:\Painel\dados\` (`painel.env`, `config\`, `data\painel.db`, `versao-anterior.txt`) | `/var/lib/painel/` (banco, `versao-anterior.txt`), `/etc/painel/` (`painel.env`, `config/`) |
+| Dados | `C:\Painel\dados\` (`painel.env`, `config\`, `data\painel.db`) | `/var/lib/painel/` (banco), `/etc/painel/` (`painel.env`, `config/`) |
+| Registro da atualização | `C:\Painel\app\versao-anterior.txt` | `/opt/painel/versao-anterior.txt` |
 | Pacotes recebidos | `C:\Painel\recebidos\` | onde o operador deixar o zip e o `.sha256` |
 
-No Linux, `PAINEL_DADOS`, `PAINEL_ENV_FILE`, `PAINEL_SERVICO` e `PAINEL_URL` mudam os padrões (`/var/lib/painel`, `/etc/painel/painel.env`, `painel`, `http://127.0.0.1:8080`). No Windows os parâmetros `-Servico` (padrão `Painel`) e `-Url` fazem o mesmo.
+No Linux, `PAINEL_ENV_FILE`, `PAINEL_SERVICO` e `PAINEL_URL` mudam os padrões (`/var/lib/painel`, `/etc/painel/painel.env`, `painel`, `http://127.0.0.1:8080`). No Windows os parâmetros `-Servico` (padrão `Painel`) e `-Url` fazem o mesmo.
 
 ## Antes de atualizar
 
@@ -29,16 +30,16 @@ No Linux, `PAINEL_DADOS`, `PAINEL_ENV_FILE`, `PAINEL_SERVICO` e `PAINEL_URL` mud
 
 1. **SHA-256** do zip contra o `.sha256`. Diferente: para, sem extrair nada.
 2. **Extrai** em `app\<versao>.tmp`, confere `bin\painel.bat` (Linux: `bin/painel`) e renomeia para `app\<versao>`. **Recusa** se a pasta da versão já existir.
-3. **Registra a versão atual** em `versao-anterior.txt` (`versao=<anterior>`).
-4. **Para o serviço** e espera o fim do processo: a trava `painel.db.lock` some junto. Com a tarefa agendada, a parada é brusca (o SQLite em WAL tolera).
-5. **Backup do banco** com `painel backup-agora` (Plano 12), da versão atual; o nome da cópia vai para `versao-anterior.txt` (`backup=<arquivo>`). Se o backup falhar, o script religa a versão atual e **aborta sem trocar nada**.
+3. **Para o serviço** e espera o fim do processo: a trava `painel.db.lock` some junto. Com a tarefa agendada, a parada é brusca (o SQLite em WAL tolera).
+4. **Backup do banco** com `painel backup-agora` (Plano 12), da versão atual. Se o backup falhar, o script religa a versão atual, **remove a pasta que acabou de extrair** (para você poder repetir) e **aborta sem trocar nada**; o registro da atualização anterior não é tocado.
+5. **Registra a versão anterior e o nome do backup** em `versao-anterior.txt` (`versao=<anterior>` e `backup=<arquivo>`), só depois do backup, de forma atômica. O arquivo fica em `C:\Painel\app\` (Linux: `/opt/painel/`), pasta que **só administradores/root escrevem** — não na pasta de dados do serviço: quem escreve esse arquivo decide qual `bin/painel` o administrador executa na reversão. A reversão ainda valida tudo o que lê dele.
 6. **Troca `atual`** para a versão nova.
 7. **Inicia o serviço** e espera `GET /api/health` por até 120 s (as migrações rodam na subida).
 8. **Fumaça**: a saúde responde e `GET /api/meta` informa a versão nova (e, quando existir o script de fumaça da Tarefa 11, ele também roda).
 
 Termina com `ATUALIZACAO_OK <versao>`. Falha no 7 ou no 8: imprime `FALHOU: execute reverter` com o comando exato e sai com código 1. **Nada é revertido automaticamente**: uma reversão automática depois de uma migração poderia piorar o estado.
 
-`-SemServico` (sh: `--sem-servico`) pula os passos 4, 5, 7 e 8 e só serve ao ensaio.
+`-SemServico` (sh: `--sem-servico`) pula os passos 3, 4, 7 e 8 e só serve ao ensaio.
 
 **Como conferir:** `ATUALIZACAO_OK`; `Get-Item C:\Painel\app\atual | Select Target` (Linux `readlink /opt/painel/atual`) mostra a versão nova; o rodapé do painel mostra `v2026.11.2`; `GET /api/meta` traz `versao`.
 

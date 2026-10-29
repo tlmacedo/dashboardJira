@@ -188,7 +188,7 @@ class SegredosDeImplantacaoTest {
 
     @Test
     fun geradorGravaSemImprimirERecusaSobrescrever() {
-        assumeTrue(sh() != null && temOpenssl(), "sem sh/openssl neste ambiente")
+        Ferramentas.exigir(sh() != null && temOpenssl(), "sem sh/openssl neste ambiente")
         val pasta = Files.createTempDirectory("painel-segredo-")
         try {
             val env = pasta.resolve("painel.env")
@@ -223,7 +223,7 @@ class SegredosDeImplantacaoTest {
 
     @Test
     fun verificarLogsAcusaOSegredoSemMostrarOValor() {
-        assumeTrue(sh() != null, "sem sh neste ambiente")
+        Ferramentas.exigir(sh() != null, "sem sh neste ambiente")
         val pasta = Files.createTempDirectory("painel-logs-")
         try {
             val env = pasta.resolve("painel.env")
@@ -246,7 +246,7 @@ class SegredosDeImplantacaoTest {
 
     @Test
     fun verificacaoDePermissaoDoArquivoDeVariaveis() {
-        assumeTrue(sh() != null, "sem sh neste ambiente")
+        Ferramentas.exigir(sh() != null, "sem sh neste ambiente")
         val pasta = Files.createTempDirectory("painel-perm-")
         try {
             val env = pasta.resolve("painel.env")

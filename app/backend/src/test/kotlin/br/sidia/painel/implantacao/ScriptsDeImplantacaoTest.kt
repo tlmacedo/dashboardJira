@@ -133,7 +133,7 @@ class ScriptsDeImplantacaoTest {
     @Test
     fun scriptsShTemSintaxeValida() {
         val shell = shell()
-        assumeTrue(shell != null, "sem sh neste ambiente")
+        Ferramentas.exigir(shell != null, "sem sh neste ambiente")
         for (n in sh) {
             val (codigo, saida) = rodar(listOf(shell!!, "-n", repo.resolve(n).toString()))
             assertEquals(0, codigo, "$n: $saida")
@@ -191,7 +191,7 @@ class ScriptsDeImplantacaoTest {
 
     @Test
     fun ensaioDeTrocaPassa() {
-        assumeTrue(temFerramentas(), "sem sh/unzip/sha256sum neste ambiente")
+        Ferramentas.exigir(temFerramentas(), "sem sh/unzip/sha256sum neste ambiente")
         val (codigo, saida) = rodar(listOf(shell()!!, repo.resolve("deploy/linux/ensaio-troca.sh").toString()))
         assertEquals(0, codigo, saida)
         assertTrue("TROCA_OK" in saida && "REVERSAO_OK" in saida, saida)
@@ -199,7 +199,7 @@ class ScriptsDeImplantacaoTest {
 
     @Test
     fun atualizarTrocaAtualEGuardaAVersaoAnterior() = comPasta { pasta ->
-        assumeTrue(temFerramentas(), "sem sh/unzip/sha256sum neste ambiente")
+        Ferramentas.exigir(temFerramentas(), "sem sh/unzip/sha256sum neste ambiente")
         val raiz = pasta.resolve("app").also { Files.createDirectories(it) }
         val dados = pasta.resolve("dados").also { Files.createDirectories(it) }
         val env = ambiente(dados)
@@ -209,7 +209,7 @@ class ScriptsDeImplantacaoTest {
         val (c2, s2) = rodar(listOf(shell()!!, atualizar, raiz.toString(), pacoteDeMentira(recebidos, "2026.11.2").toString(), "--sem-servico"), env)
         assertEquals(0, c2, s2)
         assertEquals("2026.11.2", Files.readSymbolicLink(raiz.resolve("atual")).fileName.toString())
-        assertTrue("versao=2026.11.1" in Files.readString(dados.resolve("versao-anterior.txt")))
+        assertTrue("versao=2026.11.1" in Files.readString(raiz.resolve("versao-anterior.txt")))
         // a versão anterior continua intacta ao lado
         assertTrue(Files.isRegularFile(raiz.resolve("2026.11.1/bin/painel")))
         val (c3, s3) = rodar(listOf(shell()!!, reverter, raiz.toString(), "--sem-servico"), env)
@@ -219,7 +219,7 @@ class ScriptsDeImplantacaoTest {
 
     @Test
     fun atualizarComChecksumErradoNaoExtraiNada() = comPasta { pasta ->
-        assumeTrue(temFerramentas(), "sem sh/unzip/sha256sum neste ambiente")
+        Ferramentas.exigir(temFerramentas(), "sem sh/unzip/sha256sum neste ambiente")
         val raiz = pasta.resolve("app").also { Files.createDirectories(it) }
         val dados = pasta.resolve("dados").also { Files.createDirectories(it) }
         val zip = pacoteDeMentira(pasta, "2026.11.1", hashErrado = true)
@@ -231,7 +231,7 @@ class ScriptsDeImplantacaoTest {
 
     @Test
     fun atualizarNaoSobrescrevePastaDeVersaoJaExistente() = comPasta { pasta ->
-        assumeTrue(temFerramentas(), "sem sh/unzip/sha256sum neste ambiente")
+        Ferramentas.exigir(temFerramentas(), "sem sh/unzip/sha256sum neste ambiente")
         val raiz = pasta.resolve("app").also { Files.createDirectories(it) }
         val dados = pasta.resolve("dados").also { Files.createDirectories(it) }
         val env = ambiente(dados)
@@ -246,7 +246,7 @@ class ScriptsDeImplantacaoTest {
 
     @Test
     fun pacoteSemBinNaoViraVersao() = comPasta { pasta ->
-        assumeTrue(temFerramentas(), "sem sh/unzip/sha256sum neste ambiente")
+        Ferramentas.exigir(temFerramentas(), "sem sh/unzip/sha256sum neste ambiente")
         val raiz = pasta.resolve("app").also { Files.createDirectories(it) }
         val dados = pasta.resolve("dados").also { Files.createDirectories(it) }
         val zip = pacoteDeMentira(pasta, "2026.11.1", comBin = false)
@@ -255,9 +255,127 @@ class ScriptsDeImplantacaoTest {
         assertEquals(emptyList(), Files.list(raiz).use { it.toList() }, "nem a pasta .tmp pode sobrar")
     }
 
+    // ---------------------------------------------------------------- I4: o registro da versao anterior nao decide o que root executa
+
+    /** Pasta com a versão boa (`2026.11.1`), uma pasta FORA da raiz com um `bin/painel` que deixa um marcador, e o painel.env. */
+    private class CenarioDeReversao(val raiz: Path, val marcador: Path, val env: Map<String, String>, val pasta: Path)
+
+    private fun montarCenarioDeReversao(pasta: Path, registro: String): CenarioDeReversao {
+        val raiz = pasta.resolve("app").also { Files.createDirectories(it) }
+        val marcador = pasta.resolve("EXECUTOU")
+        fun painelQueMarca(dir: Path) {
+            Files.createDirectories(dir.resolve("bin"))
+            Files.writeString(dir.resolve("bin/painel"), "#!/bin/sh\necho x > '$marcador'\necho RESTAURACAO OK\n")
+            dir.resolve("bin/painel").toFile().setExecutable(true)
+        }
+        painelQueMarca(raiz.resolve("2026.11.1"))
+        painelQueMarca(pasta.resolve("outro"))
+        painelQueMarca(raiz.resolve("com-link-alvo"))
+        Files.createSymbolicLink(raiz.resolve("2026.11.2"), pasta.resolve("outro"))
+        val backups = pasta.resolve("backups").also { Files.createDirectories(it) }
+        Files.writeString(backups.resolve("painel-bom.db"), "copia")
+        Files.writeString(pasta.resolve("fora.db"), "copia")
+        val banco = pasta.resolve("dados/painel.db")
+        Files.createDirectories(banco.parent)
+        val envFile = pasta.resolve("painel.env")
+        Files.write(envFile, listOf("BACKUP_DIR=$backups", "DATABASE_PATH=$banco"))
+        Files.writeString(raiz.resolve("versao-anterior.txt"), registro)
+        return CenarioDeReversao(raiz, marcador, mapOf("PAINEL_ENV_FILE" to envFile.toString()), pasta)
+    }
+
+    private fun reverterComRegistro(registro: String, vararg extras: String): Triple<Int, String, Boolean> {
+        val pasta = Files.createTempDirectory("painel-reversao-")
+        try {
+            val c = montarCenarioDeReversao(pasta, registro)
+            val (codigo, saida) = rodar(listOf(shell()!!, reverter, c.raiz.toString(), "--restaurar-banco", "--sem-servico") + extras, c.env)
+            return Triple(codigo, saida, Files.exists(c.marcador))
+        } finally {
+            pasta.toFile().deleteRecursively()
+        }
+    }
+
+    @Test
+    fun registroComVersaoMaliciosaNuncaExecutaNada() {
+        Ferramentas.exigir(shell() != null, "sem sh")
+        for (versao in listOf("../outro", "../../tmp/x", "/tmp/x", "2026.11.1 x", "-x", "2026.13.1", "2026.11.0", "2026.11.1/../../outro", "2026.11", "", "com-link-alvo")) {
+            val (codigo, saida, executou) = reverterComRegistro("versao=$versao\nbackup=painel-bom.db\n")
+            assertTrue(codigo != 0, "versao='$versao': $saida")
+            assertFalse(executou, "versao='$versao' executou um bin/painel: $saida")
+        }
+    }
+
+    @Test
+    fun registroApontandoParaPastaComLinkNaoEExecutado() {
+        Ferramentas.exigir(shell() != null, "sem sh")
+        val (codigo, saida, executou) = reverterComRegistro("versao=2026.11.2\nbackup=painel-bom.db\n")
+        assertTrue(codigo != 0, saida)
+        assertFalse(executou, saida)
+    }
+
+    @Test
+    fun registroComBackupMaliciosoNaoExecutaNada() {
+        Ferramentas.exigir(shell() != null, "sem sh")
+        for (backup in listOf("../fora.db", "/etc/passwd", "-x", "a b.db", "..", "painel-bom.db/../../fora.db", "a\\b.db", "sub/painel-bom.db", "")) {
+            val (codigo, saida, executou) = reverterComRegistro("versao=2026.11.1\nbackup=$backup\n")
+            assertTrue(codigo != 0, "backup='$backup': $saida")
+            assertFalse(executou, "backup='$backup' chegou a executar o painel: $saida")
+        }
+    }
+
+    @Test
+    fun backupInformadoNaLinhaDeComandoFicaDentroDeBackupDir() {
+        Ferramentas.exigir(shell() != null, "sem sh")
+        for (arg in listOf("-x", "../fora.db", "/tmp/qualquer.db", "backups/../../fora.db")) {
+            val (codigo, saida, executou) = reverterComRegistro("versao=2026.11.1\n", "--backup", arg)
+            assertTrue(codigo != 0, "--backup '$arg': $saida")
+            assertFalse(executou, "--backup '$arg' chegou a executar o painel: $saida")
+        }
+    }
+
+    @Test
+    fun controleRegistroValidoChegaAConferirACopia() {
+        Ferramentas.exigir(shell() != null, "sem sh")
+        // o caso bom passa pelas validações e só então executa o painel da versão registrada (conferência da cópia)
+        val (_, saida, executou) = reverterComRegistro("versao=2026.11.1\nbackup=painel-bom.db\n")
+        assertTrue(executou, "o caso válido deveria chegar à conferência da cópia: $saida")
+    }
+
+    @Test
+    fun registroFicaNaRaizEOUsuarioDoServicoNaoOEscreve() {
+        // o registro vai para <raiz>, não para a pasta de dados do serviço
+        for (n in listOf("deploy/linux/atualizar.sh", "deploy/linux/reverter.sh")) {
+            val t = ler(n)
+            assertFalse("\$DADOS/versao-anterior" in t, "$n usa a pasta de dados para o registro")
+        }
+        assertTrue("\$RAIZ/versao-anterior.txt" in ler("deploy/linux/reverter.sh"))
+        assertTrue("gravar_registro" in ler("deploy/linux/atualizar.sh"))
+    }
+
+    @Test
+    fun registroSoDepoisDoBackupEFalhaDeBackupLimpaAPastaExtraida() {
+        val s = ler("deploy/linux/atualizar.sh")
+        assertTrue(posicao(s, "fazer_backup") < posicao(s, "gravar_registro"), ".sh: registro só depois do backup")
+        assertTrue("rm -rf \"\${RAIZ:?}/\$VERSAO\"" in s, ".sh: limpa a pasta extraída se o backup falhar")
+        val p = ler("deploy/windows/atualizar.ps1")
+        assertTrue(posicao(p, "Fazer-Backup") < posicao(p, "Gravar-Registro"), ".ps1: registro só depois do backup")
+        assertTrue("Remove-Item" in p.substringAfter("Fazer-Backup"), ".ps1: limpa a pasta extraída se o backup falhar")
+    }
+
+    @Test
+    fun reverterPowerShellValidaOQueLeDoRegistro() {
+        val p = ler("deploy/windows/reverter.ps1")
+        assertTrue("Test-PastaDaVersaoValida" in p && "Test-NomeDeBackupValido" in p && "Test-CaminhoDentroDe" in p)
+        assertFalse("\$dados" in p.lines().filter { "versao-anterior" in it }.joinToString("\n"), "o registro não fica na pasta de dados")
+        // as validações vêm ANTES de qualquer execução do painel.bat
+        assertTrue(posicao(p, "Test-PastaDaVersaoValida") < posicao(p, "verificar-restauracao"))
+        val c = ler("deploy/windows/comum.ps1")
+        assertTrue("^[0-9]{4}\\.(0[1-9]|1[0-2])\\.[1-9][0-9]*\$" in c)
+        assertTrue(ler("deploy/windows/atualizar.ps1").contains("Test-VersaoValida"))
+    }
+
     @Test
     fun reverterSemVersaoAnteriorRecusa() = comPasta { pasta ->
-        assumeTrue(temFerramentas(), "sem sh/unzip/sha256sum neste ambiente")
+        Ferramentas.exigir(temFerramentas(), "sem sh/unzip/sha256sum neste ambiente")
         val raiz = pasta.resolve("app").also { Files.createDirectories(it) }
         val dados = pasta.resolve("dados").also { Files.createDirectories(it) }
         val (codigo, saida) = rodar(listOf(shell()!!, reverter, raiz.toString(), "--sem-servico"), ambiente(dados))

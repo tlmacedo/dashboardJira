@@ -121,6 +121,67 @@ function Trocar-Atual {
     New-Item -ItemType Junction -Path $atual -Target $alvo | Out-Null
 }
 
+# ---------------------------------------------------------------------------------------------------------------------
+# Registro da versao anterior. FICA EM <App>\versao-anterior.txt (pasta que so administradores escrevem), NAO na pasta de dados do
+# servico: o reverter executa como administrador o <App>\<versao>\bin\painel.bat, entao quem escreve o registro decide o que
+# roda com privilegio. Mesmo assim tudo o que e lido dele e validado (defesa em profundidade).
+# ---------------------------------------------------------------------------------------------------------------------
+
+# Uma unica linha, sem caracteres de controle.
+function Test-TextoDeUmaLinha {
+    param([string]$Texto)
+    return (-not ($Texto -match '[\x00-\x1f\x7f]'))
+}
+
+# Versao AAAA.MM.N (nada de .., barras, espacos, traco inicial, quebra de linha).
+function Test-VersaoValida {
+    param([string]$Versao)
+    return ((Test-TextoDeUmaLinha $Versao) -and ($Versao -match '^[0-9]{4}\.(0[1-9]|1[0-2])\.[1-9][0-9]*$'))
+}
+
+# Nome de arquivo de backup do registro: so o nome (sem barras, sem .., sem traco inicial, sem espaco nem controle).
+function Test-NomeDeBackupValido {
+    param([string]$Nome)
+    if (-not (Test-TextoDeUmaLinha $Nome)) { return $false }
+    if ($Nome.Contains('..')) { return $false }
+    return ($Nome -match '^[A-Za-z0-9][A-Za-z0-9._-]*$')
+}
+
+# O caminho completo esta DENTRO da pasta indicada (sem sair por .. nem por link)?
+function Test-CaminhoDentroDe {
+    param([string]$Arquivo, [string]$Pasta)
+    try {
+        $a = [System.IO.Path]::GetFullPath($Arquivo)
+        $p = [System.IO.Path]::GetFullPath($Pasta).TrimEnd('\') + '\'
+    } catch { return $false }
+    return $a.StartsWith($p, [System.StringComparison]::OrdinalIgnoreCase)
+}
+
+# <App>\<versao> e uma pasta de verdade (nao uma juncao nem link), direta dentro de <App>, com bin\painel.bat proprio.
+function Test-PastaDaVersaoValida {
+    param([string]$App, [string]$Versao)
+    if (-not (Test-VersaoValida $Versao)) { return $false }
+    $pasta = Join-Path $App $Versao
+    if (-not (Test-Path -LiteralPath $pasta -PathType Container)) { return $false }
+    $item = Get-Item -LiteralPath $pasta
+    if ($item.Attributes -band [System.IO.FileAttributes]::ReparsePoint) { return $false }
+    if (-not (Test-CaminhoDentroDe $item.FullName $App)) { return $false }
+    $bat = Join-Path $pasta 'bin\painel.bat'
+    if (-not (Test-Path -LiteralPath $bat -PathType Leaf)) { return $false }
+    if ((Get-Item -LiteralPath $bat).Attributes -band [System.IO.FileAttributes]::ReparsePoint) { return $false }
+    return $true
+}
+
+# Grava o registro de forma atomica (temporario + Move-Item). O backup e opcional.
+function Gravar-Registro {
+    param([Parameter(Mandatory = $true)][string]$App, [Parameter(Mandatory = $true)][string]$Anterior, [string]$Backup = '')
+    $linhas = @("versao=$Anterior")
+    if ($Backup -ne '') { $linhas += "backup=$Backup" }
+    $tmp = Join-Path $App 'versao-anterior.txt.novo'
+    Set-Content -LiteralPath $tmp -Encoding ASCII -Value $linhas
+    Move-Item -LiteralPath $tmp -Destination (Join-Path $App 'versao-anterior.txt') -Force
+}
+
 # O painel roda como servico (NSSM) ou como tarefa agendada (Agendador de Tarefas); o mesmo nome serve aos dois.
 function Parar-Painel {
     param([Parameter(Mandatory = $true)][string]$Servico)
@@ -175,10 +236,15 @@ function Fazer-Backup {
     param([Parameter(Mandatory = $true)][string]$App, [Parameter(Mandatory = $true)][string]$ArquivoEnv)
     $guardada = $env:PAINEL_ENV_FILE
     $env:PAINEL_ENV_FILE = $ArquivoEnv
+    # No Windows PowerShell 5.1, com 'Stop', qualquer linha no stderr do programa (ex.: "Picked up JAVA_TOOL_OPTIONS", comum em PC
+    # corporativo) vira erro e interrompe o script; aqui o stderr e so texto (o resultado vem do codigo de saida e da linha BACKUP OK).
+    $acaoAnterior = $ErrorActionPreference
+    $ErrorActionPreference = 'Continue'
     try {
         $saida = (& (Join-Path $App 'atual\bin\painel.bat') backup-agora 2>&1 | Out-String)
         $codigo = $LASTEXITCODE
     } finally {
+        $ErrorActionPreference = $acaoAnterior
         $env:PAINEL_ENV_FILE = $guardada
     }
     if ($saida -match '(?m)^BACKUP OK (\S+) ') { return $Matches[1] }

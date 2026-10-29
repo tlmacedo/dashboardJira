@@ -1,5 +1,6 @@
 #!/bin/sh
-# Volta o painel para a versao anterior (a de <dados>/versao-anterior.txt, gravada por atualizar.sh) (Plano 13, T10).
+# Volta o painel para a versao anterior (a de <raiz>/versao-anterior.txt, gravada por atualizar.sh numa pasta que so root
+# escreve; mesmo assim a versao e o nome do backup sao validados antes de virarem caminho) (Plano 13, T10).
 # Uso (como root):  sh deploy/linux/reverter.sh /opt/painel [--restaurar-banco] [--backup <arquivo>] [--sem-servico]
 #
 # Sem --restaurar-banco so o pacote volta (serve quando a versao nova NAO trouxe migracao, ou trouxe uma compativel com a
@@ -9,7 +10,7 @@
 # ou quando a anterior nao sobe sobre o esquema novo. Antes de tocar no banco atual, a copia e conferida com
 # `painel verificar-restauracao` (Plano 12).
 # --sem-servico pula parar/iniciar/fumaca (so serve ao ensaio da troca de pasta).
-# Variaveis opcionais: PAINEL_DADOS (/var/lib/painel), PAINEL_ENV_FILE (/etc/painel/painel.env), PAINEL_SERVICO (painel),
+# Variaveis opcionais: PAINEL_ENV_FILE (/etc/painel/painel.env), PAINEL_SERVICO (painel),
 # PAINEL_URL (http://127.0.0.1:8080).
 set -eu
 
@@ -40,28 +41,37 @@ while [ "$#" -gt 0 ]; do
     shift
 done
 [ -n "$RAIZ" ] || uso
-DADOS="${PAINEL_DADOS:-/var/lib/painel}"
 ARQUIVO_ENV="${PAINEL_ENV_FILE:-/etc/painel/painel.env}"
 SERVICO="${PAINEL_SERVICO:-painel}"
 URL="${PAINEL_URL:-http://127.0.0.1:8080}"
-REGISTRO="$DADOS/versao-anterior.txt"
+# O registro fica na pasta que so root escreve (a conta do servico escreve em /var/lib/painel e nao decide o que root executa).
+REGISTRO="$RAIZ/versao-anterior.txt"
 
 [ -d "$RAIZ" ] || erro "pasta do painel nao encontrada"
-[ -f "$REGISTRO" ] || erro "falta $REGISTRO: nenhuma atualizacao registrada, nao ha versao anterior para voltar"
+[ -f "$REGISTRO" ] || erro "falta $REGISTRO (versao-anterior): nenhuma atualizacao registrada, nao ha versao anterior para voltar"
 ANTERIOR="$(valor_do_arquivo "$REGISTRO" versao)"
 [ -n "$ANTERIOR" ] || erro "o arquivo versao-anterior.txt nao informa a versao"
-[ -d "$RAIZ/$ANTERIOR" ] || erro "a pasta da versao anterior ($ANTERIOR) nao existe em $RAIZ"
+# Nada do registro vira caminho antes de passar: formato AAAA.MM.N, pasta propria (sem link) dentro de $RAIZ, bin/painel proprio.
+pasta_da_versao_valida "$RAIZ" "$ANTERIOR"
 
 COPIA=""
 if [ "$RESTAURAR" -eq 1 ]; then
-    COPIA="$BACKUP_INFORMADO"
-    [ -n "$COPIA" ] || COPIA="$(valor_do_arquivo "$REGISTRO" backup)"
-    [ -n "$COPIA" ] || erro "nao ha backup registrado em versao-anterior.txt; informe --backup <arquivo>"
-    case "$COPIA" in
-        /*) ;;
-        *) COPIA="$(valor_do_arquivo "$ARQUIVO_ENV" BACKUP_DIR)/$COPIA" ;;
-    esac
+    PASTA_DE_BACKUP="$(valor_do_arquivo "$ARQUIVO_ENV" BACKUP_DIR)"
+    [ -n "$PASTA_DE_BACKUP" ] && [ -d "$PASTA_DE_BACKUP" ] || erro "BACKUP_DIR nao esta definido (ou nao existe) no arquivo de variaveis"
+    if [ -n "$BACKUP_INFORMADO" ]; then
+        COPIA="$BACKUP_INFORMADO"
+        texto_de_uma_linha "$COPIA" || erro "caminho de backup invalido"
+        case "$COPIA" in -* | *..*) erro "caminho de backup invalido" ;; esac
+        case "$COPIA" in /*) ;; *) COPIA="$PASTA_DE_BACKUP/$COPIA" ;; esac
+    else
+        NOME_DO_BACKUP="$(valor_do_arquivo "$REGISTRO" backup)"
+        [ -n "$NOME_DO_BACKUP" ] || erro "nao ha backup registrado em versao-anterior.txt; informe --backup <arquivo>"
+        nome_de_backup_valido "$NOME_DO_BACKUP" || erro "o nome do backup no registro e invalido"
+        COPIA="$PASTA_DE_BACKUP/$NOME_DO_BACKUP"
+    fi
     [ -f "$COPIA" ] || erro "a copia de seguranca nao foi encontrada"
+    # A copia (resolvida, sem links) tem de estar DENTRO de BACKUP_DIR.
+    caminho_dentro_de "$COPIA" "$PASTA_DE_BACKUP" || erro "a copia de seguranca esta fora de BACKUP_DIR"
     # Confere a copia ANTES de mexer no banco atual (restaura num temporario e compara tabela a tabela).
     if ! PAINEL_ENV_FILE="$ARQUIVO_ENV" "$RAIZ/$ANTERIOR/bin/painel" verificar-restauracao "$COPIA" | grep -q "RESTAURACAO OK"; then
         erro "a copia nao passou em verificar-restauracao; nada foi alterado"

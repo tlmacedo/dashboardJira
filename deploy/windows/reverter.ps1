@@ -1,4 +1,5 @@
-# Volta o painel para a versao anterior (a de <Raiz>\dados\versao-anterior.txt, gravada por atualizar.ps1) (Plano 13, T10).
+# Volta o painel para a versao anterior (a de <Raiz>\app\versao-anterior.txt, gravada por atualizar.ps1 numa pasta que so
+# administradores escrevem; mesmo assim a versao e o nome do backup sao validados antes de virarem caminho) (Plano 13, T10).
 # Uso (PowerShell como administrador):
 #   powershell.exe -NoProfile -ExecutionPolicy Bypass -File deploy\windows\reverter.ps1 -Raiz 'C:\Painel' [-RestaurarBanco] [-Backup <arquivo>] [-SemServico]
 #
@@ -25,27 +26,45 @@ $ErrorActionPreference = 'Stop'
 $app = Join-Path $Raiz 'app'
 $dados = Join-Path $Raiz 'dados'
 $arquivoEnv = Join-Path $dados 'painel.env'
-$registro = Join-Path $dados 'versao-anterior.txt'
+# O registro fica na pasta que so administradores escrevem (a conta do servico escreve em dados\ e nao decide o que roda
+# com privilegio).
+$registro = Join-Path $app 'versao-anterior.txt'
 
 if (-not (Test-Path -LiteralPath $app)) { throw "pasta do painel nao encontrada: $app" }
-if (-not (Test-Path -LiteralPath $registro)) { throw "falta $registro: nenhuma atualizacao registrada, nao ha versao anterior para voltar" }
+if (-not (Test-Path -LiteralPath $registro)) { throw "falta $registro (versao-anterior): nenhuma atualizacao registrada, nao ha versao anterior para voltar" }
 $anterior = Ler-ValorDoArquivo -Arquivo $registro -Nome 'versao'
 if ($anterior -eq '') { throw 'o arquivo versao-anterior.txt nao informa a versao' }
-if (-not (Test-Path -LiteralPath (Join-Path $app $anterior))) { throw "a pasta da versao anterior ($anterior) nao existe em $app" }
+# Nada do registro vira caminho antes de passar: formato AAAA.MM.N, pasta propria (sem juncao) dentro de app\, painel.bat proprio.
+if (-not (Test-PastaDaVersaoValida -App $app -Versao $anterior)) { throw 'a versao anterior do registro e invalida ou nao e uma pasta propria de app\' }
 
 $copia = ''
 if ($RestaurarBanco) {
-    $copia = $Backup
-    if ($copia -eq '') { $copia = Ler-ValorDoArquivo -Arquivo $registro -Nome 'backup' }
-    if ($copia -eq '') { throw 'nao ha backup registrado em versao-anterior.txt; informe -Backup <arquivo>' }
-    if (-not [System.IO.Path]::IsPathRooted($copia)) { $copia = Join-Path (Ler-ValorDoArquivo -Arquivo $arquivoEnv -Nome 'BACKUP_DIR') $copia }
-    if (-not (Test-Path -LiteralPath $copia)) { throw 'a copia de seguranca nao foi encontrada' }
+    $pastaDeBackup = Ler-ValorDoArquivo -Arquivo $arquivoEnv -Nome 'BACKUP_DIR'
+    if ($pastaDeBackup -eq '' -or -not (Test-Path -LiteralPath $pastaDeBackup -PathType Container)) { throw 'BACKUP_DIR nao esta definido (ou nao existe) no arquivo de variaveis' }
+    if ($Backup -ne '') {
+        if (-not (Test-TextoDeUmaLinha $Backup) -or $Backup.StartsWith('-') -or $Backup.Contains('..')) { throw 'caminho de backup invalido' }
+        $copia = $Backup
+        if (-not [System.IO.Path]::IsPathRooted($copia)) { $copia = Join-Path $pastaDeBackup $copia }
+    } else {
+        $nomeDoBackup = Ler-ValorDoArquivo -Arquivo $registro -Nome 'backup'
+        if ($nomeDoBackup -eq '') { throw 'nao ha backup registrado em versao-anterior.txt; informe -Backup <arquivo>' }
+        if (-not (Test-NomeDeBackupValido $nomeDoBackup)) { throw 'o nome do backup no registro e invalido' }
+        $copia = Join-Path $pastaDeBackup $nomeDoBackup
+    }
+    if (-not (Test-Path -LiteralPath $copia -PathType Leaf)) { throw 'a copia de seguranca nao foi encontrada' }
+    # A copia tem de estar DENTRO de BACKUP_DIR (caminho completo, sem sair por .. e sem link).
+    if (-not (Test-CaminhoDentroDe $copia $pastaDeBackup)) { throw 'a copia de seguranca esta fora de BACKUP_DIR' }
+    if ((Get-Item -LiteralPath $copia).Attributes -band [System.IO.FileAttributes]::ReparsePoint) { throw 'a copia de seguranca e um link' }
     # Confere a copia ANTES de mexer no banco atual (restaura num temporario e compara tabela a tabela).
     $guardada = $env:PAINEL_ENV_FILE
     $env:PAINEL_ENV_FILE = $arquivoEnv
+    # Stderr do programa (ex.: "Picked up JAVA_TOOL_OPTIONS") nao pode interromper o script no Windows PowerShell 5.1.
+    $acaoAnterior = $ErrorActionPreference
+    $ErrorActionPreference = 'Continue'
     try {
         $conferencia = (& (Join-Path $app "$anterior\bin\painel.bat") verificar-restauracao $copia 2>&1 | Out-String)
     } finally {
+        $ErrorActionPreference = $acaoAnterior
         $env:PAINEL_ENV_FILE = $guardada
     }
     if ($conferencia -notmatch 'RESTAURACAO OK') { throw 'a copia nao passou em verificar-restauracao; nada foi alterado' }
