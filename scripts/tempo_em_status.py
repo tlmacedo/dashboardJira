@@ -173,6 +173,7 @@ def buscar_issues(url, token, jql, abrir=urllib.request.urlopen, dormir=time.sle
 
 
 def _paginas(url, token, jql, abrir, dormir, tamanho_pagina, max_tentativas, arquivo_env):
+    exigir_flag_do_jira(arquivo_env)  # defesa em profundidade: antes de montar a requisição
     inicio = 0
     while True:
         consulta = urllib.parse.urlencode({
