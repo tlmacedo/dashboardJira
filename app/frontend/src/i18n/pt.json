@@ -13,6 +13,7 @@
   "shell.semPermissao": "Sem permissão para este papel.",
   "shell.telaPrevista": "Tela prevista no mapa de navegação; ainda não implementada.",
   "shell.metaErro": "Não foi possível consultar o servidor. O menu mostra apenas o mínimo.",
+  "shell.aguardandoCarga": "Aguardando a primeira carga do Jira. Os painéis ficam vazios até a sincronização terminar; nenhum dado de demonstração é exibido.",
   "sessao.expirada": "Sua sessão expirou. Entre de novo para continuar; os filtros da tela ficam na URL.",
   "sessao.entrar": "Entrar de novo",
   "role.USUARIO": "Usuário",

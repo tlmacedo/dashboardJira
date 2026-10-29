@@ -79,7 +79,18 @@ import java.time.Clock
 data class HealthResposta(val ok: Boolean)
 
 @Serializable
-data class MetaResposta(val devMode: Boolean, val liveEnabled: Boolean, val zone: String, val banner: String?)
+data class MetaResposta(
+    val devMode: Boolean,
+    val liveEnabled: Boolean,
+    val zone: String,
+    val banner: String?,
+    /** Flag do Jira ligada e nenhuma sincronização real ainda: a tela mostra "aguardando a primeira carga", não um painel vazio. */
+    val aguardandoCargaDoJira: Boolean,
+)
+
+/** Sem banco ou com erro de leitura não há como afirmar que falta a carga: responde falso (a tela não inventa um aviso). */
+private fun semSincronizacaoReal(ds: javax.sql.DataSource?): Boolean =
+    ds != null && runCatching { ds.connection.use { !br.sidia.painel.sync.SincronizacaoReal.existe(it) } }.getOrDefault(false)
 
 private val log = LoggerFactory.getLogger("br.sidia.painel")
 
@@ -257,6 +268,7 @@ fun Application.module(
                     liveEnabled = settings.jiraLiveEnabled,
                     zone = settings.zone.id,
                     banner = banner,
+                    aguardandoCargaDoJira = settings.jiraLiveEnabled && semSincronizacaoReal(context.dataSource),
                 ),
             )
         }
