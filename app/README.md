@@ -44,6 +44,15 @@ DASHBOARD_DEMO_DATA=true sh iniciar.sh        # PowerShell: $env:DASHBOARD_DEMO_
 | `OIDC_ISSUER`, `OIDC_CLIENT_ID`, `OIDC_CLIENT_SECRET`, `OIDC_REDIRECT_URI`, `OIDC_CLAIM_USERNAME`, `SESSION_SECRET` | vazio | Login SSO/OIDC e assinatura da sessão. Obrigatórios em produção (menos o segredo do cliente e a claim); ver `docs/implantacao.md`. |
 | `DATABASE_PATH` | `data/painel.db` | Arquivo SQLite do painel. |
 
+## LGPD e aceite do DPO
+
+Auditoria e Integridade mostram sinais sobre pessoas e ficam **fechadas por uma trava em código** até o aceite do encarregado de dados (DPO):
+
+- Fora do modo desenvolvimento offline (`DASHBOARD_DEV_MODE=true` e `JIRA_LIVE_ENABLED=false`, sobre um banco sem dado sincronizado de verdade), as rotas de Auditoria e Integridade respondem 403 `AGUARDANDO_ACEITE_DPO` (depois da checagem de papel), a Central deixa os itens deles de fora e o menu marca as telas com a pausa e o texto "aguardando aceite do DPO".
+- O aceite é `DASHBOARD_DPO_ACEITE=true` com `DASHBOARD_DPO_ACEITE_REF=<referência do parecer>` no `app/.env`. **Só o usuário define, depois do parecer do DPO**; nenhuma IA liga. Sem a referência o painel não sobe. A data do aceite fica no `HANDOFF.md`.
+- Documentos em `docs/lgpd/`: inventário dos dados (verificado contra o banco por teste), relatório para o DPO (com as perguntas e as opções), atendimento ao titular e aviso à equipe.
+- Cada pessoa consulta os próprios dados na tela **Meus dados** (`GET /api/titular/meus-dados`, sem parâmetros). A retenção é por categoria (`RETENTION_*_MONTHS`, tabela de flags acima).
+
 ## Sincronização periódica (`SYNC_*`)
 
 A flag `JIRA_LIVE_ENABLED` é a única chave de liga e desliga. As variáveis `SYNC_*` só ajustam limites e horários (vazio = padrão): `SYNC_INSTANCIAS` (padrão `samsung`), `SYNC_INTERVALO_MIN` (5 a 1440; padrão 10), `SYNC_HORA_RECONCILIACAO` (padrão 03:00), `SYNC_HORA_RETENCAO` (padrão 04:00), `SYNC_MAX_ITENS` (1 a 200000; padrão 50000), `SYNC_MAX_REQUISICOES` (1 a 20000; padrão 2000), `SYNC_SOBREPOSICAO_MIN` (1 a 60; padrão 5), `SYNC_FUSO_SERVIDOR` (padrão America/Manaus) e `SYNC_TEMPO_MAX_MIN` (1 a 240; padrão 60). A retenção local usa `RETENTION_MONTHS` (6 a 600; padrão 24) e a auditoria de acessos tem chave própria, `ACCESS_LOG_RETENTION_MONTHS` (12 a 600; padrão 24). Procedimento completo, status e códigos de erro: [runbook da sincronização](../docs/jira/runbook-sincronizacao.md).
