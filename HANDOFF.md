@@ -41,7 +41,7 @@ Se o ClineSR mostrar "aborted": quase sempre é clone ou tarefa antigos mandando
 ## A regra da flag
 
 - `JIRA_LIVE_ENABLED` é a **única** trava de acesso ao Jira e **vale somente dentro de `app/.env`** (variável de terminal ou do sistema é ignorada; linha ausente = desligada). Desligada: proibido para todos (app, agendador, MCP, rede). Ligada: liberado. **Só o usuário muda a flag, à mão.** Os scripts do repositório respeitam a trava: `scripts/tempo_em_status.py` lê só a linha da flag em `app/.env` e recusa (código 2) antes de qualquer rede; `ScriptsNaoAcessamJiraSemTravaTest` falha se surgir script com cliente de rede que cite o Jira sem a checagem (correção da auditoria final, PR #52, **feita**).
-- **Sem exceção fora da trava:** o app Python antigo (`client.py` e `teams.py` acessavam o Jira sem a flag) foi removido em 29/10/2026 (Plano 8, T9); o código só existe na tag `legacy-final`. Não restaure nem rode esse código contra um Jira real.
+- **Sem exceção fora da trava:** o app Python antigo (`client.py` e `teams.py` acessavam o Jira sem a flag) foi removido em 29/10/2026 (Plano 8, T9); o código só existe no branch (ou tag) `legacy-final`. Não restaure nem rode esse código contra um Jira real.
 - Os hooks (`.claude/hooks/guard.sh`, `.clinerules/hooks/PreToolUse` e `PreToolUse.ps1`) leem a flag só dessa linha e, com ela desligada, bloqueiam URL e host de Jira (não a palavra solta); `atlassian.com` é liberado. Continuam barrados: MCP da Atlassian, variáveis `JIRA_*` de conexão, ligar a flag por texto ou arquivo, exibir token, ler ou escrever `.env`. Risco residual aceito: host montado em tempo de execução, IP direto, redirects. O `.ps1` do hook é provado no CI do Windows; **os `.ps1` do pacote e da implantação nunca foram executados** (D14 do roteiro).
 - Documentos não escrevem a linha da flag com valor verdadeiro (o hook barra): escreva "ligada" ou "valor verdadeiro".
 
@@ -60,7 +60,7 @@ Decisões que as IAs tomaram sozinhas pela regra "(Recomendada)" e que mudam dad
 | 3 | Gaveta da task só pelo responsável atual | pendente | |
 | 4 | `OIDC_DOMINIOS_PERMITIDOS` obrigatória nas estratégias `parte_local_do_email` e `conta_windows` | pendente | |
 | 5 | Aceite do DPO fechado até o parecer | pendente | |
-| 6 | Remoção do `legacy/` (o "sim" ao documento de equivalência) | sim, remover ("Delete o /legacy"); feita, código na tag `legacy-final` | 29/10/2026 |
+| 6 | Remoção do `legacy/` (o "sim" ao documento de equivalência) | sim, remover ("Delete o /legacy"); feita, código no branch (ou tag) `legacy-final` | 29/10/2026 |
 | 7 | "Quem consultou quem" fora do `access_log` | pendente | |
 | 8 | Squad Leader sem task sem responsável | pendente | |
 | 9 | Distribuição e Rebalanceamento só em modo sombra | pendente | |
@@ -88,7 +88,8 @@ Decisões que as IAs tomaram sozinhas pela regra "(Recomendada)" e que mudam dad
 - **Auditoria final da `main` (PR #52, feita):** trava da flag no ponto de rede de `scripts/tempo_em_status.py`, provas de root do `como_servico` rodando no CI por `sudo -n` (falham, não pulam, com `CI=true`), mensagens de configuração sem eco do valor lido, orçamento do bundle no CI e `diagnostico-conexao.ps1` com caixa exata. Detalhe e Minor não corrigidos (M-1 `access_log` com texto cru de filtro, M-2 modo dev com escuta aberta, M-5 cadeia de suprimentos, M-7 `/api/meta`, M-8 lint): `docs/superpowers/progresso/2026-10-29-auditoria-final.md`. **Lacunas da varredura de scripts:** rede montada por concatenação de texto, `eval`/`__import__`, binários não listados, ordem dentro de ramos condicionais; `tests/` e `test*` ficam fora; `DASHBOARD_DPO_ACEITE_REF` e `OIDC_HOSTS_PERMITIDOS`/`OIDC_DOMINIOS_PERMITIDOS` sem caso próprio no teste de mensagens.
 
 - **Rulings reversíveis a conferir na 1ª conexão** e **Minor adiados** de cada plano: nos arquivos de `docs/superpowers/progresso/` (seções "Minor adiados" e "Depois da flag / com o usuário"). Não os copie para cá.
-- O aviso automático de segurança sobre o `routes.py` do app Python antigo (webhook sem segredo) some com a remoção; o código antigo fica só na tag `legacy-final`.
+- `legacy-final` foi criado como **branch** em 29/10/2026 porque o push de tag é barrado nesta sessão; não apague o branch. Para converter em tag: `git tag legacy-final origin/legacy-final && git push origin legacy-final` e só depois apague o branch (nomes iguais geram ambiguidade). Para ler o código antigo: `git fetch origin legacy-final` e `git show origin/legacy-final:legacy/<arquivo>`.
+- O aviso automático de segurança sobre o `routes.py` do app Python antigo (webhook sem segredo) some com a remoção; o código antigo fica só no branch (ou tag) `legacy-final`.
 - Logo limpo (SVG ou PNG transparente) e manual de marca da Sidia: hoje há só um recorte e as cores públicas do site.
 - Skills do Claude no Cline (teste, não bloqueia nenhum plano): inventário em `SKILLS_INSTALADAS_CLAUDE.md`, cópias em `skills-para-cline/`; rode `scripts/copiar-skills-para-cline.ps1` no PC da empresa e registre em `docs/ferramentas-claude-para-o-cline/skills.md` se o Cline as reconheceu.
 - Versão nova do Impeccable disponível (v4.7.0; instalada v4.3.1); só atualizar se o usuário pedir. Recomendações de automação ainda não criadas: subagentes `jql-validator` e `auditoria-fixtures`, MCP Playwright e context7 (precisa autorização no `/mcp`).

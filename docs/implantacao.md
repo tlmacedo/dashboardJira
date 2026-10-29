@@ -20,7 +20,7 @@ VERSAO.txt      versão, commit curto e data da montagem
 LEIA-ME.txt     como rodar
 ```
 
-O pacote **nunca** leva configuração real (`papeis.yaml`, `equipes.yaml`, `ausencias.yaml`, `calendario.yaml`...), arquivo de variáveis real, arquivo de banco, trava, chave ou certificado, nem uma pasta `legacy` (o app Python antigo foi removido; tag `legacy-final`). O `verificar-pacote` confere isso a cada montagem.
+O pacote **nunca** leva configuração real (`papeis.yaml`, `equipes.yaml`, `ausencias.yaml`, `calendario.yaml`...), arquivo de variáveis real, arquivo de banco, trava, chave ou certificado, nem uma pasta `legacy` (o app Python antigo foi removido; branch (ou tag) `legacy-final`). O `verificar-pacote` confere isso a cada montagem.
 
 ## 2. Requisitos
 
@@ -66,7 +66,7 @@ Conferir um zip recebido (copiado de outra máquina, com o `.sha256` junto):
 | `powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\verificar-pacote.ps1 C:\caminho\painel-2026.11.1.zip` | `sh scripts/verificar-pacote.sh /caminho/painel-2026.11.1.zip` |
 | ou só o hash: `(Get-FileHash .\painel-2026.11.1.zip -Algorithm SHA256).Hash.ToLower()` | ou `sha256sum -c painel-2026.11.1.zip.sha256` |
 
-Com o zip, a verificação confere, **antes de extrair**: o nome (`painel-AAAA.MM.N.zip`), o tamanho (no máximo 200 MB), o SHA-256 contra o `.sha256`, que toda entrada está sob a pasta raiz `painel-AAAA.MM.N/` e que nenhuma entrada tem nome proibido (`.env`, `painel.env`, `*.db`, `*.db-wal`, `*.db-shm`, `*.lock`, chaves e certificados, `papeis.yaml`, `equipes.yaml`, `ausencias.yaml`, `squads.yaml`, `status_map.yaml`, `jira_campos.yaml`, `calendario.yaml`, `vinculos.yaml`, `labels_atraso.yaml`, `auditoria.yaml`, `Filtros_Status_tool.txt`, `legacy/` (app Python antigo, tag `legacy-final`), `node_modules/`, `.git/`). Depois extrai numa pasta temporária e roda as conferências acima sobre o conteúdo.
+Com o zip, a verificação confere, **antes de extrair**: o nome (`painel-AAAA.MM.N.zip`), o tamanho (no máximo 200 MB), o SHA-256 contra o `.sha256`, que toda entrada está sob a pasta raiz `painel-AAAA.MM.N/` e que nenhuma entrada tem nome proibido (`.env`, `painel.env`, `*.db`, `*.db-wal`, `*.db-shm`, `*.lock`, chaves e certificados, `papeis.yaml`, `equipes.yaml`, `ausencias.yaml`, `squads.yaml`, `status_map.yaml`, `jira_campos.yaml`, `calendario.yaml`, `vinculos.yaml`, `labels_atraso.yaml`, `auditoria.yaml`, `Filtros_Status_tool.txt`, `legacy/` (app Python antigo, branch (ou tag) `legacy-final`), `node_modules/`, `.git/`). Depois extrai numa pasta temporária e roda as conferências acima sobre o conteúdo.
 
 ## 4. Pastas e variáveis: tudo o que é real fica FORA do pacote
 

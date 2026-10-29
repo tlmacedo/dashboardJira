@@ -1,6 +1,6 @@
 # Equivalência por card: app legado × painel novo
 
-Conferência do Plano 8, Tarefa 3. Para cada card do inventário do app Python (`legacy/`, em `docs/analise/relatorio-cards-app-atual.md`) este documento diz **qual(is) card(s) do catálogo do painel novo o substituem**, **se a conta é a mesma** e **onde está a prova**. Foi a base do "sim" do usuário para a remoção do `legacy/` (Plano 8, Tarefa 9), dado em 29/10/2026; a pasta saiu do repositório e o código antigo está na tag `legacy-final`.
+Conferência do Plano 8, Tarefa 3. Para cada card do inventário do app Python (`legacy/`, em `docs/analise/relatorio-cards-app-atual.md`) este documento diz **qual(is) card(s) do catálogo do painel novo o substituem**, **se a conta é a mesma** e **onde está a prova**. Foi a base do "sim" do usuário para a remoção do `legacy/` (Plano 8, Tarefa 9), dado em 29/10/2026; a pasta saiu do repositório e o código antigo está no branch (ou tag) `legacy-final`.
 
 - Data: 2026-10-29. Escrito só a partir dos documentos de diferenças esperadas, do inventário e dos testes; nenhum dado real foi lido e nenhum servidor Jira foi acessado.
 - A coluna **Card(s) novo(s)** traz ids do catálogo (`GET /api/cartoes/catalogo`), entre crases. A primeira coluna traz o id **do inventário legado**, sem crases. Atenção: alguns ids coincidem de propósito (a mesma pergunta continua com o mesmo id), mas outros foram reaproveitados para um card **diferente** (o `AU-01` e o `SI-01` do catálogo são cards novos; o `AU-01` e o `SI-01` do legado estão em `DC-01` e `SY-nn`).
@@ -169,7 +169,7 @@ Documentos: [trabalho e prazos](diferencas-esperadas-trabalho-e-prazos.md) · [t
 
 Resumo: 5 equivalentes, 29 consistentes, 107 diferenças esperadas, 1 não migrado (contados por id do inventário; as linhas agrupadas contam um por id).
 
-**Prova histórica.** A tag `legacy-final` guarda o código original em `legacy/`. Todos os `CompatLegado*Test` (`CompatLegadoTest`, `CompatLegadoTempoEmStatusTest`, `CompatLegadoTrabalhoTest`, `CompatLegadoCapacidadeTest`, `CompatLegadoDistribuicaoTest` e `CompatLegadoChecklistTest`) têm os valores e as fórmulas do legado congelados dentro deles (as fórmulas em Python ficam nos comentários) e rodam sem a pasta, sem nenhum teste pulado: a prova numérica sobrevive à remoção.
+**Prova histórica.** A branch (ou tag) `legacy-final` guarda o código original em `legacy/`. Todos os `CompatLegado*Test` (`CompatLegadoTest`, `CompatLegadoTempoEmStatusTest`, `CompatLegadoTrabalhoTest`, `CompatLegadoCapacidadeTest`, `CompatLegadoDistribuicaoTest` e `CompatLegadoChecklistTest`) têm os valores e as fórmulas do legado congelados dentro deles (as fórmulas em Python ficam nos comentários) e rodam sem a pasta, sem nenhum teste pulado: a prova numérica sobrevive à remoção.
 
 Nenhum card do inventário ficou sem destino, exceto o SI-02. As diferenças esperadas são todas decisões registradas nos documentos da última coluna (fuso, dias úteis, regra única de "no prazo", escopo por papel, ausência de ranking de pessoas).
 
@@ -187,12 +187,12 @@ Cards do catálogo que não substituem nenhum id do inventário (spec 6.2 e os p
 
 ## Resposta do usuário (remoção do `legacy/`)
 
-Este documento foi o ponto de parada obrigatório do Plano 8 (Tarefa 3, passo 5; roteiro D9). **Resposta: sim, remover.** Em 29/10/2026, na conversa, o usuário mandou: "Delete o /legacy". A Tarefa 9 foi executada em PR próprio: a pasta saiu do repositório e o código antigo ficou na tag `legacy-final`.
+Este documento foi o ponto de parada obrigatório do Plano 8 (Tarefa 3, passo 5; roteiro D9). **Resposta: sim, remover.** Em 29/10/2026, na conversa, o usuário mandou: "Delete o /legacy". A Tarefa 9 foi executada em PR próprio: a pasta saiu do repositório e o código antigo ficou no branch (ou tag) `legacy-final`.
 
 Resumo que embasou a decisão: 5 equivalentes, 29 consistentes, 107 diferenças esperadas, 1 não migrado (SI-02, "como ligar ao Jira", substituído pelo checklist da primeira conexão). Só as 5 linhas "equivalente" têm comparação numérica com o legado (`CompatLegado*Test`); as 29 "consistente" não têm, e a decisão considerou isso.
 
 Opções apresentadas e a escolhida:
 
-1. Aprovar e remover o `legacy/` na Tarefa 9 (Recomendada): **escolhida em 29/10/2026**. O código antigo fica na tag `legacy-final` e o repositório deixa de ter duas implementações.
+1. Aprovar e remover o `legacy/` na Tarefa 9 (Recomendada): **escolhida em 29/10/2026**. O código antigo fica no branch (ou tag) `legacy-final` e o repositório deixa de ter duas implementações.
 2. Aprovar com ajustes (indicar quais): não escolhida.
 3. Ainda não; manter o `legacy/`: não escolhida.

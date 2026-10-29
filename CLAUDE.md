@@ -49,11 +49,11 @@ Dashboard de gestão do time TG-Basic sobre tasks do Jira Data Center: fluxo, pr
 | Equivalência por card com o app atual e diferenças esperadas | `docs/analise/equivalencia-por-card.md`, `docs/analise/` |
 | Jira: checklist da 1ª conexão, runbook, matriz e referência pública | `docs/jira/` |
 | Operação, implantação e LGPD | `docs/operacao/`, `docs/implantacao.md`, `docs/lgpd/` |
-| App Python anterior (removido; código recuperável na tag `legacy-final`) | `git show legacy-final:legacy/<arquivo>` |
+| App Python anterior (removido; código recuperável no branch (ou tag) `legacy-final`) | `git fetch origin legacy-final` e `git show origin/legacy-final:legacy/<arquivo>` |
 
 ## Estrutura e comandos
 
-- `app/backend` (Gradle, Kotlin 2 + Ktor 3), `app/frontend` (pnpm + Vite). O app Python anterior não está mais no repositório (tag `legacy-final`).
+- `app/backend` (Gradle, Kotlin 2 + Ktor 3), `app/frontend` (pnpm + Vite). O app Python anterior não está mais no repositório (branch ou tag `legacy-final`).
 - Subir tudo local: `cd app && sh iniciar.sh` (PowerShell: `.\iniciar.ps1`); painel em `http://127.0.0.1:8080`. Para apagar os dados locais, pare o painel e apague `app/data/painel.db`. Detalhes em `app/README.md`.
 - Testes: `cd app/backend && ./gradlew test` e `cd app/frontend && pnpm test`.
 

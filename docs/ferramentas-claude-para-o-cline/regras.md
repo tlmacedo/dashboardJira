@@ -82,7 +82,7 @@ Siglas da coluna "Onde": **C** = `CLAUDE.md` · **R** = `.clinerules/00-regras-d
 
 | # | Regra | Onde |
 |---|---|---|
-| 7.1 | Stack Kotlin/Ktor + SQLite + React/Vite; o app Python antigo foi removido (tag `legacy-final`) | C |
+| 7.1 | Stack Kotlin/Ktor + SQLite + React/Vite; o app Python antigo foi removido (branch ou branch (ou tag) `legacy-final`) | C |
 | 7.2 | Fuso America/Manaus; dias úteis por padrão; relógio e calendário injetados | C, G |
 | 7.3 | Concluída = categoria done **e** `resolution`; divergência vai para Qualidade dos dados | C |
 | 7.4 | "No prazo" e "no prazo ajustado" lado a lado | C |

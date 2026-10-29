@@ -1,6 +1,6 @@
 # Diferenças esperadas: complementos de telas e filtros (Plano 10)
 
-Cada item da auditoria do projeto (`docs/superpowers/cobertura-do-projeto.md`) tem aqui o que mudou, a prova (`Classe.metodo` de teste do backend, que o `DiferencasComplementosDocTest` confere; testes do frontend vêm pelo nome do arquivo) e a diferença em relação ao app anterior (`legacy/`, na tag `legacy-final`). Nada aqui toca o Jira: tudo foi provado com fixtures, MockEngine e SQLite real em arquivo temporário, com a flag de acesso ao Jira desligada.
+Cada item da auditoria do projeto (`docs/superpowers/cobertura-do-projeto.md`) tem aqui o que mudou, a prova (`Classe.metodo` de teste do backend, que o `DiferencasComplementosDocTest` confere; testes do frontend vêm pelo nome do arquivo) e a diferença em relação ao app anterior (`legacy/`, no branch (ou tag) `legacy-final`). Nada aqui toca o Jira: tudo foi provado com fixtures, MockEngine e SQLite real em arquivo temporário, com a flag de acesso ao Jira desligada.
 
 ## A4: opções de filtro pelo escopo visível
 

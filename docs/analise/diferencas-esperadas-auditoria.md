@@ -1,6 +1,6 @@
 # Auditoria de vencimento, responsável e labels de atraso: diferenças esperadas em relação ao app atual
 
-Compara o que o app Python (`legacy/`, na tag `legacy-final`) fazia com a auditoria nova do painel (Plano 4, spec `docs/superpowers/specs/2026-10-25-spec-fase-04-auditoria.md`). Diferença listada aqui é intencional; qualquer outra divergência é defeito. Os exemplos usam a issue fictícia `TG-10` e as pessoas fictícias `ana`, `bruno` e `carla` (cenário AUD-1 dos testes). Nada aqui foi conferido no Jira real: a primeira conexão segue `docs/jira/checklist-primeira-conexao.md`.
+Compara o que o app Python (`legacy/`, no branch (ou tag) `legacy-final`) fazia com a auditoria nova do painel (Plano 4, spec `docs/superpowers/specs/2026-10-25-spec-fase-04-auditoria.md`). Diferença listada aqui é intencional; qualquer outra divergência é defeito. Os exemplos usam a issue fictícia `TG-10` e as pessoas fictícias `ana`, `bruno` e `carla` (cenário AUD-1 dos testes). Nada aqui foi conferido no Jira real: a primeira conexão segue `docs/jira/checklist-primeira-conexao.md`.
 
 ## O que o app atual tem (e o que não tem)
 

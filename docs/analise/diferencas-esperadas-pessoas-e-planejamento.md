@@ -1,6 +1,6 @@
 # Diferenças esperadas: pessoas, planejamento e ausências (Fase 6)
 
-Este documento lista o que **muda de propósito** entre o app Python anterior (`legacy/backend/jiradash/metrics/capacity.py`, `core.py`, na tag `legacy-final`) e o painel novo nos cards de gestão de pessoas, capacidade e ausências. Quem validar com dados reais deve ler daqui o que **não** é bug. Fonte do inventário: `docs/analise/relatorio-cards-app-atual.md` (seções 4.14 a 4.16, achados 8 a 11). Spec: `docs/superpowers/specs/2026-10-25-spec-fase-06-pessoas-planejamento-ausencias.md`.
+Este documento lista o que **muda de propósito** entre o app Python anterior (`legacy/backend/jiradash/metrics/capacity.py`, `core.py`, no branch (ou tag) `legacy-final`) e o painel novo nos cards de gestão de pessoas, capacidade e ausências. Quem validar com dados reais deve ler daqui o que **não** é bug. Fonte do inventário: `docs/analise/relatorio-cards-app-atual.md` (seções 4.14 a 4.16, achados 8 a 11). Spec: `docs/superpowers/specs/2026-10-25-spec-fase-06-pessoas-planejamento-ausencias.md`.
 
 O bloco 6b (worklog, posse, esforço, cobertura, simulador, competências, revisões pendentes e carga por tipo/OS) tem a sua seção no fim deste documento ("Bloco 6b").
 
