@@ -43,7 +43,7 @@ data class InstanciaDemo(
 data class ManifestoDemo(val versao: Int, val ancora: LocalDate, val instancias: Map<String, InstanciaDemo>)
 
 /** O que a carga gravou numa instância. */
-data class ResumoDemo(val instancia: String, val issues: Int, val eventos: Int)
+data class ResumoDemo(val instancia: String, val issues: Int, val eventos: Int, val vinculos: Int = 0, val decisoes: Int = 0)
 
 /** A carga (ou a subida) foi recusada de propósito; [codigo] é um identificador estável, sem dados. */
 class DemoRecusadaException(val codigo: String) : IllegalStateException("dados de demonstração recusados: $codigo")
@@ -130,6 +130,7 @@ class DadosDeDemonstracao(
     }
 
     /**
+     * Só age enquanto NÃO existe prova de sincronização real (checada na mesma transação); com a prova, não apaga nada.
      * Apaga SÓ as linhas fictícias da demonstração, numa transação única: para cada instância do manifesto, as issues cuja chave
      * é EXATAMENTE uma das chaves da fixture daquela instância (e tem o prefixo dela), com seus eventos e horas (cascata), os vínculos
      * e as decisões de distribuição dessas chaves. Issue de outro prefixo, de mesmo prefixo em outra instância ou de chave fora da
@@ -149,9 +150,16 @@ class DadosDeDemonstracao(
             val autoCommit = con.autoCommit
             con.autoCommit = false
             try {
-                val resumos = chaves.map { (id, _, lista) -> expurgarInstancia(con, id, lista) }
-                if (existeIssue(con) && !br.sidia.painel.sync.SincronizacaoReal.existe(con)) {
-                    throw DemoRecusadaException("BANCO_DESCONHECIDO_SEM_SINCRONIZACAO")
+                // Depois da primeira sincronização real o expurgo nunca mais apaga nada: o projeto do Jira real pode ter chaves
+                // iguais às da fixture (DEMO-n), e essas issues, vínculos e decisões são dados de verdade. A prova é checada
+                // NA MESMA transação; a primeira subida com a flag roda antes do agendador, então ainda não há sincronização.
+                val resumos = if (br.sidia.painel.sync.SincronizacaoReal.existe(con)) {
+                    emptyList()
+                } else {
+                    val apagados = chaves.map { (id, _, lista) -> expurgarInstancia(con, id, lista) }
+                    // Sem prova de sincronização, o que sobra de issue não é demonstração nem dado sincronizado: banco desconhecido.
+                    if (existeIssue(con)) throw DemoRecusadaException("BANCO_DESCONHECIDO_SEM_SINCRONIZACAO")
+                    apagados
                 }
                 con.commit()
                 resumos
@@ -178,17 +186,21 @@ class DadosDeDemonstracao(
             ps.setString(2, json)
             ps.executeQuery().use { if (it.next()) eventos = it.getInt(1) }
         }
-        // Vínculos e decisões não têm cascata: saem aqui, pela chave exata da fixture.
-        for (sql in listOf(
+        // Vínculos e decisões não têm cascata: saem aqui, pela chave exata da fixture (e só desta instância).
+        val vinculos = con.prepareStatement(
             "DELETE FROM issue_link WHERE instance = ? AND (from_key IN (SELECT value FROM json_each(?)) OR to_key IN (SELECT value FROM json_each(?)))",
+        ).use { ps ->
+            ps.setString(1, instancia)
+            ps.setString(2, json)
+            ps.setString(3, json)
+            ps.executeUpdate()
+        }
+        val decisoes = con.prepareStatement(
             "DELETE FROM decisao_distribuicao WHERE instance = ? AND issue_key IN (SELECT value FROM json_each(?))",
-        )) {
-            con.prepareStatement(sql).use { ps ->
-                ps.setString(1, instancia)
-                ps.setString(2, json)
-                if (sql.contains("to_key")) ps.setString(3, json)
-                ps.executeUpdate()
-            }
+        ).use { ps ->
+            ps.setString(1, instancia)
+            ps.setString(2, json)
+            ps.executeUpdate()
         }
         // Eventos e horas saem pela cascata da issue.
         val issues = con.prepareStatement("DELETE FROM issue WHERE instance = ? AND key IN (SELECT value FROM json_each(?))").use { ps ->
@@ -196,7 +208,7 @@ class DadosDeDemonstracao(
             ps.setString(2, json)
             ps.executeUpdate()
         }
-        return ResumoDemo(instancia, issues, eventos)
+        return ResumoDemo(instancia, issues, eventos, vinculos, decisoes)
     }
 
     /** Se existe alguma issue de chave com prefixo de demonstração, em qualquer instância. */
@@ -360,13 +372,16 @@ fun prepararDemonstracao(ctx: AppContext) {
     try {
         if (!s.dashboardDemoData) {
             if (s.jiraLiveEnabled) {
-                // Flag ligada: o fictício sai sozinho (só as linhas do manifesto, numa transação) e dado real nunca é tocado.
+                // Flag ligada: antes da primeira sincronização real o fictício sai sozinho (só as linhas do manifesto, numa
+                // transação); depois dela o expurgo não apaga nada.
                 val resumo = demo.expurgar()
-                if (resumo.sumOf { it.issues } > 0) {
+                if (resumo.sumOf { it.issues + it.vinculos + it.decisoes } > 0) {
                     br.sidia.painel.db.CacheDeLeituras.invalidar()
                     log.info(
                         "Dados de demonstração (fictícios) apagados na subida: {}",
-                        resumo.joinToString("; ") { "${it.instancia}: ${it.issues} issues, ${it.eventos} eventos" },
+                        resumo.joinToString("; ") {
+                            "${it.instancia}: ${it.issues} issues, ${it.eventos} eventos, ${it.vinculos} vínculos, ${it.decisoes} decisões"
+                        },
                     )
                 }
                 return
@@ -384,7 +399,12 @@ fun prepararDemonstracao(ctx: AppContext) {
             resumo.joinToString("; ") { "${it.instancia}: ${it.issues} issues, ${it.eventos} eventos" },
         )
     } catch (e: DemoRecusadaException) {
-        log.error("Subida recusada ({}): apague o arquivo do banco (data/painel.db) e confira DASHBOARD_DEMO_DATA, DASHBOARD_DEV_MODE e JIRA_LIVE_ENABLED.", e.codigo)
+        val orientacao = if (e.codigo == "BANCO_DESCONHECIDO_SEM_SINCRONIZACAO") {
+            "faça backup de data/painel.db e VERIFIQUE as issues do banco (podem ser reais) antes de apagá-lo; confira também DASHBOARD_DEMO_DATA, DASHBOARD_DEV_MODE e a flag do Jira."
+        } else {
+            "apague o arquivo do banco (data/painel.db) e confira DASHBOARD_DEMO_DATA, DASHBOARD_DEV_MODE e a flag do Jira."
+        }
+        log.error("Subida recusada ({}): {}", e.codigo, orientacao)
         throw e
     }
 }

@@ -93,36 +93,55 @@ class ExpurgoDeDemonstracaoTest {
     private val demoTotal get() = "SELECT count(*) FROM issue WHERE (instance = 'samsung' AND key LIKE 'DEMO-%' AND key <> 'DEMO-5000') OR (instance = 'sidia' AND key LIKE 'DEMOCAT-%')"
 
     @Test
-    fun expurgoApagaSoAsLinhasFicticiasEDeixaODadoReal() {
+    fun expurgoApagaADemonstracaoPuraEOsDerivadosSoDaInstanciaDela() {
         contexto().use { demo ->
             carregarDemo(demo)
-            semearReal(demo)
-            // Derivados da demonstração criados depois (uma decisão de distribuição sobre uma task fictícia e outra sobre uma real).
-            exec(demo, "INSERT INTO decisao_distribuicao(instance, tipo, issue_key, decisao, decidido_por, decidido_em, versao_regras, chave_sugestao) VALUES ('samsung', 'DISTRIBUICAO', 'DEMO-3', 'APROVADA', 'dev', 1, 'v1', 'kd')")
-            exec(demo, "INSERT INTO decisao_distribuicao(instance, tipo, issue_key, decisao, decidido_por, decidido_em, versao_regras, chave_sugestao) VALUES ('samsung', 'DISTRIBUICAO', 'TG-1', 'APROVADA', 'ana', 1, 'v1', 'kr')")
+            val decisao = { inst: String, chave: String, k: String ->
+                exec(demo, "INSERT INTO decisao_distribuicao(instance, tipo, issue_key, decisao, decidido_por, decidido_em, versao_regras, chave_sugestao) VALUES ('$inst', 'DISTRIBUICAO', '$chave', 'APROVADA', 'dev', 1, 'v1', '$k')")
+            }
+            val vinculo = { inst: String, de: String, para: String ->
+                exec(demo, "INSERT INTO issue_link(instance, from_key, to_key, link_type, direction, visto_em) VALUES ('$inst', '$de', '$para', 'Blocks', 'OUTWARD', 1)")
+            }
+            decisao("samsung", "DEMO-3", "k1")
+            decisao("outra", "DEMO-3", "k2")
+            // Vínculo com UMA ponta fictícia e a outra fora das issues (ainda não sincronizada): sai; o de outra instância fica.
+            vinculo("samsung", "DEMO-3", "TG-5")
+            vinculo("outra", "DEMO-3", "DEMO-4")
             assertTrue(contar(demo, demoTotal) > 40)
             assertTrue(contar(demo, "SELECT count(*) FROM worklog w JOIN issue i ON i.id = w.issue_id WHERE i.key = 'DEMO-40'") > 0)
-            val antes = contar(demo, "SELECT count(*) FROM issue")
 
             prepararDemonstracao(comSettings(demo, flagVerdadeira))
 
-            // Tudo que é fictício saiu: issues, eventos, horas, vínculos e decisões.
-            assertEquals(0, contar(demo, demoTotal))
-            assertEquals(0, contar(demo, "SELECT count(*) FROM change_event e LEFT JOIN issue i ON i.id = e.issue_id WHERE i.id IS NULL"), "sem evento órfão")
-            assertEquals(0, contar(demo, "SELECT count(*) FROM worklog w LEFT JOIN issue i ON i.id = w.issue_id WHERE i.id IS NULL"), "sem worklog órfão")
-            assertEquals(0, contar(demo, "SELECT count(*) FROM issue_link WHERE from_key LIKE 'DEMO-%' AND instance = 'samsung' AND from_key <> 'DEMO-5000'"))
-            assertEquals(0, contar(demo, "SELECT count(*) FROM decisao_distribuicao WHERE issue_key = 'DEMO-3'"))
-            // O real ficou inteiro.
-            assertEquals(5, contar(demo, "SELECT count(*) FROM issue"))
-            assertTrue(antes > 5, "havia demonstração para apagar")
-            assertEquals(1, contar(demo, "SELECT count(*) FROM issue WHERE instance = 'samsung' AND key = 'TG-1'"))
-            assertEquals(1, contar(demo, "SELECT count(*) FROM issue WHERE instance = 'outra' AND key = 'DEMO-1'"), "mesmo prefixo em outra instância")
-            assertEquals(1, contar(demo, "SELECT count(*) FROM issue WHERE instance = 'samsung' AND key = 'DEMO-5000'"), "prefixo igual, chave fora da fixture")
-            assertEquals(1, contar(demo, "SELECT count(*) FROM issue WHERE instance = 'samsung' AND key = 'DEMOCAT-7'"), "prefixo da outra instância na instância errada")
-            assertEquals(3, contar(demo, "SELECT count(*) FROM change_event"), "eventos das issues reais")
-            assertEquals(1, contar(demo, "SELECT count(*) FROM worklog"))
-            assertEquals(1, contar(demo, "SELECT count(*) FROM issue_link"))
-            assertEquals(1, contar(demo, "SELECT count(*) FROM decisao_distribuicao WHERE issue_key = 'TG-1'"))
+            assertEquals(0, contar(demo, "SELECT count(*) FROM issue"))
+            assertEquals(0, contar(demo, "SELECT count(*) FROM change_event"))
+            assertEquals(0, contar(demo, "SELECT count(*) FROM worklog"))
+            assertEquals(0, contar(demo, "SELECT count(*) FROM issue_link WHERE instance = 'samsung'"))
+            assertEquals(0, contar(demo, "SELECT count(*) FROM decisao_distribuicao WHERE instance = 'samsung'"))
+            assertEquals(1, contar(demo, "SELECT count(*) FROM issue_link WHERE instance = 'outra'"), "vínculo de outra instância fica")
+            assertEquals(1, contar(demo, "SELECT count(*) FROM decisao_distribuicao WHERE instance = 'outra'"), "decisão de outra instância fica")
+        }
+    }
+
+    @Test
+    fun comSincronizacaoRealNadaEApagadoMesmoComProjetoDemoRealEmReinicios() {
+        contexto().use { demo ->
+            // O Jira real tem um projeto DEMO: issues DEMO-1..40 sincronizadas de verdade, com vínculo e decisão humana.
+            carregarDemo(demo)
+            semearReal(demo)
+            exec(demo, "INSERT INTO decisao_distribuicao(instance, tipo, issue_key, decisao, decidido_por, decidido_em, versao_regras, chave_sugestao) VALUES ('samsung', 'DISTRIBUICAO', 'DEMO-3', 'APROVADA', 'ana', 1, 'v1', 'kd')")
+            exec(demo, "INSERT INTO issue_link(instance, from_key, to_key, link_type, direction, visto_em) VALUES ('samsung', 'TG-5', 'DEMO-3', 'Blocks', 'OUTWARD', 1)")
+            val fotos = listOf(
+                "SELECT count(*) FROM issue", "SELECT count(*) FROM change_event", "SELECT count(*) FROM worklog",
+                "SELECT count(*) FROM issue_link", "SELECT count(*) FROM decisao_distribuicao",
+            )
+            val antes = fotos.map { contar(demo, it) }
+            assertTrue(contar(demo, demoTotal) > 40)
+            repeat(3) {
+                prepararDemonstracao(comSettings(demo, flagVerdadeira))
+                assertEquals(antes, fotos.map { contar(demo, it) }, "reinício ${it + 1}: nada é apagado depois da primeira sincronização real")
+            }
+            assertEquals(1, contar(demo, "SELECT count(*) FROM issue_link WHERE from_key = 'TG-5' AND to_key = 'DEMO-3'"))
+            assertEquals(1, contar(demo, "SELECT count(*) FROM decisao_distribuicao WHERE issue_key = 'DEMO-3'"))
         }
     }
 
@@ -154,7 +173,8 @@ class ExpurgoDeDemonstracaoTest {
             val e = assertFailsWith<DemoRecusadaException> { prepararDemonstracao(comSettings(demo, flagVerdadeira)) }
             assertEquals("BANCO_DESCONHECIDO_SEM_SINCRONIZACAO", e.codigo)
             assertEquals(total, contar(demo, "SELECT count(*) FROM issue"), "recusou sem apagar às cegas")
-            // Só a demonstração (nada mais) é expurgada normalmente.
+            assertEquals(1, contar(demo, "SELECT count(*) FROM issue WHERE key = 'TG-9'"))
+            assertTrue(contar(demo, demoTotal) > 40, "a demonstração também ficou (rollback)")
         }
     }
 
