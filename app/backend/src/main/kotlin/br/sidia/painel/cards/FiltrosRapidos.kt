@@ -27,7 +27,10 @@ object FiltrosRapidos {
     private val FORMATO_DE_ID = Regex("[a-z0-9-]{1,40}")
     private const val MAX_VALOR = 120
 
-    fun fromYaml(path: Path): List<FiltroRapidoDto> {
+    private val UNITS = setOf("util", "corrido")
+
+    /** [slugsDoDicionario] não nulo: `campo.<slug>` precisa existir no dicionário; `unit` só `util` ou `corrido`, um valor. */
+    fun fromYaml(path: Path, slugsDoDicionario: Set<String>? = null): List<FiltroRapidoDto> {
         val arquivo = try {
             Yaml.default.decodeFromString(ArquivoRapidos.serializer(), Files.readString(path))
         } catch (e: SerializationException) {
@@ -43,6 +46,12 @@ object FiltrosRapidos {
             for ((param, valores) in f.aplica) {
                 require(param in PARAMETROS || FORMATO_DE_CAMPO.matches(param)) { "$path: parâmetro '${param.take(40)}' não permitido em ${f.id}" }
                 require(valores.isNotEmpty()) { "$path: ${f.id}/$param sem valor" }
+                if (param == "unit") {
+                    require(valores.size == 1 && valores[0] in UNITS) { "$path: unit inválido em ${f.id}" }
+                }
+                if (slugsDoDicionario != null && param.startsWith("campo.")) {
+                    require(param.removePrefix("campo.") in slugsDoDicionario) { "$path: campo desconhecido em ${f.id}" }
+                }
                 require(valores.all { it.isNotBlank() && it.length <= MAX_VALOR && it.none(Char::isISOControl) }) {
                     "$path: valor inválido em ${f.id}/$param"
                 }
@@ -55,12 +64,15 @@ object FiltrosRapidos {
      * Lê o arquivo real ou, na falta dele, o modelo; sem nenhum dos dois a lista é vazia (o recurso é opcional). Arquivo
      * inválido não derruba o painel: vai para o log (só o tipo do erro) e a lista fica vazia.
      */
-    fun ler(configDir: Path): List<FiltroRapidoDto> {
+    fun ler(configDir: Path, slugsDoDicionario: Set<String>? = null): List<FiltroRapidoDto> {
         val arquivo = listOf("filtros_rapidos.yaml", "filtros_rapidos.exemplo.yaml").map(configDir::resolve).firstOrNull(Files::isRegularFile)
             ?: return emptyList()
         return try {
-            fromYaml(arquivo)
+            fromYaml(arquivo, slugsDoDicionario)
         } catch (e: IllegalArgumentException) {
+            log.warn("filtros_rapidos inválido ({}): nenhum filtro rápido será oferecido", e.javaClass.simpleName)
+            emptyList()
+        } catch (e: java.io.IOException) {
             log.warn("filtros_rapidos inválido ({}): nenhum filtro rápido será oferecido", e.javaClass.simpleName)
             emptyList()
         }

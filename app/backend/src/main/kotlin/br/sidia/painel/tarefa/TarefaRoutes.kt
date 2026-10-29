@@ -86,7 +86,7 @@ private fun tarefaDe(ctx: AppContext, store: SqliteWorkStore, principal: Princip
         tempoPorStatus = tempoPorStatus(ctx, s, e, avisos),
         posse = posseDe(ctx, s, e, avisos),
         fatoresDeRisco = fatoresDeRisco(s, e),
-        historico = if (veHistorico) historico(ctx, s.key).linhas else null,
+        historico = if (veHistorico) historico(ctx, s.key, instancia).linhas else null,
         linkJira = LinkJira.paraIssue(ctx.settings, instancia, s.key),
         avisos = avisos,
     )

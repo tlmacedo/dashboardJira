@@ -51,13 +51,13 @@ fun Route.rotasDeAuditoria(ctx: AppContext, auditoria: AccessLog) {
 }
 
 /** Histórico campo a campo; chave fora do padrão é 400 e issue inexistente (ou removida) é 404. */
-internal fun historico(ctx: AppContext, chave: String): HistoricoDto {
+internal fun historico(ctx: AppContext, chave: String, instancia: String = INSTANCIA_AUDITORIA): HistoricoDto {
     try {
         JqlValues.issueKey(chave)
     } catch (e: InvalidJqlValueException) {
         throw ErroHttp(HttpStatusCode.BadRequest)
     }
-    val issue = SqliteAuditStore(requireNotNull(ctx.dataSource)).issue(INSTANCIA_AUDITORIA, chave) ?: throw ErroHttp(HttpStatusCode.NotFound)
+    val issue = SqliteAuditStore(requireNotNull(ctx.dataSource)).issue(instancia, chave) ?: throw ErroHttp(HttpStatusCode.NotFound)
     val deteccao = contextoDeDeteccao(ctx)
     val t = AuditTimeline(issue, ctx.statusMap)
     val linhas = issue.events.sortedBy { it.at }.map { e ->

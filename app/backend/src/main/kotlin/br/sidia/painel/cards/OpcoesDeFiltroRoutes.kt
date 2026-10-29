@@ -41,7 +41,8 @@ private fun opcoesDe(ctx: AppContext, store: SqliteWorkStore, principal: Princip
     val agora = ctx.clock.instant()
     val todos = store.pessoas(INSTANCIA_TRABALHO) + ctx.equipes.todos.map { it.id }
     val visiveis = Visibility.visibleUserIds(principal, ctx.roles, hoje, todos)
-    val coordenacao = Role.COORDENADOR in principal.roles || Role.GERENTE in principal.roles
+    val papeis = papeisVigentes(ctx, principal)
+    val coordenacao = Role.COORDENADOR in papeis || Role.GERENTE in papeis
     val escopo = Escopo(visiveis, veSemResponsavel = coordenacao)
 
     val squads: Set<String> = if (coordenacao) {
@@ -86,7 +87,7 @@ private fun opcoesDe(ctx: AppContext, store: SqliteWorkStore, principal: Princip
         os = lista("os", noEscopo.asSequence().mapNotNull { it.osVersion }),
         campos = campos,
         avisos = avisos,
-        rapidos = FiltrosRapidos.ler(ctx.settings.configDir),
+        rapidos = FiltrosRapidos.ler(ctx.settings.configDir, campos.map { it.slug }.toSet()),
         prefixosDeChave = lista("prefixo", noEscopo.asSequence().map { it.key.substringBefore('-') }),
     )
 }

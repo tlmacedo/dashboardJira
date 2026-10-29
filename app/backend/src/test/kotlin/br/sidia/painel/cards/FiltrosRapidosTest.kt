@@ -57,6 +57,24 @@ class FiltrosRapidosTest {
     }
 
     @Test
+    fun validaSlugDoDicionarioEUnit() {
+        val base = "versao: 1\nfiltros:\n  - id: x\n    rotuloPt: X\n    rotuloEn: X\n    aplica:\n"
+        val slugs = setOf("sku-type")
+        FiltrosRapidos.fromYaml(yaml(base + "      campo.sku-type: [MR]\n      unit: [corrido]\n"), slugs)
+        assertFailsWith<IllegalArgumentException> { FiltrosRapidos.fromYaml(yaml(base + "      campo.outro: [MR]\n"), slugs) }
+        assertFailsWith<IllegalArgumentException> { FiltrosRapidos.fromYaml(yaml(base + "      unit: [semanas]\n"), slugs) }
+        assertFailsWith<IllegalArgumentException> { FiltrosRapidos.fromYaml(yaml(base + "      unit: [util, corrido]\n"), slugs) }
+    }
+
+    @Test
+    fun arquivoIlegivelNaoDerrubaALeitura() {
+        val dir = Files.createTempDirectory("rapidos-ruim")
+        // Bytes que não são UTF-8 válido: a leitura do texto lança IOException, e não pode virar 500.
+        Files.write(dir.resolve("filtros_rapidos.yaml"), byteArrayOf(0xFF.toByte(), 0xFE.toByte(), 0xC0.toByte()))
+        assertEquals(emptyList(), FiltrosRapidos.ler(dir))
+    }
+
+    @Test
     fun arquivoAusenteDaListaVazia() {
         assertEquals(emptyList(), FiltrosRapidos.ler(Files.createTempDirectory("sem-config")))
     }

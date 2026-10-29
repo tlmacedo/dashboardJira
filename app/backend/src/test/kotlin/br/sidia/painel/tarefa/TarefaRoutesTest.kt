@@ -120,6 +120,24 @@ class TarefaRoutesTest {
     }
 
     @Test
+    fun squadLeaderNaoVeTaskDeOutroSquad() = rodar { get ->
+        // TG-103 é de carla (Beta); lider.alfa lidera só o Alfa: 404 sem corpo. A task do próprio squad abre.
+        val fora = get("lider.alfa", "/api/tarefa/TG-103")
+        assertEquals(HttpStatusCode.NotFound, fora.status)
+        assertEquals("", fora.corpo)
+        assertEquals(HttpStatusCode.OK, get("lider.alfa", "/api/tarefa/TG-101").status)
+    }
+
+    @Test
+    fun historicoRespeitaAInstancia() = rodar { get ->
+        get("gerente.exemplo", "/api/tarefa/TG-101") // sobe o contexto
+        val c = ctx!!
+        assertNotNull(br.sidia.painel.auditoria.historico(c, "TG-101", br.sidia.painel.auditoria.INSTANCIA_AUDITORIA))
+        val e = kotlin.test.assertFailsWith<br.sidia.painel.cards.ErroHttp> { br.sidia.painel.auditoria.historico(c, "TG-101", "outra-instancia") }
+        assertEquals(HttpStatusCode.NotFound, e.status)
+    }
+
+    @Test
     fun historicoSoParaCoordenacaoEGerente() = rodar { get ->
         assertNull(tarefa(get("lider.alfa", "/api/tarefa/TG-101")).historico)
         assertNull(tarefa(get("ana", "/api/tarefa/TG-101")).historico)

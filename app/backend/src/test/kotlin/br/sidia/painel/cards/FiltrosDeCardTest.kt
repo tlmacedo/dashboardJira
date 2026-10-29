@@ -113,6 +113,13 @@ class FiltrosDeCardTest {
     }
 
     @Test
+    fun prefixoDeCampoComMaiusculaDa400() {
+        // Antes era ignorado em silêncio e o card respondia sem filtro.
+        val e = assertFailsWith<ErroHttp> { lerCampos("Campo.sku-type" to "MR") }
+        assertEquals("FILTRO_INVALIDO", e.codigo)
+    }
+
+    @Test
     fun valorComControle400() {
         assertFailsWith<ErroHttp> { lerCampos("campo.sku-type" to "a\u0007b") }
         assertFailsWith<ErroHttp> { lerCampos("campo.sku-type" to "x".repeat(121)) }

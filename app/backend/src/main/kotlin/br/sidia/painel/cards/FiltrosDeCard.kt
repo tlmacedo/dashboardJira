@@ -86,7 +86,9 @@ data class FiltrosDeCard(
          */
         private fun lerCampos(params: Parameters, camposDeFiltro: List<CampoDeFiltro>): Map<String, Set<String>> {
             val saida = LinkedHashMap<String, Set<String>>()
-            for (nomeDoParametro in params.names().filter { it.startsWith(PREFIXO_DE_CAMPO) }.sorted()) {
+            for (nomeDoParametro in params.names().filter { it.startsWith(PREFIXO_DE_CAMPO, ignoreCase = true) }.sorted()) {
+                // Prefixo com outra caixa ("Campo.sku-type") é 400: ignorá-lo em silêncio devolveria o card sem filtro.
+                if (!nomeDoParametro.startsWith(PREFIXO_DE_CAMPO)) throw ErroHttp(HttpStatusCode.BadRequest, CODIGO_FILTRO_INVALIDO)
                 val slug = nomeDoParametro.removePrefix(PREFIXO_DE_CAMPO).lowercase(Locale.ROOT)
                 val parametros = if (FORMATO_DE_SLUG.matches(slug)) mapOf("campo" to slug) else emptyMap()
                 val invalido = { ErroHttp(HttpStatusCode.BadRequest, CODIGO_FILTRO_INVALIDO, parametros) }
