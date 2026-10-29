@@ -320,6 +320,37 @@ class FixturesDeDemoTest {
             "falta JIRAUSER sem resolução",
         )
 
+        // --- Estimativas e worklog (Plano 11): um caso fictício de cada sinal novo ---
+        val estimativas = samsung.flatMap { i -> mudancas(i, "timeoriginalestimate").map { i to it } }
+        fun numero(v: String?) = v?.toLongOrNull()
+        assertTrue(
+            estimativas.any { (i, e) ->
+                val antes = numero(e.from)
+                val depois = numero(e.to)
+                val inicio = mudancas(i, "status").firstOrNull { it.to == "In Progress" }?.at
+                antes != null && depois != null && (antes - depois) * 5 >= antes && inicio != null && e.at.isAfter(inicio)
+            },
+            "falta estimativa reduzida em pelo menos 20% depois de a task entrar em andamento",
+        )
+        assertTrue(
+            estimativas.any { (_, e) -> numero(e.from) != null && numero(e.to) != null && numero(e.to)!! * 10 >= numero(e.from)!! * 13 },
+            "falta estimativa aumentada em pelo menos 30% (Integridade)",
+        )
+        val feriados = br.sidia.painel.time.BusinessCalendar.fromYaml(TestPaths.configDir.resolve("calendario.exemplo.yaml"), zona)
+        val worklogs = samsung.flatMap { i ->
+            val lista = ((fields(i)["worklog"] as? JsonObject)?.get("worklogs") as? JsonArray).orEmpty().map { it.jsonObject }
+            br.sidia.painel.sync.WorklogParser.toRecords(lista, emptyMap()).map { i to it }
+        }
+        assertTrue(worklogs.isNotEmpty(), "falta worklog na demonstração")
+        assertTrue(worklogs.all { (_, w) -> w.criado != null && w.autor?.startsWith("dev.") == true }, "worklog com criação e autor fictício")
+        fun diasUteis(w: br.sidia.painel.sync.WorklogRecord): Int {
+            val ini = w.started.atZone(zona).toLocalDate()
+            val fim = w.criado!!.atZone(zona).toLocalDate()
+            return generateSequence(ini.plusDays(1)) { it.plusDays(1) }.takeWhile { !it.isAfter(fim) }.count { feriados.isBusinessDay(it) }
+        }
+        assertTrue(worklogs.any { (_, w) -> diasUteis(w) >= 2 }, "falta worklog registrado 2 dias úteis ou mais depois do início")
+        assertTrue(worklogs.any { (_, w) -> diasUteis(w) < 2 }, "falta worklog registrado em dia (não retroativo)")
+
         // --- Duas instâncias e dois squads ---
         assertEquals(setOf("samsung", "sidia"), manifesto.instancias.keys)
         assertEquals(setOf("DEMO", "DEMOCAT"), manifesto.instancias.values.map { it.prefixo }.toSet())

@@ -73,6 +73,19 @@ class WorklogStoreTest {
     }
 
     @Test
+    fun guardaEPreservaACriacaoDoWorklog() {
+        val ds = novoBanco()
+        val issues = SqliteIssueStore(ds)
+        val worklogs = SqliteWorklogStore(ds)
+        val criado = Instant.parse("2026-10-20T19:00:00Z")
+        val com = reg("1", "ana", "2026-10-15T13:00:00Z", 3600).copy(criado = criado)
+        val sem = reg("2", "bruno", "2026-10-16T13:00:00Z", 60)
+        issues.upsert(issue("TG-1"), emptyList(), "samsung", worklogs = listOf(com, sem))
+        val lidos = worklogs.porIssue("samsung", setOf("TG-1")).getValue("TG-1")
+        assertEquals(listOf(criado, null), lidos.map { it.criado })
+    }
+
+    @Test
     fun worklogQueMudouDeIssueNaoViolaOIndiceUnico() {
         val ds = novoBanco()
         val issues = SqliteIssueStore(ds)

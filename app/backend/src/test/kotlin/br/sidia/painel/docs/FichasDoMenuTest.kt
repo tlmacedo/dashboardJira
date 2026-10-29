@@ -11,6 +11,7 @@ class FichasDoMenuTest {
     /** Telas do menu que NÃO têm ficha própria, cada uma com o motivo (e a ficha ou o cartão que as cobre). */
     private val isentas = mapOf(
         "squad" to "monta-se dos cards Carga, Vencimentos, Capacidade e Riscos com o filtro de squad",
+        "meusDados" to "lê só o banco do painel e o diretório de papéis (direito de acesso do titular), sem consulta ao Jira",
         "meu" to "monta-se dos cards Carga, Metas, Riscos e Agenda com o filtro de pessoa",
         "divergencia" to "é a Task x Review, coberta pela ficha da auditoria",
         "rebalanceamento" to "usa a ficha da distribuição",

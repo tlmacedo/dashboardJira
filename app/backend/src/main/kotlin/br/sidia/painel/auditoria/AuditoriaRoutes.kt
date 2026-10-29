@@ -3,9 +3,12 @@ package br.sidia.painel.auditoria
 import br.sidia.painel.AppContext
 import br.sidia.painel.cards.AvisoDto
 import br.sidia.painel.cards.ErroHttp
+import br.sidia.painel.cards.ROTA_SENSIVEL
 import br.sidia.painel.cards.executarAuditado
 import br.sidia.painel.cards.hoje
 import br.sidia.painel.db.AccessLog
+import br.sidia.painel.lgpd.ModuloSensivel
+import br.sidia.painel.lgpd.TravaDpo
 import br.sidia.painel.jql.InvalidJqlValueException
 import br.sidia.painel.jql.JqlValues
 import io.ktor.http.HttpStatusCode
@@ -14,7 +17,7 @@ import io.ktor.server.routing.get
 import java.util.Locale
 
 /** Campos do changelog cujo valor (de/para) o painel guarda e pode mostrar; os demais só têm o nome do campo. */
-private val CAMPOS_COM_VALOR = setOf("status", "assignee", "resolution", "duedate", "labels", "os version")
+private val CAMPOS_COM_VALOR = setOf("status", "assignee", "resolution", "duedate", "labels", "os version", "timeoriginalestimate")
 
 /** Campos cuja alteração tem regra de quem pode fazer (spec 7.1). */
 private val CAMPOS_DE_AUTORIZACAO = setOf("assignee", "duedate", "labels")
@@ -28,27 +31,37 @@ private val CAMPOS_DE_AUTORIZACAO = setOf("assignee", "duedate", "labels")
  */
 fun Route.rotasDeAuditoria(ctx: AppContext, auditoria: AccessLog) {
     get("/api/auditoria/sinais") {
+        call.attributes.put(ROTA_SENSIVEL, true)
         call.executarAuditado(auditoria, ctx) { principal ->
             exigirCoordenacao(ctx, principal)
+            TravaDpo(ctx.settings, ctx.dataSource).exigir(ModuloSensivel.AUDITORIA)
             val calculada = calcularAuditoria(ctx, principal, lerFiltrosAuditoria(call.request.queryParameters, hoje(ctx)))
             paraDto(calculada, ctx)
         }
     }
 
     get("/api/auditoria/historico/{key}") {
+        call.attributes.put(ROTA_SENSIVEL, true)
         call.executarAuditado(auditoria, ctx) { principal ->
             exigirCoordenacao(ctx, principal)
+            TravaDpo(ctx.settings, ctx.dataSource).exigir(ModuloSensivel.AUDITORIA)
             historico(ctx, call.parameters["key"].orEmpty())
         }
     }
 
     get("/api/cards/task-review") {
+        call.attributes.put(ROTA_SENSIVEL, true)
         call.executarAuditado(auditoria, ctx) { principal ->
             exigirCoordenacao(ctx, principal)
+            TravaDpo(ctx.settings, ctx.dataSource).exigir(ModuloSensivel.AUDITORIA)
             paraDto(calcularTaskReview(ctx, principal, lerFiltrosTaskReview(call.request.queryParameters)), ctx)
         }
     }
 }
+
+/** A estimativa é guardada em segundos e mostrada em horas com uma casa ("36000" vira "10.0"); os demais campos saem como estão. */
+private fun valorParaOHistorico(campo: String, valor: String): String =
+    if (campo == "timeoriginalestimate") valor.toLongOrNull()?.let { String.format(Locale.ROOT, "%.1f", it / 3600.0) } ?: valor else valor
 
 /** Histórico campo a campo; chave fora do padrão é 400 e issue inexistente (ou removida) é 404. */
 internal fun historico(ctx: AppContext, chave: String, instancia: String = INSTANCIA_AUDITORIA): HistoricoDto {
@@ -88,8 +101,8 @@ internal fun historico(ctx: AppContext, chave: String, instancia: String = INSTA
         }
         LinhaHistoricoDto(
             at = e.at.toString(), campo = e.field,
-            de = e.from?.takeIf { guardado }?.take(LIMITE_VALOR_HISTORICO),
-            para = e.to?.takeIf { guardado }?.take(LIMITE_VALOR_HISTORICO),
+            de = e.from?.takeIf { guardado }?.let { valorParaOHistorico(campo, it) }?.take(LIMITE_VALOR_HISTORICO),
+            para = e.to?.takeIf { guardado }?.let { valorParaOHistorico(campo, it) }?.take(LIMITE_VALOR_HISTORICO),
             autor = e.authorRef, autorizado = avaliacao?.autorizado, motivo = avaliacao?.motivo?.name, valorGuardado = guardado,
         )
     }
@@ -99,5 +112,21 @@ internal fun historico(ctx: AppContext, chave: String, instancia: String = INSTA
             add(AvisoDto(AvisoDto.VENCIMENTO_ILEGIVEL, AvisoDto.INFORMATIVO, "vencimento ilegível no histórico", mapOf("n" to t.vencimentosIlegiveis.toString())))
         }
     }
-    return HistoricoDto(AVISO_INDICIO_NAO_PROVA, issue.key, issue.summary, issue.reporter, linhas, avisos)
+    return HistoricoDto(AVISO_INDICIO_NAO_PROVA, issue.key, issue.summary, issue.reporter, (linhas + linhasDeWorklog(issue, ctx)).sortedBy { it.at }, avisos)
 }
+
+/**
+ * Os registros de horas da issue como linhas do histórico (`campo = "worklog"`): `de` é o dia do início declarado, `para` o dia
+ * da criação (fuso de Manaus) com a duração em horas, e `at` o instante da criação (o início, se a criação não foi guardada).
+ * Sem comentário: o painel nunca o guarda. O autor do worklog aparece como nos demais eventos.
+ */
+private fun linhasDeWorklog(issue: AuditIssue, ctx: AppContext): List<LinhaHistoricoDto> =
+    issue.worklogs.sortedWith(compareBy({ it.started }, { it.jiraId })).map { w ->
+        val horas = String.format(Locale.ROOT, "%.1f h", w.seconds / 3600.0)
+        LinhaHistoricoDto(
+            at = (w.criado ?: w.started).toString(), campo = "worklog",
+            de = ctx.calendar.localDate(w.started).toString(),
+            para = (w.criado?.let { ctx.calendar.localDate(it).toString() } ?: "?") + " ($horas)",
+            autor = w.autor, autorizado = null, motivo = null, valorGuardado = true,
+        )
+    }

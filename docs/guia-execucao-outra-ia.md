@@ -85,7 +85,7 @@ Estes foram os defeitos que as revisões do Claude mais encontraram; procure-os 
 
 ## 7. Parar e perguntar ao usuário (em forma de pergunta com opções)
 
-Ação irreversível ou destrutiva; qualquer coisa de segurança que o plano não resolva; efeito fora do repositório (push em branch compartilhada, publicação, mudar configuração do GitHub, merge fora das condições do fluxo de entrega); decisão de produto que muda o que é construído; plano tão quebrado que todo caminho é palpite; qualquer necessidade de acessar o Jira (**a resposta padrão é "não"**: a flag `JIRA_LIVE_ENABLED` só o usuário liga, e a primeira conexão real segue `docs/jira/checklist-primeira-conexao.md`).
+Ação irreversível ou destrutiva; qualquer coisa de segurança que o plano não resolva; efeito fora do repositório (push em branch compartilhada, publicação, mudar configuração do GitHub, merge fora das condições do fluxo de entrega); decisão de produto que muda o que é construído; plano tão quebrado que todo caminho é palpite; qualquer necessidade de acessar o Jira (**a resposta padrão é "não"**: a flag `JIRA_LIVE_ENABLED` só o usuário liga, e a primeira conexão real segue `docs/jira/checklist-primeira-conexao.md`). **O aceite do DPO (`DASHBOARD_DPO_ACEITE=true` com `DASHBOARD_DPO_ACEITE_REF`) é decisão do usuário, como a flag do Jira**: nenhuma IA o liga, em arquivo ou comando (inclusive no `app/.env`), nem escreve a referência do parecer; o modelo `.env.example` traz `false`. Sem o aceite, Auditoria e Integridade ficam fechadas em produção (`docs/lgpd/relatorio-para-o-dpo.md`).
 
 ## 8. Fim de sessão
 

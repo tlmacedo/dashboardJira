@@ -43,8 +43,23 @@ class WorklogParserTest {
         val registros = WorklogParser.toRecords(lista("[$json]"), emptyMap())
         val texto = registros.toString()
         assertFalse("COMENTARIO-SECRETO" in texto || "outra.pessoa" in texto || "Nome Completo" in texto || "exemplo.invalid" in texto, texto)
-        // O registro só tem os quatro campos permitidos.
-        assertEquals(setOf("jiraId", "autor", "started", "seconds"), WorklogRecord::class.java.declaredFields.map { it.name }.toSet())
+        // O registro só tem os cinco campos permitidos (a data de criação entrou no Plano 11; comentário nunca).
+        assertEquals(setOf("jiraId", "autor", "started", "seconds", "criado"), WorklogRecord::class.java.declaredFields.map { it.name }.toSet())
+    }
+
+    @Test
+    fun worklogGuardaCriacao() {
+        val r = WorklogParser.toRecords(lista("[${w(extra = """"created":"2026-10-20T15:00:00.000-0400"""")}]"), emptyMap()).single()
+        assertEquals(Instant.parse("2026-10-20T19:00:00Z"), r.criado)
+        assertEquals(Instant.parse("2026-10-05T13:00:00Z"), r.started)
+    }
+
+    @Test
+    fun worklogSemCriacaoOuIlegivelFicaNuloSemPerderAsHoras() {
+        assertNull(WorklogParser.toRecords(lista("[${w()}]"), emptyMap()).single().criado)
+        val ruim = WorklogParser.toRecords(lista("[${w(extra = """"created":"ontem à tarde"""")}]"), emptyMap()).single()
+        assertNull(ruim.criado)
+        assertEquals(3600, ruim.seconds)
     }
 
     @Test

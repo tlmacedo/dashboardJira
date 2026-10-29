@@ -31,12 +31,18 @@ data class RegrasDeAuditoria(
     val tiposReview: Set<String>,
     val sinais: Map<CodigoSinal, RegraSinal>,
     val emLoteMinimo: Int = 5,
+    /** Redução mínima (fração da estimativa original) que vira `ESTIMATIVA_REDUZIDA`; 0,05 a 0,9 (padrão 0,2). */
+    val estimativaReducaoMinima: Double = 0.2,
+    /** Dias úteis de Manaus entre o início declarado e o registro das horas que viram `WORKLOG_RETROATIVO`; 1 a 30 (padrão 2). */
+    val worklogRetroativoDiasUteis: Int = 2,
 ) {
     init {
         require(pertoDoVencimentoDias in 0..30) { "pertoDoVencimentoDias $pertoDoVencimentoDias fora de 0..30" }
         require(posseAntesDoVencimentoDias in 0..30) { "posseAntesDoVencimentoDias $posseAntesDoVencimentoDias fora de 0..30" }
         require(passaBolaTrocas in 2..10) { "passaBolaTrocas $passaBolaTrocas fora de 2..10" }
         require(emLoteMinimo in 2..100) { "emLoteMinimo $emLoteMinimo fora de 2..100" }
+        require(estimativaReducaoMinima in 0.05..0.9) { "estimativaReducaoMinima $estimativaReducaoMinima fora de 0.05..0.9" }
+        require(worklogRetroativoDiasUteis in 1..30) { "worklogRetroativoDiasUteis $worklogRetroativoDiasUteis fora de 1..30" }
         require(statusCancelamento.isNotEmpty() && statusCancelamento.none { it.isBlank() }) {
             "statusCancelamento deve ter ao menos um status, sem itens vazios"
         }
@@ -80,6 +86,8 @@ data class RegrasDeAuditoria(
                     tiposReview = vinculos.tiposReview,
                     sinais = sinais,
                     emLoteMinimo = bruto.emLoteMinimo,
+                    estimativaReducaoMinima = bruto.estimativaReducaoMinima,
+                    worklogRetroativoDiasUteis = bruto.worklogRetroativoDiasUteis,
                 )
             } catch (e: IllegalArgumentException) {
                 invalido(e.message.orEmpty(), e)
@@ -101,4 +109,7 @@ private data class RegrasYaml(
     val statusCancelamento: List<String>,
     val sinais: Map<String, RegraSinalYaml>,
     val emLoteMinimo: Int = 5,
+    val estimativaReducaoMinima: Double = 0.2,
+    /** Dias úteis de Manaus entre o início declarado e o registro das horas que viram `WORKLOG_RETROATIVO`; 1 a 30 (padrão 2). */
+    val worklogRetroativoDiasUteis: Int = 2,
 )

@@ -205,8 +205,9 @@ class CentralRoutesTest {
     }
 
     @Test
-    fun gavetaDasAlteracoesSemAutorizacaoNaoGravaTotalNemPessoaNoRegistro() = rodar { cli ->
-        val r = cli.get("gerente.exemplo", "/api/cartoes/VG-09/tasks?segmento=ALTERACOES_SEM_AUTORIZACAO&pessoa=bruno")
+    fun gavetaDasAlteracoesSemAutorizacaoNaoGravaTotalNemPessoaNoRegistro() = rodar(dev = true) { cli ->
+        // Desde o Plano 11 os itens da Auditoria moram no VG-14 (módulo sensível), não mais no VG-09.
+        val r = cli.get("gerente.exemplo", "/api/cartoes/VG-14/tasks?segmento=ALTERACOES_SEM_AUTORIZACAO&pessoa=bruno")
         assertEquals(HttpStatusCode.OK, r.status, r.corpo)
         val filtros = requireNotNull(ctx!!.dataSource).connection.use { con ->
             con.createStatement().executeQuery("SELECT filters FROM access_log ORDER BY id DESC LIMIT 1").use { rs -> rs.next(); rs.getString(1).orEmpty() }
@@ -218,6 +219,34 @@ class CentralRoutesTest {
             con.createStatement().executeQuery("SELECT filters FROM access_log ORDER BY id DESC LIMIT 1").use { rs -> rs.next(); rs.getString(1).orEmpty() }
         }
         assertTrue("total" in comum, comum)
+    }
+
+    @Test
+    fun itensDaAuditoriaSairamDoVg09() = rodar(dev = true) { cli ->
+        val vg09 = cli.get("gerente.exemplo", "/api/cartoes/VG-09/tasks?segmento=ALTERACOES_SEM_AUTORIZACAO")
+        assertEquals(HttpStatusCode.BadRequest, vg09.status, "o VG-09 não serve mais o item da Auditoria")
+        assertEquals(HttpStatusCode.BadRequest, cli.get("gerente.exemplo", "/api/cartoes/VG-09/tasks?segmento=TASK_REVIEW_DIVERGENTE").status)
+        val c = dto(cli.get("gerente.exemplo", rota))
+        for (nome in listOf("ALTERACOES_SEM_AUTORIZACAO", "TASK_REVIEW_DIVERGENTE")) {
+            val item = c.item(nome)
+            assertNotNull(item, "$nome fica na Central (em dev aberto)")
+            assertEquals(listOf("VG-14", nome), listOf(item.cartao, item.segmento))
+        }
+    }
+
+    @Test
+    fun centralSemItensSensiveisSemOAceite() = rodar(dev = false) { cli ->
+        for (u in listOf("gerente.exemplo", "coord.um")) {
+            val c = dto(cli.get(u, rota))
+            for (nome in listOf("ALTERACOES_SEM_AUTORIZACAO", "TASK_REVIEW_DIVERGENTE", "INDICIO_ALTO")) assertEquals(null, c.item(nome), "$u $nome")
+            val aviso = c.avisos.single { it.codigo == "ITENS_AGUARDANDO_ACEITE_DPO" }
+            // O coordenador não fica sabendo da Integridade.
+            assertEquals(if (u == "coord.um") "AUDITORIA" else "AUDITORIA,INTEGRIDADE", aviso.params["modulos"], u)
+        }
+        // A gaveta do VG-14 nega com o código do DPO.
+        val g = cli.get("gerente.exemplo", "/api/cartoes/VG-14/tasks?segmento=ALTERACOES_SEM_AUTORIZACAO")
+        assertEquals(HttpStatusCode.Forbidden, g.status)
+        assertTrue("AGUARDANDO_ACEITE_DPO" in g.corpo)
     }
 
     @Test

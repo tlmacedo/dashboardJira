@@ -118,6 +118,49 @@ class ChangelogParserTest {
         assertEquals(8, porCampo.values.map { it.changelogId }.toSet().size)
     }
 
+    private fun estimativa(campo: String, from: String?, to: String?, fromStr: String? = "10h", toStr: String? = "8h") = historicos(
+        """[{"id":"11","created":"2026-10-03T10:00:00.000-0400","author":{"name":"ana.silva"},"items":[
+            {"field":"$campo","from":${from?.let { "\"$it\"" }},"fromString":${fromStr?.let { "\"$it\"" }},
+             "to":${to?.let { "\"$it\"" }},"toString":${toStr?.let { "\"$it\"" }}}]}]""",
+    )
+
+    @Test
+    fun estimativaGuardaSegundosBrutos() {
+        for (campo in listOf("timeoriginalestimate", "timeestimate", "TimeOriginalEstimate")) {
+            val e = ChangelogParser.toEvents(issue(), estimativa(campo, "36000", "28800")).single()
+            // Segundos como texto decimal, nunca o texto humanizado ("10h").
+            assertEquals("36000", e.from, campo)
+            assertEquals("28800", e.to, campo)
+        }
+    }
+
+    @Test
+    fun estimativaNaoNumericaViraNula() {
+        val e = ChangelogParser.toEvents(issue(), estimativa("timeoriginalestimate", "dez horas", "-5", "10h", "8h")).single()
+        assertNull(e.from)
+        assertNull(e.to)
+        // Sem from (primeira estimativa) e valores com sinal, decimal ou notação científica também não entram.
+        val primeira = ChangelogParser.toEvents(issue(), estimativa("timeestimate", null, "7200")).single()
+        assertNull(primeira.from)
+        assertEquals("7200", primeira.to)
+        for (ruim in listOf("1e5", "3.5", "+10", " ", "", "99999999999999999999")) {
+            assertNull(ChangelogParser.toEvents(issue(), estimativa("timeestimate", ruim, ruim)).single().to, "'$ruim'")
+        }
+    }
+
+    @Test
+    fun textoLivreContinuaSemValor() {
+        val h = historicos(
+            """[{"id":"12","created":"2026-10-03T10:00:00.000-0400","author":{"name":"ana.silva"},"items":[
+                {"field":"description","from":"36000","fromString":"texto antigo","to":"28800","toString":"texto novo"},
+                {"field":"summary","from":"1","fromString":"a","to":"2","toString":"b"}]}]""",
+        )
+        for (e in ChangelogParser.toEvents(issue(), h)) {
+            assertNull(e.from, e.field)
+            assertNull(e.to, e.field)
+        }
+    }
+
     @Test
     fun duedateGuardaFromIsoQuandoPresente() {
         val h = historicos(

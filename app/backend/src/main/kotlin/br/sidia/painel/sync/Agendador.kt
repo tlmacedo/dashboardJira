@@ -227,7 +227,7 @@ private suspend fun executarRetencao(ctx: AppContext, estado: SyncStateStore, cl
         try {
             val hoje = LocalDate.now(clock.withZone(ctx.settings.zone))
             val apagadas = Retention(ds, ctx.calendar).purge(
-                hoje, ctx.settings.retentionMonths, ctx.settings.accessLogRetentionMonths,
+                hoje, ctx.settings.retencao,
                 aoRemover = { categoria, n -> metricas?.retencaoRemoveu(categoria, n) },
             )
             estado.concluir(id, RunStatus.OK, RunResumo(removidas = apagadas), null, null, clock.instant())

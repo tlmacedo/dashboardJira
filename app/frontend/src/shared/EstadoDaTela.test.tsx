@@ -24,6 +24,22 @@ const consulta = (extra: Partial<Parameters<typeof estadoDe>[0]> = {}) => ({
 beforeEach(() => localStorage.clear())
 afterEach(() => cleanup())
 
+describe('estado aguardando o DPO', () => {
+  it('estadoAguardandoDpoAntesDoSemPermissao', () => {
+    const c = consulta({ isError: true, error: new ErroDaApi(403, 'AGUARDANDO_ACEITE_DPO', { modulo: 'AUDITORIA' }) })
+    expect(estadoDe(c).tipo).toBe('aguardando-dpo')
+    // 403 sem o código continua sendo "sem permissão".
+    expect(estadoDe(consulta({ isError: true, error: new ErroDaApi(403) })).tipo).toBe('sem-permissao')
+    expect(estadoDe(consulta({ isError: true, error: new ErroDaApi(403, 'OUTRO') })).tipo).toBe('sem-permissao')
+  })
+
+  it('mostraSoOTextoSemNumerosNemTentarDeNovo', () => {
+    mostrar({ tipo: 'aguardando-dpo' })
+    expect(screen.getByRole('alert')).toHaveTextContent('desligada até o encarregado de dados (DPO) aprovar o uso. Nenhum dado foi consultado.')
+    expect(screen.queryByRole('button')).toBeNull()
+  })
+})
+
 describe('estadoDe', () => {
   it('mapeiaCadaSituacaoDaConsulta', () => {
     expect(estadoDe(consulta({ isPending: true })).tipo).toBe('carregando')

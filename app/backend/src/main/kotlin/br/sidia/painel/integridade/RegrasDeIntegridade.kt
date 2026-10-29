@@ -86,7 +86,7 @@ data class RegrasDeIntegridade(
                     else -> 1
                 }
             },
-            ativos = SinalIntegridade.entries.toSet() - SinalIntegridade.ESTIMATIVA_AUMENTADA,
+            ativos = SinalIntegridade.entries.toSet(),
             trocaAntesDeFecharHoras = 2.0, criadaEFechadaMinutos = 15, reabreEFechaHoras = 2.0, loteQuantidade = 6, loteMinutos = 10,
             fracaoVidaTardia = 0.7, estimativaAumento = 0.3, labelsCriticidade = listOf("CRITICAL", "BLOCKER"), labelRemovidaDias = 2,
             limiteInicioHora = 22, pontosAlto = 12, multiploAlto = 3.0, gravesAlto = 3, pontosMedio = 6, multiploMedio = 2.0,

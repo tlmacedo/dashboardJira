@@ -41,6 +41,9 @@ object ChangelogParser {
      */
     private val CAMPOS_COM_VALOR = listOf("status", "resolution", "duedate", "labels", "OS Version")
 
+    /** Campos de estimativa cujo valor (em segundos) também é gravado; alimentam `ESTIMATIVA_REDUZIDA` e `ESTIMATIVA_AUMENTADA`. */
+    internal val CAMPOS_DE_ESTIMATIVA = listOf("timeoriginalestimate", "timeestimate")
+
     private val OFFSET_SEM_DOIS_PONTOS: DateTimeFormatter = DateTimeFormatterBuilder()
         .append(DateTimeFormatter.ISO_LOCAL_DATE_TIME)
         .appendOffset("+HHmm", "Z")
@@ -88,11 +91,14 @@ object ChangelogParser {
                 val guardaValor = CAMPOS_COM_VALOR.any { campo.equals(it, ignoreCase = true) }
                 // Campos fora da lista só registram que houve mudança: nunca o texto (privacidade).
                 val ehVencimento = campo.equals("duedate", ignoreCase = true)
+                val ehEstimativa = CAMPOS_DE_ESTIMATIVA.any { campo.equals(it, ignoreCase = true) }
                 val de = if (ehResponsavel) usuario(item, "from", chaves)
                 else if (ehVencimento) vencimento(item, "from", "fromString")
+                else if (ehEstimativa) segundos(item, "from")
                 else if (guardaValor) item.texto("fromString") else null
                 val para = if (ehResponsavel) usuario(item, "to", chaves)
                 else if (ehVencimento) vencimento(item, "to", "toString")
+                else if (ehEstimativa) segundos(item, "to")
                 else if (guardaValor) item.texto("toString") else null
                 eventos += ChangeEventRecord("$key:$historicoId:$i", key, campo, de, para, quando, autor)
             }
@@ -101,6 +107,15 @@ object ChangelogParser {
     }
 
     private val DATA_ISO = Regex("""^\d{4}-\d{2}-\d{2}$""")
+
+    /**
+     * Estimativas (Plano 11): só os SEGUNDOS brutos (`from`/`to`, número inteiro sem sinal), nunca o texto humanizado
+     * (`fromString`, como "1d 2h"). Valor ausente ou não numérico vira nulo, sem exceção. Não é texto livre nem dado de pessoa.
+     */
+    private fun segundos(item: JsonObject, chave: String): String? =
+        item.texto(chave)?.trim()?.takeIf { SEGUNDOS.matches(it) }
+
+    private val SEGUNDOS = Regex("""^\d{1,12}$""")
 
     /**
      * Vencimento: o DC manda `from`/`to` como `aaaa-mm-dd` e `fromString`/`toString` como `aaaa-mm-dd 00:00:00.0`.

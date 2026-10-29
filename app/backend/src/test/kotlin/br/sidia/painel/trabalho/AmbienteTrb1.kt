@@ -29,7 +29,7 @@ class RespTrb(val status: HttpStatusCode, val corpo: String)
 fun novoContextoTrb1(
     banco: BancoEmArquivo,
     issues: List<Trb1.IssueDeTeste> = Trb1.issues(),
-    settings: Settings = Settings(dashboardDevMode = false),
+    settings: Settings = Settings(dashboardDevMode = false, lgpd = br.sidia.painel.lgpd.LgpdSettings(true, "TESTE-TRB1")),
 ): AppContext {
     val ctx = testContextComBanco(settings, banco, Trb1.papeis, Trb1.relogio, statusMap = Trb1.statusMap, calendar = Trb1.calendario)
     Trb1.carregar(requireNotNull(ctx.dataSource), issues)
