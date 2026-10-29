@@ -59,6 +59,14 @@ data class AvisoDto(
         const val SEM_VAZAO_HISTORICA = "SEM_VAZAO_HISTORICA"
         /** Nenhum issue da base tem o campo de épico (`Epic Link`): a tabela de épicos fica vazia (informativo). */
         const val EPICO_INDISPONIVEL = "EPICO_INDISPONIVEL"
+        /** Itens da Central de um módulo atrás da trava do DPO ficam fora da lista (`modulos`: nomes separados por vírgula). Informativo. */
+        const val ITENS_AGUARDANDO_ACEITE_DPO = "ITENS_AGUARDANDO_ACEITE_DPO"
+        /** O histórico da gaveta fica fora enquanto a Auditoria aguarda o aceite do DPO. Informativo. */
+        const val HISTORICO_AGUARDANDO_ACEITE_DPO = "HISTORICO_AGUARDANDO_ACEITE_DPO"
+        /** Eventos de estimativa gravados sem valor (antes da carga que traz os segundos): não geram sinal (`n`). Informativo. */
+        const val HISTORICO_DE_ESTIMATIVA_INCOMPLETO = "HISTORICO_DE_ESTIMATIVA_INCOMPLETO"
+        /** Worklogs gravados sem a data de criação (antes da nova carga): não geram sinal (`n`). Informativo. */
+        const val HISTORICO_DE_WORKLOG_INCOMPLETO = "HISTORICO_DE_WORKLOG_INCOMPLETO"
         /** Alguma lista de opções de filtro passou do limite e foi cortada (`lista`, `limite`). */
         const val OPCOES_TRUNCADAS = "OPCOES_TRUNCADAS"
         /** Issues cujos campos do dicionário vieram só do `raw` antigo: a reconciliação completa os completa (`n`). */
@@ -92,4 +100,4 @@ data class DrillRow(
 
 /** Quem está logado, com os papéis do diretório na data de hoje (nunca de claims). */
 @Serializable
-data class MeDto(val userId: String, val roles: List<String>)
+data class MeDto(val userId: String, val roles: List<String>, val modulosBloqueados: List<String> = emptyList())

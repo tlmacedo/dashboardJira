@@ -262,6 +262,54 @@ class SettingsTest {
         }
     }
 
+    // ---- Retenção por categoria (Plano 11) ----
+
+    @Test
+    fun semVariaveisTudoEm24Meses() {
+        assertEquals(RetencaoSettings(24, 24, 24, 24), Settings.fromEnv(emptyMap()).retencao)
+        assertEquals(RetencaoSettings(24, 24, 24, 24), Settings().retencao)
+    }
+
+    @Test
+    fun retentionMonthsVaiParaTodas() {
+        assertEquals(RetencaoSettings(12, 12, 12, 12), Settings.fromEnv(mapOf("RETENTION_MONTHS" to "12")).retencao)
+        // Abaixo de 12 a auditoria (access_log e decisões) NÃO encurta: o piso da auditoria continua valendo; histórico e execuções seguem.
+        assertEquals(RetencaoSettings(6, 24, 24, 6), Settings.fromEnv(mapOf("RETENTION_MONTHS" to "6")).retencao)
+    }
+
+    @Test
+    fun variavelPropriaVence() {
+        val s = Settings.fromEnv(mapOf("RETENTION_MONTHS" to "12", "RETENTION_ACCESS_LOG_MONTHS" to "6"))
+        assertEquals(RetencaoSettings(historicoMeses = 12, accessLogMeses = 6, decisoesMeses = 12, execucoesMeses = 12), s.retencao)
+        val todas = Settings.fromEnv(
+            mapOf(
+                "RETENTION_HISTORICO_MONTHS" to "36", "RETENTION_ACCESS_LOG_MONTHS" to "3",
+                "RETENTION_DECISOES_MONTHS" to "48", "RETENTION_EXECUCOES_MONTHS" to "1",
+            ),
+        )
+        assertEquals(RetencaoSettings(36, 3, 48, 1), todas.retencao)
+        // O que o resto do painel lê continua coerente com a categoria de histórico e do access_log.
+        assertEquals(36, todas.retentionMonths)
+        assertEquals(3, todas.accessLogRetentionMonths)
+        // A variável antiga da auditoria segue valendo para access_log e decisões quando a nova não existe.
+        assertEquals(RetencaoSettings(24, 18, 18, 24), Settings.fromEnv(mapOf("ACCESS_LOG_RETENTION_MONTHS" to "18")).retencao)
+    }
+
+    @Test
+    fun limitesDaRetencaoPorCategoriaFalham() {
+        for (nome in listOf("RETENTION_HISTORICO_MONTHS", "RETENTION_ACCESS_LOG_MONTHS", "RETENTION_DECISOES_MONTHS", "RETENTION_EXECUCOES_MONTHS")) {
+            for (v in listOf("0", "121", "-1", "abc", "1.5")) {
+                val e = assertFailsWith<IllegalArgumentException> { Settings.fromEnv(mapOf(nome to v)) }
+                assertTrue(nome in e.message.orEmpty(), "$nome=$v: ${e.message}")
+                assertFalse("'$v'" in e.message.orEmpty(), "a mensagem cita só o nome")
+            }
+            Settings.fromEnv(mapOf(nome to "1"))
+            Settings.fromEnv(mapOf(nome to "120"))
+            // Vazio vale o padrão.
+            assertEquals(RetencaoSettings(24, 24, 24, 24), Settings.fromEnv(mapOf(nome to "  ")).retencao)
+        }
+    }
+
     @Test
     fun syncLeTodasAsVariaveis() {
         val s = Settings.fromEnv(

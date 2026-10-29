@@ -118,7 +118,7 @@ abstract class CenarioDeCarga(
         Files.writeString(relatorio, "# escala issues=${escala.issues} eventos/issue=${escala.eventosPorIssue} pessoas=${escala.pessoas} worklogs=${escala.worklogs}\n")
         val (papeis, equipes, ausencias) = GeradorSintetico.arquivosDeEquipe(pasta, escala.pessoas)
         roles = RoleDirectory.fromYaml(papeis)
-        val settings = Settings(dashboardDevMode = false)
+        val settings = Settings(dashboardDevMode = false, lgpd = br.sidia.painel.lgpd.LgpdSettings(true, "TESTE-CARGA"))
         val relogio = Clock.fixed(GeradorSintetico.AGORA, ZONA)
         ctx = testContextComBanco(
             settings, banco, roles = roles, clock = relogio,

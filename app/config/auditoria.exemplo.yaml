@@ -15,6 +15,14 @@ passaBolaTrocas: 3
 # marca os sinais com "em lote (N)". É contexto, não prova (2 a 100; se a chave faltar, vale 5).
 emLoteMinimo: 5
 
+# Estimativa reduzida (Plano 11): redução mínima da estimativa original, em fração do valor anterior, depois de o trabalho
+# começar (0.05 a 0.9; se a chave faltar, vale 0.2).
+estimativaReducaoMinima: 0.2
+
+# Worklog retroativo (Plano 11): horas registradas tantos dias úteis de Manaus (ou mais) depois do início declarado viram
+# sinal. O dia do início não conta, o do registro conta (1 a 30; se a chave faltar, vale 2).
+worklogRetroativoDiasUteis: 2
+
 # Como contar os dias: corrido ou util (dias úteis do calendário).
 unidade: corrido
 
@@ -34,3 +42,5 @@ sinais:
   LABEL_TARDIA_COM_POSSE_ANTECIPADA: { gravidade: 2 }
   LABEL_APOS_VENCIMENTO: { gravidade: 3 }
   CANCELAMENTO_SUSPEITO: { gravidade: 2 }
+  ESTIMATIVA_REDUZIDA: { gravidade: 2 }
+  WORKLOG_RETROATIVO: { gravidade: 2 }

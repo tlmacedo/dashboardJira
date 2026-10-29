@@ -1,6 +1,7 @@
 package br.sidia.painel.auditoria
 
 import br.sidia.painel.sync.ChangeEventRecord
+import br.sidia.painel.sync.WorklogRecord
 import java.time.Instant
 import java.time.LocalDate
 
@@ -23,6 +24,8 @@ data class AuditIssue(
     val status: String,
     val labels: List<String>,
     val events: List<ChangeEventRecord>,
+    /** Horas registradas na issue (sem comentário); a data de criação alimenta o sinal de worklog retroativo. */
+    val worklogs: List<WorklogRecord> = emptyList(),
 )
 
 /** Leitor do vencimento nos dois formatos que o Jira DC entrega. */

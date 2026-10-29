@@ -156,8 +156,18 @@ class DetectoresDePrazoEFluxoTest {
         assertEquals(listOf("SINAL_SEM_DADO"), avisos.map { it.codigo })
         assertEquals(AvisoDto.INFORMATIVO, avisos.single().gravidade)
         assertEquals("ESTIMATIVA_AUMENTADA", avisos.single().params["sinal"])
-        // Com o sinal desligado (o padrão) não há o que avisar.
-        assertEquals(emptyList(), DetectoresDePrazoEFluxo.avisosDeDados(listOf(s), Int1.regras))
+        // Com o sinal desligado não há o que avisar.
+        assertEquals(emptyList(), DetectoresDePrazoEFluxo.avisosDeDados(listOf(s), Int1.regras.copy(ativos = Int1.regras.ativos - SinalIntegridade.ESTIMATIVA_AUMENTADA)))
+    }
+
+    @Test
+    fun estimativaAumentadaAtivaNoExemplo() {
+        // O modelo versionado liga o sinal (Plano 11): com o valor guardado em segundos há evidência sem mexer no YAML.
+        val exemplo = RegrasDeIntegridade.fromYaml(br.sidia.painel.TestPaths.configDir.resolve("integridade.exemplo.yaml"))
+        assertTrue(exemplo.ativo(SinalIntegridade.ESTIMATIVA_AUMENTADA))
+        val sobe = comEstimativaMudando("TG-637", "36000", "50400")
+        assertEquals(listOf("TG-637"), de(SinalIntegridade.ESTIMATIVA_AUMENTADA, listOf(sobe), exemplo).map { it.issueKey })
+        assertEquals(emptyList(), DetectoresDePrazoEFluxo.avisosDeDados(listOf(sobe), exemplo))
     }
 
     @Test
@@ -174,8 +184,8 @@ class DetectoresDePrazoEFluxoTest {
         assertEquals(2, evidencias.first().gravidade)
         assertTrue(DetectoresDePrazoEFluxo.estimativaTemDado(listOf(sobe)))
         assertEquals(emptyList(), DetectoresDePrazoEFluxo.avisosDeDados(listOf(sobe), comEstimativa))
-        // Desligado (o padrão do modelo): nenhuma evidência, mesmo com dado.
-        assertEquals(emptyList(), de(SinalIntegridade.ESTIMATIVA_AUMENTADA, listOf(sobe)))
+        // Desligado: nenhuma evidência, mesmo com dado.
+        assertEquals(emptyList(), de(SinalIntegridade.ESTIMATIVA_AUMENTADA, listOf(sobe), Int1.regras.copy(ativos = Int1.regras.ativos - SinalIntegridade.ESTIMATIVA_AUMENTADA)))
     }
 
     // ---- Criticidade ----

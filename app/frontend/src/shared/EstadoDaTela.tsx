@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom'
 import { ErroDaApi } from '../api/client'
 import { useLang } from '../i18n/LangProvider'
 import type { Aviso } from './useCard'
+import { AguardandoDpo, ehAguardandoDpo } from './AguardandoDpo'
 import { textoDoErro } from './textoDoErro'
 import '../screens/TempoEmStatus/tempo.css'
 import './cardpage.css'
@@ -16,6 +17,7 @@ export type Estado =
   | { tipo: 'erro'; tentarDeNovo: () => void }
   | { tipo: 'filtro-invalido'; erro?: unknown }
   | { tipo: 'sem-permissao' }
+  | { tipo: 'aguardando-dpo' }
   | { tipo: 'sessao' }
   | { tipo: 'incompleto'; avisos: Aviso[] }
   | { tipo: 'ok' }
@@ -32,6 +34,8 @@ export function estadoDe(q: ConsultaParaEstado, vazio?: (dados: unknown) => bool
   const temDados = q.data !== undefined && q.data !== null
   if (!temDados) {
     if (q.isError) {
+      // A trava do DPO (403 com código próprio) vem ANTES do 403 genérico de "sem permissão".
+      if (ehAguardandoDpo(q.error)) return { tipo: 'aguardando-dpo' }
       const status = q.error instanceof ErroDaApi ? q.error.status : null
       if (status === 403) return { tipo: 'sem-permissao' }
       if (status === 401) return { tipo: 'sessao' }
@@ -100,6 +104,8 @@ export function EstadoDaTela(props: EstadoDaTelaProps) {
           <p>{estado.erro instanceof ErroDaApi && estado.erro.codigo ? textoDoErro(estado.erro, t) : t('cardpage.filtroInvalido')}</p>
         </div>
       )
+    case 'aguardando-dpo':
+      return <AguardandoDpo />
     case 'sem-permissao':
       return (
         <div className="estado estado--erro" role="alert">

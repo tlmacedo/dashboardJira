@@ -11,11 +11,18 @@ import java.time.Instant
  * Um registro de horas do Jira, SEM comentário: só o id do Jira, o autor (username normalizado; chave interna sem
  * tradução fica em maiúsculas), o início e os segundos.
  */
-data class WorklogRecord(val jiraId: String, val autor: String?, val started: Instant, val seconds: Long)
+data class WorklogRecord(
+    val jiraId: String,
+    val autor: String?,
+    val started: Instant,
+    val seconds: Long,
+    /** Quando o registro foi CRIADO no Jira (`created`); nulo em registro antigo ou sem o campo. Alimenta o sinal de worklog retroativo. */
+    val criado: Instant? = null,
+)
 
 /**
  * Lê o worklog do Jira Data Center (`fields.worklog.worklogs` ou o endpoint `issue/{key}/worklog`). Só `id`, `author`,
- * `started` e `timeSpentSeconds` são lidos: `comment`, `updateAuthor`, `self`, `created` e `updated` NUNCA são tocados, então
+ * `started`, `created` (só a data de criação) e `timeSpentSeconds` são lidos: `comment`, `updateAuthor`, `self` e `updated` NUNCA são tocados, então
  * nenhum texto livre nem dado de exibição de pessoa chega ao banco.
  */
 object WorklogParser {
@@ -47,7 +54,15 @@ object WorklogParser {
             }
         } ?: return null
         val segundos = (w["timeSpentSeconds"] as? JsonPrimitive)?.longOrNull?.takeIf { it >= 0 } ?: return null
-        return WorklogRecord(id, autor(w, chaves), inicio, segundos)
+        // `created` é só uma data: se vier ilegível, o registro entra sem ela (nunca descarta as horas).
+        val criado = w.texto("created")?.let {
+            try {
+                ChangelogParser.parseInstant(it)
+            } catch (_: IllegalArgumentException) {
+                null
+            }
+        }
+        return WorklogRecord(id, autor(w, chaves), inicio, segundos, criado)
     }
 
     /** `name` normalizado; chave interna (`JIRAUSER*`, no nome ou só na `key`) traduzida por [chaves] ou, sem tradução, em maiúsculas. */

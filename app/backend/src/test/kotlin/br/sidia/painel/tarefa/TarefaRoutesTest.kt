@@ -65,6 +65,23 @@ class TarefaRoutesTest {
     private fun tarefa(r: RespTrb) = Json.decodeFromString<TarefaDto>(r.corpo)
 
     @Test
+    fun historicoDaGavetaBloqueadoSemOAceiteDoDpo() {
+        // Plano 11: o histórico é dado da Auditoria. Produção sem o aceite: 200, histórico nulo e aviso; o resto da gaveta segue.
+        val c = novoContextoTrb1(banco, issues(), br.sidia.painel.config.Settings(dashboardDevMode = false)).also { ctx = it }
+        rodarTrb1(c) { get ->
+            for (u in listOf("gerente.exemplo", "coord.um")) {
+                val r = get(u, "/api/tarefa/TG-101")
+                assertEquals(HttpStatusCode.OK, r.status, r.corpo)
+                val t = tarefa(r)
+                assertNull(t.historico, u)
+                assertEquals(listOf("HISTORICO_AGUARDANDO_ACEITE_DPO"), t.avisos.map { it.codigo }.filter { it.startsWith("HISTORICO") }, u)
+                assertEquals("TG-101", t.key)
+                assertFalse("\"campo\"" in r.corpo, "nenhuma linha de histórico no corpo")
+            }
+        }
+    }
+
+    @Test
     fun tarefaVisivelDevolveTudo() = rodar { get ->
         val r = get("gerente.exemplo", "/api/tarefa/TG-101")
         assertEquals(HttpStatusCode.OK, r.status, r.corpo)

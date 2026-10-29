@@ -1,3 +1,4 @@
+import { AguardandoDpo, ehAguardandoDpo } from '../../shared/AguardandoDpo'
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { useMemo, useState, type FormEvent } from 'react'
 import { useSearchParams } from 'react-router-dom'
@@ -76,7 +77,9 @@ export function Divergencia() {
         </p>
       )}
 
-      {consulta.isError && !dto && (
+      {consulta.isError && !dto && ehAguardandoDpo(consulta.error) && <AguardandoDpo />}
+
+      {consulta.isError && !dto && !ehAguardandoDpo(consulta.error) && (
         <div className="estado estado--erro" role="alert">
           {status === 403 && <p>{t('divergencia.semPermissao')}</p>}
           {status === 400 && <p>{t('divergencia.filtroInvalido')}</p>}

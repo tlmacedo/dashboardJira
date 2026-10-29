@@ -36,11 +36,22 @@ DASHBOARD_DEMO_DATA=true sh iniciar.sh        # PowerShell: $env:DASHBOARD_DEMO_
 | `JIRA_LIVE_ENABLED` | `false` | Única chave de liga e desliga da sincronização. Só o usuário liga; `false` proíbe qualquer acesso ao Jira. |
 | `DASHBOARD_DEV_MODE` | `true` em `iniciar.sh`/`iniciar.ps1` e em `./gradlew run`; `false` no pacote instalado | Modo desenvolvimento: **sem login**, todos os dados, faixa vermelha. O pacote instalado (`installDist`) sobe em modo produção quando a variável falta; o modelo `.env.example` não a liga. |
 | `DASHBOARD_DEMO_DATA` | `false` | Carrega issues **fictícias** na subida, sem tocar no Jira. Só com `DASHBOARD_DEV_MODE=true` e `JIRA_LIVE_ENABLED=false`; qualquer outra combinação derruba a subida. |
+| `DASHBOARD_DPO_ACEITE`, `DASHBOARD_DPO_ACEITE_REF` | `false` e vazio | Trava do DPO (LGPD): sem o aceite, Auditoria e Integridade só abrem no modo dev offline (dev ligado e Jira desligado); fora dele respondem 403 `AGUARDANDO_ACEITE_DPO`. Com `true` a referência do parecer é obrigatória (1 a 80 caracteres `A-Za-z0-9._/-`). **Só o usuário liga, depois do parecer do DPO.** |
+| `RETENTION_HISTORICO_MONTHS`, `RETENTION_ACCESS_LOG_MONTHS`, `RETENTION_DECISOES_MONTHS`, `RETENTION_EXECUCOES_MONTHS` | `RETENTION_MONTHS` (24) | Retenção por categoria de dado, de 1 a 120 meses: histórico (issue resolvida antiga, alterações, horas), registro de acesso, decisões de distribuição e execuções. Sem valor próprio vale `RETENTION_MONTHS`; a auditoria não encurta abaixo de 12. Os valores finais são decisão do DPO. |
 | `PAINEL_STATIC_DIR` | `frontend/dist` | Pasta do build do frontend servida em `/`. |
 | `PAINEL_HOST` | `127.0.0.1` | Interface em que o painel escuta (porta 8080). O padrão só atende a própria máquina; outra interface exige firewall (`docs/implantacao.md`). |
 | `PAINEL_CACHE_SEG` | `60` | Segundos em que as telas reaproveitam a leitura bruta do banco; `0` desliga. Fim de sincronização e de retenção invalidam na hora. |
 | `OIDC_ISSUER`, `OIDC_CLIENT_ID`, `OIDC_CLIENT_SECRET`, `OIDC_REDIRECT_URI`, `OIDC_CLAIM_USERNAME`, `SESSION_SECRET` | vazio | Login SSO/OIDC e assinatura da sessão. Obrigatórios em produção (menos o segredo do cliente e a claim); ver `docs/implantacao.md`. |
 | `DATABASE_PATH` | `data/painel.db` | Arquivo SQLite do painel. |
+
+## LGPD e aceite do DPO
+
+Auditoria e Integridade mostram sinais sobre pessoas e ficam **fechadas por uma trava em código** até o aceite do encarregado de dados (DPO):
+
+- Fora do modo desenvolvimento offline (`DASHBOARD_DEV_MODE=true` e `JIRA_LIVE_ENABLED=false`, sobre um banco sem dado sincronizado de verdade), as rotas de Auditoria e Integridade respondem 403 `AGUARDANDO_ACEITE_DPO` (depois da checagem de papel), a Central deixa os itens deles de fora e o menu marca as telas com a pausa e o texto "aguardando aceite do DPO".
+- O aceite é `DASHBOARD_DPO_ACEITE=true` com `DASHBOARD_DPO_ACEITE_REF=<referência do parecer>` no `app/.env`. **Só o usuário define, depois do parecer do DPO**; nenhuma IA liga. Sem a referência o painel não sobe. A data do aceite fica no `HANDOFF.md`.
+- Documentos em `docs/lgpd/`: inventário dos dados (verificado contra o banco por teste), relatório para o DPO (com as perguntas e as opções), atendimento ao titular e aviso à equipe.
+- Cada pessoa consulta os próprios dados na tela **Meus dados** (`GET /api/titular/meus-dados`, sem parâmetros). A retenção é por categoria (`RETENTION_*_MONTHS`, tabela de flags acima).
 
 ## Sincronização periódica (`SYNC_*`)
 

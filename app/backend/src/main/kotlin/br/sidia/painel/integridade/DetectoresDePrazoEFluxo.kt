@@ -107,8 +107,8 @@ object DetectoresDePrazoEFluxo {
     private fun numero(v: String?): Double? = v?.trim()?.toDoubleOrNull()?.takeIf { it.isFinite() }
 
     /**
-     * Estimativa original aumentada em `estimativaAumento` ou mais (inclusive). O changelog hoje só guarda o NOME do campo da
-     * estimativa; sem eventos com valor legível não há evidência (e o aviso `SINAL_SEM_DADO` explica por quê).
+     * Estimativa original aumentada em `estimativaAumento` ou mais (inclusive). O painel guarda o valor (em segundos) do campo da
+     * estimativa desde o Plano 11; sem eventos com valor legível (carga antiga ainda não refeita) não há evidência e o aviso `SINAL_SEM_DADO` explica por quê.
      */
     private val estimativaAumentada = DetectorIntegridade { issues, regras, _ ->
         issues.flatMap { s ->
@@ -148,7 +148,7 @@ object DetectoresDePrazoEFluxo {
 
     val todos: List<DetectorIntegridade> = listOf(resgateEProrrogacao, vencimentoTardio, puloOFluxo, estimativaAumentada, criticidadeRemovida)
 
-    /** Algum evento de estimativa traz valor legível (de ou para)? Hoje o changelog guarda só o nome do campo. */
+    /** Algum evento de estimativa traz valor legível (de ou para)? Falso enquanto a carga antiga não for refeita. */
     fun estimativaTemDado(issues: List<IssueSnapshot>): Boolean =
         issues.any { s -> s.events.any { it.field.equals(CAMPO_ESTIMATIVA, ignoreCase = true) && (numero(it.from) != null || numero(it.to) != null) } }
 
@@ -160,7 +160,7 @@ object DetectoresDePrazoEFluxo {
         if (regras.ativo(SinalIntegridade.ESTIMATIVA_AUMENTADA) && !estimativaTemDado(issues)) {
             listOf(
                 AvisoDto(
-                    AVISO_SINAL_SEM_DADO, AvisoDto.INFORMATIVO, "o changelog não guarda o valor da estimativa",
+                    AVISO_SINAL_SEM_DADO, AvisoDto.INFORMATIVO, "nenhum evento de estimativa tem o valor guardado ainda",
                     mapOf("sinal" to SinalIntegridade.ESTIMATIVA_AUMENTADA.name),
                 ),
             )

@@ -427,7 +427,7 @@ class AppContextTest {
                 "SELECT name FROM sqlite_master WHERE type = 'table'",
             ).use { rs -> generateSequence { if (rs.next()) rs.getString(1) else null }.toSet() }
         }
-        assertTrue(tabelas.containsAll(setOf("person", "issue", "change_event")), tabelas.toString())
+        assertTrue(tabelas.containsAll(setOf("issue", "change_event")), tabelas.toString())
         assertFalse(ds.isClosed)
         ctx.close()
         assertTrue(ds.isClosed)

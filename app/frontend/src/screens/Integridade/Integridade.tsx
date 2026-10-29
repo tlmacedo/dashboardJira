@@ -1,3 +1,4 @@
+import { AguardandoDpo, ehAguardandoDpo } from '../../shared/AguardandoDpo'
 import { useQuery, keepPreviousData } from '@tanstack/react-query'
 import { useState, type FormEvent } from 'react'
 import { useSearchParams } from 'react-router-dom'
@@ -147,7 +148,9 @@ export function Integridade() {
         </p>
       )}
 
-      {consulta.isError && !dto && (
+      {consulta.isError && !dto && ehAguardandoDpo(consulta.error) && <AguardandoDpo />}
+
+      {consulta.isError && !dto && !ehAguardandoDpo(consulta.error) && (
         <div className="estado estado--erro" role="alert">
           {erro?.status === 403 && erro.codigo === 'AGUARDANDO_ACEITE_DPO' && <p>{t('integridade.aguardandoDpo')}</p>}
           {erro?.status === 403 && erro.codigo !== 'AGUARDANDO_ACEITE_DPO' && <p>{t('integridade.semPermissao')}</p>}

@@ -31,6 +31,9 @@ class RoleDirectory(pessoas: List<Pessoa>) {
     /** A pessoa consta no diretório (em qualquer data)? Usado por `equipes.yaml`, `ausencias.yaml` e pelo validador de configuração. */
     fun conhece(userId: String): Boolean = userId in pessoas
 
+    /** Todas as atribuições de papel da pessoa, com a vigência, na ordem do arquivo (vazio se desconhecida). Para o atendimento ao titular. */
+    fun atribuicoesDe(userId: String): List<AtribuicaoPapel> = pessoas[userId]?.papeis.orEmpty()
+
     /** Papéis da pessoa na data (vazio se desconhecida). */
     fun rolesOf(userId: String, date: LocalDate): Set<Role> = ativos(userId, date).map { it.papel }.toSet()
 

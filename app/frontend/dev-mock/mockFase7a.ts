@@ -53,7 +53,7 @@ function integridadeMock() {
     aviso: 'INDICIO_NAO_PROVA', avisoDpo: 'VALIDAR_BASE_LEGAL_COM_DPO', versaoRegras: 'integridade v1', de: '2026-07-30', ate: '2026-10-28',
     resumo: {
       evidencias: evidencias.length, issuesAfetadas: 3, medianaTaxa: 0.1,
-      porSinal: SINAIS_MOCK.map((s) => ({ sinal: s, gravidade: 2, ativo: s !== 'ESTIMATIVA_AUMENTADA', n: evidencias.filter((e) => e.sinal === s).length })),
+      porSinal: SINAIS_MOCK.map((s) => ({ sinal: s, gravidade: 2, ativo: true, n: evidencias.filter((e) => e.sinal === s).length })),
       pessoas: [{ pessoa: 'bruno', nivel: 'MEDIO', pontos: 4, concluidas: 12, taxa: 0.33, multiplo: 3.3, graves: 0, evidencias: 2 }],
       pessoasAlto: 0, pessoasMedio: 1, evidenciasNivelAlto: 0, evidenciasNivelMedio: 2, impactoMetasPp: 6.5, taxaNoPrazo: 0.82, taxaOriginal: 0.75,
       pontosAlto: 12, multiploAlto: 3, gravesAlto: 3, pontosMedio: 6, multiploMedio: 2, concluidasMinimas: 8,
