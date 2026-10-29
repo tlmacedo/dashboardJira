@@ -13,8 +13,79 @@ import kotlin.test.assertTrue
  * Aqui só a lógica pura e a leitura da variável; o login de ponta a ponta está em `UsernamePorProvedorOidcTest`.
  */
 class ExtratorDeUsernameTest {
-    private fun extrair(valor: Any?, estrategia: EstrategiaDeUsername, claim: String = "preferred_username") =
-        ExtratorDeUsername.extrair(mapOf(claim to valor), claim, estrategia)
+    private val dominios = setOf("empresa.invalid", "empresa")
+
+    private fun extrair(
+        valor: Any?,
+        estrategia: EstrategiaDeUsername,
+        claim: String = "preferred_username",
+        permitidos: Set<String> = dominios,
+    ) = ExtratorDeUsername.extrair(mapOf(claim to valor), claim, estrategia, permitidos)
+
+    // ---------------------------------------------------------------- domínio obrigatório (convidado B2B / floresta confiável)
+
+    @Test
+    fun parteLocalDeOutroDominioNaoViraAPessoaDoDominioCerto() {
+        assertNull(extrair("gerente.exemplo@outro.invalid", EstrategiaDeUsername.PARTE_LOCAL_DO_EMAIL))
+        assertNull(extrair("gerente.exemplo@gmail.invalid", EstrategiaDeUsername.PARTE_LOCAL_DO_EMAIL))
+    }
+
+    @Test
+    fun contaWindowsDeOutroDominioNaoViraAPessoaDoDominioCerto() {
+        assertNull(extrair("OUTRODOMINIO\\gerente.exemplo", EstrategiaDeUsername.CONTA_WINDOWS))
+    }
+
+    @Test
+    fun dominioCompararSemDiferenciarCaixa() {
+        assertEquals("ana", extrair("ana@EMPRESA.Invalid", EstrategiaDeUsername.PARTE_LOCAL_DO_EMAIL))
+        assertEquals("ana", extrair("Empresa\\ana", EstrategiaDeUsername.CONTA_WINDOWS))
+        assertEquals("ana", extrair("ana@empresa.invalid", EstrategiaDeUsername.PARTE_LOCAL_DO_EMAIL, permitidos = setOf("EMPRESA.INVALID").map { it.lowercase() }.toSet()))
+    }
+
+    @Test
+    fun sufixoESubdominioParciaisNaoCasam() {
+        for (ruim in listOf("ana@evilempresa.invalid", "ana@sub.empresa.invalid", "ana@empresa.invalid.evil.invalid", "ana@mpresa.invalid", "ana@empresa.invali")) {
+            assertNull(extrair(ruim, EstrategiaDeUsername.PARTE_LOCAL_DO_EMAIL), ruim)
+        }
+        for (ruim in listOf("EVILEMPRESA\\ana", "SUB.EMPRESA\\ana", "EMPRES\\ana", "EMPRESA2\\ana")) {
+            assertNull(extrair(ruim, EstrategiaDeUsername.CONTA_WINDOWS), ruim)
+        }
+    }
+
+    @Test
+    fun semDominioConfiguradoNaoCasaComNinguem() {
+        assertNull(extrair("ana@empresa.invalid", EstrategiaDeUsername.PARTE_LOCAL_DO_EMAIL, permitidos = emptySet()))
+        assertNull(extrair("EMPRESA\\ana", EstrategiaDeUsername.CONTA_WINDOWS, permitidos = emptySet()))
+        // claim_direto não usa domínio e não muda
+        assertEquals("ana", extrair("ana", EstrategiaDeUsername.CLAIM_DIRETO, permitidos = emptySet()))
+    }
+
+    @Test
+    fun unicodeNoUsernameOuNoDominioDasEstrategiasDeDominioERecusado() {
+        // sinal Kelvin (U+212A) vira "k" em minúsculas: homógrafo de outra pessoa/domínio
+        assertNull(extrair("Katia@empresa.invalid", EstrategiaDeUsername.PARTE_LOCAL_DO_EMAIL))
+        assertNull(extrair("ana@empresa.invalid\u0000", EstrategiaDeUsername.PARTE_LOCAL_DO_EMAIL))
+        assertNull(extrair("ana@еmpresa.invalid", EstrategiaDeUsername.PARTE_LOCAL_DO_EMAIL))
+        assertNull(extrair("EMPRESA\\Katia", EstrategiaDeUsername.CONTA_WINDOWS))
+    }
+
+    @Test
+    fun duasBarrasNaEntradaEmKotlinSaoDuasBarrasNaConta() {
+        assertNull(extrair("EMPRESA\\\\ana", EstrategiaDeUsername.CONTA_WINDOWS))
+        assertNull(extrair("a@b@empresa.invalid", EstrategiaDeUsername.PARTE_LOCAL_DO_EMAIL))
+    }
+
+    @Test
+    fun variavelDeDominiosPermitidos() {
+        fun ler(valor: String?) = OidcSettings.fromEnv(
+            ENV_OIDC_DE_TESTE + (if (valor == null) emptyMap() else mapOf("OIDC_DOMINIOS_PERMITIDOS" to valor)), devMode = false,
+        )!!.dominiosPermitidos
+        assertEquals(emptySet(), ler(null))
+        assertEquals(setOf("empresa.invalid", "empresa"), ler(" Empresa.INVALID , EMPRESA ,"))
+        val e = assertFailsWith<IllegalArgumentException> { ler("segredo-ruim/com barra") }
+        assertTrue("OIDC_DOMINIOS_PERMITIDOS" in e.message!!)
+        assertFalse("segredo-ruim" in e.message!!)
+    }
 
     @Test
     fun claimDiretoNormaliza() {

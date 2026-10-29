@@ -138,6 +138,18 @@ class GuardasDeProducaoTest {
     }
 
     @Test
+    fun estrategiaDeDominioSemDominioPermitidoNaoSobe() {
+        for (estrategia in listOf("parte_local_do_email", "CONTA_WINDOWS")) {
+            val base = envValido() + ("OIDC_USERNAME_ESTRATEGIA" to estrategia)
+            assertEquals(listOf("DOMINIO_DO_USERNAME_AUSENTE"), codigos(env = base), estrategia)
+            assertEquals(listOf("DOMINIO_DO_USERNAME_AUSENTE"), codigos(env = base + ("OIDC_DOMINIOS_PERMITIDOS" to " , ")), estrategia)
+            assertEquals(emptyList(), codigos(env = base + ("OIDC_DOMINIOS_PERMITIDOS" to "empresa.invalid")), estrategia)
+        }
+        // claim_direto (ou ausente) não exige domínio
+        assertEquals(emptyList(), codigos(env = envValido() + ("OIDC_USERNAME_ESTRATEGIA" to "claim_direto")))
+    }
+
+    @Test
     fun aceiteDoDpoSemReferenciaNaoSobe() {
         for (aceite in listOf("true", "TRUE", " true ")) {
             assertEquals(

@@ -1,5 +1,6 @@
 package br.sidia.painel.config
 
+import br.sidia.painel.security.EstrategiaDeUsername
 import br.sidia.painel.security.SegredosDaSessao
 import java.net.URI
 import java.net.URISyntaxException
@@ -15,7 +16,7 @@ class ViolacaoDeProducao(val codigos: List<String>) : IllegalStateException("Sub
  * Lêem as variáveis de OIDC, sessão e origem pública direto do mapa [env] (não dependem do formato interno de `OidcSettings`)
  * e o resto da configuração já interpretada ([Settings]). Códigos, nesta ordem: `DEMO_EM_PRODUCAO`, `OIDC_ISSUER_SEM_HTTPS`,
  * `REDIRECT_URI_SEM_HTTPS`, `ORIGEM_PUBLICA_AUSENTE`, `REDIRECT_URI_FORA_DA_ORIGEM_PUBLICA`, `SESSION_SECRET_CURTO`,
- * `PROXY_NAO_CONFIGURADO`, `ESCUTA_ABERTA_A_TODAS`, `CAMINHO_RELATIVO`.
+ * `DOMINIO_DO_USERNAME_AUSENTE`, `PROXY_NAO_CONFIGURADO`, `ESCUTA_ABERTA_A_TODAS`, `CAMINHO_RELATIVO`.
  *
  * Mais `TRAVA_DPO_NAO_DECLARADA` (por último): `DASHBOARD_DPO_ACEITE=true` sem `DASHBOARD_DPO_ACEITE_REF`. Aceite ausente ou
  * false NÃO recusa nada: a trava do DPO fica fechada e o painel sobe.
@@ -42,6 +43,16 @@ object GuardasDeProducao {
         }
 
         if (!segredoDeSessaoValido(valor("SESSION_SECRET"))) achados += "SESSION_SECRET_CURTO"
+
+        // parte_local_do_email e conta_windows descartam o domínio: sem lista de domínios permitidos, um convidado de outro domínio
+        // com a mesma parte local viraria a pessoa do papeis.yaml.
+        val estrategia = try {
+            EstrategiaDeUsername.daVariavel(valor("OIDC_USERNAME_ESTRATEGIA"))
+        } catch (e: IllegalArgumentException) {
+            EstrategiaDeUsername.CLAIM_DIRETO // valor inválido já derruba a subida em OidcSettings
+        }
+        val dominios = valor("OIDC_DOMINIOS_PERMITIDOS")?.split(',')?.map { it.trim() }?.filter { it.isNotEmpty() }.orEmpty()
+        if (estrategia.exigeDominio && dominios.isEmpty()) achados += "DOMINIO_DO_USERNAME_AUSENTE"
 
         if (s.proxyConfiavel.isEmpty()) achados += "PROXY_NAO_CONFIGURADO"
 

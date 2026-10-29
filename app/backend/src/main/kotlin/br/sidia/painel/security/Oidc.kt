@@ -360,7 +360,7 @@ class OidcAuthenticator(
             return recusa(e.codigo, HttpStatusCode.BadGateway)
         }
         // A estratégia da instalação (OIDC_USERNAME_ESTRATEGIA) tira o username da claim; formato inesperado = 401, sem adivinhar.
-        val usuario = ExtratorDeUsername.extrairDoTexto(valido.usuario, cfg.estrategiaUsername) ?: return recusa("USERNAME_ILEGIVEL")
+        val usuario = ExtratorDeUsername.extrairDoTexto(valido.usuario, cfg.estrategiaUsername, cfg.dominiosPermitidos) ?: return recusa("USERNAME_ILEGIVEL")
         if (!USERNAME_VALIDO.matches(usuario)) return recusa("USUARIO_INVALIDO")
         // Os papéis vêm do diretório de hoje; sem papel vigente não se abre sessão (e o API responderia 403 de qualquer jeito).
         if (principalFor(usuario, roles, LocalDate.now(relogio)).roles.isEmpty()) {

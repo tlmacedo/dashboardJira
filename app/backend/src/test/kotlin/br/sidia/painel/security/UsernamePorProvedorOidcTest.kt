@@ -26,6 +26,7 @@ import java.util.Base64
 import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 
@@ -54,6 +55,7 @@ class UsernamePorProvedorOidcTest {
         redirectUri = "https://painel.exemplo.invalid/auth/callback",
         claimUsername = claim,
         estrategiaUsername = estrategia,
+        dominiosPermitidos = setOf("empresa.invalid", "empresa"),
         sessao = SegredosDaSessao.de(Base64.getEncoder().encodeToString(ByteArray(48) { (it * 5 + 1).toByte() }), null),
     )
 
@@ -125,6 +127,23 @@ class UsernamePorProvedorOidcTest {
         val r = entrar(c, "preferred_username", "dev.alfa1@outro.invalid")
         assertNull(sessaoDe(r))
         assertContains(listOf(HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden), r.status)
+    }
+
+    @Test
+    fun convidadoDeOutroDominioNaoRecebeOsPapeisDoGerente() = comApp("preferred_username", EstrategiaDeUsername.PARTE_LOCAL_DO_EMAIL) { c ->
+        val r = entrar(c, "preferred_username", "gerente.exemplo@gmail.invalid")
+        assertEquals(HttpStatusCode.Unauthorized, r.status)
+        assertNull(sessaoDe(r))
+        assertContains(ultimoMotivo(c), "USERNAME_ILEGIVEL")
+        assertFalse("gmail" in r.bodyAsText())
+    }
+
+    @Test
+    fun contaDeOutroDominioWindowsNaoRecebeOsPapeisDoGerente() = comApp("winaccountname", EstrategiaDeUsername.CONTA_WINDOWS) { c ->
+        val r = entrar(c, "winaccountname", "OUTRODOMINIO\\gerente.exemplo")
+        assertEquals(HttpStatusCode.Unauthorized, r.status)
+        assertNull(sessaoDe(r))
+        assertContains(ultimoMotivo(c), "USERNAME_ILEGIVEL")
     }
 
     @Test
