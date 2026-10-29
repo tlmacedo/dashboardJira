@@ -97,6 +97,20 @@ class ScriptsNaoAcessamJiraSemTravaTest {
         }
     }
 
+    /** M-6: o PowerShell ignora caixa em -match/-eq; a trava do diagnóstico tem de ser tão estrita quanto a do app. */
+    @Test
+    fun diagnosticoDeConexaoLeAFlagComCaixaExata() {
+        val linhas = Files.readString(repo.resolve("docs/jira/diagnostico-conexao.ps1")).lines()
+            .filterNot { it.trimStart().startsWith("#") }
+        val daFlag = linhas.filter { "JIRA_LIVE_ENABLED" in it }
+        assertTrue(daFlag.isNotEmpty(), "o diagnóstico perdeu a leitura da flag")
+        val leitura = daFlag.first { "Matches" in it || "-cmatch" in it || "-match" in it }
+        assertTrue("-cmatch" in leitura, "o nome da flag deve ser comparado com -cmatch (caixa exata): $leitura")
+        assertFalse(Regex("(?<![a-z])-match").containsMatchIn(leitura), "sobrou -match sem c: $leitura")
+        assertTrue("-ceq 'true'" in leitura, "o valor deve ser comparado com -ceq (depois de minúsculas, como o app): $leitura")
+        assertFalse(Regex("(?<![a-z])-eq ").containsMatchIn(leitura), "sobrou -eq sem c: $leitura")
+    }
+
     @Test
     fun listaDeScriptsLocaisNaoTemEntradaObsoleta() {
         for ((caminho, motivo) in locais) {

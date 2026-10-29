@@ -44,7 +44,7 @@ $flagLigada = $false
 foreach ($p in @("$PSScriptRoot\..\..\app\.env", '.\app\.env', '.\.env')) {
   if (Test-Path $p) {
     foreach ($line in Get-Content $p -ErrorAction SilentlyContinue) {
-      if ($line -match '^\s*JIRA_LIVE_ENABLED\s*=\s*"?(\w+)"?\s*(#.*)?$') { $flagLigada = ($Matches[1] -eq 'true') }
+      if ($line -cmatch '^\s*JIRA_LIVE_ENABLED\s*=\s*"?(\w+)"?\s*(#.*)?$') { $flagLigada = ($Matches[1].ToLowerInvariant() -ceq 'true') }
     }
     break
   }
