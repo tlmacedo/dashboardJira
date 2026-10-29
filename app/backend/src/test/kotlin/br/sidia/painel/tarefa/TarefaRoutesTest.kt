@@ -44,8 +44,14 @@ class TarefaRoutesTest {
         ctx?.close()
     }
 
-    /** O cenário TRB-1 mais TG-501: hoje de `carla`, mas `ana` já foi a responsável (visível a ela pela posse). */
+    /**
+     * O cenário TRB-1 mais TG-501 (hoje de `carla`; `ana` foi a responsável antes e hoje recebe 404) e TG-502 (hoje de `ana`;
+     * `carla` foi a responsável antes, fora da visão de `ana`).
+     */
     private fun issues() = Trb1.issues() + Trb1.issue(
+        "TG-502", "Checklist", "ana", "10-01T12", "In Progress", prioridade = "Medium",
+        eventos = Trb1.trilha("TG-502", "Open", "10-02T12" to "In Progress") + Trb1.ev("TG-502", "assignee", "carla", "ana", "10-10T12"),
+    ) + Trb1.issue(
         "TG-501", "Checklist", "carla", "10-01T12", "In Progress", prioridade = "Medium",
         campos = mapOf("SKU Type" to "MR", "Model Name" to "MODELO-A"),
         eventos = Trb1.trilha("TG-501", "Open", "10-02T12" to "In Progress") + Trb1.ev("TG-501", "assignee", "ana", "carla", "10-10T12"),
@@ -166,6 +172,29 @@ class TarefaRoutesTest {
             }
         }
         assertEquals(listOf("/api/tarefa/{key}"), rotas)
+    }
+
+    @Test
+    fun posseDeQuemEstaForaDaVisaoViraOutraPessoa() = rodar { get ->
+        // TG-502 é hoje de ana e antes foi de carla (fora da visão de ana): a fatia dela é "outra pessoa", sem nome.
+        val r = get("ana", "/api/tarefa/TG-502")
+        assertEquals(HttpStatusCode.OK, r.status, r.corpo)
+        assertFalse("carla" in r.corpo, "o nome de quem está fora da visão vazou: ${r.corpo}")
+        val t = tarefa(r)
+        assertEquals(setOf("ana", null), t.posse.map { it.pessoa }.toSet())
+        assertTrue(t.posse.any { it.pessoa == null && !it.semResponsavel }, t.posse.toString())
+    }
+
+    @Test
+    fun barraInvertidaCruaNaoFalsificaARotaDoLog() = rodar { get ->
+        val r = get("gerente.exemplo", "/api/tarefa/..\\x\\TG-1")
+        assertTrue(r.status == HttpStatusCode.BadRequest || r.status == HttpStatusCode.NotFound, r.status.toString())
+        val rotas = requireNotNull(ctx!!.dataSource).connection.use { c ->
+            c.createStatement().executeQuery("SELECT route FROM access_log").use { rs ->
+                buildList { while (rs.next()) add(rs.getString(1)) }
+            }
+        }
+        assertTrue(rotas.none { "TG-1" in it || "/x" in it }, rotas.toString())
     }
 
     @Test

@@ -63,7 +63,7 @@ export function GavetaDeTasks(props: GavetaDeTasksProps) {
 
   function abrirEmNovaAba() {
     // `noopener`: a nova aba não recebe `window.opener`. A URL é um caminho do próprio painel.
-    window.open(urlDoDetalhe(cartaoId, segmento, new URLSearchParams(chaveDosFiltros), titulo), '_blank', 'noopener')
+    window.open(urlDoDetalhe(cartaoId, segmento, new URLSearchParams(chaveDosFiltros)), '_blank', 'noopener')
   }
 
   return (

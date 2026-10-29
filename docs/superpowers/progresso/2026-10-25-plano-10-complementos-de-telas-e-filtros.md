@@ -51,6 +51,12 @@ Branch `feat/complementos-telas-filtros-plano-10` (parte de `origin/main` com o 
 - Minors corrigidos: M1 (histórico pela instância), M3 (`Campo.*` com maiúscula é 400), M5 (filtros rápidos validam slug e `unit`; `IOException` não derruba), M7 (teste do Squad Leader), M8 (`csvExportaTudo` real), M10 (CSS dos botões na gaveta), M11 (título do detalhe não vem da URL), M12 (documento de diferenças corrigido e teste exige uma prova por item), M14 (`papeisVigentes` nas opções).
 - **Adiados:** M2 (`responsavel=null` mistura "fora da visão" e "sem responsável" na gaveta), M4 (valor `-` colide com "sem valor"; texto com `"; "` é partido como lista), M6 (`linhasIncompletas` pode manter o aviso permanente), M9 (teste de contraste com superfícies fixas, sem o tema Sidia; `--cat-1` e `--cat-5` próximos no Claro), M13 (Auditoria, Integridade e Registro de acesso fora da `TabelaVirtual`).
 
+## Segunda rodada da revisão (29/10)
+
+- I-1b corrigido: `\` cru não separa segmentos (o Ktor o trata como caractere do segmento); vira `_` em `segmentosNormalizados`, o que também cobre `rotaSensivel` (`RotaParaRegistroTest.barraInvertidaCruaEParteDoSegmento` e `rotaSensivelComBarraInvertidaContinuaSensivel`; ponta a ponta: `TarefaRoutesTest.barraInvertidaCruaNaoFalsificaARotaDoLog`).
+- Minors: teste da posse "outra pessoa" restaurado (`TarefaRoutesTest.posseDeQuemEstaForaDaVisaoViraOutraPessoa`), comentário do cenário corrigido, `titulo` removido de `urlDoDetalhe`.
+- **Adiado:** gavetas de Posse, Esforço, Tendência e Carga por tipo abrem "não encontrada" para task que já passou adiante (efeito do Ruling de visão só pelo responsável atual).
+
 ## Desvio de processo
 
 - No merge de `origin/main` usei `git add -A app docs` uma vez (escopo limitado a `app` e `docs`) para concluir a resolução de conflitos.

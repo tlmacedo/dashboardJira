@@ -232,7 +232,8 @@ internal fun normalizarCaminho(caminho: String): String = "/" + segmentosNormali
  */
 internal fun segmentosNormalizados(caminho: String): List<String> {
     val segmentos = ArrayDeque<String>()
-    for (bruto in caminho.substringBefore('?').replace('\\', '/').split('/')) {
+    // `\` cru NÃO separa segmentos (o Ktor o trata como caractere do segmento): vira `_`, como a barra que só aparece decodificada.
+    for (bruto in caminho.substringBefore('?').split('/')) {
         var atual = bruto.substringBefore(';')
         repeat(3) {
             val decodificado = try {

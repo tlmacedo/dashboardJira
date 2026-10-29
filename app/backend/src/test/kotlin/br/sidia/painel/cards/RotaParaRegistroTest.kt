@@ -3,6 +3,7 @@ package br.sidia.painel.cards
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
 /**
  * A rota gravada no `access_log` é o MODELO da rota (`/api/tarefa/{key}`), nunca o caminho decodificado: uma chave codificada
@@ -37,6 +38,24 @@ class RotaParaRegistroTest {
             val rota = rotaParaRegistro(v)
             assertEquals("/api/auditoria/historico/{key}", rota, "variante $v")
         }
+    }
+
+    @Test
+    fun barraInvertidaCruaEParteDoSegmento() {
+        // O Ktor trata `\` como caractere do segmento: a chave inteira continua sendo UM segmento do modelo.
+        val variantes = listOf("..\\x\\TG-1", "..\\..\\integridade\\TG-1", "..%5Cx%5CTG-1", "..\\x%2FTG-1", "%2E%2E\\x\\TG-1")
+        for (v in variantes) {
+            assertEquals("/api/tarefa/{key}", rotaParaRegistro("/api/tarefa/$v"), "tarefa $v")
+            assertEquals("/api/auditoria/historico/{key}", rotaParaRegistro("/api/auditoria/historico/$v"), "historico $v")
+        }
+    }
+
+    @Test
+    fun rotaSensivelComBarraInvertidaContinuaSensivel() {
+        for (v in listOf("/api/cartoes/IN-01\\..\\..\\x/tasks", "/api/cartoes/IN-01%5C..%5Cx/tasks", "/api/integridade\\x")) {
+            assertTrue(rotaSensivel(v), v)
+        }
+        assertFalse(rotaSensivel("/api/cartoes/AB-01/tasks"))
     }
 
     @Test
