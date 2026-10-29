@@ -135,7 +135,8 @@ data class Settings(
                     try {
                         ZoneId.of(it)
                     } catch (e: DateTimeException) {
-                        throw IllegalArgumentException("PAINEL_TZ inválido: '$it'", e)
+                        // sem a causa: a mensagem dela repete o valor lido
+                        throw IllegalArgumentException("PAINEL_TZ inválido (esperado um fuso IANA, ex.: America/Manaus)")
                     }
                 } ?: padrao.zone,
                 configDir = caminho(env, "PAINEL_CONFIG_DIR") ?: padrao.configDir,
@@ -152,7 +153,7 @@ data class Settings(
                 staticDir = caminho(env, "PAINEL_STATIC_DIR") ?: padrao.staticDir,
                 databasePoolSize = texto(env, "DATABASE_POOL_SIZE")?.let {
                     it.toIntOrNull()?.takeIf { n -> n in 1..100 }
-                        ?: throw IllegalArgumentException("DATABASE_POOL_SIZE inválido: '$it' (esperado inteiro de 1 a 100)")
+                        ?: throw IllegalArgumentException("DATABASE_POOL_SIZE inválido (esperado inteiro de 1 a 100)")
                 } ?: padrao.databasePoolSize,
                 jiraInstances = listOfNotNull(
                     instancia(env, "samsung", "JIRA_SAMSUNG", JiraAuthKind.BEARER),
@@ -300,7 +301,7 @@ data class Settings(
                 try {
                     Path.of(it)
                 } catch (e: InvalidPathException) {
-                    throw IllegalArgumentException("$nome inválido: '$it'", e)
+                    throw IllegalArgumentException("$nome inválido (esperado um caminho de arquivo ou pasta)")
                 }
             }
 
@@ -347,7 +348,7 @@ data class Settings(
             return when (bruto.lowercase()) {
                 "true" -> true
                 "false" -> false
-                else -> throw IllegalArgumentException("$nome inválido: '$bruto' (esperado true ou false)")
+                else -> throw IllegalArgumentException("$nome inválido (esperado true ou false)")
             }
         }
     }
