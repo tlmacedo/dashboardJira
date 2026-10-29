@@ -32,15 +32,9 @@ class CompatLegadoChecklistTest {
         )
     }
 
-    @Test
-    fun fechamentoRapidoEPuloDoFluxoSaoExclusivosComoNoLegado() {
-        // No legado é `if life_min < 15: ... elif not started and r.time_spent_s == 0: ...`: um fechamento rápido gera um
-        // sinal só. No painel os dois sinais existem e a exclusividade é provada por `FechamentoRapidoExclusivoTest`.
-        assertEquals(
-            listOf("CRIADA_E_FECHADA_RAPIDO", "PULOU_O_FLUXO"),
-            listOf(SinalIntegridade.CRIADA_E_FECHADA_RAPIDO, SinalIntegridade.PULOU_O_FLUXO).map { it.name },
-        )
-    }
+    // Exclusividade do fechamento rápido: no legado é `if life_min < 15: ... elif not started and r.time_spent_s == 0: ...`
+    // (um fechamento rápido gera um sinal só). No painel isso é provado por `FechamentoRapidoExclusivoTest`
+    // (`abertaEFechadaEmCincoMinutosGeraSoUmSinal`), que roda a detecção real.
 
     private fun evidencias(pessoa: String, g3: Int = 0, g2: Int = 0, g1: Int = 0): List<EvidenciaIntegridade> {
         val regras = RegrasDeIntegridade.PADRAO

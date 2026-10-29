@@ -25,7 +25,11 @@ class ReferenciasLegacyTest {
 
     private val raiz: Path = TestPaths.repoDir
 
-    private val pastasIgnoradas = setOf(".git", "node_modules", "build", ".gradle", ".kotlin", "dist", "data", "pacote")
+    /** Pastas geradas ou de terceiros, ignoradas em qualquer nível. */
+    private val pastasIgnoradasEmQualquerNivel = setOf(".git", "node_modules", ".gradle", ".kotlin")
+
+    /** Pastas geradas, ignoradas só nestes caminhos (não por nome: `docs/**/data` continua varrido). */
+    private val caminhosIgnorados = listOf("app/data/", "app/pacote/", "app/backend/build/", "app/frontend/dist/")
 
     /** Arquivos de texto sob [relativo] (arquivo ou pasta), sem as pastas geradas. */
     private fun arquivos(relativo: String): List<Path> {
@@ -34,7 +38,8 @@ class ReferenciasLegacyTest {
         if (Files.isRegularFile(base)) return listOf(base)
         return Files.walk(base).use { fluxo ->
             fluxo.filter { Files.isRegularFile(it) }
-                .filter { p -> raiz.relativize(p).none { it.toString() in pastasIgnoradas } }
+                .filter { p -> raiz.relativize(p).none { it.toString() in pastasIgnoradasEmQualquerNivel } }
+                .filter { p -> caminhosIgnorados.none { relativo(p).startsWith(it) } }
                 .toList()
         }
     }
@@ -50,8 +55,12 @@ class ReferenciasLegacyTest {
 
     /** Escopo da varredura de referências (Plano 8, T9, passo 2). */
     private fun escopo(): List<Path> {
+        // skills-para-cline/ fica de fora: são cópias de skills de terceiros, com exemplos genéricos que citam "legacy/".
         val ignorados = listOf("docs/superpowers/", "docs/analise/equivalencia-por-card.md")
-        val todos = listOf("app", ".claude/hooks", "CLAUDE.md", "README.md", "PRODUCT.md", "HANDOFF.md", "docs").flatMap(::arquivos)
+        val todos = listOf(
+            "app", ".claude", ".clinerules", ".cline", ".github", "scripts", "deploy", "ops", "docs",
+            "CLAUDE.md", "README.md", "PRODUCT.md", "HANDOFF.md", "DESIGN.md", "SKILLS_INSTALADAS_CLAUDE.md", ".gitignore",
+        ).flatMap(::arquivos)
         return todos.filter { p -> ignorados.none { relativo(p).startsWith(it) } && p.fileName.toString() != "ReferenciasLegacyTest.kt" }
     }
 
