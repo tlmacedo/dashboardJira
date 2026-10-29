@@ -104,6 +104,7 @@ class TreinamentoDocTest {
             val texto = ApoioDeDocs.texto(arquivo)
             assertTrue("### Tela `meusDados`" in texto, "$arquivo sem a tela Meus dados")
             assertTrue("plano 11" !in texto.lowercase(), "$arquivo ainda trata o Plano 11 como futuro")
+            for (trecho in listOf("24 meses", "200", "\"dev\"", "decisões de distribuição")) assertTrue(trecho in texto, "$arquivo sem \"$trecho\" na tela Meus dados")
         }
         // A Auditoria está atrás da Trava do DPO: os materiais da coordenação e do gerente dizem isso e citam o código.
         for (arquivo in listOf("docs/treinamento/coordenador.md", "docs/treinamento/gerente.md")) {

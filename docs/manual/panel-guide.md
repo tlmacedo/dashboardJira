@@ -41,9 +41,9 @@ The DPO gate stops Audit and Integrity from serving real data before the data pr
 
 ## My data and data protection
 
-Every role has the **My data** screen (`meusDados`, route `/api/titular/meus-dados`): it shows only the person's own record: counts of tasks, changes and logged hours, planned absences (without the reason), roles, the categories processed with purpose and retention, and the person's accesses in the last 90 days. The button "Download my data (JSON)" generates the same content in the browser. The screen does not accept a request for someone else's data and does not show the content of Audit or Integrity signals about the person. A former member with no current role gets "no permission" and exercises the rights through the DPO channel. To correct data, fix it in Jira (the dashboard reflects it on the next sync); to ask for deletion, go through the DPO channel. See [`docs/lgpd/atendimento-ao-titular.md`](../lgpd/atendimento-ao-titular.md).
+Every role has the **My data** screen (`meusDados`, route `/api/titular/meus-dados`): it shows only the person's own record: counts of tasks, changes and logged hours, planned absences (without the reason), roles, the categories processed with purpose and retention, and the person's accesses in the last 90 days (at most 200 accesses in the list), plus the count of distribution decisions in which the person appears. In the demonstration the development user ("dev") shows with zeroed counts. The button "Download my data (JSON)" generates the same content in the browser. The screen does not accept a request for someone else's data and does not show the content of Audit or Integrity signals about the person. A former member with no current role gets "no permission" and exercises the rights through the DPO channel. To correct data, fix it in Jira (the dashboard reflects it on the next sync); to ask for deletion, go through the DPO channel. See [`docs/lgpd/atendimento-ao-titular.md`](../lgpd/atendimento-ao-titular.md).
 
-**Retention by category.** The default is 24 months for every category (a provisional decision, to be confirmed with the DPO), each with its own variable from 1 to 120 months: `RETENTION_HISTORICO_MONTHS` (old resolved tasks, changes, logged hours), `RETENTION_ACCESS_LOG_MONTHS` (access log), `RETENTION_DECISOES_MONTHS` (distribution decisions) and `RETENTION_EXECUCOES_MONTHS` (sync and backup runs). A short historical retention also shortens the window of the first synchronization.
+**Retention by category.** The default is 24 months for every category (a provisional decision, to be confirmed with the DPO), each with its own variable from 1 to 120 months: `RETENTION_HISTORICO_MONTHS` (old resolved tasks, changes, logged hours), `RETENTION_ACCESS_LOG_MONTHS` (access log), `RETENTION_DECISOES_MONTHS` (distribution decisions) and `RETENTION_EXECUCOES_MONTHS` (sync and backup runs). A short historical retention also shortens the window of the first synchronization. The code still accepts the old variables `RETENTION_MONTHS` (6 to 600) and `ACCESS_LOG_RETENTION_MONTHS` (minimum 12). The precedence for each category is its own variable, then (access log and decisions only) `ACCESS_LOG_RETENTION_MONTHS`, then `RETENTION_MONTHS`; when inherited there is a 12-month floor for the audit data (access log and decisions), and only the own variable accepts less.
 
 ## Home
 
@@ -118,7 +118,7 @@ Home of the user. In production it shows only what is yours; the squad leader ca
 
 **Who sees it.** User, Squad Leader, Coordinator, Manager.
 
-Data subject screen (LGPD), for every role: it shows only the person's own record and their accesses of the last 90 days, and lets them download the same content as JSON. It does not accept a request for another person's data. A former member with no current role gets "no permission" and goes to the DPO channel. Details in the section "My data and data protection".
+Data subject screen (LGPD), for every role: it shows only the person's own record and their accesses of the last 90 days, and lets them download the same content as JSON. It does not accept a request for another person's data. A former member with no current role gets "no permission" and goes to the DPO channel. In the demonstration the development user ("dev") shows with zeroed counts, as in My dashboard. The access list shows at most 200 entries, and the count of distribution decisions in which the person appears is also part of the summary. Details in the section "My data and data protection".
 
 **Where the numbers come from.** This screen has no sheet or cards: it reads the person's own record through the route `/api/titular/meus-dados`.
 
@@ -761,7 +761,7 @@ Suggestions are read-only: the decision is human. Who may change assignee, due d
 
 **Who sees it.** Coordinator, Manager.
 
-It shows changes to due dates, assignees and delay labels for review. Evidence, not proof: the screen points to what deserves a conversation, never a conclusion about people. It sits behind the DPO gate: with the gate closed the screen is off and nothing is queried, and the field-by-field history opens only with the gate open (see "DPO gate"). Besides the date, owner and label signals, there are two more: estimate reduced after the start (`ESTIMATIVA_REDUZIDA`) and hours logged late (`WORKLOG_RETROATIVO`).
+It shows changes to due dates, assignees and delay labels for review. Evidence, not proof: the screen points to what deserves a conversation, never a conclusion about people. It sits behind the DPO gate: with the gate closed the screen is off and nothing is queried, and the field-by-field history opens only with the gate open (see "DPO gate"). Besides the date, owner and label signals, there are two more: estimate reduced after the start (`ESTIMATIVA_REDUZIDA`) and hours logged late (`WORKLOG_RETROATIVO`). These signals depend on reloading from Jira: until the new load (which only happens with the flag on) warnings such as `HISTORICO_DE_ESTIMATIVA_INCOMPLETO` and `SINAL_SEM_DADO` appear.
 
 **Cards.**
 
@@ -801,7 +801,7 @@ It only shows and links to Jira; it fixes nothing.
 
 **Who sees it.** Manager.
 
-Only the manager sees it. It sits behind the DPO gate: without the DPO's acceptance the screen queries no data at all (it shows "This screen stays off until the data protection officer (DPO) approves its use"). Each signal is evidence, not proof. Every query is logged in the Access log. Per person, the screen calculates points, rate (points per completed task), the multiple of the rate against the team median and an evidence level (high or medium), in alphabetical order and without ranking; the signal catalog (IN-08) includes `ESTIMATIVA_AUMENTADA`. Without the DPO's acceptance it works only with demonstration data.
+Only the manager sees it. It sits behind the DPO gate: without the DPO's acceptance the screen queries no data at all (it shows "This screen stays off until the data protection officer (DPO) approves its use"). Each signal is evidence, not proof. Every query is logged in the Access log. Per person, the screen calculates points, rate (points per completed task), the multiple of the rate against the team median and an evidence level (high or medium), in alphabetical order and without ranking; the signal catalog (IN-08) includes `ESTIMATIVA_AUMENTADA`, which also depends on reloading from Jira (until then the warning `SINAL_SEM_DADO` appears). Without the DPO's acceptance it works only with demonstration data.
 
 **Cards.**
 

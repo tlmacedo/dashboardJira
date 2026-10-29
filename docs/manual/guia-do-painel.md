@@ -41,9 +41,9 @@ A Trava do DPO impede que a Auditoria e a Integridade sirvam dados reais antes d
 
 ## Meus dados e proteção de dados
 
-Todos os papéis têm a tela **Meus dados** (`meusDados`, rota `/api/titular/meus-dados`): ela mostra só o registro da própria pessoa, com quantidades de tasks, alterações e registros de horas, ausências planejadas (sem o motivo), papéis, as categorias tratadas com finalidade e prazo, e os acessos dela nos últimos 90 dias. O botão "Baixar meus dados (JSON)" gera o mesmo conteúdo no navegador. A tela não aceita pedir os dados de outra pessoa e não mostra o conteúdo de sinais de Auditoria ou de Integridade sobre a pessoa. Quem saiu do time e não tem papel vigente recebe "sem permissão" e exerce o direito pelo canal do DPO. Para corrigir um dado, corrija no Jira (o painel reflete na sincronização seguinte); para pedir eliminação, o caminho é o canal do DPO. Veja [`docs/lgpd/atendimento-ao-titular.md`](../lgpd/atendimento-ao-titular.md).
+Todos os papéis têm a tela **Meus dados** (`meusDados`, rota `/api/titular/meus-dados`): ela mostra só o registro da própria pessoa, com quantidades de tasks, alterações e registros de horas, ausências planejadas (sem o motivo), papéis, as categorias tratadas com finalidade e prazo, e os acessos dela nos últimos 90 dias (no máximo 200 acessos na lista), além da contagem de decisões de distribuição em que ela aparece. Na demonstração o usuário de desenvolvimento ("dev") aparece com as contagens zeradas. O botão "Baixar meus dados (JSON)" gera o mesmo conteúdo no navegador. A tela não aceita pedir os dados de outra pessoa e não mostra o conteúdo de sinais de Auditoria ou de Integridade sobre a pessoa. Quem saiu do time e não tem papel vigente recebe "sem permissão" e exerce o direito pelo canal do DPO. Para corrigir um dado, corrija no Jira (o painel reflete na sincronização seguinte); para pedir eliminação, o caminho é o canal do DPO. Veja [`docs/lgpd/atendimento-ao-titular.md`](../lgpd/atendimento-ao-titular.md).
 
-**Retenção por categoria.** O padrão é 24 meses para todas as categorias (decisão provisória, a confirmar com o DPO), cada uma com a sua variável, de 1 a 120 meses: `RETENTION_HISTORICO_MONTHS` (issue resolvida antiga, alterações, horas registradas), `RETENTION_ACCESS_LOG_MONTHS` (registro de acesso), `RETENTION_DECISOES_MONTHS` (decisões de distribuição) e `RETENTION_EXECUCOES_MONTHS` (execuções da sincronização e das cópias de segurança). Reter o histórico por pouco tempo também encurta a janela da carga inicial da sincronização.
+**Retenção por categoria.** O padrão é 24 meses para todas as categorias (decisão provisória, a confirmar com o DPO), cada uma com a sua variável, de 1 a 120 meses: `RETENTION_HISTORICO_MONTHS` (issue resolvida antiga, alterações, horas registradas), `RETENTION_ACCESS_LOG_MONTHS` (registro de acesso), `RETENTION_DECISOES_MONTHS` (decisões de distribuição) e `RETENTION_EXECUCOES_MONTHS` (execuções da sincronização e das cópias de segurança). Reter o histórico por pouco tempo também encurta a janela da carga inicial da sincronização. O código ainda aceita as variáveis antigas `RETENTION_MONTHS` (6 a 600) e `ACCESS_LOG_RETENTION_MONTHS` (mínimo 12). A precedência de cada categoria é a variável própria, depois (só registro de acesso e decisões) `ACCESS_LOG_RETENTION_MONTHS`, depois `RETENTION_MONTHS`; na herança vale um piso de 12 meses para a auditoria (registro de acesso e decisões), e só a variável própria aceita menos.
 
 ## Início
 
@@ -118,7 +118,7 @@ Início do usuário. Em produção, mostra só o que é seu; o líder do squad p
 
 **Quem vê.** Usuário, Squad Leader, Coordenador, Gerente.
 
-Tela do titular (LGPD), para todos os papéis: mostra só o registro da própria pessoa e os acessos dela dos últimos 90 dias, e permite baixar o mesmo conteúdo em JSON. Não aceita pedir os dados de outra pessoa. Quem saiu do time e não tem papel vigente recebe "sem permissão" e procura o canal do DPO. Detalhes na seção "Meus dados e proteção de dados".
+Tela do titular (LGPD), para todos os papéis: mostra só o registro da própria pessoa e os acessos dela dos últimos 90 dias, e permite baixar o mesmo conteúdo em JSON. Não aceita pedir os dados de outra pessoa. Quem saiu do time e não tem papel vigente recebe "sem permissão" e procura o canal do DPO. Na demonstração o usuário de desenvolvimento ("dev") aparece com as contagens zeradas, como no Meu painel. A lista de acessos mostra no máximo 200 e a contagem de decisões de distribuição em que a pessoa aparece também entra no resumo. Detalhes na seção "Meus dados e proteção de dados".
 
 **De onde vêm os números.** Esta tela não tem ficha nem cartões: lê o registro da própria pessoa pela rota `/api/titular/meus-dados`.
 
@@ -761,7 +761,7 @@ As sugestões são de leitura: a decisão é humana. Quem pode alterar responsá
 
 **Quem vê.** Coordenador, Gerente.
 
-Mostra alterações de vencimento, responsável e labels de atraso para conferir. Indício, não prova: a tela aponta o que merece conversa, nunca uma conclusão sobre pessoas. Fica atrás da Trava do DPO: com a trava fechada a tela fica desligada e nada é consultado, e o histórico campo a campo só abre com ela aberta (ver "Trava do DPO"). Além dos sinais de data, dono e label, há dois sinais: estimativa reduzida depois do início (`ESTIMATIVA_REDUZIDA`) e horas registradas com atraso (`WORKLOG_RETROATIVO`).
+Mostra alterações de vencimento, responsável e labels de atraso para conferir. Indício, não prova: a tela aponta o que merece conversa, nunca uma conclusão sobre pessoas. Fica atrás da Trava do DPO: com a trava fechada a tela fica desligada e nada é consultado, e o histórico campo a campo só abre com ela aberta (ver "Trava do DPO"). Além dos sinais de data, dono e label, há dois sinais: estimativa reduzida depois do início (`ESTIMATIVA_REDUZIDA`) e horas registradas com atraso (`WORKLOG_RETROATIVO`). Esses sinais dependem da recarga do Jira: até a nova carga (que só acontece com a flag ligada) aparecem avisos como `HISTORICO_DE_ESTIMATIVA_INCOMPLETO` e `SINAL_SEM_DADO`.
 
 **Cartões.**
 
@@ -801,7 +801,7 @@ Só mostra e leva ao Jira; não corrige nada.
 
 **Quem vê.** Gerente.
 
-Só o gerente vê. Fica atrás da Trava do DPO: sem o aceite do DPO a tela não consulta dado algum (mostra "Esta tela fica desligada até o encarregado de dados (DPO) aprovar o uso"). Cada sinal é indício, não prova. Toda consulta é registrada no Registro de acesso. Por pessoa, a tela calcula pontos, taxa (pontos por concluída), o múltiplo da taxa em relação à mediana do time e um nível de indício (alto ou médio), em ordem alfabética e sem ranking; o catálogo de sinais (IN-08) inclui `ESTIMATIVA_AUMENTADA`. Sem o aceite do DPO, só funciona com dados de demonstração.
+Só o gerente vê. Fica atrás da Trava do DPO: sem o aceite do DPO a tela não consulta dado algum (mostra "Esta tela fica desligada até o encarregado de dados (DPO) aprovar o uso"). Cada sinal é indício, não prova. Toda consulta é registrada no Registro de acesso. Por pessoa, a tela calcula pontos, taxa (pontos por concluída), o múltiplo da taxa em relação à mediana do time e um nível de indício (alto ou médio), em ordem alfabética e sem ranking; o catálogo de sinais (IN-08) inclui `ESTIMATIVA_AUMENTADA`, que também depende da recarga do Jira (até lá aparece o aviso `SINAL_SEM_DADO`). Sem o aceite do DPO, só funciona com dados de demonstração.
 
 **Cartões.**
 

@@ -191,6 +191,18 @@ class GuiasDocTest {
         assertEquals(true, comAceite.liberada)
         // Retenção padrão: 24 meses em todas as categorias, como os guias e o FAQ dizem.
         assertEquals(RetencaoSettings(24, 24, 24, 24), Settings().retencao)
+        // ...e os documentos dizem o mesmo número e os limites (mutação 24 -> 12 nos .md tem de ser pega).
+        for ((lang, faq) in mapOf("pt" to faqPt, "en" to faqEn)) {
+            val padrao = if (lang == "pt") "24 meses" else "24 months"
+            val limites = if (lang == "pt") "1 a 120" else "1 to 120"
+            assertTrue(padrao in guia(lang) && padrao in ApoioDeDocs.texto(faq), "guia/FAQ ($lang) sem \"$padrao\"")
+            assertTrue(limites in guia(lang), "guia ($lang) sem os limites \"$limites\"")
+            // Variáveis antigas e precedência da retenção (.env.example).
+            assertTrue("`RETENTION_MONTHS`" in guia(lang) && "`ACCESS_LOG_RETENTION_MONTHS`" in guia(lang) && "12" in guia(lang), "guia ($lang) sem as variáveis antigas de retenção")
+            // Sinais novos dependem da recarga do Jira; "Meus dados" na demonstração e limite de acessos.
+            assertTrue("`SINAL_SEM_DADO`" in guia(lang) && "`HISTORICO_DE_ESTIMATIVA_INCOMPLETO`" in guia(lang), "guia ($lang) sem os avisos dos sinais novos")
+            assertTrue("200" in guia(lang) && "\"dev\"" in guia(lang), "guia ($lang) sem o limite de acessos ou o usuário dev da demonstração")
+        }
         val catalogo = catalogoPadrao().cartoes
         val integridade = catalogo.filter { it.moduloSensivel == ModuloSensivel.INTEGRIDADE }.map { it.meta.id }.sorted()
         assertEquals((1..8).map { "IN-%02d".format(it) } + "VG-13", integridade, "cartões da Integridade atrás da trava mudaram: revisar guias e treinamento")
