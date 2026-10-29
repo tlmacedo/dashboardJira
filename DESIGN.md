@@ -43,7 +43,8 @@ Valor efetivo em cada tema: o do bloco do tema, ou o de `:root` quando o tema n�
 | `--menu` | `#ffffff` | `#0d121c` | `#1329a0` | Fundo do menu lateral. |
 | `--menu-text` | `#181818` | `#eef1f8` | `#ffffff` | Texto do menu. |
 | `--menu-text2` | `#595959` | `#b4bccf` | `#c9d4ff` | Texto secundário do menu. |
-| `--menu-line` | `#dadde6` | `#222b40` | `#3a4db8` | Divisória do menu. |
+| `--menu-line` | `#dadde6` | `#222b40` | `#3a4db8` | Divisória do menu (decorativa). |
+| `--menu-line-control` | `#7e8399` | `#6c7897` | `#97a6ff` | Contorno dos botões do menu (segmentados e ☰): 3:1 ou mais sobre o menu e o item ativo. |
 | `--menu-active` | `#e8ecff` | `#1e2740` | `#2438b0` | Fundo do item ativo do menu. |
 | `--menu-marca` | `var(--primary)` | `var(--primary)` | `#77ff94` | Cor do nome do painel no menu. |
 | `--s1` | `#1329a0` | `#8fa8ff` | `#1329a0` | Série de apoio herdada dos protótipos; reservada, nenhum componente a usa hoje (os gráficos usam --cat-*). |
