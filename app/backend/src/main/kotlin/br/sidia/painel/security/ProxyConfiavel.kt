@@ -31,7 +31,8 @@ class FaixaCidr private constructor(private val rede: ByteArray, private val pre
 
     companion object {
         private val IPV4 = Regex("^(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})$")
-        private val IPV6 = Regex("^[0-9A-Fa-f:.]{2,45}$")
+        // Começa por hexadecimal ou ':' (nunca por '.', que faria o JDK tratar o texto como nome e consultar o DNS).
+        private val IPV6 = Regex("^[0-9A-Fa-f:][0-9A-Fa-f:.]{1,44}$")
 
         /** Bytes do endereço literal (4 ou 16), ou nulo se não for um IP literal. Nunca consulta DNS. */
         internal fun enderecoLiteral(texto: String): ByteArray? {
@@ -71,7 +72,17 @@ class FaixaCidr private constructor(private val rede: ByteArray, private val pre
 /** De onde a chamada realmente veio, depois de considerar (ou ignorar) os cabeçalhos do proxy. */
 data class OrigemDaChamada(val ip: String, val https: Boolean, val host: String)
 
-private val HOST_ENCAMINHADO = Regex("^[A-Za-z0-9.\\-]{1,253}(:\\d{1,5})?$")
+// `nome[:porta]` ou `[ipv6][:porta]`.
+private val HOST_ENCAMINHADO = Regex("^([A-Za-z0-9.\\-]{1,253}|\\[[0-9A-Fa-f:.]{2,45}\\])(:\\d{1,5})?$")
+
+/** Separa `nome[:porta]` ou `[ipv6][:porta]` em host (IPv6 sem colchetes) e porta; só para texto que passou em [HOST_ENCAMINHADO]. */
+internal fun separarHostEPorta(host: String): Pair<String, Int?> =
+    if (host.startsWith("[")) {
+        val fim = host.indexOf(']')
+        host.substring(1, fim) to host.substring(fim + 1).removePrefix(":").toIntOrNull()
+    } else {
+        host.substringBefore(':') to host.substringAfter(':', "").toIntOrNull()
+    }
 
 /**
  * Decide o IP do cliente, o esquema e o host da chamada. `X-Forwarded-Proto`, `-For` e `-Host` SÓ valem quando o IP da
@@ -89,10 +100,15 @@ fun resolverOrigem(
     fun confiavel(ip: String) = confiaveis.any { it.contem(ip) }
     if (!confiavel(ipDaConexao)) return OrigemDaChamada(ipDaConexao, https = false, host = hostDaRequisicao)
 
-    fun primeiro(nome: String): String? = cabecalho(nome)?.split(',')?.firstOrNull()?.trim()?.takeIf { it.isNotEmpty() }
+    // Proto e Host podem vir em várias linhas ou valores (o cliente forja os da esquerda; o proxy acrescenta à direita). Se todos
+    // concordam, vale esse valor; se DIVERGEM, ninguém é crido (um proxy que não define o cabeçalho deixaria o do cliente passar).
+    fun unico(nome: String): String? {
+        val valores = cabecalho(nome)?.split(',')?.map { it.trim().lowercase() }.orEmpty().filter { it.isNotEmpty() }.distinct()
+        return valores.singleOrNull()
+    }
 
-    val https = primeiro("X-Forwarded-Proto")?.equals("https", ignoreCase = true) == true
-    val host = primeiro("X-Forwarded-Host")?.takeIf { HOST_ENCAMINHADO.matches(it) } ?: hostDaRequisicao
+    val https = unico("X-Forwarded-Proto") == "https"
+    val host = unico("X-Forwarded-Host")?.takeIf { HOST_ENCAMINHADO.matches(it) } ?: hostDaRequisicao
     val entradas = cabecalho("X-Forwarded-For")?.split(',')?.map { it.trim() }.orEmpty().filter { it.isNotEmpty() }
     var ip = ipDaConexao
     for (entrada in entradas.asReversed()) {
@@ -115,17 +131,21 @@ fun Application.instalarProxyConfiavel(
     install(
         createApplicationPlugin("ProxyConfiavel") {
             onCall { call ->
+                val conexao = origemDaConexao(call)
+                // Conexão fora das faixas: não se toca em nada (os cabeçalhos do proxy nem são lidos).
+                if (confiaveis.none { it.contem(conexao) }) return@onCall
                 val o = resolverOrigem(
-                    ipDaConexao = origemDaConexao(call),
-                    cabecalho = { call.request.headers[it] },
+                    ipDaConexao = conexao,
+                    // `headers[...]` devolve só a PRIMEIRA linha; todas as linhas entram, na ordem em que chegaram.
+                    cabecalho = { call.request.headers.getAll(it)?.joinToString(",") },
                     confiaveis = confiaveis,
                     hostDaRequisicao = call.request.local.serverHost,
                 )
-                // Conexão fora das faixas: [resolverOrigem] devolve os valores originais e nada muda de fato.
                 val ponto = call.mutableOriginConnectionPoint
                 if (o.https) ponto.scheme = "https"
-                ponto.serverHost = o.host.substringBefore(':')
-                o.host.substringAfter(':', "").toIntOrNull()?.let { ponto.serverPort = it }
+                val (nome, porta) = separarHostEPorta(o.host)
+                ponto.serverHost = nome
+                porta?.let { ponto.serverPort = it }
                 ponto.remoteAddress = o.ip
             }
         },

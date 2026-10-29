@@ -81,7 +81,7 @@ Trocar o pacote por um mais novo não pode apagar nada. Por isso a configuraçã
 | `DATABASE_POOL_SIZE` | Conexões do pool (1 a 100; padrão 4). No SQLite só uma grava por vez; mais conexões só aumentam leitores |
 | `PAINEL_HOST` | Interface em que o painel escuta (padrão `127.0.0.1`; veja a seção 7) |
 | `DASHBOARD_PORT` | Porta em que o painel escuta (1 a 65535; padrão 8080) |
-| `DASHBOARD_PROXY_CONFIAVEL` | Faixas CIDR de onde vem a conexão do proxy da empresa (padrão vazio). Só essas conexões podem informar `X-Forwarded-Proto`, `-For` e `-Host`; o `-For` é lido da direita para a esquerda. Proxy na mesma máquina: `127.0.0.1/32,::1/128`. Obrigatória em produção |
+| `DASHBOARD_PROXY_CONFIAVEL` | Faixas CIDR de onde vem a conexão do proxy da empresa (padrão vazio). Só essas conexões podem informar `X-Forwarded-Proto`, `-For` e `-Host`; o `-For` é lido da direita para a esquerda, juntando todas as linhas do cabeçalho (proxies como o HAProxy acrescentam uma linha nova); `-Proto` e `-Host` só valem se todos os valores recebidos forem iguais (divergentes são ignorados, porque o valor da esquerda pode ser do cliente). Configure o proxy para SOBRESCREVER esses três cabeçalhos. Proxy na mesma máquina: `127.0.0.1/32,::1/128`. Obrigatória em produção |
 | `PAINEL_CACHE_SEG` | Segundos em que as telas reaproveitam a leitura bruta do banco (padrão 60; `0` desliga). Sem isso, cada requisição relê as issues e o histórico inteiros |
 | `RETENTION_MONTHS` | Meses de dados locais mantidos (6 a 600; padrão 24; o prazo final é do DPO) |
 | `ACCESS_LOG_RETENTION_MONTHS` | Meses do registro de acesso (12 a 600; padrão 24) |

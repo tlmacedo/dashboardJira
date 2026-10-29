@@ -73,6 +73,34 @@ class ProxyConfiavelTest {
     }
 
     @Test
+    fun prefixosForaDoLimiteDeOcteto() {
+        val a = FaixaCidr.parse("10.0.0.128/25")
+        assertTrue(a.contem("10.0.0.200") && a.contem("10.0.0.128") && a.contem("10.0.0.255"))
+        assertFalse(a.contem("10.0.0.127") || a.contem("10.0.0.100"))
+        val b = FaixaCidr.parse("172.16.0.0/12")
+        assertTrue(b.contem("172.31.255.255") && b.contem("172.16.0.1"))
+        assertFalse(b.contem("172.32.0.0") || b.contem("172.15.255.255"))
+        val c = FaixaCidr.parse("128.0.0.0/1")
+        assertTrue(c.contem("200.1.1.1"))
+        assertFalse(c.contem("100.1.1.1"))
+        val d = FaixaCidr.parse("2001:db8:8000::/33")
+        assertTrue(d.contem("2001:db8:ffff::1"))
+        assertFalse(d.contem("2001:db8:7fff::1"))
+        // IPv4 mapeado em CIDR IPv6 vira 4 bytes no JDK: um prefixo de IPv6 não faz sentido e é recusado
+        assertFailsWith<IllegalArgumentException> { FaixaCidr.parse("::ffff:10.0.0.0/104") }
+    }
+
+    @Test
+    fun entradaQueComecaComPontoNaoEhLiteralENuncaConsultaNome() {
+        assertFailsWith<IllegalArgumentException> { FaixaCidr.parse(".:1") }
+        assertFailsWith<IllegalArgumentException> { FaixaCidr.parse("..::") }
+        assertFalse(FaixaCidr.parse("0.0.0.0/0").contem(".:1"))
+        // XFF com esse lixo à direita nunca vira IP
+        val o = resolver("10.0.0.5", mapOf("X-Forwarded-For" to "203.0.113.9, .:1"), faixas("10.0.0.0/24"))
+        assertEquals("10.0.0.5", o.ip)
+    }
+
+    @Test
     fun ipQueNaoEhLiteralNaoCasaComNada() {
         val tudo = FaixaCidr.parse("0.0.0.0/0")
         for (ruim in listOf("", "localhost", "abc", "1.2.3", "1.2.3.4.5", "999.1.1.1", "10.0.0.5, 10.0.0.6", " ")) {
@@ -153,10 +181,14 @@ class ProxyConfiavelTest {
             faixas("10.0.0.0/24"),
         )
         assertEquals(OrigemDaChamada("10.0.0.5", https = false, host = "painel.exemplo.invalid"), o)
-        // lista separada por vírgula: vale o primeiro (o mais próximo do cliente)
+        // valores divergentes na lista: ninguém é crido (o da esquerda pode ser do cliente)
         val p = resolver("10.0.0.5", mapOf("X-Forwarded-Proto" to "https, http", "X-Forwarded-Host" to "a.invalid, b.invalid"), faixas("10.0.0.0/24"))
-        assertTrue(p.https)
-        assertEquals("a.invalid", p.host)
+        assertFalse(p.https)
+        assertEquals("painel.exemplo.invalid", p.host)
+        // valores iguais valem
+        val q = resolver("10.0.0.5", mapOf("X-Forwarded-Proto" to "https, HTTPS", "X-Forwarded-Host" to "a.invalid, A.invalid"), faixas("10.0.0.0/24"))
+        assertTrue(q.https)
+        assertEquals("a.invalid", q.host)
     }
 
     @Test
@@ -186,6 +218,86 @@ class ProxyConfiavelTest {
         val sem = eco("203.0.113.9", faixas("10.0.0.0/24"), cab).split("|")
         assertEquals("http", sem[0])
         assertFalse(sem[1] == "painel.publico.invalid")
+    }
+
+    /** Como [eco], mas com cada cabeçalho em LINHAS separadas (proxies como o HAProxy acrescentam uma linha nova) e a porta. */
+    private fun ecoComLinhas(conexao: String, confiaveis: List<FaixaCidr>, cabecalhos: List<Pair<String, String>>): String {
+        var corpo = ""
+        testApplication {
+            application {
+                instalarProxyConfiavel(confiaveis) { conexao }
+                routing {
+                    get("/eco") { call.respondText("${call.request.origin.scheme}|${call.request.origin.serverHost}|${call.request.origin.remoteAddress}|${call.request.origin.serverPort}") }
+                }
+            }
+            corpo = client.get("/eco") { cabecalhos.forEach { (k, v) -> header(k, v) } }.bodyAsText()
+        }
+        return corpo
+    }
+
+    @Test
+    fun xffEmLinhasSeparadasOClienteForjaAPrimeiraEOProxyAcrescentaAUltima() {
+        val r = ecoComLinhas(
+            "10.0.0.5", faixas("10.0.0.0/24"),
+            listOf("X-Forwarded-For" to "198.51.100.7", "X-Forwarded-For" to "203.0.113.50"),
+        )
+        assertEquals("203.0.113.50", r.split("|")[2], "vale a linha do proxy, não a do cliente")
+    }
+
+    @Test
+    fun xffEmLinhasSeparadasComCadeiaConfiavel() {
+        val r = ecoComLinhas(
+            "10.0.0.5", faixas("10.0.0.0/24"),
+            listOf("X-Forwarded-For" to "198.51.100.7", "X-Forwarded-For" to "203.0.113.9", "X-Forwarded-For" to "10.0.0.7"),
+        )
+        assertEquals("203.0.113.9", r.split("|")[2])
+    }
+
+    @Test
+    fun hostEProtoDivergentesEmLinhasSeparadasSaoIgnorados() {
+        // o cliente mandou X-Forwarded-Host/Proto e o proxy (que também os define) acrescentou os seus: divergem, ninguém é crido
+        val r = ecoComLinhas(
+            "10.0.0.5", faixas("10.0.0.0/24"),
+            listOf(
+                "X-Forwarded-Host" to "atacante.invalid", "X-Forwarded-Host" to "painel.publico.invalid",
+                "X-Forwarded-Proto" to "http", "X-Forwarded-Proto" to "https",
+            ),
+        )
+        val partes = r.split("|")
+        assertEquals("http", partes[0])
+        assertTrue(partes[1] != "atacante.invalid" && partes[1] != "painel.publico.invalid", r)
+    }
+
+    @Test
+    fun hostEProtoIguaisEmVariasLinhasValem() {
+        val r = ecoComLinhas(
+            "10.0.0.5", faixas("10.0.0.0/24"),
+            listOf("X-Forwarded-Host" to "painel.publico.invalid", "X-Forwarded-Host" to "painel.publico.invalid", "X-Forwarded-Proto" to "https"),
+        )
+        assertEquals("https|painel.publico.invalid", r.substringBeforeLast("|").substringBeforeLast("|"))
+    }
+
+    @Test
+    fun hostIpv6ComPortaNaoEhEstragado() {
+        val r = ecoComLinhas("10.0.0.5", faixas("10.0.0.0/24"), listOf("X-Forwarded-Host" to "[2001:db8::1]:8443", "X-Forwarded-Proto" to "https"))
+        val p = r.split("|")
+        assertEquals("2001:db8::1", p[1].removeSurrounding("[", "]"))
+        assertEquals("8443", p[3])
+        // sem porta
+        val s = ecoComLinhas("10.0.0.5", faixas("10.0.0.0/24"), listOf("X-Forwarded-Host" to "[2001:db8::1]"))
+        assertEquals("2001:db8::1", s.split("|")[1].removeSurrounding("[", "]"))
+    }
+
+    @Test
+    fun conexaoNaoConfiavelNaoMudaNadaNemOHost() {
+        val normal = ecoComLinhas("203.0.113.9", faixas("10.0.0.0/24"), emptyList())
+        val forjado = ecoComLinhas(
+            "203.0.113.9", faixas("10.0.0.0/24"),
+            listOf("X-Forwarded-Host" to "[::1]:9", "X-Forwarded-Proto" to "https", "X-Forwarded-For" to "198.51.100.7"),
+        )
+        assertEquals(normal.split("|")[0], forjado.split("|")[0])
+        assertEquals(normal.split("|")[1], forjado.split("|")[1])
+        assertEquals(normal.split("|")[3], forjado.split("|")[3])
     }
 
     // ---------------------------------------------------------------- login atrás do proxy
