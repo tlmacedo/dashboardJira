@@ -42,6 +42,7 @@ import { Divergencia } from './screens/Divergencia/Divergencia'
 import { Qualidade } from './screens/Qualidade/Qualidade'
 import { RegistroDeAcesso } from './screens/RegistroDeAcesso/RegistroDeAcesso'
 import { Configuracao } from './screens/Configuracao/Configuracao'
+import { MeusDados } from './screens/MeusDados/MeusDados'
 import { MapaDeCartoes } from './screens/MapaDeCartoes/MapaDeCartoes'
 import { Sincronizacao } from './screens/Sincronizacao/Sincronizacao'
 import { TempoEmStatus } from './screens/TempoEmStatus/TempoEmStatus'
@@ -68,6 +69,7 @@ export default function App() {
                 <Route path="central" element={<Central />} />
                 <Route path="squad" element={<Squad />} />
                 <Route path="meu" element={<MeuPainel />} />
+                <Route path="meusDados" element={<MeusDados />} />
                 <Route path="abertas" element={<Abertas />} />
                 <Route path="negligenciadas" element={<Negligenciadas />} />
                 <Route path="fechadas" element={<Fechadas />} />

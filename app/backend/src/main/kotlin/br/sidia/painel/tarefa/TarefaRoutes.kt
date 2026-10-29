@@ -18,6 +18,7 @@ import br.sidia.painel.domain.TimeUnitMode
 import br.sidia.painel.domain.TimelineBuilder
 import br.sidia.painel.domain.UnmappedStatusException
 import br.sidia.painel.jql.InvalidJqlValueException
+import br.sidia.painel.lgpd.TravaDpo
 import br.sidia.painel.jql.JqlValues
 import br.sidia.painel.security.Principal
 import br.sidia.painel.security.Role
@@ -75,7 +76,12 @@ private fun tarefaDe(ctx: AppContext, store: SqliteWorkStore, principal: Princip
     }
 
     val papeis = papeisVigentes(ctx, principal)
-    val veHistorico = Role.COORDENADOR in papeis || Role.GERENTE in papeis
+    val temPapelDeHistorico = Role.COORDENADOR in papeis || Role.GERENTE in papeis
+    // O histórico de alterações é dado da AUDITORIA: com a trava do DPO fechada ele fica fora (nulo) e a gaveta avisa, sem dado.
+    val veHistorico = temPapelDeHistorico && TravaDpo(ctx.settings, ctx.dataSource).liberada
+    if (temPapelDeHistorico && !veHistorico) {
+        avisos += AvisoDto(AvisoDto.HISTORICO_AGUARDANDO_ACEITE_DPO, AvisoDto.INFORMATIVO, "histórico aguardando o aceite do DPO")
+    }
 
     return TarefaDto(
         key = s.key, resumo = s.summary, tipo = s.issueType, status = s.status, categoria = categoria,

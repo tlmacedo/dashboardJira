@@ -99,6 +99,39 @@ class AuditStoreTest {
         assertEquals(listOf("TG-1"), auditoria.comEventos("samsung", de, ate).map { it.key })
     }
 
+    private fun gravarComWorklog(j: JsonObject, vararg ws: br.sidia.painel.sync.WorklogRecord) {
+        val chave = (j["key"] as kotlinx.serialization.json.JsonPrimitive).content
+        gravador.upsert(j, emptyList(), "samsung", null, IssueLinks.ler(chave, j), i("2026-10-30T12:00:00Z"), worklogs = ws.toList())
+    }
+
+    private fun wl(id: String, started: String, criado: String?) =
+        br.sidia.painel.sync.WorklogRecord(id, "ana", i(started), 3600, criado?.let(::i))
+
+    @Test
+    fun comEventosIncluiWorklogCriadoNoPeriodo() {
+        // Sem nenhum evento de changelog: só o worklog criado no período põe a issue na conta.
+        gravarComWorklog(json("TG-1"), wl("1", "2026-10-01T13:00:00Z", "2026-10-12T15:00:00Z"))
+        gravarComWorklog(json("TG-2"), wl("2", "2026-10-01T13:00:00Z", "2026-09-20T15:00:00Z")) // criado antes do período
+        gravarComWorklog(json("TG-3"), wl("3", "2026-10-11T13:00:00Z", null)) // sem a data de criação
+        val r = auditoria.comEventos("samsung", i("2026-10-10T00:00:00Z"), i("2026-10-20T00:00:00Z"))
+        assertEquals(listOf("TG-1"), r.map { it.key })
+        assertEquals(listOf("1"), r.single().worklogs.map { it.jiraId })
+        assertEquals(i("2026-10-12T15:00:00Z"), r.single().worklogs.single().criado)
+        // [de, ate): criado == ate fica fora.
+        assertTrue(auditoria.comEventos("samsung", i("2026-10-01T00:00:00Z"), i("2026-10-12T15:00:00Z")).isEmpty())
+    }
+
+    @Test
+    fun issueEIssuesDoPeriodoTrazemTodosOsWorklogsDaIssue() {
+        gravarComWorklog(
+            json("TG-1"), wl("1", "2026-10-01T13:00:00Z", "2026-10-12T15:00:00Z"), wl("2", "2026-10-02T13:00:00Z", "2026-09-30T15:00:00Z"),
+        )
+        assertEquals(listOf("1", "2"), auditoria.issue("samsung", "TG-1")!!.worklogs.map { it.jiraId })
+        assertEquals(listOf("1", "2"), auditoria.comEventos("samsung", i("2026-10-10T00:00:00Z"), i("2026-10-20T00:00:00Z")).single().worklogs.map { it.jiraId })
+        // Outra instância não mistura.
+        assertNull(auditoria.issue("sidia", "TG-1"))
+    }
+
     @Test
     fun campoSemDiferenciarMaiusculas() {
         gravar(json("TG-1"), listOf(ev("TG-1", "DueDate", "2026-10-15", "2026-10-20", "2026-10-10T12:00:00Z")))

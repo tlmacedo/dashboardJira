@@ -9,6 +9,7 @@ import br.sidia.painel.sync.IssueLinks
 import br.sidia.painel.db.emJson
 import br.sidia.painel.db.tuplasEmJson
 import br.sidia.painel.sync.SqliteIssueStore
+import br.sidia.painel.sync.WorklogParser
 import com.charleskorn.kaml.Yaml
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
@@ -182,6 +183,7 @@ class DadosDeDemonstracao(
             val chaveDaIssue = (issue["key"] as JsonPrimitive).content
             store.upsertNaTransacao(
                 con, issue, registros, instancia, inst.osVersionCustomId, IssueLinks.ler(chaveDaIssue, issue), agora,
+                worklogs = horasDaFixture(issue, chaves),
                 camposDeFiltro = inst.camposCustomIds.map { (nome, id) -> CampoDeFiltro(nome, CamposDoDicionario.slugDe(nome), id) },
             )
             eventos += registros.size
@@ -198,6 +200,7 @@ class DadosDeDemonstracao(
                 campos.mapValues { (nome, valor) ->
                     when {
                         nome in CAMPOS_DE_INSTANTE -> deslocarTexto(valor) { deslocarInstante(it, dias) }
+                        nome == "worklog" -> deslocarWorklog(valor, dias)
                         nome == "duedate" -> deslocarTexto(valor) { deslocarData(it, dias) }
                         else -> valor
                     }
@@ -225,6 +228,26 @@ class DadosDeDemonstracao(
             saida["changelog"] = JsonObject(changelog + ("histories" to JsonArray(historicos)))
         }
         return JsonObject(saida)
+    }
+
+    /** Os registros de horas da fixture (`fields.worklog.worklogs`), lidos pelo mesmo leitor da sincronização; nulo se a issue não tem. */
+    private fun horasDaFixture(issue: JsonObject, chaves: Map<String, String>) =
+        (((issue["fields"] as? JsonObject)?.get("worklog") as? JsonObject)?.get("worklogs") as? JsonArray)
+            ?.let { WorklogParser.toRecords(it.map { w -> w.jsonObject }, chaves) }
+
+    /** Desloca `started` e `created` de cada registro de horas (a fixture traz as datas ancoradas em 30/10/2026). */
+    private fun deslocarWorklog(valor: JsonElement, dias: Long): JsonElement {
+        val campo = valor as? JsonObject ?: return valor
+        val registros = (campo["worklogs"] as? JsonArray) ?: return valor
+        val novos = registros.map { r ->
+            val w = r as? JsonObject ?: return@map r
+            JsonObject(
+                w.mapValues { (nome, v) ->
+                    if (nome == "started" || nome == "created") deslocarTexto(v) { deslocarInstante(it, dias) } else v
+                },
+            )
+        }
+        return JsonObject(campo + ("worklogs" to JsonArray(novos)))
     }
 
     private fun deslocarTexto(valor: JsonElement?, f: (String) -> String): JsonElement =

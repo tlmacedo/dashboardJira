@@ -115,7 +115,7 @@ class SyncerWorklogTest {
         }
         // As colunas do worklog são só as permitidas (sem coluna de texto livre).
         val colunas = consultar("SELECT name FROM pragma_table_info('worklog')").flatten().toSet()
-        assertEquals(setOf("id", "issue_id", "author_ref", "started", "seconds", "instance", "jira_id"), colunas)
+        assertEquals(setOf("id", "issue_id", "author_ref", "started", "seconds", "instance", "jira_id", "criado_em"), colunas)
     }
 
     @Test

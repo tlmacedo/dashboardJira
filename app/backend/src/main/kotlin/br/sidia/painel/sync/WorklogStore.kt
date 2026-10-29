@@ -21,7 +21,7 @@ class SqliteWorklogStore(private val ds: DataSource) : WorklogStore {
     override fun porIssue(instance: String, keys: Set<String>): Map<String, List<WorklogRecord>> {
         if (keys.isEmpty()) return emptyMap()
         val sql = """
-            SELECT i.key, COALESCE(w.jira_id, CAST(w.id AS TEXT)), w.author_ref, w.started, w.seconds
+            SELECT i.key, COALESCE(w.jira_id, CAST(w.id AS TEXT)), w.author_ref, w.started, w.seconds, w.criado_em
             FROM worklog w JOIN issue i ON i.id = w.issue_id
             WHERE i.instance = ? AND i.removida_em IS NULL AND i.key IN (SELECT value FROM json_each(?))
             ORDER BY i.key, w.started, w.jira_id
@@ -34,7 +34,7 @@ class SqliteWorklogStore(private val ds: DataSource) : WorklogStore {
                     val saida = LinkedHashMap<String, MutableList<WorklogRecord>>()
                     while (rs.next()) {
                         saida.getOrPut(rs.getString(1)) { mutableListOf() } +=
-                            WorklogRecord(rs.getString(2), rs.getString(3), rs.getTimestamp(4).toInstant(), rs.getLong(5))
+                            WorklogRecord(rs.getString(2), rs.getString(3), rs.getTimestamp(4).toInstant(), rs.getLong(5), rs.getTimestamp(6)?.toInstant())
                     }
                     saida
                 }
@@ -75,9 +75,9 @@ class SqliteWorklogStore(private val ds: DataSource) : WorklogStore {
         }
         if (registros.isEmpty()) return
         val sql = """
-            INSERT INTO worklog (issue_id, author_ref, started, seconds, instance, jira_id) VALUES (?, ?, ?, ?, ?, ?)
+            INSERT INTO worklog (issue_id, author_ref, started, seconds, instance, jira_id, criado_em) VALUES (?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT (instance, jira_id) DO UPDATE SET
-                issue_id = excluded.issue_id, author_ref = excluded.author_ref, started = excluded.started, seconds = excluded.seconds
+                issue_id = excluded.issue_id, author_ref = excluded.author_ref, started = excluded.started, seconds = excluded.seconds, criado_em = excluded.criado_em
         """.trimIndent()
         con.prepareStatement(sql).use { ps ->
             for (r in registros) {
@@ -87,6 +87,7 @@ class SqliteWorklogStore(private val ds: DataSource) : WorklogStore {
                 ps.setLong(4, r.seconds)
                 ps.setString(5, instance)
                 ps.setString(6, r.jiraId)
+                if (r.criado != null) ps.setTimestamp(7, Timestamp.from(r.criado)) else ps.setNull(7, java.sql.Types.INTEGER)
                 ps.addBatch()
             }
             ps.executeBatch()
