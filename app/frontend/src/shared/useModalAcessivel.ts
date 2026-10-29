@@ -33,7 +33,10 @@ export function useModalAcessivel(aoFechar: () => void) {
       return
     }
     if (e.key !== 'Tab' || !raiz.current) return
-    const focaveis = raiz.current.querySelectorAll<HTMLElement>('button:not([disabled]), [href], [tabindex="0"]')
+    // Tudo o que recebe Tab: botões, links, campos de formulário (a gaveta de decisão tem área de texto) e regiões roláveis.
+    const focaveis = raiz.current.querySelectorAll<HTMLElement>(
+      'button:not([disabled]), [href], input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled]), summary, [tabindex="0"]',
+    )
     if (focaveis.length === 0) return
     const primeiro = focaveis[0]
     const ultimo = focaveis[focaveis.length - 1]

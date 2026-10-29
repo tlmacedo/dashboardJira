@@ -23,5 +23,5 @@
     "noFallthroughCasesInSwitch": true
   },
   "include": ["src"],
-  "exclude": ["src/a11y"]
+  "exclude": ["src/a11y/*.ts"]
 }

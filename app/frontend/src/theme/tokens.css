@@ -17,7 +17,8 @@
   --menu: #ffffff;
   --menu-text: #181818;
   --menu-text2: #595959;
-  --menu-line: #dadde6;
+  --menu-line: #dadde6; /* divisória decorativa do menu; NÃO usar como contorno de botão */
+  --menu-line-control: #7e8399; /* contorno dos botões do menu (segmentado, ☰): >= 3:1 sobre --menu e --menu-active */
   --menu-active: #e8ecff;
   --menu-marca: var(--primary);
   --s1: #1329a0;
@@ -56,6 +57,7 @@
   --menu-text: #eef1f8;
   --menu-text2: #b4bccf;
   --menu-line: #222b40;
+  --menu-line-control: #6c7897;
   --menu-active: #1e2740;
   --s1: #8fa8ff;
   --s2: #b9a0ff;
@@ -84,6 +86,7 @@
   --menu-text: #ffffff;
   --menu-text2: #c9d4ff;
   --menu-line: #3a4db8;
+  --menu-line-control: #97a6ff;
   --menu-active: #2438b0;
   --menu-marca: #77ff94;
   /* Moldura do logo em faixa fina de 4 px: índigo, verde, laranja e o azul de marca.
