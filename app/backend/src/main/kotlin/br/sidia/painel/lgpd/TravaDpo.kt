@@ -1,6 +1,7 @@
 package br.sidia.painel.lgpd
 
 import br.sidia.painel.config.Settings
+import br.sidia.painel.sync.SincronizacaoReal
 import javax.sql.DataSource
 
 /**
@@ -30,17 +31,8 @@ class TravaDpo(private val settings: Settings, private val dataSource: DataSourc
         // Sem banco não há como provar que é demonstração: fecha.
         val ds = dataSource ?: return false
         return try {
-            ds.connection.use { c ->
-                c.createStatement().use { st ->
-                    // Execução de sincronização REAL (incremental ou reconciliação; a retenção roda sempre, até em demonstração, e não
-                    // conta), ou QUALQUER linha de estado de uma instância do Jira em `sync_state` (a retenção pode apagar o histórico de
-                    // execuções e a migração V7 zera a marca d'água, mas a linha da instância sobrevive; a instância "-" é a da retenção).
-                    st.executeQuery(
-                        "SELECT 1 FROM sync_run WHERE kind IN ('INCREMENTAL', 'RECONCILIACAO') " +
-                            "UNION ALL SELECT 1 FROM sync_state WHERE instance <> '-' LIMIT 1",
-                    ).use { !it.next() }
-                }
-            }
+            // A prova de sincronização real é a mesma do expurgo da demonstração (execução real ou linha de estado de instância).
+            ds.connection.use { c -> !SincronizacaoReal.existe(c) }
         } catch (e: Exception) {
             false
         }

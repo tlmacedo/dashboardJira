@@ -129,6 +129,76 @@ class DadosDeDemonstracao(
         }
     }
 
+    /**
+     * Apaga SÓ as linhas fictícias da demonstração, numa transação única: para cada instância do manifesto, as issues cuja chave
+     * é EXATAMENTE uma das chaves da fixture daquela instância (e tem o prefixo dela), com seus eventos e horas (cascata), os vínculos
+     * e as decisões de distribuição dessas chaves. Issue de outro prefixo, de mesmo prefixo em outra instância ou de chave fora da
+     * fixture nunca é tocada. Não escreve `sync_run` nem mexe em `sync_state` (o cursor zerado pela V7 fica como está).
+     *
+     * Se depois do expurgo ainda restar issue e o banco não tiver NENHUMA prova de sincronização real, o banco é desconhecido
+     * (nem demonstração pura, nem dado sincronizado): desfaz tudo e recusa com `BANCO_DESCONHECIDO_SEM_SINCRONIZACAO`.
+     */
+    fun expurgar(): List<ResumoDemo> {
+        val manifesto = lerManifestoDemo(pasta)
+        // As chaves vêm das fixtures (leitura de recurso, antes de tocar no banco).
+        val chaves = manifesto.instancias.map { (id, inst) ->
+            Triple(id, inst, lerIssuesDemo(pasta, inst.arquivo).map { (it["key"] as JsonPrimitive).content }
+                .filter { it.startsWith("${inst.prefixo}-") })
+        }
+        return ds.connection.use { con ->
+            val autoCommit = con.autoCommit
+            con.autoCommit = false
+            try {
+                val resumos = chaves.map { (id, _, lista) -> expurgarInstancia(con, id, lista) }
+                if (existeIssue(con) && !br.sidia.painel.sync.SincronizacaoReal.existe(con)) {
+                    throw DemoRecusadaException("BANCO_DESCONHECIDO_SEM_SINCRONIZACAO")
+                }
+                con.commit()
+                resumos
+            } catch (e: Throwable) {
+                con.rollback()
+                throw e
+            } finally {
+                con.autoCommit = autoCommit
+            }
+        }
+    }
+
+    private fun existeIssue(con: Connection): Boolean =
+        con.createStatement().use { st -> st.executeQuery("SELECT EXISTS (SELECT 1 FROM issue)").use { it.next() && it.getBoolean(1) } }
+
+    private fun expurgarInstancia(con: Connection, instancia: String, chaves: List<String>): ResumoDemo {
+        if (chaves.isEmpty()) return ResumoDemo(instancia, 0, 0)
+        val json = chaves.emJson()
+        var eventos = 0
+        con.prepareStatement(
+            "SELECT count(*) FROM change_event WHERE issue_id IN (SELECT id FROM issue WHERE instance = ? AND key IN (SELECT value FROM json_each(?)))",
+        ).use { ps ->
+            ps.setString(1, instancia)
+            ps.setString(2, json)
+            ps.executeQuery().use { if (it.next()) eventos = it.getInt(1) }
+        }
+        // Vínculos e decisões não têm cascata: saem aqui, pela chave exata da fixture.
+        for (sql in listOf(
+            "DELETE FROM issue_link WHERE instance = ? AND (from_key IN (SELECT value FROM json_each(?)) OR to_key IN (SELECT value FROM json_each(?)))",
+            "DELETE FROM decisao_distribuicao WHERE instance = ? AND issue_key IN (SELECT value FROM json_each(?))",
+        )) {
+            con.prepareStatement(sql).use { ps ->
+                ps.setString(1, instancia)
+                ps.setString(2, json)
+                if (sql.contains("to_key")) ps.setString(3, json)
+                ps.executeUpdate()
+            }
+        }
+        // Eventos e horas saem pela cascata da issue.
+        val issues = con.prepareStatement("DELETE FROM issue WHERE instance = ? AND key IN (SELECT value FROM json_each(?))").use { ps ->
+            ps.setString(1, instancia)
+            ps.setString(2, json)
+            ps.executeUpdate()
+        }
+        return ResumoDemo(instancia, issues, eventos)
+    }
+
     /** Se existe alguma issue de chave com prefixo de demonstração, em qualquer instância. */
     fun existemDados(): Boolean {
         val padroes = lerManifestoDemo(pasta).instancias.values.map { "${it.prefixo}-%" }
@@ -280,7 +350,8 @@ class DadosDeDemonstracao(
 /**
  * Chamado na subida, logo depois de `AppContext.load`. Com `DASHBOARD_DEMO_DATA` carrega os dados fictícios
  * (só em desenvolvimento e com o Jira real desligado; qualquer outra combinação derruba a subida). Com a flag do Jira
- * ligada e dados fictícios no banco, derruba a subida: nada é apagado automaticamente, use um volume novo.
+ * ligada nunca carrega demonstração e APAGA os dados fictícios que restarem ([DadosDeDemonstracao.expurgar]: só as linhas do
+ * manifesto, numa transação); banco que não é demonstração nem dado sincronizado de verdade derruba a subida.
  */
 fun prepararDemonstracao(ctx: AppContext) {
     val s = ctx.settings
@@ -288,9 +359,20 @@ fun prepararDemonstracao(ctx: AppContext) {
     val demo = DadosDeDemonstracao(ds, SqliteIssueStore(ds), ctx.clock, s.zone)
     try {
         if (!s.dashboardDemoData) {
-            // Produção (sem modo dev) nunca convive com dado fictício remanescente; com o Jira ligado também não.
+            if (s.jiraLiveEnabled) {
+                // Flag ligada: o fictício sai sozinho (só as linhas do manifesto, numa transação) e dado real nunca é tocado.
+                val resumo = demo.expurgar()
+                if (resumo.sumOf { it.issues } > 0) {
+                    br.sidia.painel.db.CacheDeLeituras.invalidar()
+                    log.info(
+                        "Dados de demonstração (fictícios) apagados na subida: {}",
+                        resumo.joinToString("; ") { "${it.instancia}: ${it.issues} issues, ${it.eventos} eventos" },
+                    )
+                }
+                return
+            }
+            // Produção (sem modo dev) com a flag desligada nunca convive com dado fictício remanescente.
             if (!s.dashboardDevMode && demo.existemDados()) throw DemoRecusadaException("DEMO_RESIDUAL")
-            if (s.jiraLiveEnabled && demo.existemDados()) throw DemoRecusadaException("BANCO_COM_DADOS_DE_DEMONSTRACAO")
             return
         }
         // Defesa em profundidade: o Settings já recusa estas combinações, mas um Settings montado à mão não passa.
