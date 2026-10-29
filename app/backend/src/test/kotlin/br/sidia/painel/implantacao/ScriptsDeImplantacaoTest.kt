@@ -260,7 +260,7 @@ class ScriptsDeImplantacaoTest {
     /** Pasta com a versão boa (`2026.11.1`), uma pasta FORA da raiz com um `bin/painel` que deixa um marcador, e o painel.env. */
     private class CenarioDeReversao(val raiz: Path, val marcador: Path, val env: Map<String, String>, val pasta: Path)
 
-    private fun montarCenarioDeReversao(pasta: Path, registro: String): CenarioDeReversao {
+    private fun montarCenarioDeReversao(pasta: Path, registro: String, comoNobody: Boolean = false): CenarioDeReversao {
         val raiz = pasta.resolve("app").also { Files.createDirectories(it) }
         val marcas = pasta.resolve("marcas").also { Files.createDirectories(it) }
         val marcador = marcas.resolve("EXECUTOU")
@@ -288,11 +288,12 @@ class ScriptsDeImplantacaoTest {
         Files.writeString(raiz.resolve("versao-anterior.txt"), registro)
         // O reverter roda o painel e a restauração com a identidade do serviço. Como root (aqui) a conta do serviço é "nobody" (o
         // reverter recusa uid 0) e as pastas ficam atravessáveis por ela; sem ser root (CI) é o próprio usuário, sem baixar privilégio.
-        val usuario = if (souRootComUsuarioNobody()) "nobody" else System.getProperty("user.name")
+        // Com [comoNobody] (provas do como_servico) o root real, direto ou por sudo -n, roda o script e a conta do serviço é "nobody".
+        val usuario = if (comoNobody || (souRoot && nobodyExiste)) "nobody" else System.getProperty("user.name")
         if (usuario == "nobody") {
             rodar(listOf("chmod", "-R", "a+rX", pasta.toString()))
             rodar(listOf("chmod", "777", marcas.toString(), backups.toString()))
-            rodar(listOf("chown", "nobody", banco.parent.toString()))
+            rodarComoRoot(listOf("chown", "nobody", banco.parent.toString()))
         }
         return CenarioDeReversao(raiz, marcador, mapOf("PAINEL_ENV_FILE" to envFile.toString(), "PAINEL_USUARIO" to usuario), pasta)
     }
@@ -414,35 +415,83 @@ class ScriptsDeImplantacaoTest {
 
     // ---------------------------------------------------------------- L1: root nunca opera dentro da pasta do servico
 
-    private fun souRootComUsuarioNobody(): Boolean {
-        if (System.getProperty("user.name") != "root") return false
-        return runCatching { rodar(listOf("id", "-u", "nobody")).first == 0 }.getOrDefault(false)
+    private val souRoot: Boolean get() = System.getProperty("user.name") == "root"
+
+    private fun comandoOk(vararg comando: String): Boolean = runCatching {
+        val p = ProcessBuilder(*comando).redirectErrorStream(true).start()
+        p.inputStream.readBytes()
+        p.waitFor(20, TimeUnit.SECONDS) && p.exitValue() == 0
+    }.getOrDefault(false)
+
+    private val nobodyExiste: Boolean by lazy { comandoOk("id", "-u", "nobody") }
+
+    /** `sudo -n` sem senha funciona (o runner do GitHub tem). Só vale a pena perguntar quando não somos root. */
+    private val sudoSemSenha: Boolean by lazy { comandoOk("sudo", "-n", "true") }
+
+    /**
+     * Só para simular o caminho do CI numa máquina onde se é root: `PAINEL_TESTE_FORCAR_SUDO=1` roda os comandos de root
+     * por `sudo -n`, como acontece com o usuário comum do runner.
+     */
+    private val forcarSudo: Boolean get() = System.getenv("PAINEL_TESTE_FORCAR_SUDO") == "1"
+
+    /** Prefixo para rodar comandos como root: vazio (já somos root), `sudo -n` (usuário comum com sudo) ou null (impossível). */
+    private fun privilegioDeRoot(): List<String>? = when {
+        souRoot && !forcarSudo -> emptyList()
+        sudoSemSenha -> listOf("sudo", "-n")
+        else -> null
+    }
+
+    /**
+     * Provas do `como_servico` (root nunca opera na pasta do serviço) exigem root real. Em CI Linux a falta de root/sudo/nobody
+     * FALHA o teste (nunca pula em silêncio); localmente sem privilégio apenas pula.
+     */
+    private fun exigirRootEUsuarioNobody() {
+        Ferramentas.exigir(
+            shell() != null && privilegioDeRoot() != null && nobodyExiste,
+            "precisa de root (ou sudo -n sem senha) e do usuário nobody",
+        )
+    }
+
+    private fun rodarComoRoot(comando: List<String>, ambiente: Map<String, String> = emptyMap()): Pair<Int, String> {
+        val prefixo = privilegioDeRoot() ?: error("sem privilégio de root")
+        if (prefixo.isEmpty()) return rodar(comando, ambiente)
+        // o sudo zera o ambiente: as variáveis vão por `env`
+        return rodar(prefixo + listOf("env") + ambiente.map { "${it.key}=${it.value}" } + comando)
+    }
+
+    /** Remove a pasta do cenário; arquivos criados como root ou como nobody só o root apaga. */
+    private fun limparCenario(pasta: Path) {
+        val prefixo = privilegioDeRoot()
+        if (prefixo != null && prefixo.isNotEmpty()) rodar(prefixo + listOf("rm", "-rf", pasta.toString()))
+        pasta.toFile().deleteRecursively()
     }
 
     @Test
     fun restauracaoEFeitaComAIdentidadeDoServicoEOBancoNasceComODonoCerto() {
-        org.junit.jupiter.api.Assumptions.assumeTrue(shell() != null && souRootComUsuarioNobody(), "precisa de root e do usuário nobody")
+        exigirRootEUsuarioNobody()
         val pasta = Files.createTempDirectory("painel-l1-")
         try {
-            val c = montarCenarioDeReversao(pasta, "versao=2026.11.1\nbackup=painel-bom.db\n")
+            val c = montarCenarioDeReversao(pasta, "versao=2026.11.1\nbackup=painel-bom.db\n", comoNobody = true)
             val alvo = pasta.resolve("alvo-so-do-root.txt").also { Files.writeString(it, "ALVO-INTOCAVEL") }
             // o "atacante" já plantou um link no lugar do banco, apontando para um arquivo só do root
             val dados = pasta.resolve("dados")
-            Files.createSymbolicLink(dados.resolve("painel.db"), alvo)
+            // (a pasta de dados já é do nobody: o link é plantado por quem pode escrever nela, como root ou via sudo -n)
+            assertEquals(0, rodarComoRoot(listOf("ln", "-s", alvo.toString(), dados.resolve("painel.db").toString())).first)
             // pastas atravessáveis pelo usuário do serviço; a pasta de dados é DELE (como em produção)
             rodar(listOf("chmod", "-R", "a+rX", pasta.toString()))
-            rodar(listOf("chown", "nobody", dados.toString()))
+            rodarComoRoot(listOf("chown", "nobody", dados.toString()))
             Files.setPosixFilePermissions(alvo, java.nio.file.attribute.PosixFilePermissions.fromString("rw-------"))
             val uidNobody = rodar(listOf("id", "-u", "nobody")).second.trim().toInt()
             val antes = Files.getAttribute(alvo, "unix:uid") as Int to Files.getPosixFilePermissions(alvo)
-            val (codigo, saida) = rodar(
+            val (codigo, saida) = rodarComoRoot(
                 listOf(shell()!!, reverter, c.raiz.toString(), "--restaurar-banco", "--sem-servico"),
                 c.env + ("PAINEL_USUARIO" to "nobody"),
             )
             assertEquals(0, codigo, saida)
             val banco = dados.resolve("painel.db")
             assertTrue(Files.isRegularFile(banco, java.nio.file.LinkOption.NOFOLLOW_LINKS), "o banco restaurado é um arquivo comum, não um link")
-            assertEquals("copia", Files.readString(banco).trim())
+            // o banco é só do dono (nobody): quem testa lê por cat como root
+            assertEquals("copia", rodarComoRoot(listOf("cat", banco.toString())).second.trim())
             assertEquals(uidNobody, Files.getAttribute(banco, "unix:uid") as Int, "o banco nasce com o dono do serviço (nenhum chown como root)")
             // o alvo do link plantado NÃO foi tocado: conteúdo, dono e modo
             assertEquals("ALVO-INTOCAVEL", Files.readString(alvo))
@@ -451,18 +500,18 @@ class ScriptsDeImplantacaoTest {
             val guardados = Files.list(dados).use { s -> s.map { it.fileName.toString() }.filter { it.startsWith("painel.db.migrado-") }.toList() }
             assertEquals(1, guardados.size, guardados.toString())
         } finally {
-            pasta.toFile().deleteRecursively()
+            limparCenario(pasta)
         }
     }
 
     @Test
     fun usuarioDoServicoNuncaPodeSerRootNemUid0() {
-        org.junit.jupiter.api.Assumptions.assumeTrue(shell() != null && souRootComUsuarioNobody(), "precisa de root e do usuário nobody")
+        exigirRootEUsuarioNobody()
         for (usuario in listOf("root", "0", "00", "-x", "a b", "")) {
             val pasta = Files.createTempDirectory("painel-uid0-")
             try {
-                val c = montarCenarioDeReversao(pasta, "versao=2026.11.1\nbackup=painel-bom.db\n")
-                val (codigo, saida) = rodar(
+                val c = montarCenarioDeReversao(pasta, "versao=2026.11.1\nbackup=painel-bom.db\n", comoNobody = true)
+                val (codigo, saida) = rodarComoRoot(
                     listOf(shell()!!, reverter, c.raiz.toString(), "--restaurar-banco", "--sem-servico"),
                     c.env + ("PAINEL_USUARIO" to usuario),
                 )
@@ -470,7 +519,7 @@ class ScriptsDeImplantacaoTest {
                 assertTrue(codigo != 0, "'$usuario': $saida")
                 assertFalse(Files.exists(c.marcador), "'$usuario' chegou a executar o painel: $saida")
             } finally {
-                pasta.toFile().deleteRecursively()
+                limparCenario(pasta)
             }
         }
         assertTrue("uid 0" in ler("deploy/linux/comum.sh") || "uid do servico" in ler("deploy/linux/comum.sh"))
@@ -478,20 +527,31 @@ class ScriptsDeImplantacaoTest {
 
     @Test
     fun pastaEcopiaTemporariasSoSaoLegiveisPeloGrupoDoServico() {
-        org.junit.jupiter.api.Assumptions.assumeTrue(shell() != null && souRootComUsuarioNobody(), "precisa de root e do usuário nobody")
+        exigirRootEUsuarioNobody()
         val pasta = Files.createTempDirectory("painel-modos-")
         try {
-            val c = montarCenarioDeReversao(pasta, "versao=2026.11.1\nbackup=painel-bom.db\n")
+            val c = montarCenarioDeReversao(pasta, "versao=2026.11.1\nbackup=painel-bom.db\n", comoNobody = true)
             val grupo = rodar(listOf("id", "-gn", "nobody")).second.trim()
-            val (codigo, saida) = rodar(listOf(shell()!!, reverter, c.raiz.toString(), "--restaurar-banco", "--sem-servico"), c.env)
+            val (codigo, saida) = rodarComoRoot(listOf(shell()!!, reverter, c.raiz.toString(), "--restaurar-banco", "--sem-servico"), c.env)
             assertEquals(0, codigo, saida)
             // o painel falso (que roda como o serviço) anotou modo e grupo da cópia e da pasta durante a conferência
             val modos = Files.readAllLines(pasta.resolve("marcas/modos"))
             assertEquals("640 $grupo", modos[0], "cópia: 0640 do grupo do serviço (outros não leem o banco)")
             assertEquals("750 $grupo", modos[1], "pasta: 0750 do grupo do serviço")
         } finally {
-            pasta.toFile().deleteRecursively()
+            limparCenario(pasta)
         }
+    }
+
+    /** Guarda do próprio teste: com CI=true em Linux, faltar root/sudo/nobody tem de FALHAR, nunca pular. */
+    @Test
+    fun faltaDePrivilegioFalhaEmCiNaoPula() {
+        val fonte = ler("app/backend/src/test/kotlin/br/sidia/painel/implantacao/ScriptsDeImplantacaoTest.kt")
+        assertFalse(
+            Regex("assumeTrue\\([^\\n]*(souRoot|nobody|sudo)", RegexOption.IGNORE_CASE).containsMatchIn(fonte),
+            "as provas do como_servico não podem usar assumeTrue direto: use exigirRootEUsuarioNobody()",
+        )
+        assertTrue(Regex("exigirRootEUsuarioNobody\\(\\)").findAll(fonte).count() >= 4, "as 3 provas chamam o guarda (mais a definição)")
     }
 
     @Test
