@@ -55,9 +55,11 @@ class TravaDpoRoutesTest {
             "/api/auditoria/sinais", "/api/auditoria/historico/TG-101", "/api/cards/task-review",
             "/api/cartoes/AU-01/tasks?segmento=todos", "/api/cartoes/AU-02/tasks?segmento=sinal:PASSA_BOLA",
             "/api/cartoes/AU-03/tasks?segmento=concluidas", "/api/cartoes/DV-01/tasks?segmento=pares",
+            "/api/cartoes/VG-14/tasks?segmento=ALTERACOES_SEM_AUTORIZACAO",
         )
         val ROTAS_INTEGRIDADE = listOf(
             "/api/integridade", "/api/integridade/catalogo", "/api/cartoes/IN-01/tasks?segmento=todas",
+            "/api/cartoes/IN-02/tasks?segmento=nivel:ALTO", "/api/cartoes/VG-13/tasks?segmento=INDICIO_ALTO",
         )
     }
 

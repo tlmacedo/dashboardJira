@@ -229,7 +229,8 @@ class CentralRoutesTest {
         val c = dto(cli.get("gerente.exemplo", rota))
         for (nome in listOf("ALTERACOES_SEM_AUTORIZACAO", "TASK_REVIEW_DIVERGENTE")) {
             val item = c.item(nome)
-            if (item != null) assertEquals(listOf("VG-14", nome), listOf(item.cartao, item.segmento))
+            assertNotNull(item, "$nome fica na Central (em dev aberto)")
+            assertEquals(listOf("VG-14", nome), listOf(item.cartao, item.segmento))
         }
     }
 

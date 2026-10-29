@@ -2130,7 +2130,7 @@
   "card.vg13.comoCalcula": "É o número do cartão de indício alto da Integridade; a consulta fica registrada no registro de acesso.",
   "dpo.menu": "aguardando aceite do DPO",
   "dpo.telaAguardando": "Esta tela fica desligada até o encarregado de dados (DPO) aprovar o uso. Nenhum dado foi consultado.",
-  "cardpage.aviso.ITENS_AGUARDANDO_ACEITE_DPO": "Alguns itens ficam fora desta lista até o encarregado de dados (DPO) aprovar o uso das telas de Auditoria e Integridade.",
+  "cardpage.aviso.ITENS_AGUARDANDO_ACEITE_DPO": "Alguns itens ficam fora desta lista até o encarregado de dados (DPO) aprovar o uso das telas sensíveis que você tem permissão de ver.",
   "cardpage.aviso.HISTORICO_AGUARDANDO_ACEITE_DPO": "O histórico de alterações fica fora até o encarregado de dados (DPO) aprovar o uso.",
   "cardpage.aviso.HISTORICO_DE_ESTIMATIVA_INCOMPLETO": "{n} evento(s) de estimativa ainda sem valor guardado: a nova carga do Jira os preenche.",
   "cardpage.aviso.HISTORICO_DE_WORKLOG_INCOMPLETO": "{n} registro(s) de horas ainda sem a data de criação: a nova carga do Jira os preenche.",

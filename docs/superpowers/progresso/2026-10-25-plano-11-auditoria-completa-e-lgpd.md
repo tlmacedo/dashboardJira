@@ -52,4 +52,13 @@ Mutação -> testes derrubados: trava sempre liberada (13); trava sem `!jiraLive
 - Sem captura visual (sem navegador); a tela Meus dados e o menu foram conferidos por teste.
 - Dev-mock (`dev-mock/`) não ganhou a rota `/api/titular/meus-dados`.
 - MIN-2 do 7a (carga inicial que falhou antes da marca d'água e sem `sync_run`): continua aberta; a trava poderia olhar também issues fora do manifesto de demonstração.
-- Pendências externas: parecer do DPO (seis perguntas), aceite ligado pelo usuário, envio do texto à equipe, nova carga do Jira (quando a flag for ligada) para preencher estimativas e datas de criação.
+- Ver a seção "Correções da revisão do PR #45" no fim deste arquivo.
+- Pendências externas: parecer do DPO (sete perguntas), aceite ligado pelo usuário, envio do texto à equipe, nova carga do Jira (quando a flag for ligada) para preencher estimativas e datas de criação.
+
+## Correções da revisão do PR #45 (Opus)
+
+- Ruling: I-1 — a `TravaDpo` (condição de desenvolvimento) fecha também com QUALQUER linha de `sync_state` de instância do Jira (`instance <> '-'`; a "-" é a da retenção/demonstração): a V7 zera só a marca d'água e a linha sobrevive, então nem a V7 nem a retenção dos `sync_run` abrem a trava sobre dado real. A demonstração pura (e com retenção) continua aberta. Testes `migracaoQueZeraACursorNaoAbreATravaSobreDadoReal`, `demonstracaoComRetencaoContinuaAberta` e `MigracaoDadosAuditoriaTest.migracaoNaoAbreATravaDoDpoNemEscreveSyncRun` (vermelhos com a regra antiga, provado por mutação; a V7 continua sem escrever `sync_run`).
+- Ruling: I-2 — relatório e aviso à equipe descrevem a pontuação da Integridade (pontos, taxa, múltiplo em relação ao time, nível ALTO/MÉDIO por pessoa, só gerente, lista alfabética, sem posição); pergunta 2 reescrita. `DocumentosLgpdTest.documentosNaoNegamAPontuacaoQueAIntegridadeEntrega` exige um termo para cada campo do `NivelPessoaDto` e proíbe as negações antigas.
+- M-1 aviso da Central sem nomear módulo; M-2/M-3 `.env.example` com a precedência da retenção e o efeito de `RETENTION_HISTORICO_MONTHS` curto na janela da carga inicial; M-4 relatório (titular vê os próprios acessos); M-5 atendimento (a próxima sincronização traz de volta o dado eliminado); M-6 comentários e aviso `SINAL_SEM_DADO`; M-7 `CentralRoutesTest` sem `if` e `TravaDpoRoutesTest` com VG-14, VG-13 e IN-02.
+- M-10 virou a pergunta 7 ao DPO (ex-membro sem papel vigente recebe 403 na tela Meus dados; exerce o direito pelo canal do DPO).
+- Adiados: M-8 (nomes de teste do brief trocados por equivalentes, mesmo conteúdo); M-9 (dev-mock sem a rota do titular, `inventarioConhecido` do Plano 8, captura visual).

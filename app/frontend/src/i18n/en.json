@@ -2130,7 +2130,7 @@
   "card.vg13.comoCalcula": "It is the number of the high indication card of Integrity; the query is recorded in the access log.",
   "dpo.menu": "awaiting DPO approval",
   "dpo.telaAguardando": "This screen stays off until the data protection officer (DPO) approves its use. No data was queried.",
-  "cardpage.aviso.ITENS_AGUARDANDO_ACEITE_DPO": "Some items are left out of this list until the data protection officer (DPO) approves the Audit and Integrity screens.",
+  "cardpage.aviso.ITENS_AGUARDANDO_ACEITE_DPO": "Some items are left out of this list until the data protection officer (DPO) approves the sensitive screens you are allowed to see.",
   "cardpage.aviso.HISTORICO_AGUARDANDO_ACEITE_DPO": "The change history is left out until the data protection officer (DPO) approves its use.",
   "cardpage.aviso.HISTORICO_DE_ESTIMATIVA_INCOMPLETO": "{n} estimate event(s) still without a stored value: the next Jira load fills them.",
   "cardpage.aviso.HISTORICO_DE_WORKLOG_INCOMPLETO": "{n} time log(s) still without a creation date: the next Jira load fills them.",
