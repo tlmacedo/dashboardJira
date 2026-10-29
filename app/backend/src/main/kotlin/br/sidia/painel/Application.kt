@@ -82,7 +82,15 @@ import java.time.Clock
 data class HealthResposta(val ok: Boolean)
 
 @Serializable
-data class MetaResposta(val devMode: Boolean, val liveEnabled: Boolean, val zone: String, val banner: String?)
+data class MetaResposta(
+    val devMode: Boolean,
+    val liveEnabled: Boolean,
+    val zone: String,
+    val banner: String?,
+    /** Versão do pacote e rótulo para a tela. Só isto: commit e data de build nunca saem numa rota pública. */
+    val versao: String,
+    val rotuloDeVersao: String,
+)
 
 private val log = LoggerFactory.getLogger("br.sidia.painel")
 
@@ -101,6 +109,8 @@ fun main(args: Array<String>) {
     val settings = Settings.fromEnv(env)
     // Produção insegura (escuta aberta, caminho relativo, origem sem https...) é recusada ANTES de abrir banco e trava.
     GuardasDeProducao.verificar(settings, env)
+    // A versão completa (com commit e data de build) só aparece aqui, no log; a rota pública mostra só a versão.
+    VersaoDoPacote.atual.let { log.info("Painel de Squads versão={} commit={} construidaEm={}", it.versao, it.commit, it.construidaEm) }
     // O Logback iniciou antes da leitura do arquivo de variáveis: reaplica formato e pasta de log e registra os segredos
     // na máscara (nenhum token sai em log, nem escapado).
     ConfiguradorDeLog.aplicar(settings.operacao.logFormato, settings.operacao.logDir)
@@ -186,6 +196,7 @@ fun Application.module(
     catalogo: CatalogoDeCartoes = catalogoPadrao(),
     prontidao: Prontidao? = prontidaoPadrao(context),
     metricas: Metricas? = null,
+    versao: Versao = VersaoDoPacote.atual,
 ) {
     val settings = context.settings
     val inicioDoProcesso = context.clock.instant()
@@ -273,6 +284,8 @@ fun Application.module(
                     liveEnabled = settings.jiraLiveEnabled,
                     zone = settings.zone.id,
                     banner = banner,
+                    versao = versao.versao,
+                    rotuloDeVersao = versao.rotulo,
                 ),
             )
         }

@@ -254,6 +254,14 @@ h1 {
   margin: 0 0 14px;
 }
 
+/* Rótulo da versão do pacote (Plano 13); só aparece quando /api/meta informa a versão. */
+.rodape-versao {
+  padding: 6px 16px;
+  font-size: 12px;
+  color: var(--text2);
+  text-align: right;
+}
+
 /* Aviso de sessão expirada: cobre a tela até o usuário entrar de novo (a sessão realmente acabou). */
 .sessao-expirada {
   position: fixed;

@@ -97,6 +97,7 @@ export function Shell() {
             <Outlet />
           </main>
         </div>
+        {meta.data?.rotuloDeVersao && <footer className="rodape-versao">{meta.data.rotuloDeVersao}</footer>}
         <SessaoExpirada devMode={dev} />
       </div>
     </RoleContext.Provider>

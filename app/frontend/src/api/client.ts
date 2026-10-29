@@ -5,6 +5,9 @@ export type Meta = {
   liveEnabled: boolean
   zone: string
   banner: string | null
+  /** Versão do pacote (`AAAA.MM.N`) e o rótulo para a tela (`v2026.11.1`, ou `dev`); ausentes em painel antigo. */
+  versao?: string
+  rotuloDeVersao?: string
 }
 
 export type Me = { userId: string; roles: string[] }
