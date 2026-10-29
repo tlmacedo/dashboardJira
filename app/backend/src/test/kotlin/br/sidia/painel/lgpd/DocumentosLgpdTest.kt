@@ -70,7 +70,7 @@ class DocumentosLgpdTest {
     @Test
     fun cadaPerguntaTemOpcoesComRecomendada() {
         val perguntas = Regex("(?m)^### Pergunta (\\d+)\\b.*$").findAll(secao(11)).toList()
-        assertEquals((1..6).toList(), perguntas.map { it.groupValues[1].toInt() }, "as seis perguntas mínimas, em ordem")
+        assertEquals((1..7).toList(), perguntas.map { it.groupValues[1].toInt() }, "as sete perguntas, em ordem")
         val s11 = secao(11)
         perguntas.forEachIndexed { i, p ->
             val fim = perguntas.getOrNull(i + 1)?.range?.first ?: s11.length
@@ -114,6 +114,28 @@ class DocumentosLgpdTest {
         for (jargao in listOf("access_log", "SQLite", "JSON", "API", "endpoint", "OIDC", "CSP", "CSRF", "migração", "banco de dados")) {
             assertTrue(!comunicacao.contains(jargao), "jargão na comunicação: $jargao")
         }
+    }
+
+    @Test
+    fun documentosNaoNegamAPontuacaoQueAIntegridadeEntrega() {
+        // Cada campo do DTO por pessoa da Integridade tem o seu termo no relatório (campo novo sem termo derruba o teste).
+        val termos = mapOf(
+            "pessoa" to "pessoa", "nivel" to "nível", "pontos" to "pontos", "concluidas" to "concluídas", "taxa" to "taxa",
+            "multiplo" to "múltiplo", "graves" to "graves", "evidencias" to "evidências",
+        )
+        val campos = br.sidia.painel.integridade.NivelPessoaDto::class.java.declaredFields.map { it.name }.filter { !it.startsWith("$") && it != "Companion" }
+        for (c in campos) {
+            val termo = termos[c] ?: error("campo '$c' do NivelPessoaDto sem termo no relatório: descreva-o e acrescente aqui")
+            assertTrue(secao(4).contains(termo, ignoreCase = true) || secao(7).contains(termo, ignoreCase = true), "relatório (seções 4 e 7) sem '$termo' ($c)")
+        }
+        // Nem o relatório nem o aviso à equipe voltam a negar nota ou comparação entre pessoas.
+        for (t in listOf(relatorio, comunicacao)) {
+            for (negacao in listOf("sem nota", "nem nota", "sem comparação entre pessoas", "não compara pessoas", "não pontua")) {
+                assertTrue(!t.contains(negacao, ignoreCase = true), "documento nega o que o painel entrega: '$negacao'")
+            }
+        }
+        assertTrue(comunicacao.contains("pontos") && comunicacao.contains("média do time"), "a comunicação não explica a pontuação")
+        assertTrue(secao(4).contains("compara") && secao(7).contains("pergunta 2"))
     }
 
     @Test

@@ -16,7 +16,9 @@ Prazo sugerido: resposta em até 15 dias corridos.
 
 ## 3. Pedir eliminação
 
-O pedido vai pelo **canal do DPO**, que avalia o que pode ser eliminado respeitando a retenção legal. Se for aprovada, o operador do painel apaga os dados da pessoa pelo procedimento do runbook diário, e a retenção automática (seção 8 do relatório) apaga o restante no prazo. Eliminar dado de uma pessoa não apaga o dado no Jira, que é o sistema de origem.
+O pedido vai pelo **canal do DPO**, que avalia o que pode ser eliminado respeitando a retenção legal. Se for aprovada, o operador do painel apaga os dados da pessoa pelo procedimento do runbook diário, e a retenção automática (seção 8 do relatório) apaga o restante no prazo. Eliminar dado de uma pessoa não apaga o dado no Jira, que é o sistema de origem, e **a próxima sincronização traz de volta** do Jira o que foi eliminado do painel (enquanto o dado existir lá e estiver dentro da retenção). Eliminação definitiva depende de tratar o dado no Jira, ou de o DPO decidir uma exclusão que o painel respeite (hoje não existe); o pedido deve ser registrado com essa ressalva.
+
+Quem saiu do time e não tem mais papel no diretório não abre a tela Meus dados (recebe "sem permissão"): o pedido dessa pessoa também vai pelo canal do DPO (pergunta 7 do relatório).
 
 Prazo sugerido: resposta em até 15 dias corridos; execução em até 30 dias.
 

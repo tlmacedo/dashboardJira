@@ -25,9 +25,9 @@ A lista completa, coluna por coluna, com finalidade, quem vê e retenção, est�
 - **Tempo em status e cards de trabalho:** medir o fluxo e acompanhar prazos, riscos, entregas e metas das tasks. Todos os papéis, cada um dentro da sua visão.
 - **Carga e ausências:** planejar a capacidade do time. O usuário vê só o próprio; o líder, o squad; coordenação e gerente, todos.
 - **Auditoria (`AUDITORIA`):** conferir quem alterou prazo, responsável e labels de atraso, e dois sinais novos (estimativa reduzida depois do início do trabalho; horas registradas com atraso). Só coordenação e gerente. **Indício, não prova**: cada sinal pede conferência humana.
-- **Integridade (`INTEGRIDADE`):** padrões de fechamento de tasks por pessoa. Só o gerente. Mais sensível, porque avalia padrões por pessoa. Também indício, não prova.
+- **Integridade (`INTEGRIDADE`):** padrões de fechamento de tasks por pessoa. Só o gerente. Mais sensível, porque **pontua e compara pessoas**: cada sinal vale pontos (pela gravidade); para cada pessoa o painel calcula os pontos, as tasks concluídas, a taxa (pontos por concluída), o número de sinais graves e o múltiplo da taxa dela em relação à taxa mediana do time, e classifica em um nível de indício (ALTO ou MÉDIO). Só quem está nesses níveis aparece na lista, em ordem alfabética, sem posição. Também indício, não prova.
 - **Distribuição e rebalanceamento:** o painel sugere quem poderia assumir uma task (em modo sombra, isto é, só mostra) e registra a decisão humana. Coordenação e gerente.
-- **Registro de acesso:** cada consulta ao painel é registrada (quem, qual tela, quando) para auditoria de uso. Só o gerente consulta.
+- **Registro de acesso:** cada consulta ao painel é registrada (quem, qual tela, quando) para auditoria de uso. O gerente consulta o registro inteiro; cada pessoa vê só os próprios acessos recentes, na tela Meus dados.
 
 ## 5. Bases legais candidatas, como perguntas
 
@@ -60,7 +60,7 @@ Cada medida abaixo cita o teste automático que a prova (classe e método).
 
 - **Sinal lido como conclusão.** Mitigação: toda tela e resposta de Auditoria e Integridade levam o aviso fixo "indício, não prova"; a linguagem nunca afirma má-fé.
 - **Acesso indevido a dado sensível.** Mitigação: acesso restrito por papel, trava do DPO fechada por padrão e registro de toda consulta.
-- **Ranking ou comparação entre pessoas.** Mitigação: tabelas de pessoas em ordem alfabética, sem nota nem posição.
+- **Pontuação e comparação por pessoa (Integridade).** Existe: pontos, taxa, evidências e múltiplo em relação ao time, e um nível de indício por pessoa. Mitigação: só o gerente vê, a trava do DPO fica fechada até o aceite, o aviso "indício, não prova" acompanha tudo, a lista é alfabética e não há posição nem ranking. O DPO decide o aceite sabendo disso (pergunta 2).
 - **Decisão automatizada sobre pessoas.** Não existe: as sugestões de distribuição ficam em modo sombra (só mostram) e a decisão é sempre humana, com registro.
 - **Dado guardado por mais tempo que o necessário.** Mitigação: retenção por categoria (seção 8) e expurgo diário.
 - **Dado antigo ou incompleto** (carga do Jira ainda não refeita): os sinais avisam quando faltam dados e não geram achado sem eles.
@@ -95,7 +95,7 @@ Cada pergunta traz as opções (a recomendada primeiro) e o que muda no painel.
 - Execução do contrato de trabalho. Consequência: igual, sem teste de balanceamento, e com a comunicação à equipe citando o contrato.
 - Outra base indicada pelo DPO. Consequência: o painel não muda; só o texto dos documentos é ajustado.
 
-### Pergunta 2. Qual é a base legal da Integridade?
+### Pergunta 2. Qual é a base legal da Integridade, que pontua cada pessoa e a compara com o time?
 - Legítimo interesse, com teste de balanceamento próprio, mais rigoroso (Recomendada). Consequência: a Integridade só abre com o parecer específico, já que avalia padrões por pessoa.
 - Execução do contrato de trabalho. Consequência: igual, sem teste de balanceamento.
 - Outra base, ou manter a Integridade desligada. Consequência: a Integridade permanece fechada pela trava e o resto do painel segue normal.
@@ -119,6 +119,10 @@ Cada pergunta traz as opções (a recomendada primeiro) e o que muda no painel.
 - Não, liberar os dois juntos (Recomendada). Consequência: nada muda; hoje a trava libera os dois com o mesmo aceite.
 - Sim, Auditoria primeiro. Consequência: pequena mudança no painel: duas variáveis de aceite em vez de uma.
 - Sim, qualquer ordem. Consequência: a mesma mudança pequena, com referência de parecer por módulo.
+
+### Pergunta 7. Quem saiu do time (sem papel vigente no diretório) exerce o direito de acesso pela tela?
+- Não, pelo canal do DPO, que pede o levantamento ao operador (Recomendada). Consequência: nada muda no painel; quem não tem papel vigente recebe 403 na tela Meus dados.
+- Sim, a tela passa a aceitar quem consta no diretório mesmo sem papel vigente. Consequência: pequena mudança no painel e revisão do controle de acesso.
 
 ## 12. Como registrar o aceite
 

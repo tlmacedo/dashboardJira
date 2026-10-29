@@ -10,7 +10,7 @@ Texto curto para a gestão enviar ao time antes do uso real do painel (por e-mai
 
 **O que o painel não faz.**
 - Nesta etapa ele **não escreve no Jira**: só lê.
-- **Não cria ranking** de pessoas. As listas de nomes seguem ordem alfabética.
+- **Não cria ranking** com posições. As listas de nomes seguem ordem alfabética. Só a tela de padrões de fechamento (vista apenas pelo gerente) dá pontos a cada pessoa e compara com a média do time, como sinal para conferir, nunca como nota de desempenho.
 - **Não tira conclusões**. Os avisos de alteração e de padrão de fechamento são **indício, não prova**: servem para uma pessoa conferir e conversar, nunca para julgar sozinhos.
 - Não toma decisões sozinho. Quando sugere quem pode assumir uma task, a decisão é sempre de uma pessoa.
 - Não guarda comentários, descrições, e-mail, foto nem nome completo.
