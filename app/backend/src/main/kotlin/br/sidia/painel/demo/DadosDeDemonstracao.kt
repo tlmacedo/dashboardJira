@@ -116,6 +116,9 @@ class DadosDeDemonstracao(
             val autoCommit = con.autoCommit
             con.autoCommit = false
             try {
+                // Banco que já teve tentativa de sincronização real (mesmo falha, sem issue) não recebe demonstração: com a flag
+                // religada o expurgo não agiria e o fictício ficaria passando por dado real.
+                if (br.sidia.painel.sync.SincronizacaoReal.houveTentativa(con)) throw DemoRecusadaException("BANCO_COM_SINCRONIZACAO_REAL")
                 exigirSemDadosReais(con, manifesto)
                 val resumos = preparadas.map { (id, inst, issues) -> gravar(con, id, inst, issues) }
                 con.commit()
@@ -399,7 +402,9 @@ fun prepararDemonstracao(ctx: AppContext) {
             resumo.joinToString("; ") { "${it.instancia}: ${it.issues} issues, ${it.eventos} eventos" },
         )
     } catch (e: DemoRecusadaException) {
-        val orientacao = if (e.codigo == "BANCO_DESCONHECIDO_SEM_SINCRONIZACAO") {
+        val orientacao = if (e.codigo == "BANCO_COM_SINCRONIZACAO_REAL") {
+            "este banco já teve tentativa de sincronização real; faça backup de data/painel.db, verifique-o e use um banco novo (outro arquivo) para a demonstração."
+        } else if (e.codigo == "BANCO_DESCONHECIDO_SEM_SINCRONIZACAO") {
             "faça backup de data/painel.db e VERIFIQUE as issues do banco (podem ser reais) antes de apagá-lo; confira também DASHBOARD_DEMO_DATA, DASHBOARD_DEV_MODE e a flag do Jira."
         } else {
             "apague o arquivo do banco (data/painel.db) e confira DASHBOARD_DEMO_DATA, DASHBOARD_DEV_MODE e a flag do Jira."

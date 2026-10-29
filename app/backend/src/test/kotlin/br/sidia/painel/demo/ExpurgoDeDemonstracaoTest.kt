@@ -238,6 +238,37 @@ class ExpurgoDeDemonstracaoTest {
     }
 
     @Test
+    fun demonstracaoNaoCarregaSobreBancoQueJaTeveTentativaDeSincronizacao() {
+        // I-3 do PR #50: tentativa que falhou (sem issue) + demonstração carregada + flag religada deixaria 45 issues fictícias.
+        val demoPura = Settings(dashboardDevMode = true, dashboardDemoData = true)
+        for (sql in listOf(
+            "INSERT INTO sync_run(instance, kind, started_at, status, codigo_erro) VALUES ('samsung', 'INCREMENTAL', 1, 'FALHA', 'HTTP_401')",
+            "INSERT INTO sync_run(instance, kind, started_at, status) VALUES ('samsung', 'RECONCILIACAO', 1, 'EM_ANDAMENTO')",
+            "INSERT INTO sync_state(instance, falhas_desde_run_id) VALUES ('samsung', 1)",
+        )) {
+            contexto().use { ctx ->
+                exec(ctx, sql)
+                val e = assertFailsWith<DemoRecusadaException> { prepararDemonstracao(comSettings(ctx, demoPura)) }
+                assertEquals("BANCO_COM_SINCRONIZACAO_REAL", e.codigo)
+                assertEquals(0, contar(ctx, "SELECT count(*) FROM issue"), "nada foi carregado")
+                // E o ciclo do cenário não deixa fictício com a flag ligada.
+                prepararDemonstracao(comSettings(ctx, flagVerdadeira))
+                assertEquals(0, contar(ctx, "SELECT count(*) FROM issue WHERE key LIKE 'DEMO%'"))
+            }
+        }
+    }
+
+    @Test
+    fun retencaoEEstadoDaRetencaoNaoImpedemACargaDaDemonstracao() {
+        contexto().use { ctx ->
+            exec(ctx, "INSERT INTO sync_run(instance, kind, started_at, status) VALUES ('-', 'RETENCAO', 1, 'OK')")
+            exec(ctx, "INSERT INTO sync_state(instance, falhas_desde_run_id) VALUES ('-', 1)")
+            prepararDemonstracao(comSettings(ctx, flagFalsa))
+            assertTrue(contar(ctx, "SELECT count(*) FROM issue") > 40)
+        }
+    }
+
+    @Test
     fun demonstracaoPuraComFlagFalsaContinuaFuncionando() {
         contexto().use { ctx ->
             prepararDemonstracao(comSettings(ctx, flagFalsa))
