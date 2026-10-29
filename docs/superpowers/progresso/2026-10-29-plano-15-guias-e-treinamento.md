@@ -9,7 +9,7 @@ Fora deste bloco: T1 (ativos, já registrados em outra branch), T9 (sessões de 
 - [x] Tarefa 5: `DESIGN.md` (raiz) derivado do código; `DesignMdTest` (+6 casos; `designMdBateComTokens` compara valor a valor com `tokens.css`).
 - [x] Tarefa 6: guia do painel em pt-BR (`docs/manual/guia-do-painel.md`) e em inglês (`docs/manual/panel-guide.md`); `GuiasDocTest`.
 - [x] Tarefa 7: perguntas frequentes (`docs/manual/perguntas-frequentes.md` e `docs/manual/faq.md`); `GuiasDocTest`.
-- [ ] Tarefa 8: material de treinamento por papel (`docs/treinamento/`); `TreinamentoDocTest`.
+- [x] Tarefa 8: material de treinamento por papel (`docs/treinamento/{usuario,squad-leader,coordenador,gerente,roteiro-da-sessao}.md`, `img/manifesto.yaml`); `TreinamentoDocTest` (9 casos). Sem capturas de tela (ver Rulings).
 
 ## Reconferir após o Plano 11
 

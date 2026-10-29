@@ -1,0 +1,17 @@
+# Manifesto das capturas de tela do treinamento (Plano 15, Tarefa 8).
+# Regra: só capturas com dados de DEMONSTRAÇÃO fictícios (DASHBOARD_DEMO_DATA=true, DASHBOARD_DEV_MODE=true, flag do Jira
+# desligada). Cada imagem desta pasta precisa ter uma entrada abaixo; o teste TreinamentoDocTest.capturasSoDeDemonstracao
+# falha se houver imagem sem entrada, entrada sem imagem ou entrada sem "demo: true".
+#
+# Estado em 29/10/2026: nenhuma captura foi gerada. O ambiente de escrita deste material não tinha navegador com o painel
+# aberto. Para gerar (1440 px de largura, tema Claro, pt-BR), suba o painel com os dados de demonstração (app/README.md),
+# escolha o papel em "Papel (simulação)" e acrescente uma entrada por arquivo neste formato:
+#
+# - arquivo: usuario-meu-painel.png
+#   tela: meu
+#   papel: USUARIO
+#   tema: claro
+#   idioma: pt-BR
+#   data: 2026-10-30
+#   demo: true
+capturas: []
