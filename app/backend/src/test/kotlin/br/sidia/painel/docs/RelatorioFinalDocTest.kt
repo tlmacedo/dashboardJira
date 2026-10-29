@@ -118,6 +118,21 @@ class RelatorioFinalDocTest {
     }
 
     @Test
+    fun listaDoUsuarioTrazItensDepoisDaFlagEAContaDoServico() {
+        val f = secao("f")
+        for (termo in listOf("Plano 13, T1", "Aceite do gestor", "Sessões de treinamento", "dono da manutenção", "Canal externo")) {
+            assertTrue(termo in f, "lista (f) sem '$termo'")
+        }
+        val c = secao("c")
+        assertTrue("PAINEL_USUARIO" in c && "como_servico" in c, "seção (c) sem a conta do serviço")
+        // A afirmação sobre o backup do atualizar tem de bater com o código dos scripts.
+        val comum = ApoioDeDocs.texto("deploy/linux/comum.sh")
+        val fazerBackup = comum.substringAfter("fazer_backup() {").substringBefore("\n}")
+        assertTrue("como_servico" in fazerBackup, "fazer_backup deixou de rodar como a conta do serviço")
+        assertTrue("rodam como root" !in doc() && "rodam como root" !in ApoioDeDocs.texto("docs/superpowers/plans/2026-10-28-roteiro-antes-e-depois-da-flag.md"))
+    }
+
+    @Test
     fun relatorioNaoLigaAFlagNemCitaHost() {
         val texto = doc()
         assertTrue(!Regex("""JIRA_LIVE_ENABLED\s*[=:]\s*true""", RegexOption.IGNORE_CASE).containsMatchIn(texto), "o relatório escreve a flag como ligada")
