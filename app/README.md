@@ -44,6 +44,9 @@ DASHBOARD_DEMO_DATA=true sh iniciar.sh        # PowerShell: $env:DASHBOARD_DEMO_
 | `PAINEL_HOST` | `127.0.0.1` | Interface em que o painel escuta (porta 8080). O padrão só atende a própria máquina; outra interface exige firewall (`docs/implantacao.md`). |
 | `PAINEL_CACHE_SEG` | `60` | Segundos em que as telas reaproveitam a leitura bruta do banco; `0` desliga. Fim de sincronização e de retenção invalidam na hora. |
 | `OIDC_ISSUER`, `OIDC_CLIENT_ID`, `OIDC_CLIENT_SECRET`, `OIDC_REDIRECT_URI`, `OIDC_CLAIM_USERNAME`, `SESSION_SECRET` | vazio | Login SSO/OIDC e assinatura da sessão. Obrigatórios em produção (menos o segredo do cliente e a claim); ver `docs/implantacao.md`. |
+| `OIDC_USERNAME_ESTRATEGIA`, `OIDC_DOMINIOS_PERMITIDOS`, `OIDC_HOSTS_PERMITIDOS` | `claim_direto`, vazio, vazio | Como a claim do `id_token` vira o username do Jira (`claim_direto`, `parte_local_do_email` ou `conta_windows`; uma só por instalação). **`OIDC_DOMINIOS_PERMITIDOS` é obrigatória** com as duas últimas (sem ela a produção não sobe: `DOMINIO_DO_USERNAME_AUSENTE`). `OIDC_HOSTS_PERMITIDOS` limita os hosts que o provedor pode anunciar na descoberta. |
+| `DASHBOARD_PORT`, `DASHBOARD_ORIGEM_PUBLICA`, `DASHBOARD_PROXY_CONFIAVEL` | `8080`, vazio, vazio | Porta de escuta; origem pela qual o navegador acessa o painel (`https` em produção; a proteção CSRF a compara com o cabeçalho `Origin`); faixas CIDR do proxy reverso cujos cabeçalhos `X-Forwarded-*` são aceitos (vazio = nenhum proxy confiável). A origem e o proxy são obrigatórios em produção, ver "Guardas de produção". |
+| `PAINEL_USUARIO` | `painel` | Só nos scripts de atualização e reversão no Linux (`deploy/linux/`): a conta sem privilégio do serviço, com a qual a restauração é feita. Nunca uid 0. Não é variável do painel. |
 | `DATABASE_PATH` | `data/painel.db` | Arquivo SQLite do painel. |
 
 ## LGPD e aceite do DPO
@@ -110,7 +113,11 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\montar-pacote.ps
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\verificar-pacote.ps1
 ```
 
-(`sh scripts/montar-pacote.sh` e `sh scripts/verificar-pacote.sh` no Linux/macOS.) O resultado fica em `app/pacote/painel/` (ignorado pelo git) e **nunca** leva configuração real, arquivo de variáveis real nem banco. Tudo sobre pastas e variáveis de produção, login SSO/OIDC, endereço de escuta (`PAINEL_HOST`, padrão `127.0.0.1`), ordem segura para ligar o Jira, serviço, backup e atualização está em [`docs/implantacao.md`](../docs/implantacao.md).
+(`sh scripts/montar-pacote.sh` e `sh scripts/verificar-pacote.sh` no Linux/macOS.) O resultado fica em `app/pacote/painel/` (ignorado pelo git) e **nunca** leva configuração real, arquivo de variáveis real nem banco. Passando a versão (`AAAA.MM.N`: `sh scripts/montar-pacote.sh 2026.11.1`, ou `-Versao 2026.11.1` no PowerShell) sai também o zip reprodutível `painel-AAAA.MM.N.zip` com o SHA-256 (arquivo `.sha256`) ao lado; a versão aparece no rodapé da tela e em `GET /api/meta`. Tudo sobre pastas e variáveis de produção, login SSO/OIDC, endereço de escuta (`PAINEL_HOST`, padrão `127.0.0.1`), ordem segura para ligar o Jira, serviço, backup, **atualização e reversão** (`deploy/windows/atualizar.ps1` e `reverter.ps1`; `deploy/linux/atualizar.sh` e `reverter.sh`; o `ensaio-troca.sh` prova a troca e a reversão no Linux) está em [`docs/implantacao.md`](../docs/implantacao.md). Os scripts `.ps1` do pacote e da implantação só foram conferidos por testes estáticos: a primeira execução no Windows 11 é pendência registrada no roteiro (D14).
+
+### Guardas de produção
+
+As guardas de produção valem com `DASHBOARD_DEV_MODE=false`: `main()` recusa a subida, antes de abrir o banco e com todos os códigos de uma vez, se: a demonstração está ligada (`DEMO_EM_PRODUCAO`); `OIDC_ISSUER` ou `OIDC_REDIRECT_URI` não são `https` ou o retorno não está sob `DASHBOARD_ORIGEM_PUBLICA`; `SESSION_SECRET` é curto; falta a lista de domínios da estratégia de username (`DOMINIO_DO_USERNAME_AUSENTE`); `DASHBOARD_PROXY_CONFIAVEL` está vazia (`PROXY_NAO_CONFIGURADO`); `PAINEL_HOST` é vazio, `0.0.0.0` ou `::`; ou `DATABASE_PATH`, `PAINEL_CONFIG_DIR` ou `PAINEL_STATIC_DIR` não são caminhos absolutos. A mensagem traz só os códigos, nunca valor. Lista completa e como corrigir cada um: [`docs/implantacao.md`](../docs/implantacao.md), seção "Guardas de produção". `painel validar-config` (seção Operação) confere a configuração sem subir o servidor.
 
 ## Inicialização e configuração
 

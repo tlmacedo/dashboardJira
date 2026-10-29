@@ -35,9 +35,11 @@ Une gestão de fluxo (tempo em status, previsão, capacidade) a auditoria de int
 
 ## Capabilities and Constraints
 
-- Cards pré-definidos, cada um com sua busca própria; relatório do inventário em `docs/analise/relatorio-cards-app-atual.md`.
-- Cards novos aprovados: calendário do time, cobertura por ausência, plano de 4 a 8 semanas, vencimentos da semana com folga real, posse da task por pessoa, simulador de ausência, matriz de competências, revisões pendentes por revisor, carga por tipo/OS, tendência de ocupação, esforço por task fechada (tipo + labels TEST-* + horas do worklog).
-- Auditoria: apenas Reporter (PL), coordenadores e gerente, ou Squad Leader do responsável podem trocar responsável, vencimento e labels de atraso.
+- Cada indicador é um **cartão** registrado no catálogo (`catalogoPadrao()`), com título, "o que mostra" e "como calcula" em pt e en, e uma gaveta que abre as tasks que o compõem (o teste de contrato garante número do cartão = total da gaveta). A tela **Mapa de cartões** (coordenação e gerente) lista todos. Inventário do app anterior: `docs/analise/relatorio-cards-app-atual.md`; equivalência por card com o app atual: `docs/analise/equivalencia-por-card.md`.
+- Telas implementadas (somente leitura, sobre dados sincronizados do Jira): tempo em status, abertas, negligenciadas, fechadas, metas e prazos, negativas, riscos, previsão, épicos, fluxo da semana, envelhecimento por etapa, bloqueios entre tasks, cruzamentos; carga, capacidade e ausências, calendário do time, plano de 4 a 8 semanas, vencimentos da semana, gargalos, tendência de ocupação, posse da task, esforço por task fechada, cobertura por ausência, simulador de ausência, matriz de competências, revisões pendentes e carga por tipo/OS; checklist × review; **Central de atenção**, Meu squad e Meu painel; **Meus dados** (cada pessoa vê o que o painel guarda sobre ela).
+- Distribuição e rebalanceamento de tasks funcionam em **modo sombra**: sugerem, a decisão é gravada só no painel e nada é escrito no Jira. Escrever no Jira pelo painel é o Plano 16 e só acontece por decisão expressa do usuário.
+- Auditoria: apenas Reporter (PL), coordenadores e gerente, ou Squad Leader do responsável podem trocar responsável, vencimento e labels de atraso. Auditoria (inclusive estimativa reduzida e worklog retroativo) e Integridade ficam atrás da **trava do DPO**: respondem 403 até o aceite do encarregado de dados, que só o usuário registra.
+- Operação: logs, prontidão, métricas, alertas, backup diário com restauração testada e pacote de produção com versão e SHA-256 (`docs/operacao/`, `docs/implantacao.md`).
 - Acesso: o `id` de cada pessoa em `papeis.yaml` é o username dela no Jira, igual ao `assignee` das issues (não é código de cargo); o papel define o que ela vê.
 - Interface em pt-BR e inglês com escolha do usuário.
 - Sem ranking individual de pessoas; tabelas de pessoas em ordem alfabética. Integridade restrita ao gerente e auditada.
@@ -49,9 +51,12 @@ O usuário pediu que o frontend siga a identidade visual da Sidia. Temas dispon�
 
 ## Evidence on Hand
 
-- App Python atual com 21 telas e manual com capturas: `app/docs/manual/`.
+- App Python anterior com 21 telas e manual com capturas: `legacy/docs/manual/` (referência; sai do repositório só com o "sim" do usuário ao documento de equivalência).
 - Documento de engenharia reversa do bscbi-web e catálogo de filtros do TG-Basic (vocabulário de campos).
-- Ausentes: manual de identidade visual da Sidia, arquivos de logo e licença da fonte "Mark". Não inventar.
+- Referência local da documentação pública do Jira Data Center (JQL, filtros, REST, gestão): `docs/jira/referencia/`. Nenhum exemplo dela foi testado em servidor real.
+- Guia do painel, perguntas frequentes e treinamento por papel: `docs/manual/guia-do-painel.md`, `docs/manual/perguntas-frequentes.md`, `docs/treinamento/`.
+- Relatório do que foi feito antes de qualquer acesso ao Jira, com decisões, limites e ações pendentes: `docs/superpowers/relatorio-final-antes-da-flag.md`. Conferência card a card contra o app anterior (o documento diz quais linhas têm comparação numérica com o legado e quais são só consistentes): `docs/analise/equivalencia-por-card.md`.
+- Ausentes: manual de identidade visual da Sidia, arquivos de logo e licença da fonte "Mark" (o painel usa alternativas de sistema; ver `docs/design/ativos-de-marca.md`). Não inventar. Ausentes também: qualquer dado real do Jira (a flag nunca foi ligada), o parecer do DPO e capturas de tela das telas em navegador.
 
 ## Product Principles
 
