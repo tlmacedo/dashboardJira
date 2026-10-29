@@ -33,6 +33,8 @@ Cada linha é um PR a partir da `main` atualizada; a seguinte só começa depois
 | A15 | Identidade, inglês e entrega (parte que não depende de ativos do usuário) | Plano 15, T2 a T8 com alternativas de sistema para marca e fonte | T1 (ativos de marca), T9 (sessões), T10 (dono): seção 3 | **Mesclado:** T1 (registro, caminho alternativo) a T4 (PR #38) e T5 a T8 (PR #47); T1 real, T9, T10 e T11 na seção 3 |
 | A16 | Fechamento do lado "antes" | Relatório, `HANDOFF.md`, índice e este roteiro atualizados | — | **Neste PR** (branch `docs/fechamento-antes-da-flag`; o PR é aberto pelo orquestrador) |
 
+Auditoria final da `main`: o PR #52 (trava da flag em `scripts/tempo_em_status.py`, provas de root no CI por `sudo -n`, mensagens de configuração sem eco, bundle no CI) está **feito e mesclado**. `legacy/backend/jiradash/jira/client.py` e `teams.py` acessam o Jira sem a trava; por decisão do usuário isso se resolve (remover ou travar) na remoção do `legacy/` (D9). Lacunas Minor da varredura do #52 no arquivo `docs/superpowers/progresso/2026-10-29-auditoria-final.md`.
+
 Fora da tabela: o PR #50 (expurgo automático dos dados fictícios ao ligar a flag e o estado "aguardando a primeira carga do Jira") foi executado depois do Plano 11 por necessidade da ligação da flag; não é uma linha do roteiro original.
 
 **Fora do alcance do "antes" por natureza:** Fase 0 (PC da empresa), Plano 14a/14b (precisam do Jira real), Plano 16 (escrita no Jira: só por decisão expressa do usuário).

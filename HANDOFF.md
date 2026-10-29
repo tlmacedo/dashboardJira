@@ -39,7 +39,8 @@ Se o ClineSR mostrar "aborted": quase sempre é clone ou tarefa antigos mandando
 
 ## A regra da flag
 
-- `JIRA_LIVE_ENABLED` é a **única** trava de acesso ao Jira e **vale somente dentro de `app/.env`** (variável de terminal ou do sistema é ignorada; linha ausente = desligada). Desligada: proibido para todos (app, agendador, MCP, rede). Ligada: liberado. **Só o usuário muda a flag, à mão.**
+- `JIRA_LIVE_ENABLED` é a **única** trava de acesso ao Jira e **vale somente dentro de `app/.env`** (variável de terminal ou do sistema é ignorada; linha ausente = desligada). Desligada: proibido para todos (app, agendador, MCP, rede). Ligada: liberado. **Só o usuário muda a flag, à mão.** Os scripts do repositório respeitam a trava: `scripts/tempo_em_status.py` lê só a linha da flag em `app/.env` e recusa (código 2) antes de qualquer rede; `ScriptsNaoAcessamJiraSemTravaTest` falha se surgir script com cliente de rede que cite o Jira sem a checagem (correção da auditoria final, PR #52, **feita**).
+- **Exceção conhecida, fora da trava:** `legacy/backend/jiradash/jira/client.py` e `legacy/backend/jiradash/jira/teams.py` (app Python antigo) acessam o Jira SEM a flag. Decisão do usuário: remover ou travar na remoção do `legacy/` (Plano 8, T9). Até lá, não rode o app Python antigo contra um Jira real.
 - Os hooks (`.claude/hooks/guard.sh`, `.clinerules/hooks/PreToolUse` e `PreToolUse.ps1`) leem a flag só dessa linha e, com ela desligada, bloqueiam URL e host de Jira (não a palavra solta); `atlassian.com` é liberado. Continuam barrados: MCP da Atlassian, variáveis `JIRA_*` de conexão, ligar a flag por texto ou arquivo, exibir token, ler ou escrever `.env`. Risco residual aceito: host montado em tempo de execução, IP direto, redirects. O `.ps1` do hook é provado no CI do Windows; **os `.ps1` do pacote e da implantação nunca foram executados** (D14 do roteiro).
 - Documentos não escrevem a linha da flag com valor verdadeiro (o hook barra): escreva "ligada" ou "valor verdadeiro".
 
@@ -82,6 +83,8 @@ Decisões que as IAs tomaram sozinhas pela regra "(Recomendada)" e que mudam dad
 - Auditoria: só Reporter (PL), coordenadores e gerente, ou Squad Leader do responsável podem trocar responsável, vencimento e labels de atraso (spec, seção 7). Concluída = categoria "done" e `resolution`; fuso America/Manaus; dias úteis por padrão.
 
 ## Pendências abertas
+
+- **Auditoria final da `main` (PR #52, feita):** trava da flag no ponto de rede de `scripts/tempo_em_status.py`, provas de root do `como_servico` rodando no CI por `sudo -n` (falham, não pulam, com `CI=true`), mensagens de configuração sem eco do valor lido, orçamento do bundle no CI e `diagnostico-conexao.ps1` com caixa exata. Detalhe e Minor não corrigidos (M-1 `access_log` com texto cru de filtro, M-2 modo dev com escuta aberta, M-5 cadeia de suprimentos, M-7 `/api/meta`, M-8 lint): `docs/superpowers/progresso/2026-10-29-auditoria-final.md`. **Lacunas da varredura de scripts:** rede montada por concatenação de texto, `eval`/`__import__`, binários não listados, ordem dentro de ramos condicionais; `tests/` e `test*` ficam fora; `DASHBOARD_DPO_ACEITE_REF` e `OIDC_HOSTS_PERMITIDOS`/`OIDC_DOMINIOS_PERMITIDOS` sem caso próprio no teste de mensagens.
 
 - **Rulings reversíveis a conferir na 1ª conexão** e **Minor adiados** de cada plano: nos arquivos de `docs/superpowers/progresso/` (seções "Minor adiados" e "Depois da flag / com o usuário"). Não os copie para cá.
 - Aviso automático de segurança sobre `legacy/backend/.../routes.py` (webhook sem segredo): código legado, sai com o `legacy/`. `legacy/.env.example` está modificado pelo usuário (fuso Manaus) e fora de commit.
