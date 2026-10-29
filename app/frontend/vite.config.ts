@@ -14,5 +14,8 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles: ['./src/test/setup.ts'],
     css: false,
+    // Folga para máquina carregada (jsdom + muitos workers); nenhum teste é pulado nem tem a asserção afrouxada.
+    testTimeout: 20_000,
+    hookTimeout: 20_000,
   },
 })

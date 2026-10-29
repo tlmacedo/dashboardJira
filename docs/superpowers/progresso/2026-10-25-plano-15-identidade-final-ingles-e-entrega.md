@@ -19,9 +19,9 @@ Branch: `feat/identidade-visual` (Tarefas 1 a 4). Executor: Claude Code (subagen
 
 ## Minor adiados
 
-- Contorno dos botões segmentados do menu (`--menu-line`, 1,33 a 1,58:1): botões têm texto e estado pressionado, mas o contorno fica abaixo de 3:1; avaliar um token `--menu-line-control` junto com a revisão visual.
-- Demais `border: var(--line)` em telas de cartões (fora do escopo deste bloco, para não colidir com os blocos paralelos) que sejam controles: revisar com o script de contraste.
-- `orcamento-bundle.mjs` (citado no plano) não existe na `main`; o build usa só o aviso de tamanho do Vite.
+- RESOLVIDO no Plano 8, T4 (branch `feat/rotas-e-acessibilidade-plano-8`): contorno dos botões segmentados do menu (`--menu-line`, 1,33 a 1,58:1). Agora há o token `--menu-line-control` (3,2 a 5,0:1 nos três temas), usado em `.seg` e `.burger`, com pares no script de contraste e teste em `src/a11y/contraste.test.ts`.
+- RESOLVIDO no Plano 8, T4: demais `border: var(--line)` em telas de cartões revisados um a um; só ficaram containers, selos de texto e divisórias (lista versionada em `contraste.test.ts`, que reprova seletor novo de controle com `--line`).
+- CORRIGIDO: `app/frontend/scripts/orcamento-bundle.mjs` EXISTE na `main` (Plano 8, T6; `pnpm build && node scripts/orcamento-bundle.mjs`, limite padrão 300 KB gzip). A nota anterior ("não existe na `main`") estava desatualizada.
 
 ## Rulings
 

@@ -68,7 +68,10 @@ const pares = [
   ['menu-text', 'menu', 4.5, 'item do menu'],
   ['menu-text2', 'menu', 4.5, 'grupo e rótulo do menu'],
   ['menu-text', 'menu-active', 4.5, 'item atual e segmentado ativo do menu'],
-  ['menu-line', 'menu', null, 'divisória e contorno dos segmentados do menu (os botões têm texto e estado pressionado; ver Minor adiado)'],
+  ['menu-line', 'menu', null, 'divisória decorativa do menu (não usar em contorno de botão)'],
+  // Contorno dos botões do menu (segmentados de papel, tema e idioma; botão ☰): WCAG 1.4.11, 3:1 sobre o menu e o item ativo.
+  ['menu-line-control', 'menu', 3, 'contorno dos botões do menu'],
+  ['menu-line-control', 'menu-active', 3, 'contorno dos botões do menu ao lado do segmento ativo'],
   ['menu-marca', 'menu', 3, 'barra do item atual do menu (indicador, não texto)'],
 ]
 
