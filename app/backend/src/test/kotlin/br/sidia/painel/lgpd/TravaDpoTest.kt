@@ -80,6 +80,31 @@ class TravaDpoTest {
     }
 
     @Test
+    fun migracaoQueZeraACursorNaoAbreATravaSobreDadoReal() {
+        // A V7 zera a marca d'água; sem sync_run (a retenção os apagou), a linha de sync_state da instância ainda prova a sincronização.
+        val ds = bancoNovo()
+        ds.connection.use { c ->
+            c.createStatement().use {
+                it.executeUpdate("INSERT INTO sync_state(instance, watermark, ultima_reconciliacao) VALUES ('samsung', NULL, 2000)")
+            }
+        }
+        assertFalse(TravaDpo(dev, ds).liberada)
+        // Só a linha de uma instância já basta (suspensão, marcador de falhas...), mesmo sem reconciliação nem marca d'água.
+        val outro = bancoNovo()
+        outro.connection.use { c -> c.createStatement().use { it.executeUpdate("INSERT INTO sync_state(instance, falhas_desde_run_id) VALUES ('sidia', 3)") } }
+        assertFalse(TravaDpo(dev, outro).liberada)
+    }
+
+    @Test
+    fun demonstracaoComRetencaoContinuaAberta() {
+        // A retenção grava sync_run e, no reinício, o marcador de falhas da instância "-": nada disso é sincronização real.
+        val ds = bancoNovo()
+        execucao(ds, "RETENCAO")
+        ds.connection.use { c -> c.createStatement().use { it.executeUpdate("INSERT INTO sync_state(instance, falhas_desde_run_id) VALUES ('-', 1)") } }
+        assertTrue(TravaDpo(dev, ds).liberada)
+    }
+
+    @Test
     fun semBancoFecha() {
         // Sem como provar que o banco é de demonstração, a porta fica fechada (fail-closed).
         assertFalse(TravaDpo(dev, null).liberada)

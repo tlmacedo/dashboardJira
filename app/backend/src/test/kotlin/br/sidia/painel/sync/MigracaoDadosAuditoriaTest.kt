@@ -55,6 +55,18 @@ class MigracaoDadosAuditoriaTest {
     }
 
     @Test
+    fun migracaoNaoAbreATravaDoDpoNemEscreveSyncRun() {
+        // Banco que sincronizou de verdade e cuja retenção já apagou os sync_run: a V7 zera a marca d'água, e a trava continua fechada.
+        val ds = ate("6")
+        exec(ds, "INSERT INTO sync_state(instance, watermark, ultima_reconciliacao) VALUES ('samsung', 1000, 2000)")
+        val dev = br.sidia.painel.config.Settings(dashboardDevMode = true)
+        assertTrue(!br.sidia.painel.lgpd.TravaDpo(dev, ds).liberada)
+        Flyway.configure().dataSource(ds).locations("classpath:db/migration").load().migrate()
+        assertTrue(!br.sidia.painel.lgpd.TravaDpo(dev, ds).liberada, "depois da V7 a trava segue fechada")
+        assertEquals(0, consulta(ds, "SELECT count(*) FROM sync_run") { it.next(); it.getInt(1) }, "a migração não escreve sync_run")
+    }
+
+    @Test
     fun migracaoAcrescentaCriadoEmSemPerderWorklog() {
         val ds = ate("6")
         exec(ds, "INSERT INTO issue(id, key, instance, project, created) VALUES (1, 'TG-1', 'samsung', 'TG', 1)")

@@ -33,10 +33,11 @@ class TravaDpo(private val settings: Settings, private val dataSource: DataSourc
             ds.connection.use { c ->
                 c.createStatement().use { st ->
                     // Execução de sincronização REAL (incremental ou reconciliação; a retenção roda sempre, até em demonstração, e não
-                    // conta), ou marca d'água de sincronização (a retenção pode apagar o histórico de execuções).
+                    // conta), ou QUALQUER linha de estado de uma instância do Jira em `sync_state` (a retenção pode apagar o histórico de
+                    // execuções e a migração V7 zera a marca d'água, mas a linha da instância sobrevive; a instância "-" é a da retenção).
                     st.executeQuery(
                         "SELECT 1 FROM sync_run WHERE kind IN ('INCREMENTAL', 'RECONCILIACAO') " +
-                            "UNION ALL SELECT 1 FROM sync_state WHERE watermark IS NOT NULL LIMIT 1",
+                            "UNION ALL SELECT 1 FROM sync_state WHERE instance <> '-' LIMIT 1",
                     ).use { !it.next() }
                 }
             }
