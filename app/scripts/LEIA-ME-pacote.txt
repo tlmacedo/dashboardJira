@@ -12,19 +12,19 @@ O QUE TEM AQUI
   .env.example    modelo das variaveis (copie para fora do pacote e preencha)
   VERSAO.txt      versao, commit e data de montagem
 
-COMO RODAR (a pasta de trabalho e a RAIZ DO PACOTE; JDK 21 em JAVA_HOME ou no PATH)
+COMO RODAR (JDK 21 em JAVA_HOME ou no PATH; em producao os tres caminhos abaixo sao ABSOLUTOS, senao a subida e recusada)
 
   Windows 11 (PowerShell):
     $env:PAINEL_CONFIG_DIR = '<pasta dos YAML reais>'
     $env:DATABASE_PATH     = '<pasta de dados>\painel.db'
+    $env:PAINEL_STATIC_DIR = '<pasta do pacote>\frontend\dist'
     $env:PAINEL_ENV_FILE   = '<arquivo de variaveis>'
-    Set-Location <pasta do pacote>
     .\bin\painel.bat
 
   Linux/macOS (sh):
-    PAINEL_CONFIG_DIR=... DATABASE_PATH=... PAINEL_ENV_FILE=... ./bin/painel      (a partir da pasta do pacote)
+    PAINEL_CONFIG_DIR=... DATABASE_PATH=... PAINEL_STATIC_DIR=... PAINEL_ENV_FILE=... ./bin/painel
 
-  O painel escuta em 127.0.0.1:8080 (PAINEL_HOST muda a interface; o proxy da empresa fica na frente e termina o TLS).
+  O painel escuta em 127.0.0.1:8080 (PAINEL_HOST e DASHBOARD_PORT mudam; o proxy da empresa fica na frente e termina o TLS).
   Este pacote sobe em MODO PRODUCAO: sem login configurado (OIDC_* e SESSION_SECRET) ele se recusa a subir. Isso e proposital.
 
 O QUE NAO FAZER

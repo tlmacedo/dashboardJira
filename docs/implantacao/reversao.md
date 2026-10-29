@@ -1,0 +1,59 @@
+# Reversão do painel
+
+Reverter é voltar o ponteiro `atual` para a versão anterior (a de `versao-anterior.txt`, gravada pela [atualização](atualizacao.md)) e, **quando necessário**, restaurar o banco do backup feito antes de atualizar. O esquema do banco só avança (Flyway não tem migração "para baixo"), por isso a escolha entre "só o pacote" e "pacote e banco" é do operador.
+
+## Quando usar cada forma
+
+| Situação | O que fazer |
+|---|---|
+| A versão nova **não criou migração** (a descrição da versão diz isso) | Só o pacote: `reverter` sem `-RestaurarBanco`. O banco é o mesmo |
+| A versão nova criou migração **compatível** com a anterior (a descrição declara que o pacote anterior roda sobre o esquema novo) | Só o pacote. A anterior sobe e funciona, ignorando o que não conhece |
+| A versão nova declarou **"migração sem volta"**, ou a anterior não sobe/não funciona sobre o esquema novo, ou há **dúvida** | Pacote **e** banco: `-RestaurarBanco` (sh: `--restaurar-banco`) |
+
+**O que o Flyway faz de fato** (registrado por teste, `ReversaoComBackupTest`): o pacote anterior sobre um banco que já tem uma migração que ele não conhece **sobe sem erro**; o Flyway ignora, por padrão, migrações aplicadas e desconhecidas de versão mais nova. Subir não quer dizer funcionar: o código antigo pode não saber lidar com colunas ou tabelas novas. Por isso a regra é: só o pacote quando a migração for **declaradamente compatível**; na dúvida, restaurar o backup.
+
+## Reverter
+
+| Windows 11 (PowerShell como administrador) | Linux (`sh`, como root) |
+|---|---|
+| `powershell.exe -NoProfile -ExecutionPolicy Bypass -File deploy\windows\reverter.ps1 -Raiz C:\Painel` | `sh deploy/linux/reverter.sh /opt/painel` |
+| com o banco: `... reverter.ps1 -Raiz C:\Painel -RestaurarBanco` | com o banco: `sh deploy/linux/reverter.sh /opt/painel --restaurar-banco` |
+| outro backup: `... -RestaurarBanco -Backup D:\copias\painel-2026-11-03-020000.db` | `... --restaurar-banco --backup /var/backups/painel/painel-2026-11-03-020000.db` |
+
+O que o script faz:
+
+1. Lê `versao-anterior.txt` (em `C:\Painel\app\` / `/opt/painel/`, pasta só de administradores/root) e recusa se não houver (nenhuma atualização registrada). **Valida tudo o que lê antes de usar como caminho**, porque o que está nesse arquivo vira um programa executado com privilégio: a `versao` tem de ser `AAAA.MM.N` e uma pasta de verdade (nem link nem junção) diretamente dentro da pasta de versões, com `bin/painel` próprio; o `backup=` tem de ser só um nome de arquivo (sem `/`, `\`, `..`, espaço, controle nem traço inicial) e a cópia resolvida tem de ficar dentro de `BACKUP_DIR`. O `--backup`/`-Backup` informado na linha de comando passa pela mesma regra de pasta. Qualquer falha recusa antes de executar qualquer coisa.
+2. Com `-RestaurarBanco`: a cópia é lida **uma única vez** para uma pasta temporária só de root/administradores, fora de `BACKUP_DIR` (a conta do serviço escreve em `BACKUP_DIR` e poderia trocar o arquivo por um link para um arquivo protegido entre a validação e o uso); a conferência e a restauração usam **só** esse temporário, e o banco restaurado é criado sem seguir links. Em seguida **confere a cópia** com `painel verificar-restauracao` (Plano 12) **antes** de tocar em qualquer coisa; se não der `RESTAURACAO OK`, para e nada muda.
+3. Para o serviço.
+4. Com `-RestaurarBanco`: o banco atual e os `-wal` e `-shm` saem **juntos** para o lado, como `painel.db.migrado-<data>`, `painel.db-wal.migrado-<data>` e `painel.db-shm.migrado-<data>`; **nada é apagado**. Depois a cópia é colocada no lugar.
+5. Aponta `atual` para a versão anterior, inicia o serviço, espera `GET /api/health` e confere a versão em `/api/meta`.
+
+Termina com `REVERSAO_OK <versao>`. Com `-RestaurarBanco`, rode `painel backup-agora` logo depois: o registro de backups voltou ao estado da cópia.
+
+**O que se perde:** com o banco restaurado, tudo o que foi gravado **depois do backup** (sincronizações, decisões, registros de acesso) só existe no `*.migrado-<data>` guardado ao lado. Se for preciso recuperar algo, abra esse arquivo com o painel parado e copie o que for necessário; ele não é apagado por nenhum script.
+
+**Como conferir:** `REVERSAO_OK`; `atual` aponta para a versão anterior; o rodapé do painel mostra a versão anterior; `painel verificar-restauracao` dá `RESTAURACAO OK`.
+
+## Regra de desenho: o root nunca opera dentro da pasta do serviço
+
+A conta do serviço escreve em `dados/`, nos backups e nos logs; por isso um link plantado ali nunca pode ser seguido por quem tem privilégio. Os scripts de Linux seguem uma regra única: **root/administrador só mexe em `<raiz>` (só dele) e em pastas temporárias criadas DENTRO de `<raiz>` (`mktemp -d -p`), nunca no `TMPDIR` do ambiente**; tudo o que precisa acontecer nas pastas do serviço roda **com a identidade do serviço** (`como_servico`, via `runuser`; na falta dele, `setpriv`):
+
+- `painel backup-agora` (na atualização) e `painel verificar-restauracao` (na reversão) rodam como o serviço: a cópia e quaisquer `-wal`/`-shm` nascem com o dono certo;
+- a restauração do banco (mover o banco antigo e os `-wal`/`-shm` para `*.migrado-<data>`, criar o novo com `O_EXCL` a partir da entrada padrão, copiar o modo do anterior) é um único script executado como o serviço; o root não faz `chown`, `chmod`, `mv` nem escrita ali;
+- a cópia do backup é lida **como o serviço** (um FIFO plantado no lugar da cópia travaria um root, e um link só alcança o que o serviço alcança) para um arquivo que o root acabou de criar em `<raiz>`, com limite de tempo; a pasta temporária fica `0750` e a cópia `0640`, do grupo da conta do serviço (ela lê pelo grupo, nenhum outro usuário local lê o banco, que tem dados pessoais);
+- `PAINEL_USUARIO` nunca pode ser `root` nem resolver para uid 0 (nome comum de conta; sem número, espaço ou traço inicial): "baixar privilégio" para o próprio root não baixa nada, e o script recusa;
+- o usuário do serviço vem de `PAINEL_USUARIO` (padrão `painel`), uma variável do ambiente de quem roda o script como root — nunca de um arquivo ou pasta que o serviço escreva.
+
+`gerar-session-secret` e `verificar-logs` não violam a regra: o primeiro só mexe em `/etc/painel` (pasta do root); o segundo só LÊ logs (não escreve nem muda nada fora da própria pasta temporária). `verificar-pacote` roda com o usuário comum do operador.
+
+**Endurecimento do sistema (recomendado):** mantenha `fs.protected_hardlinks=1` e `fs.protected_symlinks=1` (o padrão nas distribuições atuais; `sysctl fs.protected_hardlinks fs.protected_symlinks`): impedem que a conta do serviço use hard links e links simbólicos em pastas com *sticky bit* (como `/tmp`) para enganar um processo com privilégio.
+
+**Windows.** Não há como rodar a restauração "como o serviço" sem a senha da conta, então o `reverter.ps1` faz o equivalente seguro: `File.Move` (renomeia o próprio item, nunca segue link), `FileMode.CreateNew` (falha se qualquer coisa já existir, inclusive link) e ACL copiada pelo handle aberto (`SetAccessControl`), nunca por caminho. **Risco residual:** o serviço poderia plantar um link entre o `File.Move` e o `CreateNew`; o `CreateNew` recusa (não segue) e a reversão falha sem escrever em lugar nenhum. **Risco residual no Windows:** `backup-agora` (no `atualizar.ps1`) e `verificar-restauracao` (no `reverter.ps1`) ainda rodam como administrador sobre a pasta de dados: o programa abre o banco vivo e cria arquivos ali (`-wal`/`-shm`, temporários) com a identidade do administrador, e a conta do serviço, que escreve nessa pasta, poderia plantar links antes da execução. Fica como pendência para quando a conta do serviço for definida (T8) e houver como executá-los com a identidade dela.
+
+## Se a atualização falhou no meio
+
+| Onde falhou | Estado | O que fazer |
+|---|---|---|
+| SHA-256, extração ou nome do zip | Nada mudou; o serviço segue na versão atual | Corrija o zip e repita |
+| Backup | O script religa a versão atual e aborta; nada foi trocado | Corrija `BACKUP_DIR`/espaço e repita |
+| Iniciar ou saúde ou fumaça | `atual` já aponta para a versão nova e o serviço pode estar fora do ar | Leia o log (`C:\Painel\logs\painel.log`; Linux `journalctl -u painel`), decida entre corrigir para frente ou `reverter` (com ou sem o banco, conforme a tabela acima) |

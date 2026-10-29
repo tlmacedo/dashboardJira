@@ -7,7 +7,15 @@ import { LangProvider } from '../i18n/LangProvider'
 import { ThemeProvider } from '../theme/ThemeProvider'
 import { Shell } from './Shell'
 
-type MetaSimulado = { devMode: boolean; liveEnabled: boolean; zone: string; banner: string | null; aguardandoCargaDoJira?: boolean }
+type MetaSimulado = {
+  devMode: boolean
+  liveEnabled: boolean
+  zone: string
+  banner: string | null
+  aguardandoCargaDoJira?: boolean
+  versao?: string
+  rotuloDeVersao?: string
+}
 
 // Simula só o /api/meta: os testes nunca usam rede.
 function simularMeta(meta: MetaSimulado) {
@@ -58,6 +66,30 @@ afterEach(() => {
   cleanup()
   vi.restoreAllMocks()
   vi.unstubAllGlobals()
+})
+
+describe('versao do pacote', () => {
+  it('rodapeMostraRotuloDeVersao', async () => {
+    simularMeta({
+      devMode: false,
+      liveEnabled: false,
+      zone: MANAUS,
+      banner: null,
+      versao: '2026.11.1',
+      rotuloDeVersao: 'v2026.11.1',
+    })
+    renderizar()
+    const rodape = await screen.findByRole('contentinfo')
+    expect(rodape).toHaveTextContent('v2026.11.1')
+  })
+
+  it('semOCampoRodapeSome', async () => {
+    // resposta de um painel antigo: sem versao, o rodapé não existe e nada quebra
+    simularMeta({ devMode: false, liveEnabled: false, zone: MANAUS, banner: null })
+    const { container } = renderizar()
+    await esperarMeta(container)
+    expect(screen.queryByRole('contentinfo')).toBeNull()
+  })
 })
 
 describe('casca', () => {

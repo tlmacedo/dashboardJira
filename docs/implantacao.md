@@ -14,6 +14,8 @@ lib/            os jars
 frontend/dist/  as telas
 config/         SÓ os modelos *.exemplo.yaml (e *.demo.yaml) e as fichas de cards/
 .env.example    modelo das variáveis; nunca um arquivo real
+implantacao/    scripts de atualização, reversão e segredos (windows/, linux/) e o modelo do arquivo de variáveis (modelos/)
+docs/           este guia e os documentos de implantação
 VERSAO.txt      versão, commit curto e data da montagem
 LEIA-ME.txt     como rodar
 ```
@@ -47,6 +49,25 @@ Cada comando parte da pasta `app/` do repositório. No PowerShell 5.1 não exist
 
 A verificação usa a porta 8080 e pastas temporárias, nunca liga a chave do Jira (o arquivo de variáveis de teste não tem essa linha) e aborta com aviso se a porta já estiver em uso.
 
+### 3.1 Versão, zip e SHA-256
+
+Para entregar o pacote a outra máquina, passe a versão (`AAAA.MM.N`: ano, mês de 01 a 12 e número do pacote no mês, a partir de 1; qualquer outro formato é recusado):
+
+| Windows 11 (PowerShell) | `sh` |
+|---|---|
+| `powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\montar-pacote.ps1 -Versao 2026.11.1` | `sh scripts/montar-pacote.sh 2026.11.1` |
+
+Além da pasta, sai `app/pacote/painel-2026.11.1.zip` (pasta raiz `painel-2026.11.1/`; mesma entrada e mesma data de build dão o mesmo SHA-256) e o `painel-2026.11.1.zip.sha256` ao lado, no formato `<sha256-em-minúsculas>  painel-2026.11.1.zip` (dois espaços, aceito por `sha256sum -c`). O script já roda a verificação do zip e termina com `PACOTE_OK painel-2026.11.1.zip <sha256>`. Sem a versão, o painel se identifica como `dev`. A versão aparece no rodapé da tela e em `GET /api/meta` (`versao`, `rotuloDeVersao`); o commit e a data de build ficam no `VERSAO.txt` do pacote e no log da subida, nunca na rota pública.
+
+Conferir um zip recebido (copiado de outra máquina, com o `.sha256` junto):
+
+| Windows 11 (PowerShell) | `sh` (precisa de `unzip`) |
+|---|---|
+| `powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\verificar-pacote.ps1 C:\caminho\painel-2026.11.1.zip` | `sh scripts/verificar-pacote.sh /caminho/painel-2026.11.1.zip` |
+| ou só o hash: `(Get-FileHash .\painel-2026.11.1.zip -Algorithm SHA256).Hash.ToLower()` | ou `sha256sum -c painel-2026.11.1.zip.sha256` |
+
+Com o zip, a verificação confere, **antes de extrair**: o nome (`painel-AAAA.MM.N.zip`), o tamanho (no máximo 200 MB), o SHA-256 contra o `.sha256`, que toda entrada está sob a pasta raiz `painel-AAAA.MM.N/` e que nenhuma entrada tem nome proibido (`.env`, `painel.env`, `*.db`, `*.db-wal`, `*.db-shm`, `*.lock`, chaves e certificados, `papeis.yaml`, `equipes.yaml`, `ausencias.yaml`, `squads.yaml`, `status_map.yaml`, `jira_campos.yaml`, `calendario.yaml`, `vinculos.yaml`, `labels_atraso.yaml`, `auditoria.yaml`, `Filtros_Status_tool.txt`, `legacy/`, `node_modules/`, `.git/`). Depois extrai numa pasta temporária e roda as conferências acima sobre o conteúdo.
+
 ## 4. Pastas e variáveis: tudo o que é real fica FORA do pacote
 
 Trocar o pacote por um mais novo não pode apagar nada. Por isso a configuração real, o arquivo de variáveis e os dados ficam em pastas próprias, apontadas por variáveis:
@@ -56,9 +77,11 @@ Trocar o pacote por um mais novo não pode apagar nada. Por isso a configuraçã
 | `PAINEL_CONFIG_DIR` | Pasta dos YAML reais (`papeis.yaml`, `equipes.yaml`, `ausencias.yaml`, `calendario.yaml`, `status_map.yaml`...). Em produção os arquivos reais são obrigatórios; os modelos `.exemplo` não valem |
 | `DATABASE_PATH` | Arquivo SQLite do painel (por exemplo `D:\painel\dados\painel.db`). Criado na primeira subida |
 | `PAINEL_ENV_FILE` | Arquivo de variáveis real (nunca no repositório nem no pacote; permissão só da conta do serviço) |
-| `PAINEL_STATIC_DIR` | Build do frontend; o padrão `frontend/dist` (relativo à raiz do pacote) já serve |
+| `PAINEL_STATIC_DIR` | Build do frontend (`<pacote>/frontend/dist`). Em produção, caminho **absoluto** (o padrão relativo `frontend/dist` só vale em desenvolvimento) |
 | `DATABASE_POOL_SIZE` | Conexões do pool (1 a 100; padrão 4). No SQLite só uma grava por vez; mais conexões só aumentam leitores |
 | `PAINEL_HOST` | Interface em que o painel escuta (padrão `127.0.0.1`; veja a seção 7) |
+| `DASHBOARD_PORT` | Porta em que o painel escuta (1 a 65535; padrão 8080) |
+| `DASHBOARD_PROXY_CONFIAVEL` | Faixas CIDR de onde vem a conexão do proxy da empresa (padrão vazio). Só essas conexões podem informar `X-Forwarded-Proto`, `-For` e `-Host`; o `-For` é lido da direita para a esquerda, juntando todas as linhas do cabeçalho (proxies como o HAProxy acrescentam uma linha nova); `-Proto` e `-Host` só valem se todos os valores recebidos forem iguais (divergentes são ignorados, porque o valor da esquerda pode ser do cliente). Configure o proxy para SOBRESCREVER esses três cabeçalhos. Proxy na mesma máquina: `127.0.0.1/32,::1/128`. Obrigatória em produção |
 | `PAINEL_CACHE_SEG` | Segundos em que as telas reaproveitam a leitura bruta do banco (padrão 60; `0` desliga). Sem isso, cada requisição relê as issues e o histórico inteiros |
 | `RETENTION_MONTHS` | Meses de dados locais mantidos (6 a 600; padrão 24; o prazo final é do DPO) |
 | `ACCESS_LOG_RETENTION_MONTHS` | Meses do registro de acesso (12 a 600; padrão 24) |
@@ -69,15 +92,15 @@ As demais variáveis (sincronização, logs, métricas, backup) estão em `docs/
 
 ## 5. Rodar o pacote
 
-A pasta de trabalho é a **raiz do pacote**, porque `frontend/dist` e a fonte dos modelos são caminhos relativos. Exige JDK 21.
+Exige JDK 21. Em produção os três caminhos (`PAINEL_CONFIG_DIR`, `DATABASE_PATH`, `PAINEL_STATIC_DIR`) são **absolutos**: um serviço iniciado na pasta errada criaria um banco vazio sem avisar, então caminho relativo recusa a subida (`CAMINHO_RELATIVO`).
 
 Windows 11 (PowerShell):
 
 ```powershell
 $env:PAINEL_CONFIG_DIR = 'D:\painel\config'
 $env:DATABASE_PATH     = 'D:\painel\dados\painel.db'
+$env:PAINEL_STATIC_DIR = 'D:\painel\pacote\painel\frontend\dist'
 $env:PAINEL_ENV_FILE   = 'D:\painel\painel.env'
-Set-Location D:\painel\pacote\painel
 .\bin\painel.bat
 ```
 
@@ -85,8 +108,12 @@ Set-Location D:\painel\pacote\painel
 
 ```sh
 cd /opt/painel/pacote/painel
-PAINEL_CONFIG_DIR=/etc/painel DATABASE_PATH=/var/lib/painel/painel.db PAINEL_ENV_FILE=/etc/painel/painel.env ./bin/painel
+PAINEL_CONFIG_DIR=/etc/painel DATABASE_PATH=/var/lib/painel/painel.db PAINEL_STATIC_DIR=/opt/painel/pacote/painel/frontend/dist PAINEL_ENV_FILE=/etc/painel/painel.env ./bin/painel
 ```
+
+### Guardas de produção
+
+Antes de abrir o banco, `main()` confere a configuração e recusa a subida com **todos** os códigos de uma vez (a mensagem nunca traz valor): `DEMO_EM_PRODUCAO`, `OIDC_ISSUER_SEM_HTTPS`, `REDIRECT_URI_SEM_HTTPS`, `ORIGEM_PUBLICA_AUSENTE` (`DASHBOARD_ORIGEM_PUBLICA` ausente ou sem `https://`), `REDIRECT_URI_FORA_DA_ORIGEM_PUBLICA`, `SESSION_SECRET_CURTO` (ausente, base64 inválido ou menos de 32 bytes), `DOMINIO_DO_USERNAME_AUSENTE` (estratégia de username que descarta o domínio sem `OIDC_DOMINIOS_PERMITIDOS`), `PROXY_NAO_CONFIGURADO` (`DASHBOARD_PROXY_CONFIAVEL` vazia), `ESCUTA_ABERTA_A_TODAS` (`PAINEL_HOST` vazio ou qualquer grafia do endereço "todas as interfaces": `0.0.0.0`, `0`, `0.0`, `::`, `::0`, `0:0:0:0:0:0:0:0`, `::ffff:0.0.0.0`...; a comparação é pelo endereço), `ESCUTA_NAO_LITERAL` (`PAINEL_HOST` que não é IP literal nem `localhost`: um nome poderia apontar para qualquer endereço) e `CAMINHO_RELATIVO`. Em modo de desenvolvimento não se aplicam.
 
 Os scripts do pacote fixam o **perfil de produção**: sem `DASHBOARD_DEV_MODE` no arquivo de variáveis o painel sobe com o modo desenvolvimento desligado e **falha fechado** (não sobe) se faltar qualquer configuração obrigatória. Antes de subir, `painel validar-config` confere os YAML e as variáveis (veja `docs/operacao/runbook-diario.md`).
 
@@ -101,6 +128,8 @@ Em produção o painel só sobe com o login configurado. Qualquer provedor OpenI
 | `OIDC_CLIENT_SECRET` | Opcional (cliente público com PKCE); nunca vai para log nem para a tela |
 | `OIDC_REDIRECT_URI` | Endereço público do painel terminado em `/auth/callback` (por exemplo `https://painel.exemplo.invalid/auth/callback`, com o endereço real), exatamente como cadastrada no provedor |
 | `OIDC_CLAIM_USERNAME` | Claim do `id_token` com o username do Jira (padrão `preferred_username`); a escolha é da implantação |
+| `OIDC_USERNAME_ESTRATEGIA` | Como a claim vira o username do Jira: `claim_direto` (padrão; Keycloak e similares), `parte_local_do_email` (claim `ana.silva@empresa`, vale o que vem antes do `@`; Entra ID) ou `conta_windows` (claim `DOMINIO\ana.silva`, vale o que vem depois da barra; ADFS). Uma só estratégia por instalação, sem tentativa em cascata; formato diferente do esperado recusa o login (401 `USERNAME_ILEGIVEL`). O resultado precisa ser igual ao `id` do `papeis.yaml` |
+| `OIDC_DOMINIOS_PERMITIDOS` | **Obrigatória** com `parte_local_do_email` e `conta_windows` (sem ela a produção recusa a subida, `DOMINIO_DO_USERNAME_AUSENTE`, e nenhum login casa). Domínios ASCII separados por vírgula, comparação exata sem diferenciar maiúsculas: `empresa.invalid` (depois do `@`) ou `EMPRESA` (antes da barra). Sufixo e subdomínio parciais não valem. Motivo: um convidado B2B de outro domínio com a mesma parte local, ou uma conta de floresta confiável (`OUTRODOMINIO\gerente.exemplo`) teria a mesma parte local de uma pessoa do `papeis.yaml` e herdaria os papéis dela. Domínio fora da lista: 401 `USERNAME_ILEGIVEL`, sem eco do valor |
 | `OIDC_HOSTS_PERMITIDOS` | Opcional: hosts aceitos nos endereços da descoberta (`authorization_endpoint`, `token_endpoint`, `jwks_uri`), separados por vírgula, só o nome do host. Com a lista, qualquer endereço fora dela é recusado; sem a lista, são recusados IP literal, `localhost`, `*.local` e `*.localhost` (com ou sem ponto final). **A validação é só pelo NOME, sem resolver DNS**: nomes que resolvem para IP interno (`intranet`, `*.internal`, `10.0.0.1.nip.io`, DNS rebinding) só são barrados com a lista `OIDC_HOSTS_PERMITIDOS`; em produção, defina-a. Com a lista o nome é comparado exato (`permitido.com.` com ponto final NÃO vale como `permitido.com`). O erro cita só o código `DESCOBERTA_ENDPOINT_NAO_PERMITIDO`, nunca o valor |
 | `SESSION_SECRET` | Segredo que assina o cookie de sessão: base64, no mínimo 32 bytes (veja `docs/operacao/rotacao-de-segredos.md`) |
 
@@ -116,7 +145,7 @@ Em produção o painel só sobe com o login configurado. Qualquer provedor OpenI
 
 ## 7. Endereço de escuta
 
-O painel escuta em `127.0.0.1:8080` por padrão (`PAINEL_HOST`): só a própria máquina o alcança, e o proxy da empresa, instalado na mesma máquina, encaminha para ele e termina o TLS. Se o proxy estiver em **outra** máquina, defina `PAINEL_HOST` com a interface da rede interna (ou `0.0.0.0`): isso expõe o painel a toda a rede dessa interface, então só com regra de firewall que libere apenas o proxy. O `painel validar-config` avisa (`ESCUTA_FORA_DO_LOOPBACK`) quando a escuta sai do loopback. A porta das métricas (9464) tem variável própria e também escuta só no loopback.
+O painel escuta em `127.0.0.1:8080` por padrão (`PAINEL_HOST`): só a própria máquina o alcança, e o proxy da empresa, instalado na mesma máquina, encaminha para ele e termina o TLS. Se o proxy estiver em **outra** máquina, defina `PAINEL_HOST` com **um** endereço da rede interna (em produção `0.0.0.0` e `::` são recusados: `ESCUTA_ABERTA_A_TODAS`) e `DASHBOARD_PROXY_CONFIAVEL` com o IP do proxy: isso expõe o painel a toda a rede dessa interface, então só com regra de firewall que libere apenas o proxy. O `painel validar-config` avisa (`ESCUTA_FORA_DO_LOOPBACK`) quando a escuta sai do loopback. A porta das métricas (9464) tem variável própria e também escuta só no loopback.
 
 ## 8. Um painel por arquivo de banco
 
@@ -136,7 +165,10 @@ Os testes automáticos do projeto usam só fixtures e `MockEngine`, mesmo com a 
 | Assunto | Onde |
 |---|---|
 | Serviço do sistema operacional, logs, prontidão (`/api/health/pronto`), métricas, alertas, backup consistente do SQLite e restauração testada | Plano 12, documentos em `docs/operacao/` |
-| Atualização, reversão ensaiada, proxy, TLS, cofre de segredos, conta de serviço e firewall | Plano 13 |
+| Atualização com backup antes (`deploy/windows/atualizar.ps1`, `deploy/linux/atualizar.sh`) | `docs/implantacao/atualizacao.md` |
+| Reversão, com ou sem o banco, e o ensaio da troca (`ensaio-troca`) | `docs/implantacao/reversao.md` e `docs/implantacao/atualizacao.md` |
+| Segredos, permissão do arquivo de variáveis e verificação de logs | `docs/implantacao/segredos.md` |
+| Proxy, TLS, serviço do sistema operacional, conta sem privilégio e firewall | Plano 13 (Tarefa 8, depois da decisão com a infraestrutura) |
 
 **Regra de reversão:** o esquema do banco só avança, por migração. Toda migração nova precisa ser compatível com o pacote anterior **ou** ter backup feito antes da atualização; reverter é voltar a pasta do pacote anterior (e, se a migração não for compatível, restaurar o backup).
 

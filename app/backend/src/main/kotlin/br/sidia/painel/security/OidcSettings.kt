@@ -27,6 +27,14 @@ class OidcSettings(
      * (IP literal, `localhost`, `*.local` e `*.localhost` são recusados; só pelo NOME, sem resolver DNS).
      */
     val hostsPermitidos: Set<String> = emptySet(),
+    /** `OIDC_USERNAME_ESTRATEGIA`: como a claim vira o username do Jira (Plano 13, T2). Padrão: a claim já é o username. */
+    val estrategiaUsername: EstrategiaDeUsername = EstrategiaDeUsername.CLAIM_DIRETO,
+    /**
+     * `OIDC_DOMINIOS_PERMITIDOS`: domínios aceitos em `parte_local_do_email` (o que vem depois do `@`) e `conta_windows` (o que vem
+     * antes da barra), em minúsculas, comparação EXATA. Sem isso essas estratégias recusam todo login: um convidado de outro
+     * domínio com a mesma parte local não pode virar a pessoa do `papeis.yaml`. `claim_direto` não usa a lista.
+     */
+    val dominiosPermitidos: Set<String> = emptySet(),
 ) {
     override fun toString() =
         "OidcSettings(issuer=$issuer, clientId=$clientId, clientSecret=${if (clientSecret != null) "***" else "nenhum"}, " +
@@ -69,12 +77,24 @@ class OidcSettings(
                 claimUsername = claim,
                 sessao = segredos,
                 hostsPermitidos = hostsPermitidos(valor("OIDC_HOSTS_PERMITIDOS")),
+                estrategiaUsername = EstrategiaDeUsername.daVariavel(valor("OIDC_USERNAME_ESTRATEGIA")),
+                dominiosPermitidos = dominiosPermitidos(valor("OIDC_DOMINIOS_PERMITIDOS")),
             )
         }
 
         private val HOST_DA_LISTA = Regex("^[a-z0-9.:\\[\\]-]{1,253}$")
 
         /** `OIDC_HOSTS_PERMITIDOS`: hosts (sem esquema, caminho nem porta) separados por vírgula, em minúsculas. */
+        private val DOMINIO_DA_LISTA = Regex("^[a-z0-9._-]{1,253}$")
+
+        /** `OIDC_DOMINIOS_PERMITIDOS`: nomes ASCII separados por vírgula, em minúsculas; a mensagem cita só o nome da variável. */
+        private fun dominiosPermitidos(bruto: String?): Set<String> {
+            if (bruto == null) return emptySet()
+            val itens = bruto.split(',').map { it.trim().lowercase(java.util.Locale.ROOT) }.filter { it.isNotEmpty() }
+            for (d in itens) require(DOMINIO_DA_LISTA.matches(d)) { "OIDC_DOMINIOS_PERMITIDOS inválida (esperado domínios ASCII separados por vírgula)" }
+            return itens.toSet()
+        }
+
         private fun hostsPermitidos(bruto: String?): Set<String> {
             if (bruto == null) return emptySet()
             val hosts = bruto.split(',').map { it.trim().lowercase() }.filter { it.isNotEmpty() }

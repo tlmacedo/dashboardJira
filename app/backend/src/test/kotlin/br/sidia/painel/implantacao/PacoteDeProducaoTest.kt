@@ -241,7 +241,7 @@ class PacoteDeProducaoTest {
         }
         // o servidor usa mesmo a interface configurada
         val aplicacao = Files.readString(TestPaths.mainSrcDir.resolve("kotlin/br/sidia/painel/Application.kt"))
-        assertTrue("host = settings.host" in aplicacao, "Application.kt deve passar settings.host ao embeddedServer")
+        assertTrue("host = context.settings.host" in aplicacao, "Application.kt deve passar settings.host ao embeddedServer")
     }
 
     @Test

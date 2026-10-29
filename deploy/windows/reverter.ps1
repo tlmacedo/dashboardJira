@@ -1,0 +1,137 @@
+# Volta o painel para a versao anterior (a de <Raiz>\app\versao-anterior.txt, gravada por atualizar.ps1 numa pasta que so
+# administradores escrevem; mesmo assim a versao e o nome do backup sao validados antes de virarem caminho) (Plano 13, T10).
+# Uso (PowerShell como administrador):
+#   powershell.exe -NoProfile -ExecutionPolicy Bypass -File deploy\windows\reverter.ps1 -Raiz 'C:\Painel' [-RestaurarBanco] [-Backup <arquivo>] [-SemServico]
+#
+# Sem -RestaurarBanco so o pacote volta (serve quando a versao nova NAO trouxe migracao, ou trouxe uma compativel com a
+# anterior). COM -RestaurarBanco o banco tambem volta para o backup feito antes da atualizacao (backup= do versao-anterior.txt,
+# ou o -Backup indicado); tudo gravado DEPOIS desse backup se perde, e o banco atual NAO e apagado: ele e guardado ao lado como
+# <banco>.migrado-<data> (com os -wal e -shm). -RestaurarBanco e OBRIGATORIO quando a versao nova declarou "migracao sem volta"
+# ou quando a anterior nao sobe sobre o esquema novo. Antes de tocar no banco atual, a copia e conferida com
+# `painel verificar-restauracao` (Plano 12).
+# -SemServico pula parar/iniciar/fumaca (so serve ao ensaio da troca de pasta).
+# Este arquivo e SO ASCII de proposito: o Windows PowerShell 5.1 le arquivo sem BOM como ANSI e estragaria os acentos.
+param(
+    [Parameter(Mandatory = $true)][string]$Raiz,
+    [switch]$RestaurarBanco,
+    [string]$Backup = '',
+    [switch]$SemServico,
+    [string]$Servico = 'Painel',
+    [string]$Url = 'http://127.0.0.1:8080'
+)
+Set-StrictMode -Version Latest
+$ErrorActionPreference = 'Stop'
+. "$PSScriptRoot\comum.ps1"
+
+$app = Join-Path $Raiz 'app'
+$dados = Join-Path $Raiz 'dados'
+$arquivoEnv = Join-Path $dados 'painel.env'
+# O registro fica na pasta que so administradores escrevem (a conta do servico escreve em dados\ e nao decide o que roda
+# com privilegio).
+$registro = Join-Path $app 'versao-anterior.txt'
+
+if (-not (Test-Path -LiteralPath $app)) { throw "pasta do painel nao encontrada: $app" }
+if (-not (Test-Path -LiteralPath $registro)) { throw "falta $registro (versao-anterior): nenhuma atualizacao registrada, nao ha versao anterior para voltar" }
+$anterior = Ler-ValorDoArquivo -Arquivo $registro -Nome 'versao'
+if ($anterior -eq '') { throw 'o arquivo versao-anterior.txt nao informa a versao' }
+# Nada do registro vira caminho antes de passar: formato AAAA.MM.N, pasta propria (sem juncao) dentro de app\, painel.bat proprio.
+if (-not (Test-PastaDaVersaoValida -App $app -Versao $anterior)) { throw 'a versao anterior do registro e invalida ou nao e uma pasta propria de app\' }
+
+$copia = ''
+$copiaSegura = ''
+$pastaSegura = ''
+try {
+if ($RestaurarBanco) {
+    $pastaDeBackup = Ler-ValorDoArquivo -Arquivo $arquivoEnv -Nome 'BACKUP_DIR'
+    if ($pastaDeBackup -eq '' -or -not (Test-Path -LiteralPath $pastaDeBackup -PathType Container)) { throw 'BACKUP_DIR nao esta definido (ou nao existe) no arquivo de variaveis' }
+    if ($Backup -ne '') {
+        if (-not (Test-TextoDeUmaLinha $Backup) -or $Backup.StartsWith('-') -or $Backup.Contains('..')) { throw 'caminho de backup invalido' }
+        $copia = $Backup
+        if (-not [System.IO.Path]::IsPathRooted($copia)) { $copia = Join-Path $pastaDeBackup $copia }
+    } else {
+        $nomeDoBackup = Ler-ValorDoArquivo -Arquivo $registro -Nome 'backup'
+        if ($nomeDoBackup -eq '') { throw 'nao ha backup registrado em versao-anterior.txt; informe -Backup <arquivo>' }
+        if (-not (Test-NomeDeBackupValido $nomeDoBackup)) { throw 'o nome do backup no registro e invalido' }
+        $copia = Join-Path $pastaDeBackup $nomeDoBackup
+    }
+    if (-not (Test-Path -LiteralPath $copia -PathType Leaf)) { throw 'a copia de seguranca nao foi encontrada' }
+    # A copia tem de estar DENTRO de BACKUP_DIR (caminho completo, sem sair por .. e sem link).
+    if (-not (Test-CaminhoDentroDe $copia $pastaDeBackup)) { throw 'a copia de seguranca esta fora de BACKUP_DIR' }
+    if ((Get-Item -LiteralPath $copia).Attributes -band [System.IO.FileAttributes]::ReparsePoint) { throw 'a copia de seguranca e um link' }
+    # TOCTOU: BACKUP_DIR e gravavel pela conta do servico, que poderia trocar a copia por um link para um arquivo so de
+    # administradores ENTRE a validacao e o uso. Por isso a copia e lida UMA vez para uma pasta temporaria so de administradores,
+    # FORA de BACKUP_DIR, e dai em diante tudo (conferencia e restauracao) usa so o temporario, nunca o caminho original.
+    $pastaSegura = Join-Path ([System.IO.Path]::GetTempPath()) ('painel-reversao-' + [Guid]::NewGuid().ToString('N'))
+    New-Item -ItemType Directory -Force $pastaSegura | Out-Null
+    & icacls $pastaSegura /inheritance:r /grant:r "*S-1-5-32-544:(OI)(CI)F" | Out-Null
+    if ($LASTEXITCODE -ne 0) { throw 'nao foi possivel restringir a pasta temporaria da reversao' }
+    $copiaSegura = Join-Path $pastaSegura 'copia.db'
+    Copy-Item -LiteralPath $copia -Destination $copiaSegura
+    # Se a origem virou um link ENTRE a validacao e a copia, o que foi lido nao e a copia validada: recusa.
+    if ((Get-Item -LiteralPath $copia).Attributes -band [System.IO.FileAttributes]::ReparsePoint) { throw 'a copia de seguranca virou um link (recusada)' }
+    # Confere a copia ANTES de mexer no banco atual (restaura num temporario e compara tabela a tabela).
+    $guardada = $env:PAINEL_ENV_FILE
+    $env:PAINEL_ENV_FILE = $arquivoEnv
+    # Stderr do programa (ex.: "Picked up JAVA_TOOL_OPTIONS") nao pode interromper o script no Windows PowerShell 5.1.
+    $acaoAnterior = $ErrorActionPreference
+    $ErrorActionPreference = 'Continue'
+    try {
+        $conferencia = (& (Join-Path $app "$anterior\bin\painel.bat") verificar-restauracao $copiaSegura 2>&1 | Out-String)
+    } finally {
+        $ErrorActionPreference = $acaoAnterior
+        $env:PAINEL_ENV_FILE = $guardada
+    }
+    if ($conferencia -notmatch 'RESTAURACAO OK') { throw 'a copia nao passou em verificar-restauracao; nada foi alterado' }
+    Write-Host 'OK copia conferida'
+}
+
+if (-not $SemServico) {
+    Parar-Painel -Servico $Servico
+    Write-Host 'OK servico parado'
+}
+
+if ($RestaurarBanco) {
+    $banco = Ler-ValorDoArquivo -Arquivo $arquivoEnv -Nome 'DATABASE_PATH'
+    if ($banco -eq '') { throw 'DATABASE_PATH nao esta definido no arquivo de variaveis' }
+    $data = Get-Date -Format 'yyyyMMdd-HHmmss'
+    # No Windows nao ha como rodar esta parte "como o servico" sem a senha da conta, entao o administrador NAO segue links:
+    #  1. nada e apagado: o banco atual e os auxiliares do WAL saem juntos para o lado, com a data; File.Move renomeia o PROPRIO
+    #     item (um link plantado e movido como link, nunca seguido). Entrada de pasta/juncao e recusada;
+    #  2. o banco restaurado e criado com FileMode.CreateNew (falha se QUALQUER coisa ja existir ali, inclusive link) a partir do
+    #     temporario conferido, e a ACL e copiada pelo HANDLE aberto (SetAccessControl), nunca por caminho (Set-Acl seguiria o link).
+    # Risco residual: a pasta de dados e do servico, que poderia plantar um link ENTRE o File.Move e o CreateNew; o CreateNew recusa
+    # (nao segue) e a reversao falha sem escrever em lugar nenhum.
+    foreach ($sufixo in @('', '-wal', '-shm')) {
+        $item = Get-Item -LiteralPath "$banco$sufixo" -Force -ErrorAction SilentlyContinue
+        if ($item) {
+            if ($item.PSIsContainer) { throw 'o banco ou seus arquivos auxiliares sao uma pasta (recusado)' }
+            [System.IO.File]::Move("$banco$sufixo", "$banco$sufixo.migrado-$data")
+        }
+    }
+    $destino = New-Object System.IO.FileStream($banco, [System.IO.FileMode]::CreateNew, [System.IO.FileAccess]::Write, [System.IO.FileShare]::None)
+    try {
+        $origem = [System.IO.File]::OpenRead($copiaSegura)
+        try { $origem.CopyTo($destino) } finally { $origem.Dispose() }
+        try { $destino.SetAccessControl([System.IO.File]::GetAccessControl("$banco.migrado-$data")) } catch { Write-Host 'AVISO: confira a permissao do banco restaurado (a ACL do anterior nao foi copiada)' }
+    } finally {
+        $destino.Dispose()
+    }
+    Write-Host "OK banco restaurado (o anterior ficou em $banco.migrado-$data; o que foi gravado depois do backup so existe la)"
+}
+
+Trocar-Atual -App $app -Versao $anterior
+Write-Host "OK atual aponta para $anterior"
+
+if (-not $SemServico) {
+    Iniciar-Painel -Servico $Servico
+    if (-not (Esperar-Saude -Url $Url -TimeoutSeg 120)) { throw '/api/health nao respondeu em 120 s depois da reversao' }
+    if (-not (Conferir-Fumaca -Url $Url -Versao $anterior)) { throw 'a fumaca nao passou depois da reversao' }
+    Write-Host "OK servico iniciado, saudavel e na versao $anterior"
+    if ($RestaurarBanco) { Write-Host 'Rode agora: painel backup-agora (o registro de backups voltou ao estado da copia).' }
+}
+
+Write-Host "REVERSAO_OK $anterior"
+} finally {
+    # A pasta temporaria sai SEMPRE, inclusive em falha.
+    if ($pastaSegura -ne '' -and (Test-Path -LiteralPath $pastaSegura)) { Remove-Item -LiteralPath $pastaSegura -Recurse -Force }
+}

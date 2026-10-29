@@ -7,6 +7,9 @@ export type Meta = {
   banner: string | null
   /** Flag do Jira ligada e nenhuma sincronização real ainda. */
   aguardandoCargaDoJira?: boolean
+  /** Versão do pacote (`AAAA.MM.N`) e o rótulo para a tela (`v2026.11.1`, ou `dev`); ausentes em painel antigo. */
+  versao?: string
+  rotuloDeVersao?: string
 }
 
 export type Me = { userId: string; roles: string[]; /** Módulos sensíveis fechados pela trava do DPO para este papel (`AUDITORIA`, `INTEGRIDADE`). */ modulosBloqueados?: string[] }

@@ -16,6 +16,7 @@ import br.sidia.painel.cards.rotasDeOpcoesDeFiltro
 import br.sidia.painel.cards.rotasDosCardsDeTrabalho
 import br.sidia.painel.cards.rotasTempoEmStatus
 import br.sidia.painel.config.ArquivoEnv
+import br.sidia.painel.config.GuardasDeProducao
 import br.sidia.painel.config.PerfilDeExecucao
 import br.sidia.painel.config.Settings
 import br.sidia.painel.db.AccessLog
@@ -48,6 +49,7 @@ import br.sidia.painel.security.DevAuthenticator
 import br.sidia.painel.security.InicioDaRotacao
 import br.sidia.painel.security.OidcAuthenticator
 import br.sidia.painel.security.criarClienteHttpOidc
+import br.sidia.painel.security.instalarProxyConfiavel
 import br.sidia.painel.security.rotasDeLogin
 import br.sidia.painel.security.installAccessControl
 import br.sidia.painel.sync.Agendador
@@ -63,8 +65,10 @@ import io.ktor.serialization.kotlinx.json.json
 import io.ktor.server.application.Application
 import io.ktor.server.application.ApplicationStopped
 import io.ktor.server.application.install
+import io.ktor.server.engine.EmbeddedServer
 import io.ktor.server.engine.embeddedServer
 import io.ktor.server.netty.Netty
+import io.ktor.server.netty.NettyApplicationEngine
 import io.ktor.server.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.server.response.respond
 import io.ktor.server.routing.get
@@ -86,6 +90,9 @@ data class MetaResposta(
     val banner: String?,
     /** Flag do Jira ligada e nenhuma sincronização real ainda: a tela mostra "aguardando a primeira carga", não um painel vazio. */
     val aguardandoCargaDoJira: Boolean,
+    /** Versão do pacote e rótulo para a tela. Só isto: commit e data de build nunca saem numa rota pública. */
+    val versao: String,
+    val rotuloDeVersao: String,
 )
 
 private val log = LoggerFactory.getLogger("br.sidia.painel")
@@ -103,6 +110,10 @@ fun main(args: Array<String>) {
     // Subcomandos de operação (validar-config etc.) rodam e saem ANTES de abrir banco, trava ou servidor.
     comandoDeOperacao(args.toList(), env)?.let { exitProcess(it) }
     val settings = Settings.fromEnv(env)
+    // Produção insegura (escuta aberta, caminho relativo, origem sem https...) é recusada ANTES de abrir banco e trava.
+    GuardasDeProducao.verificar(settings, env)
+    // A versão completa (com commit e data de build) só aparece aqui, no log; a rota pública mostra só a versão.
+    VersaoDoPacote.atual.let { log.info("Painel de Squads versão={} commit={} construidaEm={}", it.versao, it.commit, it.construidaEm) }
     // O Logback iniciou antes da leitura do arquivo de variáveis: reaplica formato e pasta de log e registra os segredos
     // na máscara (nenhum token sai em log, nem escapado).
     ConfiguradorDeLog.aplicar(settings.operacao.logFormato, settings.operacao.logDir)
@@ -124,12 +135,22 @@ fun main(args: Array<String>) {
     // Leitura bruta do banco reaproveitada por poucos segundos (desligada nos testes; ver CacheDeLeituras). Depois da carga
     // de demonstração e antes de aceitar a primeira requisição.
     CacheDeLeituras.configurar(java.time.Duration.ofSeconds(settings.cacheDeLeituraSeg.toLong()))
-    // Só escuta na interface de PAINEL_HOST (padrão 127.0.0.1): quem expõe o painel à rede escolhe isso de propósito.
-    embeddedServer(Netty, port = 8080, host = settings.host) {
+    servidorDoPainel(context, agendador, metricas).start(wait = true)
+}
+
+/**
+ * Servidor do painel, ainda parado. Só escuta na interface `PAINEL_HOST` (padrão 127.0.0.1) e na porta `DASHBOARD_PORT`
+ * (padrão 8080): quem expõe o painel à rede escolhe isso de propósito (e a produção recusa `0.0.0.0`; ver GuardasDeProducao).
+ */
+fun servidorDoPainel(
+    context: AppContext,
+    agendador: Agendador?,
+    metricas: Metricas?,
+): EmbeddedServer<NettyApplicationEngine, NettyApplicationEngine.Configuration> =
+    embeddedServer(Netty, port = context.settings.porta, host = context.settings.host) {
         module(context.settings, context, agendador = agendador, metricas = metricas)
         monitor.subscribe(ApplicationStopped) { context.close() }
-    }.start(wait = true)
-}
+    }
 
 /**
  * Monta as métricas do processo: binders da JVM, pool do banco, estado da sincronização, falhas do registro de acesso e o
@@ -178,6 +199,7 @@ fun Application.module(
     catalogo: CatalogoDeCartoes = catalogoPadrao(),
     prontidao: Prontidao? = prontidaoPadrao(context),
     metricas: Metricas? = null,
+    versao: Versao = VersaoDoPacote.atual,
 ) {
     val settings = context.settings
     val inicioDoProcesso = context.clock.instant()
@@ -201,6 +223,8 @@ fun Application.module(
     val lacoDeAlertas = avaliador?.let { LacoDeAlertas(it) }
     monitor.subscribe(ApplicationStarted) { app -> lacoDeAlertas?.iniciar(app) }
     monitor.subscribe(ApplicationStopping) { runBlocking { lacoDeAlertas?.parar() } }
+    // Cabeçalhos X-Forwarded-* só de conexão do proxy da empresa (DASHBOARD_PROXY_CONFIAVEL); vazia = nenhum é aceito.
+    if (settings.proxyConfiavel.isNotEmpty()) instalarProxyConfiavel(settings.proxyConfiavel)
     install(ContentNegotiation) { json() }
     // Id de requisição e uma linha de log por requisição, com o modelo da rota (ver LogDeRequisicao.kt).
     instalarLogDeRequisicao()
@@ -265,6 +289,8 @@ fun Application.module(
                     zone = settings.zone.id,
                     banner = banner,
                     aguardandoCargaDoJira = settings.jiraLiveEnabled && br.sidia.painel.sync.SincronizacaoReal.aguardandoPrimeiraCarga(context.dataSource),
+                    versao = versao.versao,
+                    rotuloDeVersao = versao.rotulo,
                 ),
             )
         }

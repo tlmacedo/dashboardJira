@@ -10,18 +10,88 @@
 #     b) modo desenvolvimento: GET /api/health responde {"ok":true}; a arvore do processo e encerrada no fim.
 # O arquivo de variaveis dos testes NAO tem a chave do acesso ao Jira (linha ausente = desligado) e o script nunca a liga.
 # Este arquivo e SO ASCII de proposito: o Windows PowerShell 5.1 le arquivo sem BOM como ANSI e estragaria os acentos.
+# Com um ZIP (painel-AAAA.MM.N.zip, com o painel-AAAA.MM.N.zip.sha256 ao lado) confere ANTES de extrair: nome, tamanho
+# (no maximo 200 MB), SHA-256, pasta raiz e nomes proibidos; depois extrai numa pasta temporaria e roda as conferencias
+# acima sobre o conteudo extraido.
+Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 $aqui = Split-Path -Parent $MyInvocation.MyCommand.Path
 $app = Split-Path -Parent $aqui
-$pacote = if ($args.Count -gt 0) { $args[0] } else { Join-Path $app 'pacote\painel' }
+$alvo = if ($args.Count -gt 0) { $args[0] } else { Join-Path $app 'pacote\painel' }
+$zipTmp = $null
 
 function Falhar($mensagem) {
     [Console]::Error.WriteLine("FALHA: $mensagem")
+    if ($script:zipTmp) { Remove-Item -Recurse -Force $script:zipTmp -ErrorAction SilentlyContinue }
     exit 1
 }
 
-if (-not (Test-Path $pacote)) { Falhar 'pacote nao encontrado (rode: scripts\montar-pacote.ps1)' }
-$pacote = (Resolve-Path $pacote).Path
+# Nome proibido num componente de caminho; $entrada e a entrada inteira, para a mensagem.
+$configsReais = @('papeis.yaml', 'equipes.yaml', 'ausencias.yaml', 'squads.yaml', 'status_map.yaml', 'jira_campos.yaml', 'calendario.yaml', 'vinculos.yaml', 'labels_atraso.yaml', 'auditoria.yaml')
+function ConfereNome($nome, $entrada) {
+    $n = $nome.ToLower()
+    if ($n -eq '.env.example') { return }
+    if ($n -eq '.env' -or $n -like '*.env' -or $n -like '.env.*') { Falhar "arquivo de variaveis (.env, painel.env) dentro do pacote: $entrada" }
+    if ($n -like '*.db' -or $n -like '*.db-wal' -or $n -like '*.db-shm' -or $n -like '*.lock' -or $n -like '*.rotacao') { Falhar "arquivo de banco ou de trava (.db, .db-wal, .db-shm, *.lock) dentro do pacote: $entrada" }
+    if ($n -like '*.pem' -or $n -like '*.key' -or $n -like '*.p12' -or $n -like '*.pfx' -or $n -like '*.jks' -or $n -like '*.keystore') { Falhar "chave ou certificado dentro do pacote: $entrada" }
+    if ($configsReais -contains $n) { Falhar "configuracao real (nao e modelo) dentro do pacote: $entrada" }
+    if ($n -eq 'filtros_status_tool.txt') { Falhar "arquivo de filtros do Jira (Filtros_Status_tool.txt) dentro do pacote: $entrada" }
+    if ($n -eq 'legacy' -or $n -eq 'node_modules' -or $n -eq '.git') { Falhar "pasta proibida (legacy, node_modules, .git) dentro do pacote: $entrada" }
+}
+
+if ($alvo -like '*.zip') {
+    Write-Host '== Zip =='
+    if (-not (Test-Path $alvo)) { Falhar "zip nao encontrado: $alvo" }
+    $zip = (Resolve-Path $alvo).Path
+    $nomeDoZip = Split-Path -Leaf $zip
+    if ($nomeDoZip -notmatch '^painel-[0-9]{4}\.(0[1-9]|1[0-2])\.[1-9][0-9]*\.zip$') { Falhar 'nome do pacote fora do padrao painel-AAAA.MM.N.zip' }
+    if ((Get-Item $zip).Length -gt 209715200) { Falhar 'o zip passa de 200 MB (limite do pacote)' }
+    # O zip e o .sha256 sao lidos UMA vez para uma pasta temporaria e dai em diante conferencia, listagem e extracao usam so a
+    # copia: o arquivo original poderia ser trocado entre uma etapa e outra.
+    $zipTmp = Join-Path ([System.IO.Path]::GetTempPath()) ('painel-zip-' + [Guid]::NewGuid().ToString('N'))
+    New-Item -ItemType Directory -Force (Join-Path $zipTmp 'copia') | Out-Null
+    if ((Get-Item $zip).Attributes -band [System.IO.FileAttributes]::ReparsePoint) { Falhar 'o zip e um link (recusado)' }
+    $zipOriginal = $zip
+    $zip = Join-Path $zipTmp "copia\$nomeDoZip"
+    Copy-Item -LiteralPath $zipOriginal -Destination $zip
+    if (Test-Path -LiteralPath "$zipOriginal.sha256") { Copy-Item -LiteralPath "$zipOriginal.sha256" -Destination "$zip.sha256" }
+    $arquivoHash = "$zip.sha256"
+    if (-not (Test-Path $arquivoHash)) { Falhar "falta o arquivo $nomeDoZip.sha256 ao lado do zip" }
+    $linha = ([string](Get-Content -Path $arquivoHash -TotalCount 1)).Trim()
+    $partes = $linha -split '\s+', 2
+    $esperado = $partes[0].ToLower()
+    $nomeNoArquivo = if ($partes.Count -gt 1) { $partes[1].TrimStart('*') } else { '' }
+    if ($nomeNoArquivo -ne $nomeDoZip) { Falhar 'o arquivo .sha256 nao e deste zip' }
+    $calculado = (Get-FileHash -Algorithm SHA256 -Path $zip).Hash.ToLower()
+    if ($esperado -ne $calculado) { Falhar 'o SHA-256 do zip nao confere com o arquivo .sha256' }
+    Write-Host 'ok: SHA-256 confere'
+    $raiz = $nomeDoZip.Substring(0, $nomeDoZip.Length - 4)
+    Add-Type -AssemblyName System.IO.Compression.FileSystem
+    $arquivoZip = [System.IO.Compression.ZipFile]::OpenRead($zip)
+    try {
+        $entradas = @($arquivoZip.Entries | ForEach-Object { $_.FullName })
+        # Tamanho TOTAL extraido (um zip pequeno pode expandir para gigabytes): no maximo 500 MB.
+        $extraido = [long]0
+        foreach ($e in $arquivoZip.Entries) { $extraido += $e.Length }
+    } finally { $arquivoZip.Dispose() }
+    if ($extraido -gt 524288000) { Falhar 'o tamanho extraido do zip passa de 500 MB' }
+    foreach ($entrada in $entradas) {
+        # Nada de barra invertida (no Windows vira separador) nem de caminho absoluto ou unidade no nome da entrada.
+        if ($entrada.Contains('\')) { Falhar "entrada com barra invertida no nome: $entrada" }
+        if ($entrada.StartsWith('/') -or $entrada -match '^[A-Za-z]:') { Falhar "entrada com caminho absoluto: $entrada" }
+        if (-not $entrada.StartsWith("$raiz/")) { Falhar "entrada fora da pasta raiz $raiz/: $entrada" }
+        foreach ($componente in ($entrada.TrimEnd('/') -split '/')) {
+            if ($componente -eq '..') { Falhar "entrada com '..' no caminho: $entrada" }
+            ConfereNome $componente $entrada
+        }
+    }
+    Write-Host 'ok: nenhuma entrada proibida'
+    [System.IO.Compression.ZipFile]::ExtractToDirectory($zip, (Join-Path $zipTmp 'extraido'))
+    $alvo = Join-Path $zipTmp "extraido\$raiz"
+}
+
+if (-not (Test-Path $alvo)) { Falhar 'pacote nao encontrado (rode: scripts\montar-pacote.ps1)' }
+$pacote = (Resolve-Path $alvo).Path
 
 function Relativo($caminho) { return $caminho.Substring($pacote.Length).TrimStart('\') }
 
@@ -47,6 +117,8 @@ if (Test-Path $config) {
     } | Select-Object -First 1
     if ($achado) { Falhar "configuracao real (nao e modelo) dentro do pacote: $(Relativo $achado.FullName)" }
 }
+# Nomes proibidos em QUALQUER lugar do pacote (a mesma lista usada para as entradas do zip).
+foreach ($item in $todos) { ConfereNome $item.Name (Relativo $item.FullName) }
 
 # ---------------------------------------------------------------- 2. estrutura
 Write-Host '== Estrutura =='
@@ -54,6 +126,11 @@ if (-not (Test-Path (Join-Path $pacote 'bin\painel'))) { Falhar 'falta bin\paine
 if (-not (Test-Path (Join-Path $pacote 'bin\painel.bat'))) { Falhar 'falta bin\painel.bat' }
 if (-not (Get-ChildItem -Path (Join-Path $pacote 'lib') -Filter 'painel-*.jar' -ErrorAction SilentlyContinue)) { Falhar 'falta o jar do painel em lib\' }
 if (-not (Test-Path (Join-Path $pacote 'frontend\dist\index.html'))) { Falhar 'falta frontend\dist\index.html' }
+if (-not (Test-Path (Join-Path $pacote 'config\papeis.exemplo.yaml'))) { Falhar 'falta config\papeis.exemplo.yaml' }
+if (-not (Test-Path (Join-Path $pacote 'VERSAO.txt'))) { Falhar 'falta VERSAO.txt' }
+if (-not (Test-Path (Join-Path $pacote 'docs\implantacao.md'))) { Falhar 'falta docs\implantacao.md' }
+if (-not (Test-Path (Join-Path $pacote 'implantacao\windows\atualizar.ps1'))) { Falhar 'falta implantacao\windows\atualizar.ps1' }
+if (-not (Test-Path (Join-Path $pacote 'implantacao\linux\atualizar.sh'))) { Falhar 'falta implantacao\linux\atualizar.sh' }
 
 # ---------------------------------------------------------------- 3. fumaca
 Write-Host '== Fumaca =='
@@ -145,6 +222,7 @@ try {
 } finally {
     Encerrar
     Remove-Item -Recurse -Force $tmp -ErrorAction SilentlyContinue
+    if ($zipTmp) { Remove-Item -Recurse -Force $zipTmp -ErrorAction SilentlyContinue }
 }
 
 Write-Host "PACOTE VERIFICADO: $pacote"
