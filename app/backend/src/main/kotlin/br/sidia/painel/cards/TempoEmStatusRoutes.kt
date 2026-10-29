@@ -228,7 +228,7 @@ internal fun rotuloDaRota(call: ApplicationCall): String {
 }
 
 /** Primeiro segmento após `/api/` das rotas do painel: lista fechada, sem nenhum valor vindo do pedido. */
-private val MODULOS_DA_API = setOf(
+internal val MODULOS_DA_API = setOf(
     "auditoria", "cards", "cartoes", "central", "distribuicao", "filtros", "governanca", "integridade", "me", "meta",
     "meu-painel", "operacao", "rebalanceamento", "squad", "sync", "tarefa", "titular",
 )
