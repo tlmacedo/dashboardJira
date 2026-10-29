@@ -59,6 +59,13 @@ class RelatorioFinalDocTest {
         val texto = secao("c")
         assertTrue("Precisam de confirmação" in texto, "falta o bloco das decisões que precisam de confirmação")
         val confirmacao = texto.substringAfter("Precisam de confirmação")
+        val linhas = confirmacao.substringBefore("### Demais").lines().filter { Regex("^\\| \\d+ \\|").containsMatchIn(it) }
+        assertEquals((1..10).map { "$it" }, linhas.map { it.trim().trim('|').split('|')[0].trim() }, "a tabela de confirmações deve ter as 10 linhas")
+        val expurgo = linhas.last()
+        for (termo in listOf("BANCO_DESCONHECIDO_SEM_SINCRONIZACAO", "BANCO_COM_SINCRONIZACAO_REAL", "expurgo", "apagar")) {
+            assertTrue(termo in expurgo, "linha 10 sem '$termo'")
+        }
+        assertTrue(!texto.substringAfter("### Demais").contains("| expurgo |"), "o expurgo ficou também entre as decisões sem confirmação")
         for (item in listOf("Plano 11", "V7", "person", "Qualidade", "gaveta", "OIDC_DOMINIOS_PERMITIDOS", "DPO")) {
             assertTrue(item in confirmacao, "decisão a confirmar sem '$item'")
         }
