@@ -55,7 +55,7 @@ Para cada plano, em ordem:
    3. Implemente o mínimo para passar, com as assinaturas **exatas** do plano.
    4. Rode os testes da tarefa e depois a suíte do módulo.
    5. **Autorrevisão obrigatória** (checklist da seção 5). Corrija antes de commitar.
-   6. Um commit por tarefa, mensagem em pt-BR no padrão Conventional Commits (`feat(...)`, `fix(...)`, `docs(...)`, `test(...)`), corpo curto. `git add` só dos arquivos da tarefa (nunca `git add -A`: o usuário mantém `legacy/.env.example` modificado e fora de commit).
+   6. Um commit por tarefa, mensagem em pt-BR no padrão Conventional Commits (`feat(...)`, `fix(...)`, `docs(...)`, `test(...)`), corpo curto. `git add` só dos arquivos da tarefa (nunca `git add -A`).
    7. Atualize o arquivo de progresso.
 4. Ao terminar todas as tarefas: siga **`docs/superpowers/fluxo-de-entrega.md`** (seções 3 a 6): onda final, suíte completa sem cache, revisão final do conjunto em contexto limpo, varredura de dados pessoais (seção 6 deste guia), HANDOFF e progresso, push, PR, CI verde, merge (squash) quando as 7 condições forem verdadeiras, `git checkout main`, `git pull --ff-only origin main` e suíte na `main`.
 5. **Merge:** por decisão do usuário (27/10/2026), a IA mescla a PR do plano/bloco **por conta própria somente quando todas as condições da seção 5 do fluxo de entrega forem verdadeiras**; faltando qualquer uma, pergunta (pergunta com opções). Não empilhe branches: o próximo plano parte da `main` já atualizada e mesclada.

@@ -165,7 +165,7 @@ class EquivalenciaDocTest {
     }
 
     @Test
-    fun fechamentoResumeEPerguntaPendenteAoUsuario() {
+    fun fechamentoResumeERespostaDoUsuario() {
         val doc = texto(caminhoDoc)
         // O resumo do documento bate com a tabela (não fica defasado).
         val por = linhas().groupBy { it.situacao }.mapValues { (_, v) -> v.sumOf { it.ids.size } }
@@ -181,12 +181,14 @@ class EquivalenciaDocTest {
         }
         assertTrue(Regex("""Resumo: \d+ equivalentes""").containsMatchIn(doc), "falta a linha 'Resumo: ...'")
 
-        // Termina na pergunta pendente: a remoção do legacy/ depende do "sim" do usuário (Plano 8, T3 passo 5 e T9).
+        // Termina na resposta do usuário: "sim, remover" em 29/10/2026 (Plano 8, T3 passo 5 e T9; roteiro D9).
         val ultima = doc.substringAfterLast("\n## ")
-        assertTrue(ultima.startsWith("Pergunta pendente"), "a última seção deve ser 'Pergunta pendente ao usuário'")
-        assertTrue("(Recomendada)" in ultima, "a pergunta precisa de uma opção marcada (Recomendada)")
-        assertTrue(ultima.indexOf("(Recomendada)") < ultima.indexOf("Aprovar com ajustes"), "a recomendada vem primeiro")
-        assertTrue("legacy-final" in ultima && "Tarefa 9" in ultima, "a pergunta cita a tag legacy-final e a Tarefa 9")
-        assertTrue("sem o \"sim\"" in doc.lowercase() || "sem o “sim”" in doc.lowercase() || "sem resposta" in ultima.lowercase(), "o documento diz que sem o sim nada é removido")
+        assertTrue(ultima.startsWith("Resposta do usuário"), "a última seção deve ser 'Resposta do usuário'")
+        assertTrue("Resposta: sim, remover" in ultima, "a resposta registrada é 'sim, remover'")
+        assertTrue("29/10/2026" in ultima, "a resposta traz a data 29/10/2026")
+        assertTrue("(Recomendada)" in ultima && ultima.indexOf("(Recomendada)") < ultima.indexOf("Aprovar com ajustes"), "a recomendada vem primeiro")
+        assertTrue("escolhida em 29/10/2026" in ultima, "a opção escolhida está marcada com a data")
+        assertTrue("legacy-final" in ultima && "Tarefa 9" in ultima, "a resposta cita a tag legacy-final e a Tarefa 9")
+        assertTrue("Pergunta pendente" !in doc, "não pode sobrar pergunta pendente")
     }
 }

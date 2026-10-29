@@ -20,7 +20,7 @@ VERSAO.txt      versão, commit curto e data da montagem
 LEIA-ME.txt     como rodar
 ```
 
-O pacote **nunca** leva configuração real (`papeis.yaml`, `equipes.yaml`, `ausencias.yaml`, `calendario.yaml`...), arquivo de variáveis real, arquivo de banco, trava, chave ou certificado, nem a pasta `legacy/`. O `verificar-pacote` confere isso a cada montagem.
+O pacote **nunca** leva configuração real (`papeis.yaml`, `equipes.yaml`, `ausencias.yaml`, `calendario.yaml`...), arquivo de variáveis real, arquivo de banco, trava, chave ou certificado, nem uma pasta `legacy` (o app Python antigo foi removido; branch (ou tag) `legacy-final`). O `verificar-pacote` confere isso a cada montagem.
 
 ## 2. Requisitos
 
@@ -42,7 +42,7 @@ Cada comando parte da pasta `app/` do repositório. No PowerShell 5.1 não exist
 
 `verificar-pacote` falha com código diferente de 0 e uma mensagem curta se:
 
-1. houver no pacote qualquer YAML real, arquivo de variáveis (além do `.env.example`), arquivo de banco ou trava, chave/certificado, a pasta `legacy/` ou artefato de contêiner;
+1. houver no pacote qualquer YAML real, arquivo de variáveis (além do `.env.example`), arquivo de banco ou trava, chave/certificado, uma pasta `legacy` ou artefato de contêiner;
 2. faltar `bin/painel`, `bin/painel.bat`, o jar do painel em `lib/` ou `frontend/dist/index.html`;
 3. o pacote **em modo produção sem `OIDC_ISSUER`** não recusar a subida (tem de terminar com erro citando `OIDC_ISSUER` e sem mostrar nenhum valor de segredo);
 4. o pacote em modo desenvolvimento não responder `{"ok":true}` em `GET /api/health`.
@@ -66,7 +66,7 @@ Conferir um zip recebido (copiado de outra máquina, com o `.sha256` junto):
 | `powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\verificar-pacote.ps1 C:\caminho\painel-2026.11.1.zip` | `sh scripts/verificar-pacote.sh /caminho/painel-2026.11.1.zip` |
 | ou só o hash: `(Get-FileHash .\painel-2026.11.1.zip -Algorithm SHA256).Hash.ToLower()` | ou `sha256sum -c painel-2026.11.1.zip.sha256` |
 
-Com o zip, a verificação confere, **antes de extrair**: o nome (`painel-AAAA.MM.N.zip`), o tamanho (no máximo 200 MB), o SHA-256 contra o `.sha256`, que toda entrada está sob a pasta raiz `painel-AAAA.MM.N/` e que nenhuma entrada tem nome proibido (`.env`, `painel.env`, `*.db`, `*.db-wal`, `*.db-shm`, `*.lock`, chaves e certificados, `papeis.yaml`, `equipes.yaml`, `ausencias.yaml`, `squads.yaml`, `status_map.yaml`, `jira_campos.yaml`, `calendario.yaml`, `vinculos.yaml`, `labels_atraso.yaml`, `auditoria.yaml`, `Filtros_Status_tool.txt`, `legacy/`, `node_modules/`, `.git/`). Depois extrai numa pasta temporária e roda as conferências acima sobre o conteúdo.
+Com o zip, a verificação confere, **antes de extrair**: o nome (`painel-AAAA.MM.N.zip`), o tamanho (no máximo 200 MB), o SHA-256 contra o `.sha256`, que toda entrada está sob a pasta raiz `painel-AAAA.MM.N/` e que nenhuma entrada tem nome proibido (`.env`, `painel.env`, `*.db`, `*.db-wal`, `*.db-shm`, `*.lock`, chaves e certificados, `papeis.yaml`, `equipes.yaml`, `ausencias.yaml`, `squads.yaml`, `status_map.yaml`, `jira_campos.yaml`, `calendario.yaml`, `vinculos.yaml`, `labels_atraso.yaml`, `auditoria.yaml`, `Filtros_Status_tool.txt`, `legacy/` (app Python antigo, branch (ou tag) `legacy-final`), `node_modules/`, `.git/`). Depois extrai numa pasta temporária e roda as conferências acima sobre o conteúdo.
 
 ## 4. Pastas e variáveis: tudo o que é real fica FORA do pacote
 

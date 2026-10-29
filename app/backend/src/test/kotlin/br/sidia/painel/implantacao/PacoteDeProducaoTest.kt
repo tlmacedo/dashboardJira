@@ -172,7 +172,7 @@ class PacoteDeProducaoTest {
     @Test
     fun semArtefatosDeContainer() {
         val proibido = Regex("(?i)^(dockerfile.*|docker-compose.*|compose.*\\.ya?ml|\\.dockerignore)$")
-        val ignorar = setOf("legacy", "node_modules", "build", "dist", ".git", ".claude", ".gradle", ".kotlin", "pacote", "data", "superpowers")
+        val ignorar = setOf("node_modules", "build", "dist", ".git", ".claude", ".gradle", ".kotlin", "pacote", "data", "superpowers")
         val achados = mutableListOf<String>()
         // raiz do repositório: só os arquivos da própria raiz; app/: tudo, menos as pastas de build e de dados
         Files.list(repo).use { s -> s.filter { Files.isRegularFile(it) && proibido.matches(it.fileName.toString()) }.forEach { achados += repo.relativize(it).toString() } }

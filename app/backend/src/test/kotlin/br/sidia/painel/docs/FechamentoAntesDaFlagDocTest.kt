@@ -163,12 +163,13 @@ class FechamentoAntesDaFlagDocTest {
     fun claudeMdMantemOTextoDasRegrasEDasDecisoesDeProduto() {
         // O fechamento só mexe na tabela de caminhos. As regras 1 a 8 e as "Decisões de produto" são do usuário: o texto completo
         // fica fixado pelo SHA-256 abaixo. Mudou de propósito (pelo usuário)? Atualize o hash junto, na mesma mudança.
+        // 29/10/2026: o usuário mandou remover o app Python (tag legacy-final); só a linha "Stack" das decisões de produto mudou.
         val texto = ApoioDeDocs.texto("CLAUDE.md").replace("\r\n", "\n")
         val bloco = texto.substringAfter("## Regras que valem sempre").substringBefore("## Onde está cada coisa").trim()
         for (n in 1..8) assertTrue(Regex("(?m)^$n\\. ").containsMatchIn(bloco), "regra $n sumiu do CLAUDE.md")
         assertTrue("## Decisões de produto" in bloco)
         val hash = java.security.MessageDigest.getInstance("SHA-256").digest(bloco.toByteArray(Charsets.UTF_8)).joinToString("") { "%02x".format(it) }
-        assertEquals("6d21285e58e6b813b15f3939f3f2f344d2e1af80614ab72dc9a117014d943786", hash, "o texto das regras 1 a 8 ou das decisões de produto do CLAUDE.md mudou")
+        assertEquals("1168e424ab8e4ed5bdd82a8aaa724e440d7dcd9645a99c5ead4b753cb2fa5281", hash, "o texto das regras 1 a 8 ou das decisões de produto do CLAUDE.md mudou")
     }
 
     @Test

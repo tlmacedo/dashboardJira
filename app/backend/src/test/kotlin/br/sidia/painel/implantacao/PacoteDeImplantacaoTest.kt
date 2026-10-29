@@ -158,6 +158,7 @@ class PacoteDeImplantacaoTest {
     @Test
     fun provaNegativaConfigRealNoZip() {
         Ferramentas.exigir(temFerramentas(), "sem sh/unzip/sha256sum neste ambiente")
+        // A pasta legacy do app Python antigo (agora só na tag legacy-final) nunca pode voltar a entrar no pacote.
         for (real in listOf("config/papeis.yaml", "papeis.yaml", "dados/equipes.yaml", "Filtros_Status_tool.txt", "legacy/app.py", "node_modules/x/index.js")) {
             val (codigo, saida) = verificarZip(mapOf(raiz + "VERSAO.txt" to "versao=2026.11.1", raiz + real to "x"))
             assertEquals(1, codigo, "$real: $saida")

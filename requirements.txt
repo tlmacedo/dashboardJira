@@ -1,2 +1,0 @@
-# Instala tudo o que o projeto precisa:  pip install -r requirements.txt
--r app/backend/requirements.txt

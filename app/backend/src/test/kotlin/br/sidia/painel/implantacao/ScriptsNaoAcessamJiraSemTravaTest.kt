@@ -12,8 +12,8 @@ import kotlin.test.assertTrue
 
 /**
  * Regra 1 do CLAUDE.md: com a flag de acesso ao Jira desligada nenhum caminho (nem script) acessa o Jira.
- * Varre os scripts do repositório (fora de `legacy/`, que é só referência) e falha se surgir um com cliente de
- * rede que possa falar com o Jira sem checar a flag em `app/.env`.
+ * Varre os scripts do repositório (o app Python antigo, que acessava o Jira sem a trava, foi removido: tag `legacy-final`)
+ * e falha se surgir um com cliente de rede que possa falar com o Jira sem checar a flag em `app/.env`.
  *
  * Classificação de cada arquivo com cliente de rede (em CÓDIGO: comentários, docstrings e blocos `<# #>` não contam):
  *  - TRAVADO: lê a flag `JIRA_LIVE_ENABLED` em linha de código (nem `echo`/mensagem, nem só a constante) ANTES do
@@ -40,7 +40,7 @@ class ScriptsNaoAcessamJiraSemTravaTest {
     )
 
     private val extensoes = setOf("py", "ps1", "psm1", "sh", "bash", "mjs", "cjs", "js", "ts", "bat", "cmd")
-    private val pastasIgnoradas = setOf(".git", "node_modules", "build", ".gradle", "legacy", ".claude", ".clinerules", "pacote", "dist", "tests")
+    private val pastasIgnoradas = setOf(".git", "node_modules", "build", ".gradle", ".claude", ".clinerules", "pacote", "dist", "tests")
 
     private val clienteDeRede = Regex(
         "urllib|import requests|from requests|httpx|aiohttp|http\\.client|urlopen|importlib\\.import_module|\\bsocket\\b|" +

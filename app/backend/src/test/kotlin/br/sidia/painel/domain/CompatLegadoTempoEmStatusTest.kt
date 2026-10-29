@@ -1,8 +1,6 @@
 package br.sidia.painel.domain
 
 import br.sidia.painel.time.BusinessCalendar
-import java.nio.file.Files
-import java.nio.file.Path
 import java.time.Instant
 import java.time.ZoneId
 import kotlin.test.Test
@@ -11,14 +9,13 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 /**
- * Compatibilidade do Tempo em status com o app Python (`legacy/backend/jiradash/analytics.py::time_in_status` e
+ * Compatibilidade do Tempo em status com o app Python (`legacy/backend/jiradash/analytics.py::time_in_status`, tag `legacy-final`, e
  * `metrics/core.py::status_durations`/`pct`), SÓ em `unit = CORRIDO` (o padrão do painel novo são dias úteis; a
  * diferença está em `docs/analise/diferencas-esperadas-tempo-em-status.md`).
  *
  * Os valores esperados são os que o legado calcula, congelados aqui à mão a partir do código dele (P85 por interpolação
  * linear do numpy, reentrada somada por status, parada quando `d > max(2.0, 1.5 * mediana)` com mediana 1 para status
- * sem histórico). Com `legacy/` presente o teste também confere o texto da fórmula; depois da remoção (tag
- * `legacy-final`) só essa conferência de texto é pulada e a prova numérica continua valendo.
+ * sem histórico). O código Python está preservado na tag `legacy-final`; o teste não depende mais da pasta `legacy/`.
  */
 class CompatLegadoTempoEmStatusTest {
     private val mapa = StatusMap(
@@ -61,24 +58,10 @@ class CompatLegadoTempoEmStatusTest {
         "2026-09-05T12:00:00Z" to "Em andamento", "2026-09-09T12:00:00Z" to "Concluído",
     )
 
-    private fun legado(arquivo: String): String? {
-        var dir: Path? = Path.of("").toAbsolutePath()
-        while (dir != null) {
-            val f = dir.resolve("legacy/backend/jiradash/$arquivo")
-            if (Files.exists(f)) return Files.readString(f)
-            dir = dir.parent
-        }
-        return null
-    }
-
     @Test
     fun p85ERentradaSomadaComoOLegado() {
-        legado("analytics.py")?.let {
-            assertTrue("m.pct(agg[s], 85)" in it && "agg[s].append(sec / m.DAY)" in it, "o legado mudou: reconferir a conta")
-        }
-        legado("metrics/core.py")?.let {
-            assertTrue("out[cur] = out.get(cur, 0.0) +" in it && "np.percentile(" in it, "o legado mudou: reconferir a conta")
-        }
+        // Trechos do legado (tag `legacy-final`): analytics.py `m.pct(agg[s], 85)` e `agg[s].append(sec / m.DAY)`;
+        // metrics/core.py `out[cur] = out.get(cur, 0.0) +` e `np.percentile(`.
         val r = calc.compute(listOf(a, b), emptyList(), agora, unit = TimeUnitMode.CORRIDO)
         val andamento = assertNotNull(r.perStatus.firstOrNull { it.status == "Em andamento" })
         // Legado: valores por issue [2, 6] (a reentrada da B soma 2 + 4); mediana 4,0; P85 = 2 + 0,85 × (6 − 2) = 5,4; n = 2.
@@ -93,9 +76,7 @@ class CompatLegadoTempoEmStatusTest {
 
     @Test
     fun paradaMaxDeDoisDiasEUmVirgulaCincoVezesAMedianaComoOLegado() {
-        legado("analytics.py")?.let {
-            assertTrue("d > max(2.0, 1.5 * smed.get(r.status, 1))" in it, "o legado mudou: reconferir a conta")
-        }
+        // Trecho do legado (analytics.py): `d > max(2.0, 1.5 * smed.get(r.status, 1))`.
         // Mediana de "Em andamento" = 4,0 → limite 6,0 (estrito: exatamente 6,0 não é parada). "Bloqueado" não tem
         // histórico: o legado usa mediana 1 → limite max(2, 1,5) = 2,0.
         val abertas = listOf(

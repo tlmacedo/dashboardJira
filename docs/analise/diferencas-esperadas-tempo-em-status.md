@@ -1,6 +1,6 @@
 # Tempo em status: diferenças esperadas em relação ao app atual
 
-Compara o card Tempo em status do app Python (`legacy/backend/jiradash/analytics.py::time_in_status`, apoiado em `metrics/core.py::status_durations` e `pct`) com o novo `TimeInStatusCalculator` (Kotlin). Diferenças listadas aqui são intencionais; qualquer outra divergência é defeito. Todas as cifras usam o cenário TG-1 (usuários fictícios `ana` e `bruno`), coberto por `TimeInStatusCalculatorTest` e `CompatLegadoTest`.
+Compara o card Tempo em status do app Python (`legacy/backend/jiradash/analytics.py::time_in_status`, no branch (ou tag) `legacy-final`, apoiado em `metrics/core.py::status_durations` e `pct`) com o novo `TimeInStatusCalculator` (Kotlin). Diferenças listadas aqui são intencionais; qualquer outra divergência é defeito. Todas as cifras usam o cenário TG-1 (usuários fictícios `ana` e `bruno`), coberto por `TimeInStatusCalculatorTest` e `CompatLegadoTest`.
 
 ## Cenário TG-1
 

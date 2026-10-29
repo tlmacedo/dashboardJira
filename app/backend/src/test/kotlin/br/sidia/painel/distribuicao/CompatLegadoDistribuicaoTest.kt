@@ -5,16 +5,14 @@ import br.sidia.painel.pessoas.Ocupacao
 import br.sidia.painel.pessoas.SemanaDeCarga
 import br.sidia.painel.trabalho.IssueSnapshot
 import br.sidia.painel.trabalho.SnapDeTeste
-import org.junit.jupiter.api.Assumptions.assumeTrue
-import java.nio.file.Files
-import java.nio.file.Path
 import java.time.LocalDate
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 /**
- * O motor novo contra o legado (`legacy/backend/jiradash/distribution/engine.py`): o que continua IGUAL (pesos, faixas, gatilho,
+ * O motor novo contra o legado (`legacy/backend/jiradash/distribution/engine.py`, na tag `legacy-final`; os valores do
+ * legado ficam congelados aqui e o teste não precisa da pasta): o que continua IGUAL (pesos, faixas, gatilho,
  * limite de movimentos, elegibilidade e desempate) e o que muda DE PROPÓSITO (cada divergência está em
  * `docs/analise/diferencas-esperadas-checklist-integridade-governanca.md`, seção 7b). Os números do legado foram conferidos
  * no código Python antes de entrarem aqui; nenhuma rede, nenhum Jira.
@@ -34,27 +32,21 @@ class CompatLegadoDistribuicaoTest {
         return fLoad + fWip + 0.6 * faltantes + (if (afinidade) -0.15 else 0.0)
     }
 
-    private fun pesosDoLegado(): List<String> {
-        var dir: Path? = Path.of("").toAbsolutePath()
-        while (dir != null) {
-            val f = dir.resolve("legacy/backend/jiradash/distribution/engine.py")
-            if (Files.exists(f)) return Files.readAllLines(f)
-            dir = dir.parent
-        }
-        assumeTrue(false, "legacy/ não está neste checkout (removido no Plano 8)")
-        return emptyList()
-    }
-
     @Test
-    fun constantesDoLegadoConferidasNoCodigoPython() {
-        val py = pesosDoLegado().joinToString("\n")
-        for (linha in listOf(
-            "W_LOAD = 1.0", "W_WIP = 0.5", "W_WIP_OVER = 1.0", "W_SKILL_MISS = 0.6", "W_AFFINITY = 0.15",
-            "CAP_WEIGHT_MIN, CAP_WEIGHT_MAX = 0.85, 1.15", "high: float = 1.1", "hysteresis: float = 0.2", "max_moves: int = 10",
-            "c.capacity_h > 0.5",
-        )) {
-            assertTrue(linha in py, "o legado mudou ou o teste copiou errado: $linha")
-        }
+    fun constantesDoLegadoCongeladasDoCodigoPython() {
+        // Constantes copiadas de `legacy/backend/jiradash/distribution/engine.py` (tag `legacy-final`), onde estavam como
+        // `W_LOAD = 1.0`, `W_WIP = 0.5`, `W_WIP_OVER = 1.0`, `W_SKILL_MISS = 0.6`, `W_AFFINITY = 0.15`,
+        // `CAP_WEIGHT_MIN, CAP_WEIGHT_MAX = 0.85, 1.15`, `high: float = 1.1`, `hysteresis: float = 0.2`,
+        // `max_moves: int = 10` e `c.capacity_h > 0.5`. O peso da carga (W_LOAD = 1,0) é o coeficiente fixo de
+        // `scoreDoLegado`; os demais são as regras padrão do painel.
+        assertEquals(
+            listOf(0.5, 1.0, 0.6, 0.15, 0.85, 1.15, 1.1, 10, 0.2, 0.5),
+            listOf(
+                regras.pesoWip, regras.penalidadeWipCheio, regras.pesoCompetenciaFaltante, regras.bonusEpicoOuComponente,
+                regras.produtividadeMin, regras.produtividadeMax, regras.gatilhoRebalanceamento, regras.maxMovimentos,
+                regras.histereseRebalanceamentoPp / 100.0, regras.capacidadeMinimaH,
+            ),
+        )
     }
 
     @Test

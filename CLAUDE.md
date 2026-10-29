@@ -16,7 +16,7 @@ Dashboard de gestão do time TG-Basic sobre tasks do Jira Data Center: fluxo, pr
 
 ## Decisões de produto (resumo)
 
-- **Stack:** backend Kotlin (Ktor) + SQLite embutido (arquivo); frontend React + TypeScript (Vite). O app Python em `legacy/` é referência e será substituído.
+- **Stack:** backend Kotlin (Ktor) + SQLite embutido (arquivo); frontend React + TypeScript (Vite). O app Python anterior foi removido em 29/10/2026 (decisão do usuário) e está preservado na tag `legacy-final`.
 - **Fuso:** America/Manaus. **Tempo:** dias úteis por padrão, com opção de dias corridos.
 - **Concluída:** categoria de status "done" **e** `resolution`; divergência vai para Qualidade dos dados.
 - **Atraso justificado:** duas métricas lado a lado ("no prazo" e "no prazo ajustado"); labels em YAML.
@@ -49,11 +49,11 @@ Dashboard de gestão do time TG-Basic sobre tasks do Jira Data Center: fluxo, pr
 | Equivalência por card com o app atual e diferenças esperadas | `docs/analise/equivalencia-por-card.md`, `docs/analise/` |
 | Jira: checklist da 1ª conexão, runbook, matriz e referência pública | `docs/jira/` |
 | Operação, implantação e LGPD | `docs/operacao/`, `docs/implantacao.md`, `docs/lgpd/` |
-| App Python anterior (só referência) | `legacy/` |
+| App Python anterior (removido; código recuperável no branch (ou tag) `legacy-final`) | `git fetch origin legacy-final` e `git show origin/legacy-final:legacy/<arquivo>` |
 
 ## Estrutura e comandos
 
-- `app/backend` (Gradle, Kotlin 2 + Ktor 3), `app/frontend` (pnpm + Vite), `legacy/` (app Python de referência, não evoluir).
+- `app/backend` (Gradle, Kotlin 2 + Ktor 3), `app/frontend` (pnpm + Vite). O app Python anterior não está mais no repositório (branch ou tag `legacy-final`).
 - Subir tudo local: `cd app && sh iniciar.sh` (PowerShell: `.\iniciar.ps1`); painel em `http://127.0.0.1:8080`. Para apagar os dados locais, pare o painel e apague `app/data/painel.db`. Detalhes em `app/README.md`.
 - Testes: `cd app/backend && ./gradlew test` e `cd app/frontend && pnpm test`.
 

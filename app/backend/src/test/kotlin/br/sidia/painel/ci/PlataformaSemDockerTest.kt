@@ -15,8 +15,8 @@ import kotlin.test.assertTrue
  * Barreira contra o retorno de contêiner, servidor de banco e Testcontainers (regra 6 do CLAUDE.md).
  *
  * O escopo é de propósito estreito: arquivos de build, código, workflows e scripts de subida. Os documentos
- * (`docs/`, `CLAUDE.md`, `.clinerules/`) citam o que é proibido e por isso não são varridos; `legacy/` é só
- * referência. Os termos proibidos são montados por concatenação para este arquivo não acusar a si mesmo
+ * (`docs/`, `CLAUDE.md`, `.clinerules/`) citam o que é proibido e por isso não são varridos (o app Python
+ * antigo, com Dockerfile e compose, saiu do repositório: tag `legacy-final`). Os termos proibidos são montados por concatenação para este arquivo não acusar a si mesmo
  * (e a varredura de código o ignora também pelo nome).
  */
 class PlataformaSemDockerTest {

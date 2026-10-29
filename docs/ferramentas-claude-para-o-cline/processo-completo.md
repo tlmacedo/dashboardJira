@@ -87,4 +87,4 @@ Sempre em forma de pergunta com 2 a 4 opções, a recomendada primeiro, cada uma
 - Rodar o Gradle em dois lugares ao mesmo tempo no mesmo diretório corrompe a execução: um de cada vez.
 - Gradle travado ou "database is locked": feche qualquer painel/JVM usando `app/data/painel.db` e rode um Gradle por vez.
 - Comece cada tarefa relendo o texto dela; não confie na memória da tarefa anterior.
-- Não use `git add -A` nem `-f`: o usuário mantém `legacy/.env.example` modificado e fora de commit.
+- Não use `git add -A` nem `-f`.

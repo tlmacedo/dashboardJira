@@ -3,7 +3,7 @@
 # primeiro problema.
 # Uso (a partir de app/):  sh scripts/verificar-pacote.sh [pasta do pacote]   (padrão: pacote/painel)
 #
-#  1. Conteúdo: nenhum YAML real, arquivo de variáveis (além do modelo), banco, trava, chave/certificado nem pasta legacy/.
+#  1. Conteúdo: nenhum YAML real, arquivo de variáveis (além do modelo), banco, trava, chave/certificado nem pasta legacy (app Python removido, tag legacy-final).
 #  2. Estrutura: bin/painel, bin/painel.bat, o jar do painel em lib/ e frontend/dist/index.html.
 #  3. Fumaça (usa a porta 8080 e pastas temporárias; aborta com aviso se a porta já estiver em uso):
 #     a) modo produção SEM OIDC: o processo termina com código diferente de 0 e a saída cita OIDC_ISSUER, sem nenhum
@@ -114,7 +114,7 @@ proibido="$(find "$PACOTE" \( -name '*.db' -o -name '*.db-wal' -o -name '*.db-sh
 proibido="$(find "$PACOTE" \( -iname '*.pem' -o -iname '*.key' -o -iname '*.p12' -o -iname '*.pfx' -o -iname '*.jks' -o -iname '*.keystore' \) -print -quit)"
 [ -z "$proibido" ] || falhar "chave ou certificado dentro do pacote: ${proibido#"$PACOTE"/}"
 proibido="$(find "$PACOTE" -name legacy -print -quit)"
-[ -z "$proibido" ] || falhar "pasta legacy/ dentro do pacote"
+[ -z "$proibido" ] || falhar "pasta legacy dentro do pacote"
 proibido="$(find "$PACOTE" \( -iname 'Dockerfile*' -o -iname 'docker-compose*' -o -iname 'compose*.yml' -o -iname 'compose*.yaml' -o -name '.dockerignore' \) -print -quit)"
 [ -z "$proibido" ] || falhar "artefato de contêiner dentro do pacote: ${proibido#"$PACOTE"/}"
 # config/: só modelos (*.exemplo.yaml, *.demo.yaml) e as fichas de cards/ (*.card.yaml). Qualquer outro arquivo é configuração real.

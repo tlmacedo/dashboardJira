@@ -27,7 +27,6 @@ app/config/equipes.yaml
 **/config/status_map.yaml
 **/config/jira_campos.yaml
 **/config/vinculos.yaml
-legacy/data/
 # Catálogo de filtros do Jira com usernames reais do time (vocabulário de consulta; nunca versionar)
 Filtros_Status_tool.txt
 Filtros_Status_tool.txt.bak
