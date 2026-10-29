@@ -35,6 +35,8 @@ function Segmentado<T extends string>(props: {
 
 export function Menu(props: {
   role: Role
+  /** Módulos fechados pela trava do DPO (`/api/me`): o item continua no menu, marcado com ⏸ e o texto. */
+  modulosBloqueados?: string[]
   /** Só em desenvolvimento: permite simular outro papel. */
   aoTrocarPapel?: (r: Role) => void
   /** Só em produção (com login): encerra a sessão. */
@@ -65,11 +67,21 @@ export function Menu(props: {
             <div className="grp" id={`grp-${g.id}`}>
               {t(g.labelKey)}
             </div>
-            {g.items.map((i) => (
-              <NavLink key={i.id} to={i.route} onClick={() => setAberto(false)}>
-                {t(i.labelKey)}
-              </NavLink>
-            ))}
+            {g.items.map((i) => {
+              const bloqueado = i.modulo !== undefined && (props.modulosBloqueados ?? []).includes(i.modulo)
+              return (
+                <NavLink key={i.id} to={i.route} onClick={() => setAberto(false)}>
+                  {t(i.labelKey)}
+                  {bloqueado && (
+                    // O símbolo não é o único sinal: o texto diz que o módulo aguarda o aceite do DPO.
+                    <span className="menu-dpo">
+                      {' '}
+                      <span aria-hidden="true">⏸</span> {t('dpo.menu')}
+                    </span>
+                  )}
+                </NavLink>
+              )
+            })}
           </div>
         ))}
       </nav>

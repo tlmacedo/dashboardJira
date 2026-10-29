@@ -6,7 +6,7 @@ import br.sidia.painel.cards.previsao.QuandoDto
 
 /**
  * Os indicadores da Central de atenção (VG-09), na ordem da tela. [cartao] e [segmento] são os do cartão da Central que abre as
- * tasks (`VG-09`, ou `VG-13` para o indício); sem eles o indicador não tem tasks. [rota] é a tela de destino. `SEM_ATUALIZACAO` e
+ * tasks (`VG-09`; `VG-13` para o indício; `VG-14` para a Auditoria); sem eles o indicador não tem tasks. [rota] é a tela de destino. `SEM_ATUALIZACAO` e
  * `PARADAS_NO_STATUS` são dois itens: uma task pode estar nos dois e nunca se somam num só.
  */
 enum class ItemCentral(internal val cartao: String?, internal val rota: String, internal val gravidade: String) {
@@ -22,8 +22,8 @@ enum class ItemCentral(internal val cartao: String?, internal val rota: String, 
     COM_FOLGA("VG-09", "carga", "neutro"),
     META_DE_PRAZO("VG-09", "metas", "meta"),
     PARES_CR_COM_ALERTA("VG-09", "checklistReview", "atencao"),
-    TASK_REVIEW_DIVERGENTE("VG-09", "divergencia", "atencao"),
-    ALTERACOES_SEM_AUTORIZACAO("VG-09", "auditoria", "problema"),
+    TASK_REVIEW_DIVERGENTE("VG-14", "divergencia", "atencao"),
+    ALTERACOES_SEM_AUTORIZACAO("VG-14", "auditoria", "problema"),
     INDICIO_ALTO("VG-13", "integridade", "problema"),
     SEM_ESTIMATIVA("VG-09", "qualidade", "fracao"),
 }
@@ -48,6 +48,8 @@ interface FontesDaCentral {
     /** VG-12: um cartão por squad, em ordem alfabética. */
     suspend fun squads(): List<CartaoSquadDto>
 
+    /** Os módulos sensíveis (nomes de `ModuloSensivel`) fechados pela trava do DPO para quem pergunta; os itens deles ficam fora. */
+    suspend fun modulosBloqueados(): List<String> = emptyList()
     /** P50 e P85 do ciclo (dias úteis) das concluídas dos últimos 30 dias (VG-03); nulo se indisponível ou sem concluídas. */
     suspend fun ciclo30d(): FaixaDaCentral? = null
 
@@ -86,6 +88,7 @@ class CentralCalculator(private val fontes: FontesDaCentral) {
         val vg09 = fontes.valoresDe("VG-09")
         val vg10 = fontes.valoresDe("VG-10")
         val vg13 = fontes.valoresDe("VG-13")
+        val vg14 = fontes.valoresDe("VG-14")
         val vg02 = fontes.valoresDe("VG-02")
         val vg03 = fontes.valoresDe("VG-03")
 
@@ -110,7 +113,7 @@ class CentralCalculator(private val fontes: FontesDaCentral) {
                 val ausentes = fontes.ausentesEm14Dias()
                 return@mapNotNull ItemCentralDto(item.name, ausentes.toString(), ausentes, null, "neutro", item.rota, null, null)
             }
-            val valores = if (item.cartao == "VG-13") vg13 else vg09
+            val valores = when (item.cartao) { "VG-13" -> vg13; "VG-14" -> vg14; else -> vg09 }
             val bruto = valores[item.name] ?: return@mapNotNull null
             val valor = n(bruto)
             val universo = when (item) {
@@ -126,12 +129,18 @@ class CentralCalculator(private val fontes: FontesDaCentral) {
             ItemCentralDto(item.name, textoDe(valor, universo), valor, universo, estado, item.rota, item.cartao, item.name)
         }
 
+        val modulosFechados = fontes.modulosBloqueados()
         val concluidas30d = vg02["atual"]?.let { atual ->
             val anterior = vg02["anterior"]
             KpiComVariacaoDto(n(atual), n(anterior), variacao = if (bloqueado || anterior == null || anterior == 0) null else (atual - anterior) * 100.0 / anterior)
         }
         val ciclo30d = if (bloqueado || (vg03["ciclo"] ?: 0) == 0) null else fontes.ciclo30d()
         val previsao = if (bloqueado) null else fontes.previsao()
+        val avisosDeIntegridade = if (itens.any { it.item == ItemCentral.INDICIO_ALTO.name }) AVISOS_FIXOS_DE_INTEGRIDADE else emptyList()
+        // Só o código e os módulos: nada dos itens que ficaram fora (nem quantos eram).
+        val avisoDeModulosFechados = if (modulosFechados.isEmpty()) emptyList() else listOf(
+            AvisoDto(AvisoDto.ITENS_AGUARDANDO_ACEITE_DPO, AvisoDto.INFORMATIVO, "itens aguardando o aceite do DPO", mapOf("modulos" to modulosFechados.joinToString(","))),
+        )
         return CentralDto(
             kpis = kpis,
             itens = itens,
@@ -142,7 +151,7 @@ class CentralCalculator(private val fontes: FontesDaCentral) {
             concluidas30d = concluidas30d,
             ciclo30d = ciclo30d,
             squads = if (bloqueado) emptyList() else fontes.squads().sortedBy { it.squad },
-            avisos = avisos + if (itens.any { it.item == ItemCentral.INDICIO_ALTO.name }) AVISOS_FIXOS_DE_INTEGRIDADE else emptyList(),
+            avisos = avisos + avisosDeIntegridade + avisoDeModulosFechados,
         )
     }
 

@@ -111,7 +111,16 @@ Lista **mínima e ordenada** das chamadas da primeira conexão. É um procedimen
   - `timeSpentSeconds` presente e coerente com `timeSpent` (por exemplo `1h` = 3600).
   - Paginação: `total` contra `maxResults`.
   - O `comment` do worklog **nunca** é lido nem gravado pelo painel (texto livre, pode ter dado pessoal): confirmar apenas que o campo existe, sem copiar nenhum conteúdo.
+  - `created` (Plano 11, sinal de worklog retroativo): presente, no mesmo formato de `started`; é a data em que o registro foi criado. O painel guarda só essa data. Ausente em alguma versão do Data Center = o sinal não gera achado e sai o aviso `HISTORICO_DE_WORKLOG_INCOMPLETO`.
 - **Quando parar:** `author` fora do username e sem como traduzir; `timeSpentSeconds` ausente; 401, 403, 429, 5xx ou CAPTCHA.
+
+## Passo extra (fora dos cinco): formato das estimativas no changelog
+
+**Confirme que a flag de acesso ao Jira está ligada e rode o passo** (na issue do Passo 4 ou em outra que tenha tido a estimativa alterada). Sem consulta nova se o `changelog` do Passo 4 já trouxer um item `timeoriginalestimate` ou `timeestimate`.
+
+- **O que conferir (Plano 11):** nos itens `field = timeoriginalestimate` e `timeestimate`, `from` e `to` vêm como **segundos** em texto decimal (por exemplo `"36000"`), enquanto `fromString` e `toString` vêm humanizados (por exemplo `"10h"`)? O painel grava só `from` e `to`; valor não numérico vira nulo. Se o servidor mandar só `fromString` e `toString`, registrar: os sinais `ESTIMATIVA_REDUZIDA` e `ESTIMATIVA_AUMENTADA` ficam sem dado (aviso `HISTORICO_DE_ESTIMATIVA_INCOMPLETO`) até o formato ser tratado.
+- **Depois da primeira conexão:** a migração do Plano 11 zerou a marca d'água da sincronização, então a primeira carga refaz o changelog das issues dos últimos 24 meses e preenche os valores de estimativa dos eventos antigos (limitada por `SYNC_MAX_REQUISICOES` por execução; cada ciclo retoma de onde parou).
+- **Quando parar:** 401, 403, 429, 5xx ou CAPTCHA.
 
 ## Passo extra (fora dos cinco): o Reporter é o PL
 

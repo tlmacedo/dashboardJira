@@ -70,7 +70,7 @@ class AuditoriaRoutesTest {
     private val zona = ZoneId.of("America/Manaus")
     private val relogio: Clock = Clock.fixed(Instant.parse("2026-10-30T15:00:00Z"), zona)
     private val hoje: LocalDate = LocalDate.now(relogio)
-    private val producao = Settings(dashboardDevMode = false)
+    private val producao = Settings(dashboardDevMode = false, lgpd = br.sidia.painel.lgpd.LgpdSettings(true, "TESTE-AUDITORIA"))
     private val json = Json { ignoreUnknownKeys = true }
 
     private fun pessoa(id: String, papel: Role, squad: String? = null) =
@@ -465,7 +465,7 @@ class AuditoriaRoutesTest {
         val provedor = AtomicInteger(0)
         fun contexto(base: String?, ligada: Boolean = true): AppContext {
             val s = Settings(
-                dashboardDevMode = false, jiraLiveEnabled = ligada,
+                dashboardDevMode = false, jiraLiveEnabled = ligada, lgpd = br.sidia.painel.lgpd.LgpdSettings(true, "TESTE-AUDITORIA"),
                 jiraInstances = if (base == null) emptyMap() else mapOf("samsung" to JiraInstanceSettings(base, JiraAuthKind.BEARER, null, "token-ficticio-abc123")),
             )
             val fabrica = JiraClientFactory(s, { provedor.incrementAndGet(); HttpClient(MockEngine { contador.incrementAndGet(); respond("{}", HttpStatusCode.OK) }) })
@@ -528,6 +528,36 @@ class AuditoriaRoutesTest {
     }
 
     @Test
+    fun historicoListaWorklogsSemComentarioEEstimativaEmHoras() = rodar { get ->
+        val j = issue("TG-30")
+        val w = br.sidia.painel.sync.WorklogRecord("77", "ana", i("2026-10-15T13:00:00Z"), 5400, i("2026-10-19T15:00:00Z"))
+        SqliteIssueStore(requireNotNull(ctx.dataSource)).upsert(
+            j,
+            listOf(
+                ev("TG-30", "status", "Open", "In Progress", "2026-10-05T12:00:00Z", "ana"),
+                ev("TG-30", "timeoriginalestimate", "36000", "21600", "2026-10-08T12:00:00Z", "ana"),
+            ),
+            "samsung", null, IssueLinks.ler("TG-30", j), i("2026-10-30T12:00:00Z"), worklogs = listOf(w),
+        )
+        val r = get("gerente.exemplo", "/api/auditoria/historico/TG-30")
+        assertEquals(HttpStatusCode.OK, r.status, r.corpo)
+        val h = json.decodeFromString<HistoricoDto>(r.corpo)
+        assertEquals(listOf("status", "timeoriginalestimate", "worklog"), h.linhas.map { it.campo })
+        val estimativa = h.linhas[1]
+        assertEquals("10.0" to "6.0", estimativa.de to estimativa.para)
+        val horas = h.linhas.last()
+        assertEquals("2026-10-15", horas.de)
+        assertEquals("2026-10-19 (1.5 h)", horas.para)
+        assertEquals("ana", horas.autor)
+        assertEquals("2026-10-19T15:00:00Z", horas.at)
+        assertFalse("comment" in r.corpo.lowercase() || "comentário" in r.corpo.lowercase(), "o histórico nunca leva comentário de worklog")
+        // E os dois sinais novos aparecem na tela da Auditoria no período.
+        val s = json.decodeFromString<AuditoriaDto>(get("coord.um", "$sinais?de=2026-10-01&ate=2026-10-30").corpo)
+        assertEquals(setOf("ESTIMATIVA_REDUZIDA", "WORKLOG_RETROATIVO"), s.sinais.map { it.codigo }.toSet())
+        assertEquals("worklog", s.sinais.first { it.codigo == "WORKLOG_RETROATIVO" }.campo)
+    }
+
+    @Test
     fun historicoCampoACampoSemTextoLivre() = rodar { get ->
         semearBase()
         val r = get("gerente.exemplo", "/api/auditoria/historico/TG-1")
@@ -570,13 +600,14 @@ class AuditoriaRoutesTest {
         assertEquals(5, l.size, l.toString())
         assertEquals(listOf(sinais, sinais, sinais, "/api/auditoria/historico/{key}", "/api/cartoes/AU-01/tasks"), l.map { it.second })
         assertEquals(listOf("coord.um", "coord.um", "ana", "coord.um", "coord.um"), l.map { it.first })
-        assertTrue("200" in l[0].third && "\"sinal\":\"PASSA_BOLA\"" in l[0].third, l[0].third)
+        // Ruling do Plano 11: o registro guarda só QUEM consultou o módulo; nem o sinal pedido, nem o total.
+        assertTrue("200" in l[0].third && "PASSA_BOLA" !in l[0].third && "sinal" !in l[0].third, l[0].third)
         // Filtros saneados: só os conhecidos vão para o registro.
         assertFalse("foo" in l[0].third || "bar" in l[0].third, l[0].third)
         assertTrue("400" in l[1].third, l[1].third)
         assertTrue("403" in l[2].third, l[2].third)
         assertTrue("404" in l[3].third, l[3].third)
-        assertTrue("\"total\":\"7\"" in l[4].third, l[4].third)
+        assertFalse("total" in l[4].third, l[4].third)
         // A auditoria guarda quantidades, nunca chaves de issue.
         assertFalse(l.any { "TG-" in it.second || "TG-" in it.third }, l.toString())
     }

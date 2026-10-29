@@ -18,9 +18,10 @@ gravidades:
   FECHADA_POR_OUTRO: 1
   FECHADA_NO_LIMITE: 1
 
-# Sinais ligados. ESTIMATIVA_AUMENTADA fica desligado: o painel ainda não guarda o valor da estimativa no changelog (só o
-# nome do campo); ligue-o quando uma decisão futura ampliar os campos com valor (aparece o aviso SINAL_SEM_DADO).
+# Sinais ligados. ESTIMATIVA_AUMENTADA depende do valor da estimativa no changelog, que o painel guarda desde o Plano 11; enquanto os eventos
+# antigos não são recarregados do Jira (a nova carga só roda com a flag ligada pelo usuário), aparece o aviso SINAL_SEM_DADO.
 ativos:
+  - ESTIMATIVA_AUMENTADA
   - RESGATE_POR_PRORROGACAO
   - TROCA_ANTES_DE_FECHAR
   - CRIADA_E_FECHADA_RAPIDO

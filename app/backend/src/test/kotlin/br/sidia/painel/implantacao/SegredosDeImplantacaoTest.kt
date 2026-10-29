@@ -87,6 +87,19 @@ class SegredosDeImplantacaoTest {
     }
 
     @Test
+    fun nenhumModeloOuExemploDefineOAceiteDoDpoVerdadeiro() {
+        val arquivos = listOf(
+            "deploy/modelos/painel.env.exemplo", "app/.env.example", "app/scripts/LEIA-ME-pacote.txt", "docs/implantacao.md",
+            "docs/implantacao/segredos.md", "docs/implantacao/atualizacao.md", "docs/implantacao/reversao.md",
+        )
+        for (a in arquivos) {
+            assertFalse(Regex("(?i)DASHBOARD_DPO_ACEITE\\s*=\\s*true").containsMatchIn(ler(a)), "$a define o aceite do DPO como verdadeiro")
+        }
+        assertEquals("false", ativas(modelo)["DASHBOARD_DPO_ACEITE"], "o modelo declara a trava fechada")
+        assertEquals("", ativas(modelo)["DASHBOARD_DPO_ACEITE_REF"])
+    }
+
+    @Test
     fun segredosApontaRotacao() {
         assertTrue("docs/operacao/rotacao-de-segredos.md" in segredosMd)
         assertTrue(Files.isRegularFile(repo.resolve("docs/operacao/rotacao-de-segredos.md")))

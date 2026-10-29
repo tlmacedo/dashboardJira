@@ -47,6 +47,7 @@ fun Route.rotasDeConfiguracao(ctx: AppContext, auditoria: AccessLog) {
                 arquivos = arquivosCarregados(s.configDir),
                 pessoas = ctx.roles.total,
                 squads = ctx.roles.squadsEm(hoje(ctx)).size,
+                aceiteDpo = s.lgpd.referenciaDoAceite,
             )
         }
     }

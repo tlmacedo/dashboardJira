@@ -138,6 +138,34 @@ class GuardasDeProducaoTest {
     }
 
     @Test
+    fun aceiteDoDpoSemReferenciaNaoSobe() {
+        for (aceite in listOf("true", "TRUE", " true ")) {
+            assertEquals(
+                listOf("TRAVA_DPO_NAO_DECLARADA"),
+                codigos(env = envValido() + ("DASHBOARD_DPO_ACEITE" to aceite)),
+                aceite,
+            )
+            assertEquals(
+                listOf("TRAVA_DPO_NAO_DECLARADA"),
+                codigos(env = envValido() + mapOf("DASHBOARD_DPO_ACEITE" to aceite, "DASHBOARD_DPO_ACEITE_REF" to "  ")),
+            )
+        }
+    }
+
+    @Test
+    fun travaDpoFechadaNaoImpedeASubida() {
+        // aceite ausente, vazio ou false: a trava fica FECHADA (fail-closed) e a subida é permitida
+        for (env in listOf(envValido(), envValido() + ("DASHBOARD_DPO_ACEITE" to ""), envValido() + ("DASHBOARD_DPO_ACEITE" to "false"))) {
+            assertEquals(emptyList(), codigos(env = env))
+        }
+        // aceite com a referência do parecer também passa
+        assertEquals(
+            emptyList(),
+            codigos(env = envValido() + mapOf("DASHBOARD_DPO_ACEITE" to "true", "DASHBOARD_DPO_ACEITE_REF" to "parecer-2026/11")),
+        )
+    }
+
+    @Test
     fun devModeIgnoraGuardas() {
         val dev = Settings(dashboardDevMode = true, dashboardDemoData = true, host = "0.0.0.0")
         GuardasDeProducao.verificar(dev, emptyMap())

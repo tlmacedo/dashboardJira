@@ -10,7 +10,10 @@ export type Meta = {
   rotuloDeVersao?: string
 }
 
-export type Me = { userId: string; roles: string[] }
+export type Me = { userId: string; roles: string[]; /** Módulos sensíveis fechados pela trava do DPO para este papel (`AUDITORIA`, `INTEGRIDADE`). */ modulosBloqueados?: string[] }
+
+/** Código do `ErroDto` quando a trava do DPO fecha um módulo (HTTP 403). */
+export const CODIGO_AGUARDANDO_DPO = 'AGUARDANDO_ACEITE_DPO'
 
 /** Cabeçalho que a proteção CSRF do backend exige em todo método que altera estado. */
 export const CABECALHO_CSRF = 'X-Painel-CSRF'

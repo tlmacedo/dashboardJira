@@ -17,8 +17,8 @@ class ViolacaoDeProducao(val codigos: List<String>) : IllegalStateException("Sub
  * `REDIRECT_URI_SEM_HTTPS`, `ORIGEM_PUBLICA_AUSENTE`, `REDIRECT_URI_FORA_DA_ORIGEM_PUBLICA`, `SESSION_SECRET_CURTO`,
  * `PROXY_NAO_CONFIGURADO`, `ESCUTA_ABERTA_A_TODAS`, `CAMINHO_RELATIVO`.
  *
- * A guarda `TRAVA_DPO_NAO_DECLARADA` do plano (exigir `DASHBOARD_DPO_ACEITE`) depende da configuração do DPO do Plano 11 e
- * entra quando ele estiver na `main`.
+ * Mais `TRAVA_DPO_NAO_DECLARADA` (por último): `DASHBOARD_DPO_ACEITE=true` sem `DASHBOARD_DPO_ACEITE_REF`. Aceite ausente ou
+ * false NÃO recusa nada: a trava do DPO fica fechada e o painel sobe.
  */
 object GuardasDeProducao {
     fun verificar(s: Settings, env: Map<String, String>) {
@@ -48,6 +48,12 @@ object GuardasDeProducao {
         if (s.host.trim() in ESCUTA_ABERTA) achados += "ESCUTA_ABERTA_A_TODAS"
 
         if (!s.databasePath.isAbsolute || !s.configDir.isAbsolute || !s.staticDir.isAbsolute) achados += "CAMINHO_RELATIVO"
+
+        // Trava do DPO: aceite ausente/false = trava FECHADA, e a subida segue (fail-closed). Aceite verdadeiro sem a referência
+        // do parecer é declaração incompleta e recusa a subida (o LgpdSettings também recusa; aqui o código sai junto dos outros).
+        if (valor("DASHBOARD_DPO_ACEITE")?.lowercase() == "true" && valor("DASHBOARD_DPO_ACEITE_REF") == null) {
+            achados += "TRAVA_DPO_NAO_DECLARADA"
+        }
 
         if (achados.isNotEmpty()) throw ViolacaoDeProducao(achados)
     }

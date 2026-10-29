@@ -42,6 +42,8 @@ data class ConfiguracaoDto(
     val arquivos: List<ArquivoConfigDto>,
     val pessoas: Int,
     val squads: Int,
+    /** Referência do parecer do DPO quando o aceite está ligado; nulo enquanto a trava do DPO está fechada (só a referência, nunca o parecer). */
+    val aceiteDpo: String? = null,
 )
 
 /**

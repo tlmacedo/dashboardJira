@@ -2,6 +2,7 @@ package br.sidia.painel.config
 
 import br.sidia.painel.jira.INSTANCIAS_CONHECIDAS
 import br.sidia.painel.jira.JiraAuthKind
+import br.sidia.painel.lgpd.LgpdSettings
 import br.sidia.painel.operacao.OperacaoSettings
 import br.sidia.painel.security.FaixaCidr
 import br.sidia.painel.security.OidcSettings
@@ -85,6 +86,10 @@ data class Settings(
      * dessas faixas podem informar `X-Forwarded-Proto/-For/-Host`; vazia = nenhum proxy confiável (cabeçalhos ignorados).
      */
     val proxyConfiavel: List<FaixaCidr> = emptyList(),
+    /** Aceite do DPO (`DASHBOARD_DPO_ACEITE` e `_REF`): sem ele, Auditoria e Integridade só abrem no modo dev offline. */
+    val lgpd: LgpdSettings = LgpdSettings(),
+    /** Prazo de retenção por categoria de dado (`RETENTION_*_MONTHS`). Sem valor próprio, deriva de [retentionMonths] e do access_log. */
+    val retencao: RetencaoSettings = RetencaoSettings(retentionMonths, accessLogRetentionMonths, accessLogRetentionMonths, retentionMonths),
 ) {
     /** Valores que nunca podem aparecer em log (tokens das instâncias); registrados na máscara de log na subida. */
     fun valoresSecretos(): List<String> = jiraInstances.values.flatMap {
@@ -99,7 +104,7 @@ data class Settings(
             "retentionMonths=$retentionMonths, accessLogRetentionMonths=$accessLogRetentionMonths, zone=$zone, configDir=$configDir, " +
             "databasePath=$databasePath, host=$host, porta=$porta, cacheDeLeituraSeg=$cacheDeLeituraSeg, staticDir=$staticDir, " +
             "databasePoolSize=$databasePoolSize, jiraInstances=$jiraInstances, origemPublica=$origemPublica, " +
-            "oidc=${if (oidc != null) "configurado" else "ausente"})"
+            "retencao=$retencao, oidc=${if (oidc != null) "configurado" else "ausente"}, aceiteDpo=${lgpd.referenciaDoAceite ?: "ausente"})"
 
     companion object {
         /**
@@ -116,15 +121,16 @@ data class Settings(
                 require(dashboardDevMode) { "DASHBOARD_DEMO_DATA exige DASHBOARD_DEV_MODE=true" }
                 require(!jiraLiveEnabled) { "DASHBOARD_DEMO_DATA exige JIRA_LIVE_ENABLED=false" }
             }
+            val retencao = lerRetencao(env, padrao)
             return Settings(
                 jiraLiveEnabled = jiraLiveEnabled,
                 dashboardDevMode = dashboardDevMode,
                 dashboardDemoData = dashboardDemoData,
                 // Piso de segurança: valor baixo apagaria quase todo o histórico. Mensagens citam só o NOME.
-                retentionMonths = mesesDeRetencao(env, "RETENTION_MONTHS", 6, padrao.retentionMonths),
-                accessLogRetentionMonths = mesesDeRetencao(
-                    env, "ACCESS_LOG_RETENTION_MONTHS", 12, padrao.accessLogRetentionMonths,
-                ),
+                // Os dois campos antigos acompanham as categorias de histórico e de access_log (o resto do painel os lê).
+                retentionMonths = retencao.historicoMeses,
+                accessLogRetentionMonths = retencao.accessLogMeses,
+                retencao = retencao,
                 zone = texto(env, "PAINEL_TZ")?.let {
                     try {
                         ZoneId.of(it)
@@ -159,6 +165,7 @@ data class Settings(
                 // Falha fechada: em produção sem OIDC (ou sem SESSION_SECRET) o painel não sobe.
                 oidc = OidcSettings.fromEnv(env, dashboardDevMode),
                 proxyConfiavel = proxyConfiavel(env),
+                lgpd = LgpdSettings.fromEnv(env),
             )
         }
 
@@ -201,6 +208,33 @@ data class Settings(
             val valor = texto(env, "PAINEL_HOST") ?: return padrao
             require(Regex("[A-Za-z0-9.:\\-]{1,253}").matches(valor)) { "PAINEL_HOST inválido (esperado nome de host ou endereço IP)" }
             return valor
+        }
+
+        /** Piso da auditoria herdado de `RETENTION_MONTHS`: abaixo disso `access_log` e decisões ficam no padrão (a auditoria não encurta). */
+        private const val PISO_DA_AUDITORIA = 12
+
+        private const val MIN_MESES_POR_CATEGORIA = 1
+        private const val MAX_MESES_POR_CATEGORIA = 120
+
+        /**
+         * Lê a retenção por categoria. Ordem de cada categoria: variável própria (`RETENTION_<CATEGORIA>_MONTHS`, 1 a 120) >
+         * variável antiga (`RETENTION_MONTHS`, 6 a 600; `ACCESS_LOG_RETENTION_MONTHS`, 12 a 600, só da auditoria) > 24 meses.
+         * `RETENTION_MONTHS` abaixo de 12 não encurta a auditoria (`access_log` e decisões). Mensagens citam só o NOME.
+         */
+        private fun lerRetencao(env: Map<String, String>, padrao: Settings): RetencaoSettings {
+            fun propria(nome: String): Int? = texto(env, nome)?.let {
+                it.toIntOrNull()?.takeIf { n -> n in MIN_MESES_POR_CATEGORIA..MAX_MESES_POR_CATEGORIA }
+                    ?: throw IllegalArgumentException("$nome inválido (esperado inteiro de $MIN_MESES_POR_CATEGORIA a $MAX_MESES_POR_CATEGORIA)")
+            }
+            val geral = mesesDeRetencao(env, "RETENTION_MONTHS", 6, padrao.retentionMonths)
+            val herdadaDaAuditoria = if (texto(env, "RETENTION_MONTHS") != null && geral >= PISO_DA_AUDITORIA) geral else padrao.accessLogRetentionMonths
+            val auditoria = mesesDeRetencao(env, "ACCESS_LOG_RETENTION_MONTHS", 12, herdadaDaAuditoria)
+            return RetencaoSettings(
+                historicoMeses = propria("RETENTION_HISTORICO_MONTHS") ?: geral,
+                accessLogMeses = propria("RETENTION_ACCESS_LOG_MONTHS") ?: auditoria,
+                decisoesMeses = propria("RETENTION_DECISOES_MONTHS") ?: auditoria,
+                execucoesMeses = propria("RETENTION_EXECUCOES_MONTHS") ?: geral,
+            )
         }
 
         private const val MAX_MESES_DE_RETENCAO = 600

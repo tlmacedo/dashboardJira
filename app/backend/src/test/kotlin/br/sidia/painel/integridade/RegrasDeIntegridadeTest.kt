@@ -25,7 +25,8 @@ class RegrasDeIntegridadeTest {
         val ordem = SinalIntegridade.entries
         // 3 para os cinco primeiros, 2 para os cinco seguintes e 1 para os dois últimos.
         assertEquals(ordem.take(5).map { 3 } + ordem.drop(5).take(5).map { 2 } + listOf(1, 1), ordem.map { r.gravidades.getValue(it) })
-        assertEquals(SinalIntegridade.entries.toSet() - SinalIntegridade.ESTIMATIVA_AUMENTADA, r.ativos)
+        // Plano 11: o painel guarda o valor da estimativa, então os 12 sinais estão ativos no modelo.
+        assertEquals(SinalIntegridade.entries.toSet(), r.ativos)
         assertEquals(2.0, r.trocaAntesDeFecharHoras)
         assertEquals(15, r.criadaEFechadaMinutos)
         assertEquals(2.0, r.reabreEFechaHoras)
@@ -105,7 +106,7 @@ class RegrasDeIntegridadeTest {
     fun gravidadeEAtivoPorSinal() {
         val r = RegrasDeIntegridade.PADRAO
         assertTrue(r.ativo(SinalIntegridade.PULOU_O_FLUXO))
-        assertFalse(r.ativo(SinalIntegridade.ESTIMATIVA_AUMENTADA))
+        assertTrue(r.ativo(SinalIntegridade.ESTIMATIVA_AUMENTADA))
         assertEquals(3, r.gravidade(SinalIntegridade.FECHAMENTO_EM_LOTE))
         assertEquals(1, r.gravidade(SinalIntegridade.FECHADA_NO_LIMITE))
     }

@@ -114,6 +114,26 @@ class DadosDeDemonstracaoTest {
     }
 
     @Test
+    fun carregaEstimativasEWorklogDaDemoDeslocados() {
+        // Plano 11: os casos fictícios dos sinais novos chegam ao banco pelo caminho real, com as datas deslocadas junto das demais.
+        val hoje = ancora.plusDays(15)
+        contexto(relogioEm(hoje)).use { ctx ->
+            carregador(ctx).carregar()
+            val desloc = DadosDeDemonstracao.deslocamentoDias(ancora, hoje)
+            assertTrue(desloc > 0)
+            assertEquals(
+                2, contar(ctx, "SELECT count(*) FROM change_event WHERE field = 'timeoriginalestimate' AND from_value GLOB '[0-9]*' AND to_value GLOB '[0-9]*'"),
+            )
+            assertEquals(2, contar(ctx, "SELECT count(*) FROM worklog WHERE criado_em IS NOT NULL AND author_ref LIKE 'dev.%'"))
+            // criado - started do primeiro registro continua sendo 5 dias corridos (a fixture tem 21/10 -> 26/10).
+            val ms = requireNotNull(ctx.dataSource).connection.use { c ->
+                c.createStatement().executeQuery("SELECT criado_em - started FROM worklog WHERE jira_id = '940001'").use { it.next(); it.getLong(1) }
+            }
+            assertEquals(5L * 24 * 3600 * 1000 + 3600_000, ms, "09:00 -> 10:00 cinco dias depois")
+        }
+    }
+
+    @Test
     fun recarregarEhIdempotente() {
         contexto(relogioEm(ancora.plusDays(1))).use { ctx ->
             val d = carregador(ctx)

@@ -70,7 +70,28 @@ class AuditTimeline(val issue: AuditIssue, private val statusMap: StatusMap) {
         return evs.any { it.at < antes && it.to == pessoa }
     }
 
+    private fun emAndamento(status: String?): Boolean {
+        if (status.isNullOrBlank()) return false
+        return try {
+            statusMap.category(status) == StatusCategory.ACTIVE
+        } catch (_: UnmappedStatusException) {
+            false
+        }
+    }
+
+    /**
+     * Quando o trabalho começou: a primeira entrada em categoria ACTIVE (o instante da transição). Se a issue já nasceu em
+     * andamento (status inicial ACTIVE), vale a criação. Nulo se nunca esteve em andamento (status fora do mapa não conta).
+     */
+    fun inicioDoTrabalho(): Instant? {
+        val transicoes = doCampo("status")
+        val inicial = if (transicoes.isEmpty()) issue.status else transicoes.first().from
+        if (emAndamento(inicial)) return issue.created
+        return transicoes.firstOrNull { emAndamento(it.to) }?.at
+    }
+
     val trocasDeResponsavel: List<ChangeEventRecord> get() = doCampo("assignee")
+    val trocasDeEstimativa: List<ChangeEventRecord> get() = doCampo("timeoriginalestimate")
     val trocasDeVencimento: List<ChangeEventRecord> get() = doCampo("duedate")
     val transicoes: List<ChangeEventRecord> get() = doCampo("status")
 
