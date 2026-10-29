@@ -79,7 +79,14 @@ import java.time.Clock
 data class HealthResposta(val ok: Boolean)
 
 @Serializable
-data class MetaResposta(val devMode: Boolean, val liveEnabled: Boolean, val zone: String, val banner: String?)
+data class MetaResposta(
+    val devMode: Boolean,
+    val liveEnabled: Boolean,
+    val zone: String,
+    val banner: String?,
+    /** Flag do Jira ligada e nenhuma sincronização real ainda: a tela mostra "aguardando a primeira carga", não um painel vazio. */
+    val aguardandoCargaDoJira: Boolean,
+)
 
 private val log = LoggerFactory.getLogger("br.sidia.painel")
 
@@ -257,6 +264,7 @@ fun Application.module(
                     liveEnabled = settings.jiraLiveEnabled,
                     zone = settings.zone.id,
                     banner = banner,
+                    aguardandoCargaDoJira = settings.jiraLiveEnabled && br.sidia.painel.sync.SincronizacaoReal.aguardandoPrimeiraCarga(context.dataSource),
                 ),
             )
         }

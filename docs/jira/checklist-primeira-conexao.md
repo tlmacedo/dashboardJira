@@ -12,6 +12,18 @@ Lista **mínima e ordenada** das chamadas da primeira conexão. É um procedimen
 - [ ] Limites desta primeira rodada: uma issue no passo 4, `maxResults=1` no passo 3, sem escrita, sem busca ampla.
 - [ ] **Os testes automáticos do projeto nunca acessam o Jira real.** Os testes automáticos usam só fixtures e `MockEngine`, mesmo com a flag ligada. A prova técnica fica nos testes `SomenteAFabricaCriaClientesJira` (só a fábrica cria cliente do Jira) e `FlagDesligadaZeroRequisicoesTest` (com a flag desligada, zero requisição). Nenhuma verificação deste checklist é feita por teste: cada passo é uma chamada manual, pela conta do usuário.
 
+## O que acontece na subida quando a flag é ligada
+
+Ao subir o painel com a flag `JIRA_LIVE_ENABLED` ligada pelo usuário (sem nenhuma chamada ao Jira para isso), o banco é preparado assim:
+
+- **Os dados fictícios da demonstração são apagados sozinhos, só ANTES da primeira sincronização real**, numa única transação: só as linhas que o manifesto da demonstração identifica (instância, prefixo `DEMO`/`DEMOCAT` e a chave exata da fixture; issues, eventos, horas, vínculos e decisões de distribuição), com a contagem de cada tipo no log. O critério é a chave da fixture, não a "cara" de fictício: por isso, **assim que existe qualquer prova de sincronização real (execução incremental ou de reconciliação, ou linha de instância em `sync_state`), o expurgo nunca mais apaga nada**, e um projeto real com chave `DEMO` (issues, vínculos, decisões) fica protegido nos reinícios seguintes. A primeira subida com a flag roda antes do agendador, então ainda não há sincronização. Subir de novo não muda nada (idempotente).
+- **Banco desconhecido é recusado.** Se, antes de qualquer sincronização real e depois do expurgo, restar issue, a subida falha com o código `BANCO_DESCONHECIDO_SEM_SINCRONIZACAO` e nada é apagado. As issues que sobraram podem ser reais: **faça backup de `app/data/painel.db` e verifique as issues** antes de apagá-lo (com o painel parado) e subir de novo.
+- **A demonstração só carrega em banco que nunca teve tentativa de sincronização.** Depois de qualquer tentativa (mesmo que falhe por credencial), carregar a demonstração é recusado com `BANCO_COM_SINCRONIZACAO_REAL`, sem apagar nada: faça backup do banco, verifique-o e use um banco novo para a demonstração. Isso evita que, ao religar a flag, o expurgo (que já não age) deixasse dados fictícios passando por reais.
+- **A demonstração nunca carrega com a flag ligada:** `DASHBOARD_DEMO_DATA` junto com a flag ligada derruba a subida. A faixa de "dados fictícios" não aparece.
+- **O painel mostra "Aguardando a primeira carga do Jira"** (e não uma tela vazia sem explicação) até existir carga de verdade: uma sincronização que terminou com sucesso, uma instância com marca d'água ou reconciliação gravada, ou qualquer issue. Uma tentativa que falhou (credencial errada, `INSTANCIA_SEM_CREDENCIAL`, erro 401) ou que ainda está em andamento NÃO tira o aviso. A trava do DPO usa um critério mais amplo e conservador (qualquer tentativa de sincronização a mantém fechada).
+- **O expurgo não escreve `sync_run` e não mexe no cursor.** A migração V7 já zerou a marca d'água, então o primeiro ciclo é a recarga completa; o expurgo não desfaz isso.
+- **A trava do DPO continua fechada.** Ligar a flag não abre Auditoria nem Integridade: elas seguem bloqueadas até o aceite do DPO (`DASHBOARD_DPO_ACEITE`), que só o usuário liga.
+
 ## Passo 1: `GET /rest/api/2/myself` (credencial e fuso)
 
 **Confirme que a flag de acesso ao Jira está ligada e rode o passo.** Consulta: `GET {base}/rest/api/2/myself`, uma vez, na instância escolhida.

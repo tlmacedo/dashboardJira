@@ -341,18 +341,15 @@ class DadosDeDemonstracaoTest {
     }
 
     @Test
-    fun flagLigadaComDadosDeDemoDerrubaSubida() {
+    fun flagLigadaComDadosDeDemoExpurgaEDemoNuncaCarregaComFlag() {
         contexto(relogioEm(ancora.plusDays(1))).use { demo ->
             carregador(demo).carregar()
             val total = contar(demo, "SELECT count(*) FROM issue")
             fun comSettings(s: Settings) = AppContext(
                 s, demo.calendar, demo.roles, demo.dataSource, demo.jira, demo.statusMap, demo.campos, demo.fichas, demo.vinculos, demo.labelsDeAtraso, demo.regrasAuditoria, demo.clock,
             )
-            // Flag ligada e demonstração desligada, mas o banco tem dados fictícios: não sobe, e nada é apagado.
-            val e = assertFailsWith<DemoRecusadaException> {
-                prepararDemonstracao(comSettings(Settings(jiraLiveEnabled = true, dashboardDemoData = false)))
-            }
-            assertEquals("BANCO_COM_DADOS_DE_DEMONSTRACAO", e.codigo)
+            // Tudo desligado: não faz nada e não apaga nada.
+            prepararDemonstracao(comSettings(Settings()))
             assertEquals(total, contar(demo, "SELECT count(*) FROM issue"))
             // Defesa em profundidade: mesmo com um Settings montado à mão, a carga recusa a combinação insegura.
             assertFailsWith<DemoRecusadaException> {
@@ -361,9 +358,10 @@ class DadosDeDemonstracaoTest {
             assertFailsWith<DemoRecusadaException> {
                 prepararDemonstracao(comSettings(Settings(dashboardDevMode = false, dashboardDemoData = true)))
             }
-            // Tudo desligado: não faz nada e não apaga nada.
-            prepararDemonstracao(comSettings(Settings()))
-            assertEquals(total, contar(demo, "SELECT count(*) FROM issue"))
+            assertEquals(total, contar(demo, "SELECT count(*) FROM issue"), "as recusas não apagam nada")
+            // Flag ligada e demonstração desligada: o fictício sai sozinho na subida (ver ExpurgoDeDemonstracaoTest).
+            prepararDemonstracao(comSettings(Settings(jiraLiveEnabled = true, dashboardDemoData = false)))
+            assertEquals(0, contar(demo, "SELECT count(*) FROM issue"))
         }
     }
 

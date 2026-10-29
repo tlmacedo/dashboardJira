@@ -2,7 +2,7 @@
 
 Material para quem lidera um squad e acompanha a semana da equipe. Roteiro da sessão (agenda, pré-requisitos e fechamento): [`roteiro-da-sessao.md`](roteiro-da-sessao.md). O que vale para todos (Meu painel, Abertas, Metas e prazos) está no [material do usuário](usuario.md); aqui estão as telas de liderança. Guia completo: [`guia-do-painel.md`](../manual/guia-do-painel.md).
 
-> **Estado de hoje (29/10/2026).** O acesso ao Jira está desligado (`JIRA_LIVE_ENABLED=false`). A sessão usa os **dados de demonstração** fictícios; os números não são os do time. O mesmo roteiro serve depois que o usuário ligar a flag e a primeira sincronização rodar.
+> **Estado de hoje (29/10/2026).** O acesso ao Jira está desligado (`JIRA_LIVE_ENABLED=false`). A sessão usa os **dados de demonstração** fictícios; os números não são os do time. O mesmo roteiro serve depois que o usuário ligar a flag e a primeira sincronização rodar. Ao ligar a flag, a primeira subida apaga sozinha os dados fictícios (só enquanto não houve nenhuma tentativa de sincronização), o painel mostra "Aguardando a primeira carga do Jira" até a primeira carga concluir, e o escopo por papel só vale com dados reais e login.
 
 ## Objetivo da sessão
 

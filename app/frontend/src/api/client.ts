@@ -5,6 +5,8 @@ export type Meta = {
   liveEnabled: boolean
   zone: string
   banner: string | null
+  /** Flag do Jira ligada e nenhuma sincronização real ainda. */
+  aguardandoCargaDoJira?: boolean
 }
 
 export type Me = { userId: string; roles: string[]; /** Módulos sensíveis fechados pela trava do DPO para este papel (`AUDITORIA`, `INTEGRIDADE`). */ modulosBloqueados?: string[] }

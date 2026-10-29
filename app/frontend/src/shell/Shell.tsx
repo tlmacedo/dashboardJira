@@ -88,6 +88,11 @@ export function Shell() {
           />
           <main id="conteudo" tabIndex={-1}>
             {meta.isError && <p className="notice">{t('shell.metaErro')}</p>}
+            {meta.data?.aguardandoCargaDoJira === true && (
+              <p className="notice" role="status">
+                {t('shell.aguardandoCarga')}
+              </p>
+            )}
             {erroSair && (
               <p className="notice" role="alert">
                 {t('shell.sairErro')}

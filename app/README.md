@@ -26,7 +26,9 @@ DASHBOARD_DEMO_DATA=true sh iniciar.sh        # PowerShell: $env:DASHBOARD_DEMO_
 ```
 
 - Os dados são **100% fictícios** (issues `DEMO-n` e `DEMOCAT-n`, pessoas dos modelos `.exemplo`) e a faixa vermelha avisa. As datas se ajustam em semanas inteiras até hoje. Nenhuma requisição ao Jira é feita.
-- Apagar `data/painel.db` é obrigatório **antes de ligar a flag do Jira**: o painel recusa subir com a flag ligada e dados de demonstração no banco. Um banco que já tem issues reais também recusa a demonstração.
+- **Ao ligar a flag do Jira, não é preciso apagar o banco da demonstração.** Na primeira subida com a flag ligada o painel apaga sozinho SÓ as linhas fictícias (as chaves `DEMO-n` e `DEMOCAT-n` da demonstração), numa transação, e enquanto não houve nenhuma tentativa de sincronização; depois da primeira tentativa o expurgo nunca mais apaga nada. Até a primeira carga concluir, a tela mostra "Aguardando a primeira carga do Jira".
+- Um banco que o painel não reconhece (tem issues e nenhuma tentativa de sincronização, depois do expurgo) é recusado com o código `BANCO_DESCONHECIDO_SEM_SINCRONIZACAO`: faça backup do `data/painel.db` e verifique as issues (podem ser reais) antes de apagá-lo.
+- A demonstração só carrega em banco que nunca teve tentativa de sincronização com o Jira, mesmo que ela tenha falhado (código `BANCO_COM_SINCRONIZACAO_REAL`), e um banco com issues reais também a recusa. Nesses casos, faça backup, verifique e use um banco novo.
 - Se a flag `JIRA_LIVE_ENABLED` estiver ligada no arquivo `app/.env`, a subida com demonstração **falha de propósito**: volte-a para `false` antes. A flag vale só nesse arquivo; variável de mesmo nome no terminal é ignorada.
 
 ## Flags

@@ -13,6 +13,7 @@
   "shell.semPermissao": "Not available for this role.",
   "shell.telaPrevista": "Screen planned in the navigation map; not implemented yet.",
   "shell.metaErro": "Could not reach the server. The menu shows the minimum only.",
+  "shell.aguardandoCarga": "Waiting for the first Jira load. Dashboards stay empty until the sync finishes; no demonstration data is shown.",
   "sessao.expirada": "Your session has expired. Sign in again to continue; the screen filters stay in the URL.",
   "sessao.entrar": "Sign in again",
   "role.USUARIO": "User",

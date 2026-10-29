@@ -3,7 +3,7 @@ package br.sidia.painel.integridade
 import br.sidia.painel.cards.metas.MetasDto
 import br.sidia.painel.domain.Percentiles
 
-/** Nível de indício de uma pessoa. NÃO é nota nem ranking: cada nível exige limiares do YAML e a revisão é humana. */
+/** Nível de indício de uma pessoa, derivado da pontuação (pontos, taxa e múltiplo em relação ao time). NÃO é ranking nem prova: cada nível exige limiares do YAML e a revisão é humana. */
 enum class NivelIntegridade { ALTO, MEDIO, NORMAL }
 
 /**
