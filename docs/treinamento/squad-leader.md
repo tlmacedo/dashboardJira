@@ -10,8 +10,9 @@ Duração: 30 a 45 min. Ao fim, o Squad Leader sabe ler a semana do seu squad em
 
 ## Antes de começar
 
-- Acesso ao painel e papel de **Squad Leader** em `papeis.yaml`, com o squad vigente. Na demonstração (modo de desenvolvimento, sem login, faixa vermelha no topo), escolha **Squad Leader** em **Papel (simulação)**, no menu.
-- Sua visão é a do seu squad (o próprio e a equipe). Pessoas de outro squad aparecem como "outra pessoa".
+- Acesso ao painel e papel de **Squad Leader** em `papeis.yaml`, com o squad vigente. Na demonstração (modo de desenvolvimento, sem login, faixa vermelha no topo), escolha **Squad Leader** em **Papel (simulação)**, no menu. **Atenção:** na demonstração o seletor só mostra o **menu** daquele papel. No servidor, o modo de desenvolvimento enxerga todos os dados (como gerente), então o escopo de dados por papel **só vale em produção, com login**.
+- Em produção, sua visão é a do seu squad (o próprio e a equipe). Na tela Posse, quem está fora dela aparece como "outra pessoa".
+- **Meu squad** é um item só do Squad Leader e depende do squad vigente do usuário logado; na demonstração, abra-o pelo endereço com `?squad=` e o nome de um squad da demonstração, ou use Carga por pessoa e Capacidade, que mostram o time todo.
 - Coordenação e gerente veem todos os squads; por isso alguns números que eles citam não batem com os seus.
 
 ## Roteiro por tela
@@ -102,9 +103,9 @@ Duração: 30 a 45 min. Ao fim, o Squad Leader sabe ler a semana do seu squad em
 
 ## Exercício com dados de demonstração
 
-Com o papel **Squad Leader** escolhido e os dados de demonstração carregados:
+Com o papel **Squad Leader** escolhido (só o menu muda) e os dados de demonstração carregados:
 
-1. Em **Meu squad**, ache a pessoa com maior ocupação nas 4 semanas e clique no número das abertas dela. Quantas tasks vencidas há na gaveta?
+1. Em **Carga por pessoa**, ache a pessoa com maior ocupação nas 4 semanas e clique no número das abertas dela. Quantas tasks vencidas há na gaveta? (Na demonstração a tela mostra o time todo.)
 2. Em **Capacidade**, ache uma semana **sem capacidade** e diga a causa (ausência ou feriado).
 3. Em **Simulador de ausência**, simule 5 dias úteis de ausência de uma pessoa do squad. Quais tasks passam a atrasar?
 4. Em **Distribuição**, abra uma sugestão e leia DI-04. Qual fator pesou mais? Rejeite a sugestão com um motivo e confirme que a tela diz que nada mudou no Jira.

@@ -10,8 +10,9 @@ Duração: 30 a 45 min. Ao fim, a pessoa sabe abrir o **Meu painel**, achar o qu
 
 ## Antes de começar
 
-- Acesso ao painel e papel de **Usuário** em `papeis.yaml`. Na demonstração (modo de desenvolvimento, sem login, faixa vermelha no topo), escolha **Usuário** em **Papel (simulação)**, no menu.
-- Sua visão é só a sua: o menu mostra as telas de trabalho, prazos e as suas próprias carga e agenda. Telas de liderança (Capacidade, Distribuição) e de gestão (Auditoria, Qualidade dos dados) não aparecem para você, e isso é esperado.
+- Acesso ao painel e papel de **Usuário** em `papeis.yaml`. Na demonstração (modo de desenvolvimento, sem login, faixa vermelha no topo), escolha **Usuário** em **Papel (simulação)**, no menu. **Atenção:** na demonstração o seletor só mostra o **menu** daquele papel. No servidor, o modo de desenvolvimento enxerga todos os dados (como gerente), então o escopo de dados por papel ("só o que é seu") **só vale em produção, com login**.
+- Em produção, sua visão é só a sua. O menu mostra as telas de trabalho, prazos e as suas próprias carga e agenda; telas de liderança (Capacidade, Distribuição) e de gestão (Auditoria, Qualidade dos dados) não aparecem para você, e isso é esperado.
+- Na demonstração, o **Meu painel** aparece zerado (os indicadores MP-01, MP-03, MP-05 e MP-06): o usuário de desenvolvimento não tem tasks. Isso é esperado e não é erro.
 - Idioma e tema ficam no menu (pt-BR e inglês; Claro, Escuro e Sidia).
 
 ## Roteiro por tela
@@ -94,7 +95,7 @@ Duração: 30 a 45 min. Ao fim, a pessoa sabe abrir o **Meu painel**, achar o qu
 
 **Como ler o número.** O tempo de cada trecho com o mesmo responsável é contado em dias úteis (ou corridos) até a resolução ou até agora.
 
-**Armadilha comum.** Alguém fora da sua visão aparece como "outra pessoa": é a regra de visão por papel, não um erro.
+**Armadilha comum.** Em produção, quem está fora da sua visão aparece nesta tela como "outra pessoa": é a regra de visão por papel, não um erro. Na demonstração você vê todos, porque o escopo por papel só vale com login.
 
 ## Outras telas que o seu papel vê
 
@@ -102,15 +103,15 @@ Duração: 30 a 45 min. Ao fim, a pessoa sabe abrir o **Meu painel**, achar o qu
 
 ## Exercício com dados de demonstração
 
-Com o papel **Usuário** escolhido e os dados de demonstração carregados:
+Com o papel **Usuário** escolhido (só o menu muda) e os dados de demonstração carregados. Os exercícios usam telas que mostram dados na demonstração, não o Meu painel:
 
-1. Em **Meu painel**, clique no número de Minhas abertas e diga quantas tasks da gaveta vencem nos próximos 7 dias. O total da gaveta é o mesmo do cartão?
+1. Em **Meu painel**, observe os indicadores zerados e explique por quê (o usuário de desenvolvimento não tem tasks). Em **Abertas**, clique no número de AB-01: o total da gaveta é o mesmo do cartão?
 2. Em **Abertas**, troque a unidade de **Dias úteis** para **Dias corridos**. Qual número mudou? Por quê?
 3. Em **Metas e prazos**, anote "No prazo" e "No prazo ajustado" do período. A diferença entre eles é o quê?
-4. Em **Carga por pessoa**, ache uma pessoa **sem capacidade** em alguma semana e explique por que não aparece uma porcentagem.
+4. Em **Carga por pessoa**, procure uma pessoa **sem capacidade** em alguma semana (se a demonstração tiver uma) e explique por que não aparece uma porcentagem.
 5. Em **Metas e prazos**, tente achar uma posição ou uma nota para as pessoas. O que o painel mostra no lugar?
 
-Gabarito: (1) sim, cartão e gaveta têm o mesmo total; (2) a idade das tasks, que em **Dias úteis** deixa de contar fins de semana e feriados; (3) o atraso justificado por label; (4) a capacidade da semana é zero; (5) uma tabela em ordem alfabética, sem ranking.
+Gabarito: (1) o usuário de desenvolvimento não tem tasks; e sim, cartão e gaveta têm o mesmo total; (2) a idade das tasks, que em **Dias úteis** deixa de contar fins de semana e feriados; (3) o atraso justificado por label; (4) a capacidade da semana é zero; (5) uma tabela em ordem alfabética, sem ranking.
 
 ## Para saber mais
 

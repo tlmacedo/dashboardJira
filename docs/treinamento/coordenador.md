@@ -10,7 +10,7 @@ Duração: 30 a 45 min. Ao fim, a coordenação sabe começar pela **Central de 
 
 ## Antes de começar
 
-- Acesso ao painel e papel de **Coordenador** em `papeis.yaml`. Na demonstração (modo de desenvolvimento, sem login, faixa vermelha no topo), escolha **Coordenador** em **Papel (simulação)**, no menu.
+- Acesso ao painel e papel de **Coordenador** em `papeis.yaml`. Na demonstração (modo de desenvolvimento, sem login, faixa vermelha no topo), escolha **Coordenador** em **Papel (simulação)**, no menu. Na demonstração o seletor só muda o **menu**; o servidor mostra todos os dados, e o escopo por papel só vale em produção, com login.
 - A coordenação vê todos os squads. Cada squad se escolhe pelos filtros.
 - Regra de ouro das telas de conferência: o painel mostra o que merece conversa, nunca uma conclusão sobre uma pessoa.
 

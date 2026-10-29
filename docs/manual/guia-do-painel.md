@@ -8,7 +8,7 @@ Este guia segue o catálogo de cartões do backend e o menu do painel: cada item
 
 ## Antes de começar
 
-**Papéis e o que cada um vê.** O papel vem de `papeis.yaml` e define o menu e os dados. O **Usuário** vê só o que é seu; o **Squad Leader** vê o próprio e o seu squad; **Coordenador** e **Gerente** veem todos. Registro de acesso, Sincronização, Configuração e Integridade são só do Gerente; Qualidade dos dados, Decisões de distribuição, Mapa de cartões, Auditoria e Divergência são da coordenação e do gerente. Em desenvolvimento (`DASHBOARD_DEV_MODE=true`) não há login, todos os dados aparecem e uma faixa vermelha avisa. Em produção o acesso é por login único (SSO/OIDC).
+**Papéis e o que cada um vê.** O papel vem de `papeis.yaml` e define o menu e os dados. O **Usuário** vê só o que é seu; o **Squad Leader** vê o próprio e o seu squad; **Coordenador** e **Gerente** veem todos. Registro de acesso, Sincronização, Configuração e Integridade são só do Gerente; Qualidade dos dados, Decisões de distribuição, Mapa de cartões, Auditoria e Divergência são da coordenação e do gerente. Em desenvolvimento (`DASHBOARD_DEV_MODE=true`) não há login, o servidor age como gerente e todos os dados aparecem, uma faixa vermelha avisa e o seletor "Papel (simulação)" só mostra o menu daquele papel: **o escopo de dados por papel só vale em produção, com login**. Em produção o acesso é por login único (SSO/OIDC).
 
 **Filtros.** As telas de trabalho e prazos têm período, squad, pessoa, tipo e prioridade (cada tela mostra os que fazem sentido). Os filtros ficam na URL: copie o endereço para compartilhar o mesmo recorte.
 
@@ -24,7 +24,7 @@ Este guia segue o catálogo de cartões do backend e o menu do painel: cada item
 
 ## Como ler os números
 
-- **No prazo e No prazo ajustado.** Duas métricas lado a lado. Só entram tasks concluídas (categoria concluído e resolução preenchida) com vencimento no período. "No prazo" conta as que saíram até o vencimento (dia da resolução no fuso de Manaus). "No prazo ajustado" conta também as que têm um label que justifica o atraso (lista em `labels_atraso.yaml`).
+- **No prazo e No prazo ajustado.** Duas métricas lado a lado. Só entram tasks concluídas (categoria concluído, resolução preenchida e que não seja cancelamento), fora de Epic, com vencimento no período. "No prazo" conta as que saíram até o vencimento (dia da resolução no fuso de Manaus). "No prazo ajustado" conta também as que têm um label que justifica o atraso (lista em `labels_atraso.yaml`).
 - **Indício, não prova.** Sinais de Auditoria e de Integridade mostram o que merece conferência humana. Eles nunca são uma conclusão sobre uma pessoa.
 - **sem capacidade.** Quando a capacidade de uma pessoa na semana é zero (férias, feriado, ausência), a ocupação não vira porcentagem: aparece "sem capacidade".
 - **Dias úteis e Dias corridos.** O tempo conta dias úteis por padrão (fins de semana e feriados do calendário ficam de fora); o filtro permite dias corridos.
@@ -37,8 +37,6 @@ A Trava do DPO impede que módulos sensíveis sirvam dados reais antes do aceite
 - **Integridade** (cartões IN-01 a IN-08 e o VG-13 da Central) passa pela trava. Ela só fica aberta em desenvolvimento com o Jira desligado e sobre um banco sem dado sincronizado de verdade (demonstração). Em produção está **fechada**, e a resposta é o código `AGUARDANDO_ACEITE_DPO` ("Este módulo está fechado até o aceite do DPO").
 - **Auditoria** (AU-01 a AU-03) está prevista para a trava, mas **ainda não é barrada** na `main`.
 - **Previsto no Plano 11, ainda não mesclado:** o aceite do DPO por configuração, a Auditoria atrás da trava e a tela "Meus dados" (`/api/titular/meus-dados`), em que cada pessoa vê o que o painel guarda sobre ela. Esta seção será completada depois da mescla (veja "A completar depois do Plano 11").
-
-## Telas do menu
 
 ## Início
 
@@ -77,7 +75,7 @@ A Trava do DPO impede que módulos sensíveis sirvam dados reais antes do aceite
 
 **Quem vê.** Squad Leader.
 
-Início do Squad Leader; coordenação e gerente escolhem o squad. Mostra a carga de cada pessoa em ordem alfabética e sem nota, o que vence em 7 dias com a folga real, as ausências (sem motivo) e o risco. Cada número abre as tasks do cartão de origem (Carga, Vencimentos, Capacidade e Riscos) com o mesmo filtro de squad. Esta tela não tem cartões próprios no catálogo.
+Início do Squad Leader; o item do menu é só do Squad Leader e a tela aceita `?squad=` na URL para escolher o squad. Mostra a carga de cada pessoa em ordem alfabética e sem nota, o que vence em 7 dias com a folga real, as ausências (sem motivo) e o risco. Cada número abre as tasks do cartão de origem (Carga, Vencimentos, Capacidade e Riscos) com o mesmo filtro de squad. Esta tela não tem cartões próprios no catálogo.
 
 **De onde vêm os números.** Esta tela não tem ficha própria; os números vêm dos cartões citados acima e do Mapa de cartões.
 
@@ -88,7 +86,7 @@ Início do Squad Leader; coordenação e gerente escolhem o squad. Mostra a carg
 
 **Quem vê.** Usuário, Squad Leader, Coordenador, Gerente.
 
-Início do usuário. Mostra só o que é seu; o líder do squad pode abrir o painel de uma pessoa do seu squad.
+Início do usuário. Em produção, mostra só o que é seu; o líder do squad pode abrir o painel de uma pessoa do seu squad. Na demonstração o usuário de desenvolvimento não tem tasks, então os indicadores MP-01, MP-03, MP-05 e MP-06 aparecem zerados.
 
 **Cartões.**
 

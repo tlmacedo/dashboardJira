@@ -6,7 +6,7 @@ Roteiro comum às sessões por papel. O conteúdo de cada sessão está no mater
 
 ## Pré-requisitos
 
-- **Acesso ao painel.** Em desenvolvimento (demonstração) não há login e uma faixa vermelha avisa; o papel se escolhe em **Papel (simulação)**, no menu. Em produção o acesso é por login único (SSO/OIDC).
+- **Acesso ao painel.** Em desenvolvimento (demonstração) não há login e uma faixa vermelha avisa; o papel se escolhe em **Papel (simulação)**, no menu, e isso muda **só o menu**: o servidor em modo de desenvolvimento mostra todos os dados, e o escopo de dados por papel (usuário vê o próprio, Squad Leader o squad) só vale em produção, com login. O Meu painel aparece zerado na demonstração. Em produção o acesso é por login único (SSO/OIDC).
 - **Papel em `papeis.yaml`.** Em produção, cada pessoa só vê o que o seu papel permite; confirme com o dono da manutenção que o papel de cada participante está certo antes da sessão.
 - **Dados de demonstração carregados.** Siga `app/README.md` (subir o painel com a demonstração ligada). Para recomeçar do zero, pare o painel e apague o arquivo do banco local (`app/data/painel.db`).
 - **Sala e tela.** Um navegador com o painel aberto na tela inicial do papel e, de preferência, o tema Claro e pt-BR.

@@ -6,7 +6,7 @@ Portuguese version: [`perguntas-frequentes.md`](perguntas-frequentes.md). Full g
 
 ## 1. Why are "On time" and "Adjusted on time" different?
 
-They are two metrics side by side, and both use the same tasks: completed ones (done category **and** a filled-in resolution) due in the period. "On time" counts those done by the due date, by the resolution day in Manaus time. "Adjusted on time" also counts those that missed the due date but carry a label that justifies the delay (the list is in `labels_atraso.yaml`). So the difference between the two is the justified delay. See cards MT-01 (Goals & deadlines), FE-05 (Closed) and MP-06 (My dashboard). A label that is under audit still counts in the "adjusted" figure, but shows in a separate counter in Audit.
+They are two metrics side by side, and both use the same tasks: completed ones (done category **and** a filled-in resolution that is not a cancellation), not an Epic, due in the period. "On time" counts those done by the due date, by the resolution day in Manaus time. "Adjusted on time" also counts those that missed the due date but carry a label that justifies the delay (the list is in `labels_atraso.yaml`). So the difference between the two is the justified delay. See cards MT-01 (Goals & deadlines), FE-05 (Closed) and MP-06 (My dashboard). A label that is under audit still counts in the "adjusted" figure, but shows in a separate counter in Audit.
 
 ## 2. What is "Evidence, not proof"?
 
@@ -22,7 +22,7 @@ Because working time does not run on weekends or holidays. The default is **Busi
 
 ## 5. Why can't I see someone else's task?
 
-Because each role has its own view. The **User** sees only their own; the **Squad Leader** sees their own and their squad; **Coordinator** and **Manager** see everyone. A person outside your view shows as "someone else" (the Portuguese interface says "outra pessoa"), with no key or name, and card totals are already calculated only over what you may see. If you need a wider view, the role is set in `papeis.yaml`: talk to the maintenance owner.
+Because each role has its own view. The **User** sees only their own; the **Squad Leader** sees their own and their squad; **Coordinator** and **Manager** see everyone. Card totals are already calculated only over what you may see. On the Task ownership screen, a person outside your view shows as "someone else" (the Portuguese interface says "outra pessoa"), with no name. This applies in production, with login: in the demonstration (development mode) the server shows all data, and the "Role (simulation)" selector only changes the menu. If you need a wider view, the role is set in `papeis.yaml`: talk to the maintenance owner.
 
 ## 6. Why did a number change from yesterday to today?
 

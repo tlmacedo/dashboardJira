@@ -8,7 +8,7 @@ This guide follows the backend card catalog and the dashboard menu: every menu i
 
 ## Before you start
 
-**Roles and what each one sees.** The role comes from `papeis.yaml` and sets the menu and the data. The **User** sees only their own; the **Squad Leader** sees their own and their squad; **Coordinator** and **Manager** see everyone. Access log, Synchronization, Configuration and Integrity are for the Manager only; Data quality, Distribution decisions, Card map, Audit and Divergence are for coordination and manager. In development (`DASHBOARD_DEV_MODE=true`) there is no login, all data shows and a red banner warns you. In production access is through single sign-on (SSO/OIDC).
+**Roles and what each one sees.** The role comes from `papeis.yaml` and sets the menu and the data. The **User** sees only their own; the **Squad Leader** sees their own and their squad; **Coordinator** and **Manager** see everyone. Access log, Synchronization, Configuration and Integrity are for the Manager only; Data quality, Distribution decisions, Card map, Audit and Divergence are for coordination and manager. In development (`DASHBOARD_DEV_MODE=true`) there is no login, the server acts as manager and all data shows, a red banner warns you and the "Role (simulation)" selector only shows the menu of that role: **data scoping by role only applies in production, with login**. In production access is through single sign-on (SSO/OIDC).
 
 **Filters.** The work and deadlines screens have period, squad, person, type and priority (each screen shows the ones that make sense). Filters live in the URL: copy the address to share the same view.
 
@@ -24,7 +24,7 @@ This guide follows the backend card catalog and the dashboard menu: every menu i
 
 ## How to read the numbers
 
-- **On time and Adjusted on time.** Two metrics side by side. Only completed tasks (done category and a filled-in resolution) due in the period count. "On time" counts those done by the due date (resolution day in Manaus time). "Adjusted on time" also counts those with a label that justifies the delay (list in `labels_atraso.yaml`).
+- **On time and Adjusted on time.** Two metrics side by side. Only completed tasks (done category, a filled-in resolution that is not a cancellation), not an Epic, due in the period count. "On time" counts those done by the due date (resolution day in Manaus time). "Adjusted on time" also counts those with a label that justifies the delay (list in `labels_atraso.yaml`).
 - **Evidence, not proof.** Audit and Integrity signals show what deserves a human check. They are never a conclusion about a person.
 - **no capacity.** When a person's capacity in a week is zero (vacation, holiday, absence), occupancy does not become a percentage: it shows "no capacity".
 - **Business days and Calendar days.** Time counts business days by default (weekends and calendar holidays left out); the filter allows calendar days.
@@ -37,8 +37,6 @@ The DPO gate stops sensitive modules from serving real data before the data prot
 - **Integrity** (cards IN-01 to IN-08 and VG-13 of the Attention center) goes through the gate. It is open only in development with Jira off and on a database with no truly synchronized data (demonstration). In production it is **closed**, and the answer is the code `AGUARDANDO_ACEITE_DPO` ("This module is closed until the DPO accepts").
 - **Audit** (AU-01 to AU-03) is meant for the gate but is **not blocked yet** on `main`.
 - **Planned in Plan 11, not merged yet:** the DPO acceptance by configuration, Audit behind the gate and the "My data" screen (`/api/titular/meus-dados`), where each person sees what the dashboard stores about them. This section will be completed after the merge (see "To complete after Plan 11").
-
-## Menu screens
 
 ## Home
 
@@ -77,7 +75,7 @@ This is the home of the coordination and the manager. It gathers the VG cards, e
 
 **Who sees it.** Squad Leader.
 
-Home of the Squad Leader; coordination and manager pick the squad. It shows each person's load in alphabetical order and without a score, what is due in 7 days with the real slack, absences (without the reason) and risk. Each number opens the tasks of the source card (Load, Due dates, Capacity and Risks) with the same squad filter. This screen has no cards of its own in the catalog.
+Home of the Squad Leader: the menu item is for the Squad Leader only, and the screen accepts `?squad=` in the URL to pick the squad. It shows each person's load in alphabetical order and without a score, what is due in 7 days with the real slack, absences (without the reason) and risk. Each number opens the tasks of the source card (Load, Due dates, Capacity and Risks) with the same squad filter. This screen has no cards of its own in the catalog.
 
 **Where the numbers come from.** This screen has no sheet of its own; the numbers come from the cards listed above and from the Card map.
 
@@ -88,7 +86,7 @@ Home of the Squad Leader; coordination and manager pick the squad. It shows each
 
 **Who sees it.** User, Squad Leader, Coordinator, Manager.
 
-Home of the user. It shows only what is yours; the squad leader can open the dashboard of a person in their squad.
+Home of the user. In production it shows only what is yours; the squad leader can open the dashboard of a person in their squad. In the demonstration the development user has no tasks, so indicators MP-01, MP-03, MP-05 and MP-06 show zero.
 
 **Cards.**
 

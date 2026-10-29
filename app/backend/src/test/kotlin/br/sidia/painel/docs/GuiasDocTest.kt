@@ -1,6 +1,10 @@
 package br.sidia.painel.docs
 
 import br.sidia.painel.TestPaths
+import br.sidia.painel.cards.contrato.catalogoPadrao
+import br.sidia.painel.config.Settings
+import br.sidia.painel.lgpd.ModuloSensivel
+import br.sidia.painel.lgpd.TravaDpo
 import java.nio.file.Files
 import kotlin.io.path.name
 import kotlin.test.Test
@@ -176,6 +180,34 @@ class GuiasDocTest {
         for (trecho in listOf("JIRA_LIVE_ENABLED=false", "DASHBOARD_DEMO_DATA=true", "AGUARDANDO_ACEITE_DPO", "Plano 11", "previst", "ainda não")) assertTrue(trecho in pt, "guia pt sem: $trecho")
         val en = guia("en")
         for (trecho in listOf("JIRA_LIVE_ENABLED=false", "DASHBOARD_DEMO_DATA=true", "AGUARDANDO_ACEITE_DPO", "Plan 11", "planned", "not merged yet")) assertTrue(trecho in en, "guia en sem: $trecho")
+    }
+
+    /** O estado do Jira e da Trava do DPO que os guias afirmam é o que o código faz de fato (não só texto). */
+    @Test
+    fun estadoDoJiraEDaTravaBateComOCodigo() {
+        // Flag do Jira falsa por padrão; demonstração só com DASHBOARD_DEMO_DATA ligado (padrão desligado).
+        assertEquals(false, Settings().jiraLiveEnabled)
+        assertEquals(false, Settings().dashboardDemoData)
+        // Em produção (modo dev desligado) a trava está FECHADA, com o código estável que os guias citam.
+        val producao = TravaDpo(Settings(dashboardDevMode = false), null)
+        assertEquals(false, producao.liberada)
+        assertEquals(TravaDpo.CODIGO, producao.motivo())
+        val catalogo = catalogoPadrao().cartoes
+        val integridade = catalogo.filter { it.moduloSensivel == ModuloSensivel.INTEGRIDADE }.map { it.meta.id }.sorted()
+        assertEquals((1..8).map { "IN-%02d".format(it) } + "VG-13", integridade, "cartões atrás da trava mudaram: revisar guias e treinamento")
+        // A Auditoria ainda não está atrás da trava na main: nenhum cartão a declara.
+        assertTrue(catalogo.none { it.moduloSensivel == ModuloSensivel.AUDITORIA }, "a Auditoria passou a ter trava: atualizar guias e treinamento (Plano 11)")
+        for (lang in listOf("pt", "en")) {
+            val g = guia(lang)
+            assertTrue("`${TravaDpo.CODIGO}`" in g, "guia ($lang) sem o código da trava")
+            assertTrue("IN-01" in g && "IN-08" in g && "VG-13" in g, "guia ($lang) não cita os cartões atrás da trava")
+            assertTrue("AU-01" in g && "AU-03" in g, "guia ($lang) não cita a Auditoria")
+            assertTrue("JIRA_LIVE_ENABLED=false" in g && "DASHBOARD_DEMO_DATA=true" in g, "guia ($lang) sem o estado da flag")
+        }
+        assertTrue("fechada" in guia("pt") && "ainda não é barrada" in guia("pt"))
+        assertTrue("closed" in guia("en") && "not blocked yet" in guia("en"))
+        // O seletor de papel da demonstração só filtra o menu: o modo dev do servidor é gerente com todos os dados.
+        assertTrue("só vale em produção" in guia("pt") && "only applies in production" in guia("en"))
     }
 
     @Test

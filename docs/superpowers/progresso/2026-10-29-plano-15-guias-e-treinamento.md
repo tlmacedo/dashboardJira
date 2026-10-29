@@ -30,7 +30,18 @@ O Plano 11 (branch `feat/auditoria-completa-lgpd-plano-11`) ainda não foi mescl
 - Ruling: as capturas de tela do treinamento (T8, passo 3) **não foram geradas**: este ambiente não tem o painel aberto com navegador. O `manifesto.yaml` fica com a lista vazia e o teste `capturasSoDeDemonstracao` vale quando houver imagens. Para gerar: subir o painel com os dados de demonstração e capturar a 1440 px, tema Claro, pt-BR.
 - Ruling: o "registro de divergências" do Plano 14 ainda não existe; o FAQ diz isso e manda reportar ao coordenador ou ao dono da manutenção.
 
+## Correções da revisão do PR #47
+
+- I-1: na demonstração o seletor "Papel (simulação)" só filtra o **menu** (o servidor em modo dev é sempre gerente, com todos os dados; o Meu painel usa o usuário "dev" e aparece zerado). Os cinco materiais, os dois guias e o FAQ foram reescritos para dizer que o escopo de dados por papel só vale em produção, com login; os exercícios do Usuário e do Squad Leader não dependem mais de "meus dados".
+- "Meu squad": item só do Squad Leader; a tela aceita `?squad=` na URL (frase sobre coordenação e gerente removida).
+- FAQ 5: "outra pessoa" restrito à tela Posse; universo de "concluídas" agora diz "resolução que não é cancelamento" e "fora de Epic".
+- Guias: título "Telas do menu" vazio removido (os grupos ficam como H2).
+- `GuiasDocTest.estadoDoJiraEDaTravaBateComOCodigo` amarra flag falsa, trava fechada em produção, `TravaDpo.CODIGO`, os cartões atrás da trava (IN-01 a IN-08 e VG-13) e a Auditoria sem trava ao código.
+
 ## Minor adiados
+
+- Lacuna: o material de treinamento só existe em pt-BR (guia e FAQ têm as duas línguas). Traduzir fica para depois, se o time pedir.
+- Uniformizar "cartão"/"card" nos textos: adiado (as traduções das telas usam os dois termos).
 
 - Capturas de tela do treinamento (acima).
 - `docs/treinamento/registro.md` (T9) e `docs/entrega/` (T10) ficam para depois do ponto de parada com o usuário.

@@ -10,7 +10,7 @@ Duração: 30 a 45 min. Ao fim, o gerente sabe começar pela **Central de atenç
 
 ## Antes de começar
 
-- Acesso ao painel e papel de **Gerente** em `papeis.yaml`. Na demonstração (modo de desenvolvimento, sem login, faixa vermelha no topo), escolha **Gerente** em **Papel (simulação)**, no menu.
+- Acesso ao painel e papel de **Gerente** em `papeis.yaml`. Na demonstração (modo de desenvolvimento, sem login, faixa vermelha no topo), escolha **Gerente** em **Papel (simulação)**, no menu. Na demonstração o seletor só muda o **menu**; o servidor em modo de desenvolvimento age como gerente e mostra todos os dados.
 - O gerente vê todos os squads e as telas de governança que a coordenação não vê: Integridade, Registro de acesso, Sincronização e Configuração.
 - **Regra de consulta auditada.** Integridade e Auditoria tratam de dados de pessoas. Toda consulta é registrada pelo painel (inclusive as negadas e a consulta ao próprio registro), e o uso real só vem depois do aceite do DPO. Consulte para decidir o que conversar e conferir, nunca para punir pelo número.
 

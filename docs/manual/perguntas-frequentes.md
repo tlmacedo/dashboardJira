@@ -6,7 +6,7 @@ Versão em inglês: [`faq.md`](faq.md). Guia completo, tela por tela: [`guia-do-
 
 ## 1. Por que "No prazo" e "No prazo ajustado" são diferentes?
 
-São duas métricas lado a lado, e as duas usam as mesmas tasks: concluídas (categoria concluído **e** resolução preenchida) com vencimento no período. "No prazo" conta as que saíram até o vencimento, pelo dia da resolução no fuso de Manaus. "No prazo ajustado" conta também as que passaram do vencimento, mas têm um label que justifica o atraso (a lista está em `labels_atraso.yaml`). A diferença entre as duas é, portanto, o atraso justificado. Ver os cartões MT-01 (Metas e prazos), FE-05 (Fechadas) e MP-06 (Meu painel). Um label que está sob auditoria continua contando no "ajustado", mas aparece num contador à parte na Auditoria.
+São duas métricas lado a lado, e as duas usam as mesmas tasks: concluídas (categoria concluído **e** resolução preenchida que não seja cancelamento), fora de Epic, com vencimento no período. "No prazo" conta as que saíram até o vencimento, pelo dia da resolução no fuso de Manaus. "No prazo ajustado" conta também as que passaram do vencimento, mas têm um label que justifica o atraso (a lista está em `labels_atraso.yaml`). A diferença entre as duas é, portanto, o atraso justificado. Ver os cartões MT-01 (Metas e prazos), FE-05 (Fechadas) e MP-06 (Meu painel). Um label que está sob auditoria continua contando no "ajustado", mas aparece num contador à parte na Auditoria.
 
 ## 2. O que é "Indício, não prova"?
 
@@ -22,7 +22,7 @@ Porque o prazo de trabalho não corre em fim de semana nem em feriado. O padrão
 
 ## 5. Por que não vejo a task de outra pessoa?
 
-Porque cada papel tem a sua visão. O **Usuário** vê só o que é seu; o **Squad Leader** vê o próprio e o seu squad; **Coordenador** e **Gerente** veem todos. Uma pessoa fora da sua visão aparece como "outra pessoa", sem chave nem nome, e os totais dos cartões já são calculados só sobre o que você pode ver. Se precisa de uma visão maior, o papel é definido em `papeis.yaml`: fale com o dono da manutenção.
+Porque cada papel tem a sua visão. O **Usuário** vê só o que é seu; o **Squad Leader** vê o próprio e o seu squad; **Coordenador** e **Gerente** veem todos. Os totais dos cartões já são calculados só sobre o que você pode ver. Na tela Posse da task, quem está fora da sua visão aparece como "outra pessoa", sem nome. Isso vale em produção, com login: na demonstração (modo de desenvolvimento) o servidor mostra todos os dados, e o seletor "Papel (simulação)" só muda o menu. Se precisa de uma visão maior, o papel é definido em `papeis.yaml`: fale com o dono da manutenção.
 
 ## 6. Por que um número mudou de ontem para hoje?
 
