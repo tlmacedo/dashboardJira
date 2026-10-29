@@ -64,6 +64,19 @@ class FechamentoAntesDaFlagDocTest {
         assertTrue(!Regex("""JIRA_LIVE_ENABLED\s*=\s*true""", RegexOption.IGNORE_CASE).containsMatchIn(texto))
     }
 
+    @Test
+    fun handoffListaAsRotasPublicasEAMigracaoDoCodigo() {
+        val texto = ApoioDeDocs.texto("HANDOFF.md")
+        val publicas = br.sidia.painel.security.ROTAS_PUBLICAS
+        assertTrue(publicas.isNotEmpty())
+        for (rota in publicas) assertTrue("`$rota`" in texto, "HANDOFF sem a rota pública $rota")
+        val ultima = Files.list(TestPaths.mainSrcDir.resolve("resources/db/migration")).use { f ->
+            f.map { it.name }.toList().mapNotNull { Regex("""^V(\d+)__""").find(it)?.groupValues?.get(1)?.toInt() }.max()
+        }
+        assertTrue("V1 a V$ultima" in texto && "próxima livre é a V${ultima + 1}" in texto, "HANDOFF com a migração desatualizada (código: V$ultima)")
+        assertTrue(!Regex("""\d[\d.]*\s+testes""").containsMatchIn(texto), "HANDOFF cita contagem de testes, que não é amarrada")
+    }
+
     // ------------------------------------------------------------------------------------------------------ product e claude.md
 
     /**

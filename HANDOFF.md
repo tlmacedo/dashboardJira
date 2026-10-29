@@ -58,6 +58,7 @@ A lista completa e em ordem está na seção (f) do relatório final. Em resumo:
 - Não editar nem commitar `.env` nem as configs reais (`papeis.yaml`, `equipes.yaml`, `ausencias.yaml`); usar `.exemplo`/`.demo`. `Filtros_Status_tool.txt` (usernames reais) está no `.gitignore`.
 - `DASHBOARD_DEV_MODE=true` e `JIRA_LIVE_ENABLED=false` são os padrões do desenvolvimento; o pacote instalado sobe em produção.
 - **Identidade e papéis:** em `papeis.yaml`, `id` = username do Jira = `assignee` (minúsculas, `[a-z0-9._-]`, 1 a 64; reservados `dev`, `system`, `admin`, `root`, `anonymous`). USUARIO vê só o próprio; SQUAD_LEADER o próprio e o squad (exige `squad`); COORDENADOR e GERENTE veem todos. Issues de quem não está no arquivo só aparecem para coordenação e gerente.
+- **Acesso à API:** em `/api` nega por padrão; só são públicas as rotas de `ROTAS_PUBLICAS` (`security/AccessControl.kt`): `/api/health`, `/api/health/pronto`, `/api/meta`, `/auth/login`, `/auth/callback` e `/auth/logout` (as de `/auth` só existem em produção, com OIDC). Principal sem papel vigente = 403. Rota nova entra no `InventarioDeRotasTest`.
 - Auditoria: só Reporter (PL), coordenadores e gerente, ou Squad Leader do responsável podem trocar responsável, vencimento e labels de atraso (spec, seção 7). Concluída = categoria "done" e `resolution`; fuso America/Manaus; dias úteis por padrão.
 
 ## Pendências abertas
