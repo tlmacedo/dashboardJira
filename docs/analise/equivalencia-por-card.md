@@ -10,7 +10,8 @@ Conferência do Plano 8, Tarefa 3. Para cada card do inventário do app Python (
 
 | Situação | Significado |
 |---|---|
-| equivalente | A mesma conta do legado (fórmula conferida no código do legado ou por `CompatLegado*Test`), nas mesmas opções. As diferenças gerais da próxima seção valem mesmo assim. |
+| equivalente | A mesma conta do legado, **provada numericamente** por ao menos um `CompatLegado*Test` (valores do legado congelados no teste), nas mesmas opções (onde a prova é só em dias corridos, a linha diz; o padrão novo é dias úteis). As diferenças gerais da próxima seção valem mesmo assim. |
+| consistente | O card existe e a conta é a mesma na descrição, mas a prova é só **consistência interna ou de escopo** (drill igual ao card, usuário vê só o próprio, números iguais aos de outras telas, pesos iguais com a conta diferente). **Não há comparação numérica com o legado.** |
 | diferença esperada | O card existe e responde a mesma pergunta, mas com uma diferença **decidida** e documentada (motivo no documento da última coluna). |
 | não migrado | Sem card equivalente; o motivo está na última coluna. |
 
@@ -35,21 +36,21 @@ Documentos: [trabalho e prazos](diferencas-esperadas-trabalho-e-prazos.md) · [t
 
 | ID | Situação | Card(s) novo(s) | Prova | Documento |
 |---|---|---|---|---|
-| VG-01 | equivalente | `VG-01` | `CentralRoutesTest.itensBatemComAsTelasDeDestino` | [checklist, integridade e governança](diferencas-esperadas-checklist-integridade-governanca.md), Início |
+| VG-01 | consistente | `VG-01` | `CentralRoutesTest.itensBatemComAsTelasDeDestino` | [checklist, integridade e governança](diferencas-esperadas-checklist-integridade-governanca.md), Início |
 | VG-02 | diferença esperada | `VG-02`, `FE-01` | `CentralCalculatorTest.centralTemConcluidas30dComVariacao` | [complementos](diferencas-esperadas-complementos.md), M3: variação relativa, não em pontos percentuais |
 | VG-03 | diferença esperada | `VG-03`, `FE-03` | `CentralCalculatorTest.centralTemCiclo30d`, `CentralRoutesTest.concluidas30dECicloBatemComFechadasEComAGaveta` | [complementos](diferencas-esperadas-complementos.md), M3: ciclo em dias úteis por padrão |
 | VG-04 | diferença esperada | `VG-04`, `MT-01` | `CentralCalculatorTest.kpisDePrazoLadoALadoContraAMeta` | [checklist, integridade e governança](diferencas-esperadas-checklist-integridade-governanca.md), Início: janela de 90 dias e "no prazo ajustado" |
-| VG-05 | equivalente | `VG-05`, `NG-03` | `CentralRoutesTest.itensBatemComAsTelasDeDestino` | [trabalho e prazos](diferencas-esperadas-trabalho-e-prazos.md), NG-03 |
+| VG-05 | consistente | `VG-05`, `NG-03` | `CentralRoutesTest.itensBatemComAsTelasDeDestino` | [trabalho e prazos](diferencas-esperadas-trabalho-e-prazos.md), NG-03 |
 | VG-06 | diferença esperada | `VG-09`, `NG-01` | `CentralCalculatorTest.semAtualizacaoEParadasSaoDoisItensQueNaoSeSomam` | [checklist, integridade e governança](diferencas-esperadas-checklist-integridade-governanca.md): deixou de ser KPI próprio, virou item da Central |
 | VG-07 | diferença esperada | `VG-09`, `NG-04` | `CentralRoutesTest.itensBatemComAsTelasDeDestino` | [checklist, integridade e governança](diferencas-esperadas-checklist-integridade-governanca.md): item da Central, com a flag de impedimento |
-| VG-08 | equivalente | `VG-08`, `RI-01` | `CentralRoutesTest.itensBatemComAsTelasDeDestino`, `CompatLegadoTrabalhoTest.riscoComPesosDoLegado` | [trabalho e prazos](diferencas-esperadas-trabalho-e-prazos.md), RI-01 |
+| VG-08 | consistente | `VG-08`, `RI-01` | `CentralRoutesTest.itensBatemComAsTelasDeDestino`, `CompatLegadoTrabalhoTest.riscoComPesosDoLegado` | [trabalho e prazos](diferencas-esperadas-trabalho-e-prazos.md), RI-01 |
 | VG-09 | diferença esperada | `VG-09` | `CentralRoutesTest.semAtualizacaoEParadasSeparadas`, `CentralCalculatorTest.itemQueOPapelNaoVeNaoExisteNoDto` | [checklist, integridade e governança](diferencas-esperadas-checklist-integridade-governanca.md): sem dupla contagem (achado 2), cada número chama o card de destino |
 | VG-10 | diferença esperada | `VG-10`, `FE-07` | `CentralCalculatorTest.entregasPorSemanaEmOrdemDeData` | [trabalho e prazos](diferencas-esperadas-trabalho-e-prazos.md), FE-07: semana de Manaus |
 | VG-11 | diferença esperada | `VG-11`, `PV-02` | `CompatLegadoTrabalhoTest.monteCarloSemChegadaComoOLegado` | [trabalho e prazos](diferencas-esperadas-trabalho-e-prazos.md), PV-02: o novo acrescenta a taxa de chegada |
 | VG-12 | diferença esperada | `VG-12` | `CentralCalculatorTest.squadsEmOrdemAlfabeticaSemNotaDePessoa`, `CentralRoutesTest.cartaoPorSquadAlfabeticoSemNotaDePessoa` | [checklist, integridade e governança](diferencas-esperadas-checklist-integridade-governanca.md), Início: ocupação média e Jain, sem nota de pessoa |
-| MP-01 | equivalente | `MP-01` | `SquadEMeuPainelRoutesTest.numerosIguaisAosCards` | [checklist, integridade e governança](diferencas-esperadas-checklist-integridade-governanca.md), Meu painel |
+| MP-01 | consistente | `MP-01` | `SquadEMeuPainelRoutesTest.numerosIguaisAosCards` | [checklist, integridade e governança](diferencas-esperadas-checklist-integridade-governanca.md), Meu painel |
 | MP-02 | diferença esperada | `MP-02`, `CP-03` | `SquadEMeuPainelRoutesTest.meuPainelDaAna` | [pessoas e planejamento](diferencas-esperadas-pessoas-e-planejamento.md): "sem capacidade" no lugar de 990% |
-| MP-03 | equivalente | `MP-03`, `RI-01` | `SquadEMeuPainelRoutesTest.numerosIguaisAosCards` | [trabalho e prazos](diferencas-esperadas-trabalho-e-prazos.md), RI-01 |
+| MP-03 | consistente | `MP-03`, `RI-01` | `SquadEMeuPainelRoutesTest.numerosIguaisAosCards` | [trabalho e prazos](diferencas-esperadas-trabalho-e-prazos.md), RI-01 |
 | MP-04 | diferença esperada | `MP-04`, `CA-07` | `SquadEMeuPainelRoutesTest.ausenciasDoSquadSemMotivoNemOutroSquad` | [checklist, integridade e governança](diferencas-esperadas-checklist-integridade-governanca.md): ausências sem motivo (LGPD) |
 | MP-05 | diferença esperada | `MP-05` | `SquadEMeuPainelRoutesTest.meuPainelIgnoraParametroPessoaDoUsuario`, `SquadEMeuPainelRoutesTest.meuPainelTemNoPrazoENoPrazoAjustadoLadoALado` | [checklist, integridade e governança](diferencas-esperadas-checklist-integridade-governanca.md): sempre o painel do próprio usuário |
 
@@ -57,26 +58,26 @@ Documentos: [trabalho e prazos](diferencas-esperadas-trabalho-e-prazos.md) · [t
 
 | ID | Situação | Card(s) novo(s) | Prova | Documento |
 |---|---|---|---|---|
-| AB-01 | equivalente | `AB-01` | `AbertasNegligenciadasRoutesTest.drillTemOMesmoTamanhoDoCardAbertas` | [trabalho e prazos](diferencas-esperadas-trabalho-e-prazos.md), Abertas |
+| AB-01 | consistente | `AB-01` | `AbertasNegligenciadasRoutesTest.drillTemOMesmoTamanhoDoCardAbertas` | [trabalho e prazos](diferencas-esperadas-trabalho-e-prazos.md), Abertas |
 | AB-02, AB-03 | diferença esperada | `AB-02` | `AbertasNegligenciadasRoutesTest.historicoDoUsuarioSoComAsProprias`, `CompatLegadoTrabalhoTest.cicloCorridoComoOLegado` | [trabalho e prazos](diferencas-esperadas-trabalho-e-prazos.md): P50 e P85 por tipo, num card só |
 | AB-04 | diferença esperada | `AB-04` | `AbertasNegligenciadasRoutesTest.filtrosDeTipoPrioridadeEUnidadeAlteramOCard` | [trabalho e prazos](diferencas-esperadas-trabalho-e-prazos.md): acima do P85 do próprio tipo |
-| AB-05 | equivalente | `AB-05` | `AbertasNegligenciadasRoutesTest.statusNaoMapeado200` | [trabalho e prazos](diferencas-esperadas-trabalho-e-prazos.md), Abertas |
+| AB-05 | consistente | `AB-05` | `AbertasNegligenciadasRoutesTest.statusNaoMapeado200` | [trabalho e prazos](diferencas-esperadas-trabalho-e-prazos.md), Abertas |
 | AB-06 | diferença esperada | `AB-06` | `AbertasNegligenciadasRoutesTest.baseSemCamposDeTrabalhoMostraAvisoNaoZero` | [trabalho e prazos](diferencas-esperadas-trabalho-e-prazos.md): vazio com aviso enquanto não há prioridade sincronizada |
 | AB-07 | equivalente | `AB-07` | `CompatLegadoTrabalhoTest.faixasDeIdadeComoOLegado` | [trabalho e prazos](diferencas-esperadas-trabalho-e-prazos.md): igual em dias corridos |
-| AB-08 | equivalente | `AB-08` | `AbertasNegligenciadasRoutesTest.usuarioVeSoAsProprias` | [trabalho e prazos](diferencas-esperadas-trabalho-e-prazos.md), Abertas |
+| AB-08 | consistente | `AB-08` | `AbertasNegligenciadasRoutesTest.usuarioVeSoAsProprias` | [trabalho e prazos](diferencas-esperadas-trabalho-e-prazos.md), Abertas |
 | AB-09 | diferença esperada | `AB-09` | `AbertasNegligenciadasRoutesTest.drillTemOMesmoTamanhoDoCardAbertas` | [trabalho e prazos](diferencas-esperadas-trabalho-e-prazos.md): responsável só dentro da visão |
 | EP-01 | diferença esperada | `EP-01` | `PrevisaoEpicosRoutesTest.comEpico`, `PrevisaoEpicosRoutesTest.epicosDrillMesmoTamanhoEVisao` | [trabalho e prazos](diferencas-esperadas-trabalho-e-prazos.md): sem as canceladas, previsão P85 |
 | NG-01, NG-05 | diferença esperada | `NG-01`, `NG-05` | `AbertasNegligenciadasRoutesTest.filtroSemMovimentoRealNaoSubstituiASemAtualizacao` | [trabalho e prazos](diferencas-esperadas-trabalho-e-prazos.md): duas listas separadas, paradas em dias úteis |
 | NG-02 | diferença esperada | `NG-02` | `AbertasNegligenciadasRoutesTest.semResponsavelSoCoordenacao` | [trabalho e prazos](diferencas-esperadas-trabalho-e-prazos.md): fila sem dono só para coordenação e gerente |
-| NG-03 | equivalente | `NG-03` | `AbertasNegligenciadasRoutesTest.drillTemOMesmoTamanhoDoCardNegligenciadas` | [trabalho e prazos](diferencas-esperadas-trabalho-e-prazos.md), Negligenciadas |
+| NG-03 | consistente | `NG-03` | `AbertasNegligenciadasRoutesTest.drillTemOMesmoTamanhoDoCardNegligenciadas` | [trabalho e prazos](diferencas-esperadas-trabalho-e-prazos.md), Negligenciadas |
 | NG-04 | diferença esperada | `NG-04` | `AbertasNegligenciadasRoutesTest.drillTemOMesmoTamanhoDoCardNegligenciadas` | [trabalho e prazos](diferencas-esperadas-trabalho-e-prazos.md): inclui a flag de impedimento |
-| NG-06 | equivalente | `NG-06` | `AbertasNegligenciadasRoutesTest.drillTemOMesmoTamanhoDoCardNegligenciadas` | [trabalho e prazos](diferencas-esperadas-trabalho-e-prazos.md), Negligenciadas |
-| RI-01 | equivalente | `RI-01` | `CompatLegadoTrabalhoTest.riscoComPesosDoLegado`, `RiscosRoutesTest.contagens` | [trabalho e prazos](diferencas-esperadas-trabalho-e-prazos.md), Riscos |
+| NG-06 | consistente | `NG-06` | `AbertasNegligenciadasRoutesTest.drillTemOMesmoTamanhoDoCardNegligenciadas` | [trabalho e prazos](diferencas-esperadas-trabalho-e-prazos.md), Negligenciadas |
+| RI-01 | consistente | `RI-01` | `CompatLegadoTrabalhoTest.riscoComPesosDoLegado`, `RiscosRoutesTest.contagens` | [trabalho e prazos](diferencas-esperadas-trabalho-e-prazos.md), Riscos |
 | RI-02 | diferença esperada | `RI-02` | `RiscosRoutesTest.drillNivel` | [trabalho e prazos](diferencas-esperadas-trabalho-e-prazos.md): alto e médio, nível baixo só no drill |
 | RI-03 | diferença esperada | `RI-03` | `RiscosRoutesTest.sinaisPorPessoaAlfabeticosSemRanking` | [trabalho e prazos](diferencas-esperadas-trabalho-e-prazos.md): proporção, ordem alfabética |
-| PV-01 | equivalente | `PV-01` | `PrevisaoEpicosRoutesTest.drillBacklogMesmoTamanho` | [trabalho e prazos](diferencas-esperadas-trabalho-e-prazos.md), Previsão |
+| PV-01 | consistente | `PV-01` | `PrevisaoEpicosRoutesTest.drillBacklogMesmoTamanho` | [trabalho e prazos](diferencas-esperadas-trabalho-e-prazos.md), Previsão |
 | PV-02, PV-03, PV-04 | diferença esperada | `PV-02`, `PV-03`, `PV-04` | `CompatLegadoTrabalhoTest.monteCarloSemChegadaComoOLegado`, `PrevisaoEpicosRoutesTest.mesmoNumeroNoMesmoDiaComOsMesmosFiltros` | [trabalho e prazos](diferencas-esperadas-trabalho-e-prazos.md): taxa de chegada, confiança por semanas com dado, semana de Manaus |
-| PV-05 | equivalente | `PV-05` | `PrevisaoEpicosRoutesTest.previsaoDoUsuarioSoComAsProprias` | [trabalho e prazos](diferencas-esperadas-trabalho-e-prazos.md), Previsão |
+| PV-05 | consistente | `PV-05` | `PrevisaoEpicosRoutesTest.previsaoDoUsuarioSoComAsProprias` | [trabalho e prazos](diferencas-esperadas-trabalho-e-prazos.md), Previsão |
 | PV-06 | diferença esperada | `PV-06` | `CompatLegadoTrabalhoTest.restanteDadaIdadeComoOLegado` | [trabalho e prazos](diferencas-esperadas-trabalho-e-prazos.md): só tasks em andamento |
 
 ### Fechadas, Negativas e Tempo em status
@@ -85,24 +86,25 @@ Documentos: [trabalho e prazos](diferencas-esperadas-trabalho-e-prazos.md) · [t
 |---|---|---|---|---|
 | FE-01, FE-02 | diferença esperada | `FE-01`, `FE-02` | `FechadasRoutesTest.periodoPadraoNoventaDias`, `FechadasRoutesTest.drillTemOMesmoTamanhoDoCard` | [trabalho e prazos](diferencas-esperadas-trabalho-e-prazos.md), Fechadas: precisa de `resolution` positiva, pontos sem dado viram traço |
 | FE-03 | diferença esperada | `FE-03` | `CompatLegadoTrabalhoTest.cicloCorridoComoOLegado` | [trabalho e prazos](diferencas-esperadas-trabalho-e-prazos.md): ciclo em dias úteis por padrão, igual ao legado em dias corridos |
-| FE-04 | equivalente | `FE-04` | `FechadasRoutesTest.periodoPadraoNoventaDias` | [trabalho e prazos](diferencas-esperadas-trabalho-e-prazos.md), Fechadas |
+| FE-04 | consistente | `FE-04` | `FechadasRoutesTest.periodoPadraoNoventaDias` | [trabalho e prazos](diferencas-esperadas-trabalho-e-prazos.md), Fechadas |
 | FE-05 | diferença esperada | `FE-05` | `FechadasRoutesTest.statusNaoMapeadoEmCandidataPorVencimentoViraAvisoBloqueante` | [trabalho e prazos](diferencas-esperadas-trabalho-e-prazos.md): "no prazo" e ajustado lado a lado, regra única |
 | FE-06 | diferença esperada | `FE-06` | `FechadasRoutesTest.tg801` | [trabalho e prazos](diferencas-esperadas-trabalho-e-prazos.md): inclui as fechadas sem `resolution` |
 | FE-07 | diferença esperada | `FE-07` | `FechadasRoutesTest.resolucaoNaFronteiraDeManausCaiNoMesmoDia` | [trabalho e prazos](diferencas-esperadas-trabalho-e-prazos.md): semana de Manaus |
-| FE-08, FE-09, FE-10 | equivalente | `FE-08`, `FE-09`, `FE-10` | `FechadasRoutesTest.drillTemOMesmoTamanhoDoCard` | [trabalho e prazos](diferencas-esperadas-trabalho-e-prazos.md), Fechadas |
+| FE-08, FE-09, FE-10 | consistente | `FE-08`, `FE-09`, `FE-10` | `FechadasRoutesTest.drillTemOMesmoTamanhoDoCard` | [trabalho e prazos](diferencas-esperadas-trabalho-e-prazos.md), Fechadas |
 | FE-11 | diferença esperada | `FE-11` | `FechadasRoutesTest.tempoAtivoPorPessoa`, `FechadasRoutesTest.tempoAtivoSoContaOTrechoDaPessoa` | [complementos](diferencas-esperadas-complementos.md), M4: responsável no instante do evento, ordem alfabética |
 | FE-12 | diferença esperada | `FE-12` | `FechadasRoutesTest.tabelaDeConcluidasComRealSobreEstimado` | [complementos](diferencas-esperadas-complementos.md), M4 |
 | NE-01, NE-02 | diferença esperada | `NE-01`, `NE-02` | `NegativasRoutesTest.periodoDeSetembroContaAReaberturaAntiga` | [trabalho e prazos](diferencas-esperadas-trabalho-e-prazos.md), Negativas: pela data do evento, não pela última atualização (achado 3) |
-| NE-03 | equivalente | `NE-03` | `NegativasRoutesTest.drillTemOMesmoTamanhoDoCard` | [trabalho e prazos](diferencas-esperadas-trabalho-e-prazos.md), Negativas |
+| NE-03 | consistente | `NE-03` | `NegativasRoutesTest.drillTemOMesmoTamanhoDoCard` | [trabalho e prazos](diferencas-esperadas-trabalho-e-prazos.md), Negativas |
 | NE-04 | diferença esperada | `NE-04` | `NegativasRoutesTest.drillTemOMesmoTamanhoDoCard` | [trabalho e prazos](diferencas-esperadas-trabalho-e-prazos.md): com e sem justificativa |
-| NE-05 | equivalente | `NE-05` | `NegativasRoutesTest.usuarioVeSoAsProprias` | [trabalho e prazos](diferencas-esperadas-trabalho-e-prazos.md), Negativas |
+| NE-05 | consistente | `NE-05` | `NegativasRoutesTest.usuarioVeSoAsProprias` | [trabalho e prazos](diferencas-esperadas-trabalho-e-prazos.md), Negativas |
 | NE-06, NE-07, NE-08 | diferença esperada | `NE-06`, `NE-07`, `NE-08` | `NegativasRoutesTest.squadLeaderVeSoOSeuSquad` | [trabalho e prazos](diferencas-esperadas-trabalho-e-prazos.md): sem worklog até o 6b, trocas dentro do período, taxas com marca ▲ |
 | NE-09 | diferença esperada | `NE-09` | `NegativasCalculatorTest.maiorTempoPorStatusNasNegativas` | [complementos](diferencas-esperadas-complementos.md), M4 (a nota "adiado" de [trabalho e prazos](diferencas-esperadas-trabalho-e-prazos.md) foi resolvida pelo Plano 10) |
 | NE-10 | diferença esperada | `NE-10` | `NegativasRoutesTest.filtrosInvalidosEPapelSemPermissao` | [trabalho e prazos](diferencas-esperadas-trabalho-e-prazos.md): por responsável no instante do evento, em ordem alfabética |
 | TS-01 | diferença esperada | `TS-01` | `TempoEmStatusRoutesTest.concluidaSemResolutionViraAvisoDivergente` | [tempo em status](diferencas-esperadas-tempo-em-status.md): concluída exige `resolution` |
-| TS-02 | equivalente | `TS-02` | `CompatLegadoTest.modoCorridoReproduzAFormulaDoAppAtual` | [tempo em status](diferencas-esperadas-tempo-em-status.md): 3/7 em dias corridos |
-| TS-03, TS-07 | equivalente | `TS-03`, `TS-07` | `CompatLegadoTest.modoCorridoReproduzAFormulaDoAppAtual`, `TempoEmStatusRoutesTest.drillTemOMesmoTamanhoDoCard` | [tempo em status](diferencas-esperadas-tempo-em-status.md): max(2 d, 1,5 × mediana) |
-| TS-04, TS-05 | equivalente | `TS-04`, `TS-05` | `CompatLegadoTest.modoCorridoReproduzAFormulaDoAppAtual`, `TempoEmStatusRoutesTest.cardIgnoraTipoEStatusForaDaFicha` | [tempo em status](diferencas-esperadas-tempo-em-status.md): mediana e P85, reentradas somadas |
+| TS-02 | equivalente | `TS-02` | `CompatLegadoTest.modoCorridoReproduzAFormulaDoAppAtual` | [tempo em status](diferencas-esperadas-tempo-em-status.md): 3/7 em dias corridos; no padrão novo (dias úteis) dá 0,643 |
+| TS-03, TS-07 | equivalente | `TS-03`, `TS-07` | `CompatLegadoTempoEmStatusTest.paradaMaxDeDoisDiasEUmVirgulaCincoVezesAMedianaComoOLegado` | [tempo em status](diferencas-esperadas-tempo-em-status.md): regra max(2 d, 1,5 × mediana) igual, só em dias corridos (o padrão novo é dias úteis) |
+| TS-04 | equivalente | `TS-04` | `CompatLegadoTempoEmStatusTest.p85ERentradaSomadaComoOLegado` | [tempo em status](diferencas-esperadas-tempo-em-status.md): mediana, P85 e reentrada somada iguais, só em dias corridos (o padrão novo é dias úteis) |
+| TS-05 | consistente | `TS-05` | `TempoEmStatusRoutesTest.cardIgnoraTipoEStatusForaDaFicha` | [tempo em status](diferencas-esperadas-tempo-em-status.md): a participação por status não tem comparação numérica com o legado |
 | TS-06 | diferença esperada | `TS-06` | `TempoEmStatusRoutesTest.taskQueMudouDeSquadNaoExpoeOColegaDoOutroSquad` | [tempo em status](diferencas-esperadas-tempo-em-status.md): tempo repartido por responsável vigente (posse) |
 
 ### Metas e prazos
@@ -110,9 +112,9 @@ Documentos: [trabalho e prazos](diferencas-esperadas-trabalho-e-prazos.md) · [t
 | ID | Situação | Card(s) novo(s) | Prova | Documento |
 |---|---|---|---|---|
 | MT-01 | diferença esperada | `MT-01` | `MetasRoutesTest.versaoDasRegrasNaResposta` | [trabalho e prazos](diferencas-esperadas-trabalho-e-prazos.md), Metas: meta em `metas.yaml`, regra única |
-| MT-02, MT-03, MT-04, MT-05, MT-06, MT-07 | equivalente | `MT-02`, `MT-03`, `MT-04`, `MT-05`, `MT-06`, `MT-07` | `CompatLegadoTrabalhoTest.metasDeltaComoOLegado` | [trabalho e prazos](diferencas-esperadas-trabalho-e-prazos.md), Metas |
+| MT-02, MT-03, MT-04, MT-05, MT-06, MT-07 | consistente | `MT-02`, `MT-03`, `MT-04`, `MT-05`, `MT-06`, `MT-07` | `CompatLegadoTrabalhoTest.metasDeltaComoOLegado` | [trabalho e prazos](diferencas-esperadas-trabalho-e-prazos.md), Metas |
 | MT-08, MT-09 | diferença esperada | `MT-08`, `MT-09` | `MetasRoutesTest.periodoPadraoEPeriodoPeloVencimento` | [trabalho e prazos](diferencas-esperadas-trabalho-e-prazos.md): séries pelo vencimento, meta e ajustado ao lado |
-| MT-10 | equivalente | `MT-10` | `CompatLegadoTrabalhoTest.metasDeltaComoOLegado` | [trabalho e prazos](diferencas-esperadas-trabalho-e-prazos.md), Metas |
+| MT-10 | consistente | `MT-10` | `CompatLegadoTrabalhoTest.metasDeltaComoOLegado` | [trabalho e prazos](diferencas-esperadas-trabalho-e-prazos.md), Metas |
 | MT-11, MT-12, MT-13 | diferença esperada | `MT-11`, `MT-12`, `MT-13` | `MetasRoutesTest.drillTemOMesmoTamanhoDoCard` | [trabalho e prazos](diferencas-esperadas-trabalho-e-prazos.md): novo na forma (pílulas com símbolo e texto) |
 | MT-14 | diferença esperada | `MT-14` | `MetasRoutesTest.usuarioVeSoAsProprias` | [trabalho e prazos](diferencas-esperadas-trabalho-e-prazos.md): ordem alfabética, sem posição |
 
@@ -152,7 +154,7 @@ Documentos: [trabalho e prazos](diferencas-esperadas-trabalho-e-prazos.md) · [t
 
 | ID | Situação | Card(s) novo(s) | Prova | Documento |
 |---|---|---|---|---|
-| DI-01, DI-02 | equivalente | `DI-01`, `DI-02` | `DistribuidorTest.pendentesSemResponsavelOuComGerente`, `DistribuicaoRoutesTest.numeroDosCartoesIgualAoDrillParaCadaPapel` | [checklist, integridade e governança](diferencas-esperadas-checklist-integridade-governanca.md), Distribuição |
+| DI-01, DI-02 | consistente | `DI-01`, `DI-02` | `DistribuidorTest.pendentesSemResponsavelOuComGerente`, `DistribuicaoRoutesTest.numeroDosCartoesIgualAoDrillParaCadaPapel` | [checklist, integridade e governança](diferencas-esperadas-checklist-integridade-governanca.md), Distribuição |
 | DI-03 | diferença esperada | `DI-03` | `DistribuidorTest.jainAntesEDepois`, `CompatLegadoDistribuicaoTest.scoreComoOLegado` | [checklist, integridade e governança](diferencas-esperadas-checklist-integridade-governanca.md): o score não soma as horas do item |
 | DI-04 | diferença esperada | `DI-04` | `DistribuidorTest.fatoresEmOrdemAlfabetica` | [checklist, integridade e governança](diferencas-esperadas-checklist-integridade-governanca.md): fatores de todos, em ordem alfabética (sem ranking) |
 | DI-05, RB-03 | diferença esperada | `DC-01` | `DistribuicaoRoutesTest.registraUmaVezEDecisaoDuplicada409`, `DistribuicaoRoutesTest.trocadaExigeMotivoEEscolhidoVisivel` | [checklist, integridade e governança](diferencas-esperadas-checklist-integridade-governanca.md): a decisão é gravada só no painel (modo sombra), motivo obrigatório na troca |
@@ -165,7 +167,9 @@ Documentos: [trabalho e prazos](diferencas-esperadas-trabalho-e-prazos.md) · [t
 
 ## Resumo
 
-Resumo: 34 equivalentes, 107 diferenças esperadas, 1 não migrado (contados por id do inventário; as linhas agrupadas contam um por id).
+Resumo: 5 equivalentes, 29 consistentes, 107 diferenças esperadas, 1 não migrado (contados por id do inventário; as linhas agrupadas contam um por id).
+
+**Prova histórica.** Os `CompatLegado*Test` conferem o texto das fórmulas em `legacy/` só enquanto a pasta existe (a tag `legacy-final` guarda o código original). Nas 5 linhas "equivalente" os valores esperados do legado estão congelados dentro dos próprios testes (`CompatLegadoTest`, `CompatLegadoTempoEmStatusTest`, `CompatLegadoTrabalhoTest`), então a prova numérica sobrevive à remoção. Os `CompatLegadoCapacidadeTest`, `CompatLegadoDistribuicaoTest` e `CompatLegadoChecklistTest` são pulados por inteiro sem o `legacy/`: a Tarefa 9 deve congelar os valores deles (ou registrar a prova como histórica) antes de remover a pasta.
 
 Nenhum card do inventário ficou sem destino, exceto o SI-02. As diferenças esperadas são todas decisões registradas nos documentos da última coluna (fuso, dias úteis, regra única de "no prazo", escopo por papel, ausência de ranking de pessoas).
 
@@ -185,7 +189,7 @@ Cards do catálogo que não substituem nenhum id do inventário (spec 6.2 e os p
 
 Este documento é o ponto de parada obrigatório do Plano 8 (Tarefa 3, passo 5; roteiro D9). Sem o "sim" expresso do usuário, nada em `legacy/` é removido ou alterado, a Tarefa 9 não é executada e a pendência segue no `HANDOFF.md`. Quem responde é só o usuário, na conversa.
 
-Resumo para decidir: 34 equivalentes, 107 diferenças esperadas, 1 não migrado (SI-02, "como ligar ao Jira", substituído pelo checklist da primeira conexão). As fórmulas de risco, capacidade, metas, previsão, checklist e distribuição foram conferidas contra o código do legado pelos `CompatLegado*Test`.
+Resumo para decidir: 5 equivalentes, 29 consistentes, 107 diferenças esperadas, 1 não migrado (SI-02, "como ligar ao Jira", substituído pelo checklist da primeira conexão). Só as 5 linhas "equivalente" têm comparação numérica com o legado (`CompatLegado*Test`); as 29 "consistente" não têm, e a decisão de aprovar considera isso.
 
 Opções:
 

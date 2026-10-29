@@ -53,7 +53,46 @@ class EquivalenciaDocTest {
         }
     }
 
-    private val situacoes = setOf("equivalente", "diferença esperada", "não migrado")
+    private val situacoes = setOf("equivalente", "consistente", "diferença esperada", "não migrado")
+
+    /**
+     * "equivalente" exige prova numérica contra o legado: ao menos um `CompatLegado*Test` do ASSUNTO da linha (prefixo
+     * do id). Qualquer exceção precisa entrar aqui, com justificativa; hoje não há nenhuma.
+     */
+    private val compatPorPrefixo: Map<String, Set<String>> = mapOf(
+        "TS" to setOf("CompatLegadoTest", "CompatLegadoTempoEmStatusTest"),
+        "AB" to setOf("CompatLegadoTrabalhoTest"), "FE" to setOf("CompatLegadoTrabalhoTest"),
+        "MT" to setOf("CompatLegadoTrabalhoTest"), "RI" to setOf("CompatLegadoTrabalhoTest"),
+        "PV" to setOf("CompatLegadoTrabalhoTest"), "EP" to setOf("CompatLegadoTrabalhoTest"),
+        "CR" to setOf("CompatLegadoChecklistTest"), "IN" to setOf("CompatLegadoChecklistTest"),
+        "CP" to setOf("CompatLegadoCapacidadeTest"), "CA" to setOf("CompatLegadoCapacidadeTest"),
+        "DI" to setOf("CompatLegadoDistribuicaoTest"), "RB" to setOf("CompatLegadoDistribuicaoTest"),
+    )
+    private val excecoesDeEquivalente: Set<String> = emptySet()
+
+    /**
+     * Contagem fixada (por id do inventário). Reclassificar uma linha obriga a mudar esta tabela, o Resumo do documento
+     * e a justificativa na revisão, em vez de passar sem que ninguém note.
+     */
+    private val contagemFixada = mapOf("equivalente" to 5, "consistente" to 29, "diferença esperada" to 107, "não migrado" to 1)
+
+    @Test
+    fun equivalenteExigeProvaNumericaContraOLegado() {
+        val ruins = linhas().filter { it.situacao == "equivalente" }.filter { l ->
+            val ok = l.ids.all { id ->
+                val permitidas = compatPorPrefixo[id.substringBefore('-')] ?: emptySet()
+                l.provas.any { it.first in permitidas }
+            }
+            !ok && !l.ids.all { it in excecoesDeEquivalente }
+        }.map { it.ids }
+        assertTrue(ruins.isEmpty(), "linhas 'equivalente' sem prova CompatLegado* do próprio assunto: $ruins")
+    }
+
+    @Test
+    fun contagemPorSituacaoFixadaEIgualAoDocumento() {
+        val real = linhas().groupBy { it.situacao }.mapValues { (_, v) -> v.sumOf { it.ids.size } }
+        assertEquals(contagemFixada, real, "reclassificação: atualize a contagem fixada, o Resumo e justifique na revisão")
+    }
 
     @Test
     fun todoIdDoRelatorioTemLinha() {
@@ -130,11 +169,17 @@ class EquivalenciaDocTest {
         val doc = texto(caminhoDoc)
         // O resumo do documento bate com a tabela (não fica defasado).
         val por = linhas().groupBy { it.situacao }.mapValues { (_, v) -> v.sumOf { it.ids.size } }
-        val resumo = Regex("""Resumo: (\d+) equivalentes?, (\d+) diferenças? esperadas?, (\d+) não migrados?""").find(doc)
-        assertTrue(resumo != null, "o documento precisa da linha 'Resumo: N equivalentes, N diferenças esperadas, N não migrados'")
-        assertEquals(por["equivalente"] ?: 0, resumo!!.groupValues[1].toInt(), "equivalentes no resumo")
-        assertEquals(por["diferença esperada"] ?: 0, resumo.groupValues[2].toInt(), "diferenças no resumo")
-        assertEquals(por["não migrado"] ?: 0, resumo.groupValues[3].toInt(), "não migrados no resumo")
+        // TODAS as ocorrências do resumo (a da seção Resumo e a da pergunta) precisam bater com a tabela.
+        val resumos = Regex("""(\d+) equivalentes?, (\d+) consistentes?, (\d+) diferenças? esperadas?, (\d+) não migrados?""").findAll(doc).toList()
+        assertTrue(resumos.size >= 2, "esperava o resumo na seção Resumo e na pergunta pendente; achou ${resumos.size}")
+        for (resumo in resumos) {
+            assertEquals(
+                listOf(por["equivalente"] ?: 0, por["consistente"] ?: 0, por["diferença esperada"] ?: 0, por["não migrado"] ?: 0),
+                resumo.groupValues.drop(1).map { it.toInt() },
+                "resumo defasado: ${resumo.value}",
+            )
+        }
+        assertTrue(Regex("""Resumo: \d+ equivalentes""").containsMatchIn(doc), "falta a linha 'Resumo: ...'")
 
         // Termina na pergunta pendente: a remoção do legacy/ depende do "sim" do usuário (Plano 8, T3 passo 5 e T9).
         val ultima = doc.substringAfterLast("\n## ")
