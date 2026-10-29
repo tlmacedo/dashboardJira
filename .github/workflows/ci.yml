@@ -83,6 +83,9 @@ jobs:
       - name: Build compatível com a CSP
         working-directory: app/frontend
         run: node scripts/verificar-csp.mjs
+      - name: Orçamento do bundle
+        working-directory: app/frontend
+        run: node scripts/orcamento-bundle.mjs
 
   guarda:
     name: guarda
