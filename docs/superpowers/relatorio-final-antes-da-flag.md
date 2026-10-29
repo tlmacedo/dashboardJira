@@ -131,7 +131,7 @@ Medidos em 29/10/2026 sobre `1ad9529`. Migrações, cartões e itens do menu sã
 ## (f) Lista de ações do usuário, em ordem
 
 1. **Ativar a proteção da `main` no GitHub**, exigindo os quatro checks `backend`, `frontend`, `guarda` e `varredura`; `guarda-windows` entra como recomendado (leva cerca de 18 minutos). Passo a passo em `docs/operacao/ci.md`, seção 5. Só depois do primeiro CI o GitHub oferece os nomes.
-2. **Segredo `VARREDURA_NOMES`** (os usernames reais do time, um por linha) e a opção "Require approval for all outside collaborators".
+2. **Segredo `VARREDURA_NOMES`** (os usernames reais do time, um por linha) e a opção "Require approval for all outside collaborators" (*Settings* → *Actions* → *General*; `docs/operacao/ci.md`, seção 5, item 8).
 3. **Marcar os falsos positivos do GitGuardian** (`SettingsTest.kt` e `guard.sh`).
 4. **Entregar os ativos de marca** (logo em SVG ou PNG transparente, manual de marca, fonte "Mark" com licença): o painel usa alternativas de sistema até lá.
 5. **Obter o parecer do DPO** sobre as sete perguntas do relatório e, só depois, dar o aceite (`DASHBOARD_DPO_ACEITE` com a referência) mais o envio do aviso à equipe.

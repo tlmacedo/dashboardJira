@@ -66,6 +66,7 @@ A IA nunca altera a configuração do repositório. Para os quatro checks serem 
 5. *Bypass list*: deixe vazia (o usuário também fica sujeito à regra; numa emergência, desative o ruleset por alguns minutos e reative). Salve com *Create*.
 6. O repositório é público desde 26/10 (decisão do usuário), então o plano gratuito da conta oferece os rulesets. Se mesmo assim o GitHub avisar que a regra não está disponível, a proteção automática não existe: a IA só mescla depois de conferir `gh pr checks <número>` com os quatro checks verdes (condição 5 do fluxo de entrega, por disciplina e não por trava técnica) e o fato fica registrado no `HANDOFF.md`.
 7. Conferir (somente leitura): `gh api repos/{owner}/{repo}/rules/branches/main` lista as regras ativas (mesmo comando no PowerShell e no sh; o `gh` preenche `{owner}` e `{repo}` dentro do clone). Aceite: abra um PR de teste e veja os quatro checks marcados como *Required* e o botão de mesclar bloqueado enquanto estiverem pendentes ou vermelhos.
+8. **Aprovação de workflows de colaboradores externos** (o repositório é público): no GitHub, repositório → *Settings* → *Actions* → *General* → seção *Fork pull request workflows from outside collaborators* → marque *Require approval for all outside collaborators* e salve com *Save*. Sem isso, o PR de um fork roda o workflow sem ninguém aprovar. O texto exato do GitHub pode mudar de lugar; a ideia é a mesma.
 
 ## 6. Custo e limites
 

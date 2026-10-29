@@ -133,6 +133,18 @@ class RelatorioFinalDocTest {
     }
 
     @Test
+    fun cadaAcaoDoUsuarioTemCaminhoDocumentado() {
+        // Toda opção do GitHub citada na lista (f) tem o caminho de menu em docs/operacao/ci.md.
+        val ci = ApoioDeDocs.texto("docs/operacao/ci.md")
+        val f = secao("f")
+        for (opcao in listOf("Require approval for all outside collaborators", "VARREDURA_NOMES")) {
+            assertTrue(opcao in f, "lista (f) sem '$opcao'")
+            assertTrue(opcao in ci, "docs/operacao/ci.md sem '$opcao'")
+        }
+        assertTrue("*Settings* → *Actions* → *General*" in ci)
+    }
+
+    @Test
     fun relatorioNaoLigaAFlagNemCitaHost() {
         val texto = doc()
         assertTrue(!Regex("""JIRA_LIVE_ENABLED\s*[=:]\s*true""", RegexOption.IGNORE_CASE).containsMatchIn(texto), "o relatório escreve a flag como ligada")
