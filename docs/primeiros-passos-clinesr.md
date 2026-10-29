@@ -17,7 +17,7 @@ Este documento é uma ordem de serviço. Ele **não substitui** a Fase 0 (`docs/
 
 ## 2. Checklist de ajustes iniciais (ordem executável)
 
-Legenda: **[VOCÊ]** o ClineSR executa. **[USUÁRIO]** só o usuário executa (você entrega o comando e espera a resposta). **[TOCA O JIRA]** só depois de o usuário ligar a flag e avisar. Registre o resultado de cada passo no arquivo de progresso `docs/superpowers/progresso/2026-10-27-plano-00-pc-da-empresa.md` (primeira linha: `# Progresso — plano: docs/superpowers/plans/2026-10-27-plano-00-pc-da-empresa.md`), só com versões e "ok/falhou", sem caminho, endereço ou credencial da empresa.
+Legenda: **[VOCÊ]** o ClineSR executa. **[USUÁRIO]** só o usuário executa (você entrega o comando e espera a resposta). **[TOCA O JIRA]** só depois de o usuário ligar a flag e avisar. Registre o resultado de cada passo no arquivo de progresso `docs/superpowers/progresso/2026-10-27-plano-00-pc-da-empresa.md`, que **você cria** numa branch própria (é versionado, então sem dado real; primeira linha: `# Progresso — plano: docs/superpowers/plans/2026-10-27-plano-00-pc-da-empresa.md`), só com versões e "ok/falhou", sem caminho, endereço ou credencial da empresa.
 
 ### Passo 1 [VOCÊ]: clone atualizado e limpo
 
@@ -45,7 +45,7 @@ gh auth status
 $PSVersionTable.PSVersion.ToString()
 ```
 
-Esperado: Java 21.x, Node v22.x, pnpm 9.x ou 10.x, `gh` com `Logged in`. Se falhar: sem JDK 21, Node 22 ou pnpm, instale em pasta do usuário (zip, sem instalador) conforme a Tarefa 1 da Fase 0, e se precisar de privilégio ou aprovação da TI, pergunte (Pergunta A5). `gh` sem login: peça ao usuário `gh auth login` (interativo, envolve o token dele); sem `gh`, o fluxo de entrega para na PR.
+Esperado: Java 21.x, Node v22.x, pnpm 9.x ou 10.x (referência: 9.12.3, a do CI com lockfile v9), `gh` com `Logged in`. Se falhar: sem JDK 21, Node 22 ou pnpm, instale em pasta do usuário (zip, sem instalador) conforme a Tarefa 1 da Fase 0 (`npm install -g` sem administrador pode exigir `npm config set prefix` para uma pasta do usuário e essa pasta no PATH), e se precisar de privilégio ou aprovação da TI, pergunte (Pergunta A5). `gh` sem login: peça ao usuário `gh auth login` (interativo, envolve o token dele); sem `gh`, o fluxo de entrega para na PR.
 
 ### Passo 3 [VOCÊ]: proxy e certificado da empresa (só se algo falhar)
 
@@ -70,6 +70,8 @@ Copy-Item app\.env.example app\.env
 O modelo já traz a linha da flag com valor **desligado** e o modo desenvolvimento só comentado (o `iniciar.ps1` e o `gradlew run` assumem modo desenvolvimento quando a variável falta). O usuário **não deve** alterar a linha da flag. Esperado: `git status` não lista `app\.env` (está no `.gitignore`). Como você confere a flag sem ler o arquivo: no Passo 9, `liveEnabled = False` em `/api/meta`; e se a flag estivesse ligada, a subida com dados fictícios falha de propósito. Se o usuário quiser conferir à mão, o comando dele é `Select-String -Path app\.env -Pattern '^JIRA_LIVE_ENABLED'`. Pergunta A1 antes deste passo.
 
 ### Passo 6 [VOCÊ]: suíte do backend, sem cache (Fase 0, Tarefa 3)
+
+`gradlew test --rerun-tasks` e o primeiro `gradlew run` (download de dependências) podem passar do tempo limite de comando do Cline: rode em segundo plano (`Start-Process`, saída para arquivo fora do repositório) ou aumente o timeout, e acompanhe até o fim.
 
 ```powershell
 Push-Location app\backend
@@ -116,6 +118,8 @@ $ok
 Invoke-RestMethod http://127.0.0.1:8080/api/meta -Proxy $null
 ```
 
+`-Proxy $null` evita o proxy da empresa para `127.0.0.1`, mas **no PowerShell 5.1 é não confirmado** que o parâmetro aceite `$null`. Se der erro, use `[System.Net.WebRequest]::DefaultWebProxy = $null` antes das chamadas, defina `$env:NO_PROXY = '127.0.0.1,localhost'`, ou `curl.exe --noproxy "*" http://127.0.0.1:8080/api/health`.
+
 Esperado: `$ok` = `True`; `/api/meta` com `devMode = True`, `liveEnabled = False`, `zone = America/Manaus`, `banner = MODO DESENVOLVIMENTO: dados fictícios de demonstração` e `aguardandoCargaDoJira = False`. Se o navegador estiver disponível, abra `http://127.0.0.1:8080` e confira a **faixa vermelha** de modo desenvolvimento e que a interface carrega (senão, registre "só a API foi verificada"). Nada nesta subida acessa o Jira.
 
 `iniciar.sh` e `iniciar.ps1` **não têm registro de execução no Windows** (`HANDOFF.md` e `docs/superpowers/relatorio-final-antes-da-flag.md`, seção (d), só afirmam isso dos `.ps1` do pacote e da implantação; para o `iniciar.ps1` o resultado é **não confirmado**). Trate esta como a primeira execução dele e registre o resultado. Se falhar:
@@ -124,11 +128,12 @@ Esperado: `$ok` = `True`; `/api/meta` com `devMode = True`, `liveEnabled = False
 - `liveEnabled = True` ou a subida recusar por causa da demonstração com a flag ligada: **pare**. Alguém ligou a flag no `app\.env`. Não a desligue por conta própria; avise o usuário (a flag é dele).
 - Qualquer código de falha de configuração (a mensagem cita só o nome da variável ou do arquivo): relate o código ao usuário.
 
-Encerre sempre toda a árvore de processos, apague os dados fictícios e limpe a sessão:
+Encerre sempre toda a árvore de processos (`taskkill /T` mata o PowerShell filho e seus descendentes; o filtro por `br.sidia.painel.ApplicationKt` evita matar outro Java; **não encerre o que não é seu**), apague os dados fictícios e limpe a sessão:
 
 ```powershell
 Stop-Process -Id $proc.Id -Force
-Get-CimInstance Win32_Process -Filter "Name='java.exe'" | Where-Object { $_.CommandLine -match 'painel' } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force }
+taskkill /PID $($proc.Id) /T /F
+Get-CimInstance Win32_Process -Filter "Name='java.exe'" | Where-Object { $_.CommandLine -match 'br\.sidia\.painel\.ApplicationKt' } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force }
 Get-NetTCPConnection -LocalPort 8080 -ErrorAction SilentlyContinue
 Remove-Item app\data\painel.db* -ErrorAction SilentlyContinue
 Remove-Item Env:DASHBOARD_DEMO_DATA
@@ -140,7 +145,7 @@ Esperado: a consulta da porta vem vazia. Se não vier, pergunte antes de encerra
 
 Conferências sem tocar em dados reais:
 - O banco é o arquivo SQLite `app\data\painel.db` (criado na primeira subida; `DATABASE_PATH` muda). A pasta `app\data\` e `*.db` estão no `.gitignore`. Um só painel por arquivo (trava `painel.db.lock` ao lado).
-- Espaço livre: abaixo de `PAINEL_DISCO_MIN_MB` (padrão 500) a prontidão (`/api/health/pronto`) responde 503. Confira o disco da pasta escolhida (Pergunta B5).
+- Espaço livre: abaixo de `PAINEL_DISCO_MIN_MB` (padrão 500) a prontidão (`/api/health/pronto`) responde 503. Confira o disco da pasta escolhida (Pergunta B5): `Get-PSDrive -PSProvider FileSystem | Select-Object Name,@{n='LivreMB';e={[int]($_.Free/1MB)}}`.
 - Escuta: `PAINEL_HOST` padrão `127.0.0.1` e `DASHBOARD_PORT` padrão 8080. Em estação de trabalho **deixe em `127.0.0.1`**; outra interface expõe o painel à rede e exige firewall (`docs/implantacao.md`, seção 7). O modo desenvolvimento não tem login.
 - Backup: `BACKUP_DIR` fica **fora do clone, fora da pasta do pacote e fora da pasta do banco**, com permissão só da conta do usuário e administradores (`docs/operacao/backup-e-restauracao.md`, seção 2, tem os `icacls`). É obrigatório em produção; para a primeira conexão a pergunta é B9.
 
@@ -164,7 +169,7 @@ Pontos que você explica ao usuário:
 - O `id` de cada pessoa em `papeis.yaml` é o **username do Jira**, em minúsculas, `[a-z0-9._-]`, 1 a 64 caracteres, igual ao `assignee`; ids reservados: `dev`, `system`, `admin`, `root`, `anonymous`. Em produção é obrigatório ao menos um GERENTE com papel vigente hoje. `equipes.yaml` e `ausencias.yaml` só aceitam ids que existam em `papeis.yaml`.
 - **O `.gitignore` cobre só estes sete nomes** em `app/config/`: `papeis`, `equipes`, `ausencias`, `calendario`, `status_map`, `jira_campos`, `vinculos`. Os demais (`labels_atraso`, `auditoria`, `metas`, `risco`, `previsao`, `planejamento`, `esforco`, `checklist_review`, `integridade`, `distribuicao` e outros) **não** estão ignorados: se o usuário os copiar com o nome real, o `git status` mostra arquivo novo. Eles não têm dado pessoal, mas **não os commite** sem perguntar (repositório público) e use sempre `git add` por caminho.
 - `PAINEL_CONFIG_DIR` fora de `app/config`: em modo desenvolvimento o painel procura o real **e** o modelo `.exemplo` na mesma pasta (`AppContext.kt`, função `resolver`); uma pasta nova sem os modelos faz a subida falhar com `ARQUIVO_AUSENTE`, e a subpasta `cards/` (fichas) também precisa estar nela (**não confirmado** se o caminho das fichas segue `PAINEL_CONFIG_DIR`: procure em `app/backend/src/main/kotlin/br/sidia/painel/AppContext.kt`). Por isso a opção recomendada na Pergunta B5 é manter `app/config` por enquanto.
-- Validar sem subir o painel e sem Jira: `.\app\scripts\painel-cli.ps1 validar-config` (precisa do pacote: antes, `Push-Location app\backend; .\gradlew.bat installDist; Pop-Location`). Ele imprime `OK <arquivo>` / `ERRO <código> <arquivo>:<linha>` e nunca o valor. Códigos e correções: `docs/operacao/configuracao.md`, seção 3. O `painel-cli.ps1` **nunca foi executado** (D14 do roteiro): é a primeira execução; falhas viram correção com teste, em PR próprio.
+- Validar sem subir o painel e sem Jira: `powershell.exe -NoProfile -ExecutionPolicy Bypass -File app\scripts\painel-cli.ps1 validar-config` (precisa do pacote: antes, `Push-Location app\backend; .\gradlew.bat installDist; Pop-Location`). Ele imprime `OK <arquivo>` / `ERRO <código> <arquivo>:<linha>` e nunca o valor. Códigos e correções: `docs/operacao/configuracao.md`, seção 3. O `painel-cli.ps1` **nunca foi executado** (D14 do roteiro): é a primeira execução; falhas viram correção com teste, em PR próprio.
 
 Esperado: `git status` não lista os sete arquivos. Se aparecer algum: o `.gitignore` está incompleto; pare e avise.
 
@@ -208,8 +213,8 @@ Onde registrar a resposta (sem dado real): decisões de produto (confirmações 
 
 **A1. Quem cria o `app\.env`? (antes do Passo 5)**
 Por que importa: o hook impede você de criar ou ler o arquivo, e é ele que guarda a flag e, depois, as credenciais.
-- "Já criei o `app\.env` a partir do modelo e não mexi na flag" (Recomendada). Segue ao Passo 6.
-- "Preciso do comando": você entrega `Copy-Item app\.env.example app\.env` e espera nova resposta.
+- "Preciso do comando" (Recomendada): você entrega `Copy-Item app\.env.example app\.env`, o usuário o roda sem alterar a flag e responde de novo. É o caminho mais seguro, pois você não vê o arquivo.
+- "Já criei o `app\.env` a partir do modelo e não mexi na flag". Segue ao Passo 6.
 - "Pular por enquanto": o painel sobe sem `.env` em modo desenvolvimento com a flag desligada por padrão (linha ausente = desligada); os passos 6 a 9 seguem; o 12 e tudo que vier depois ficam bloqueados.
 Registro: progresso da Fase 0, "app\.env criado: sim/não".
 
@@ -226,13 +231,12 @@ Consequência: sem isso nenhuma suíte roda. Registro: progresso, "ajustes de re
 - "A política de grupo bloqueia até isso": você para e o usuário fala com a TI. Nunca altere a política da máquina.
 
 **A4. Porta 8080 ocupada ou outro painel rodando**
-- "Encerro o processo dono da porta" (Recomendada se for processo do usuário): o usuário diz qual é; você só encerra o que ele confirmar.
-- "Usar outra porta (`DASHBOARD_PORT`)": o usuário a define no `app\.env`; o texto deste documento e os comandos de health trocam a porta; o painel continua em `127.0.0.1`.
-- "Tentar mais tarde".
+- "Usar outra porta (`DASHBOARD_PORT`)" (Recomendada): não mexe em processo de ninguém; o usuário a define no `app\.env`, os comandos de health trocam a porta e o painel continua em `127.0.0.1`.
+- "Encerro o processo dono da porta": o usuário diz qual é; você só encerra o que ele confirmar.
 Consequência: uma segunda subida no mesmo banco também é recusada pela trava `painel.db.lock`.
 
 **A5. Instalar ferramentas e entrar no GitHub**
-- "Instale em pasta do meu usuário, sem instalador" (Recomendada): JDK 21 e Node 22 em zip, pnpm por `npm install -g pnpm@9`; sem privilégio de administrador.
+- "Instale em pasta do meu usuário, sem instalador" (Recomendada): JDK 21 e Node 22 em zip, pnpm por `npm install -g pnpm@9.12.3` (sem administrador, pode precisar de `npm config set prefix` numa pasta do usuário).
 - "A TI instala": você lista versões e para.
 - "Já tenho, vou ajustar `JAVA_HOME`/`PATH`".
 `gh auth login` é sempre do usuário.
@@ -273,7 +277,7 @@ Registro: progresso, "papeis.yaml preenchido: sim/não; validar-config: OK/erros
 
 **B7. Modo desenvolvimento (sem login) ou SSO/OIDC na primeira conexão**
 Por que importa: com a flag ligada, o modo desenvolvimento mostra dados reais **sem login**, com o banner "MODO DESENVOLVIMENTO: dados reais do Jira sem login" e um aviso no log. O OIDC só foi testado com emissor falso.
-- "Primeira conexão em modo desenvolvimento, só em `127.0.0.1`, neste PC, sem acesso remoto de outras pessoas" (Recomendada): é o que o Plano 14a pressupõe. Consequência: quem usa este Windows (inclusive por acesso remoto) enxerga tudo.
+- "Primeira conexão em modo desenvolvimento, só em `127.0.0.1`, neste PC, sem acesso remoto de outras pessoas" (Recomendada): é o que o Plano 14a pressupõe. Consequência: quem usa este Windows (inclusive por acesso remoto) enxerga tudo. Peça ao usuário que confirme que a escuta é só loopback (`PAINEL_HOST` padrão) e que ninguém mais acessa este PC; `validar-config` acusa `ESCUTA_FORA_DO_LOOPBACK` se a escuta sair do loopback.
 - "Esperar o login SSO/OIDC (Plano 13)": mais seguro, adia a primeira conexão até haver provedor, claim e proxy.
 Registro: progresso, `Ruling:`.
 
@@ -291,7 +295,7 @@ Por que importa: o painel usa America/Manaus e dias úteis por padrão; `SYNC_FU
 **B10. Dado real antes do parecer do DPO**
 Por que importa: `docs/implantacao.md`, seção 12, diz que base legal, retenção e comunicação à equipe precisam da validação do DPO **antes** de dados reais entrarem e que, até lá, só fixtures e demonstração; por outro lado, o código só fecha Auditoria e Integridade (trava `DASHBOARD_DPO_ACEITE`, fechada por padrão), o resto do painel abre com a flag. **Não confirmado** se o DPO exige o parecer antes de o painel guardar qualquer cópia local de dado do Jira (procure em `docs/lgpd/inventario-de-dados.md` e `docs/lgpd/relatorio-para-o-dpo.md`).
 - "Obter pelo menos a ciência do DPO antes de ligar a flag; o parecer completo antes de abrir Auditoria e Integridade" (Recomendada): mais prudente; adia a flag até haver esse registro.
-- "Ligar a flag antes do parecer, com Auditoria e Integridade fechadas pela trava": avança o Plano 14a; o usuário assume o risco e registra a decisão com data.
+- "Ligar a flag antes do parecer, com Auditoria e Integridade fechadas pela trava": **contraria `docs/implantacao.md`, seção 12**; só com decisão expressa do usuário registrada como `Ruling:` (com data e o risco aceito).
 - "Aguardar o parecer completo antes de qualquer dado real".
 Registro: `HANDOFF.md`, confirmação 5 (a data do aceite e a referência do parecer; **nunca o nome do DPO**).
 
