@@ -61,11 +61,12 @@ describe('Detalhe em nova aba', () => {
     expect(mock).not.toHaveBeenCalled()
   })
 
-  it('tituloDaUrlEntraComoTextoNuncaComoHtml', async () => {
+  it('tituloDaUrlNuncaViraOH1', async () => {
+    // O título vem do cartão validado (chave de tradução do backend); texto arbitrário da URL não é renderizado.
     simular({ [ROTA]: { status: 200, corpo: gaveta(1) } })
-    renderizarTela(<Detalhe />, '/detalhe', '/detalhe?cartao=AB-01&segmento=abertas&titulo=%3Cimg%20src%3Dx%20onerror%3Dalert(1)%3E')
+    renderizarTela(<Detalhe />, '/detalhe', '/detalhe?cartao=AB-01&segmento=abertas&titulo=Pagamento%20urgente%3A%20ligue%20para%20o%20numero')
     const h1 = await screen.findByRole('heading', { level: 1 })
-    expect(h1.textContent).toBe('<img src=x onerror=alert(1)>')
+    expect(h1.textContent).not.toContain('Pagamento urgente')
     expect(h1.querySelector('img')).toBeNull()
   })
 

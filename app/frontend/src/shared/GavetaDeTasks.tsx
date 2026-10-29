@@ -10,6 +10,7 @@ import { fetchTasksDoCartao } from './tasksApi'
 import { TarefaDrawer } from './TarefaDrawer'
 import { urlDoDetalhe } from './urlDoDetalhe'
 import { useModalAcessivel } from './useModalAcessivel'
+import './cardpage.css' // estilos dos botões .contagem-botao e .ordenar-botao, também usados dentro da gaveta (portal)
 import './gaveta.css'
 import './tabela.css'
 

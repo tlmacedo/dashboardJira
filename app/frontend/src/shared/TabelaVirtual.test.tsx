@@ -2,8 +2,12 @@ import { cleanup, fireEvent, render, screen, within } from '@testing-library/rea
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { LangProvider } from '../i18n/LangProvider'
-import { paraCsv } from './csv'
+import { baixarCsv, paraCsv } from './csv'
+import { exportarTasksCsv } from './ListaDeTasks'
 import { TabelaVirtual, type Coluna } from './TabelaVirtual'
+import type { LinhaDeTask } from './tasksApi'
+
+vi.mock('./csv', async (original) => ({ ...(await original<typeof import('./csv')>()), baixarCsv: vi.fn() }))
 
 type Linha = { key: string; nome: string; n: number }
 
@@ -106,11 +110,19 @@ describe('TabelaVirtual', () => {
   })
 
   it('csvExportaTudo', () => {
-    // A tabela só desenha a janela, mas quem exporta usa a lista inteira: o CSV nunca é da janela.
-    const todas = linhas(30_000)
-    const texto = paraCsv(todas.map((l) => [l.key, l.nome]))
-    expect(texto.split('\r\n')).toHaveLength(30_000)
-    renderizar({ total: 30_000 })
+    // A tabela só desenha a janela, mas o export REAL do drill (exportarTasksCsv) usa a lista inteira.
+    const total = 30_000
+    const todas: LinhaDeTask[] = Array.from({ length: total }, (_, i) => ({ key: `TG-${i + 1}`, resumo: `Task ${i + 1}`, responsavel: null, status: 'Open', detalhe: '' }))
+    exportarTasksCsv({
+      arquivo: 'x.csv', titulo: 'T', t: (k) => k,
+      dados: { tituloChave: 'a', definicaoChave: 'b', total, colunas: ['chave', 'resumo'], linhas: todas, linkJira: null },
+    })
+    expect(baixarCsv).toHaveBeenCalledTimes(1)
+    const enviado = vi.mocked(baixarCsv).mock.calls[0][1]
+    // 3 linhas de comentário + cabeçalho + todas as linhas.
+    expect(enviado).toHaveLength(4 + total)
+    expect(paraCsv(enviado.slice(4, 6))).toContain('TG-1')
+    renderizar({ total })
     expect(dados().length).toBeLessThan(40)
   })
 

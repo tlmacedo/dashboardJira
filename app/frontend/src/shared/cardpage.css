@@ -59,7 +59,7 @@
 .cardpage .pilula--problema {
   color: var(--bad);
 }
-.cardpage .contagem-botao {
+.contagem-botao {
   font: inherit;
   padding: 0 4px;
   background: none;
@@ -68,7 +68,7 @@
   color: inherit;
   cursor: pointer;
 }
-.cardpage .contagem-botao:focus-visible {
+.contagem-botao:focus-visible {
   outline: 2px solid var(--focus);
   outline-offset: 2px;
 }
@@ -83,7 +83,7 @@
   border-radius: 3px;
   background: var(--primary);
 }
-.cardpage .ordenar-botao {
+.ordenar-botao {
   font: inherit;
   font-weight: 600;
   background: none;
@@ -93,7 +93,7 @@
   cursor: pointer;
   text-align: inherit;
 }
-.cardpage .ordenar-botao:focus-visible {
+.ordenar-botao:focus-visible {
   outline: 2px solid var(--focus);
   outline-offset: 2px;
 }

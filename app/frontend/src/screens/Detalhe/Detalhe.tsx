@@ -27,7 +27,6 @@ export function Detalhe() {
   const [sp] = useSearchParams()
   const cartao = sp.get('cartao') ?? ''
   const segmento = sp.get('segmento') ?? ''
-  const tituloDaUrl = sp.get('titulo')?.slice(0, 200) ?? ''
   const valido = FORMATO_DO_CARTAO.test(cartao) && segmento.length > 0 && segmento.length <= MAX_SEGMENTO
   const filtros = new URLSearchParams(sp)
   for (const p of PARAMETROS_DO_RECORTE) filtros.delete(p)
@@ -41,7 +40,8 @@ export function Detalhe() {
     retry: false,
   })
   const dados = consulta.data
-  const titulo = tituloDaUrl || (dados ? t(dados.tituloChave) : '')
+  // O título vem da chave de tradução do cartão validado pelo backend; o `titulo` da URL nunca é renderizado (spoofing de conteúdo).
+  const titulo = dados ? t(dados.tituloChave) : ''
   const link = linkSeguro(dados?.linkJira ?? null)
   const semPermissao = consulta.error instanceof ErroDaApi && consulta.error.status === 403
 
