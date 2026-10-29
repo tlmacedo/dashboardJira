@@ -27,6 +27,14 @@ Branch: `feat/preparacao-oidc-desempenho-pacote`. Bloco parcial do Plano 8: **Ta
 - Ruling (T2): o botão "Sair" (`Menu`/`Shell`) só aparece fora do modo desenvolvimento, envia `POST /auth/logout` com o cabeçalho anti-CSRF e só então vai para `/`; se o logout falhar, mostra o aviso e fica (não finge que saiu). Duas chaves novas em `pt.json`/`en.json`.
 - Ruling (T2): o teste do validador de `id_token` e o do fluxo foram escritos junto da implementação (o código do validador nasceu antes do teste); a prova de que os testes pegam defeito foi por mutação real: tirar a conferência de `iss` e o uso único do `state` derrubou `issuerErrado401`, `emissorErradoEhRecusado` e `nonceRepetidoRepetirOCallbackEhRecusado`; as mutações foram desfeitas.
 
+### Tarefa 3 (equivalência por card; passos 1 a 4 e 6, SEM o passo 5)
+
+- Ruling (T3): o documento `docs/analise/equivalencia-por-card.md` usa três situações (`equivalente`, `diferença esperada`, `não migrado`), no lugar das cinco do plano (`reformulado (sem ranking)`, `removido` e `novo`), porque o pedido do usuário e o roteiro (linha A12) falam nessas três. O "reformulado sem ranking" entra como `diferença esperada` (motivo na última coluna) e os cards sem equivalente no legado ficam numa seção própria, "Cards novos", conferida contra o catálogo. Opção Recomendada, reversível (é só texto e o teste).
+- Ruling (T3): a coluna "Prova" cita `Classe.metodo` de teste que já existe (inclusive os `CompatLegado*Test`), conferido por texto em `src/test` (como os demais `Diferencas*DocTest`), e não por reflexão: o resultado é o mesmo e o teste não depende de classes internas. Nenhum `CompatLegado*Test` precisou de caso novo.
+- Ruling (T3): o relatório não numera as sete verificações do QD; o documento as numera QD-01 a QD-07 só para a classificação (todas vão ao card `QD-01`). Os ids `AU-01` e `SI-01` do legado são `DC-01` e `SY-nn` no catálogo; os do catálogo com o mesmo nome são cards novos (avisado no documento).
+- Resultado: 34 equivalentes, 107 diferenças esperadas, 1 não migrado (SI-02, "como ligar ao Jira", substituído por `docs/jira/checklist-primeira-conexao.md`). Todo card do catálogo (`catalogoPadrao()`) está citado.
+- **Passo 5 (ponto de parada) NÃO executado: pergunta pendente ao usuário** (ver "Depois da flag / com o usuário"). Nada em `legacy/` foi tocado; a Tarefa 9 não foi feita.
+
 ### Tarefa 6 (desempenho na escala da spec, sobre SQLite em arquivo)
 
 - Ruling (T6): o cenário é uma classe abstrata (`CenarioDeCarga`) com dois usos: `CargaTest` (`@Tag("carga")`, escala da spec, só pela tarefa `testCarga`; `-PescalaDeCarga=moderada|minima` e `-PcacheDeCarga=0` mudam o tamanho e o cache) e `CargaMinimaTest` (400 issues, na suíte padrão, para provar a lógica de concorrência a cada execução). A suíte padrão exclui a tag `carga` (`excludeTags`), e a tarefa `testCarga` repete as variáveis e propriedades que a `test` não herda. Os números saem em `app/backend/build/reports/carga/<classe>.txt`.
@@ -72,6 +80,7 @@ Branch: `feat/preparacao-oidc-desempenho-pacote`. Bloco parcial do Plano 8: **Ta
 ## Tarefas
 
 - Tarefa 2: commit `feat(seguranca): SSO/OIDC genérico atrás da interface, testado com emissor falso`.
+- Tarefa 3 (sem o passo 5): commit `docs: equivalência por card com o app atual`.
 - Tarefa 6: commit `perf: orçamento de tempo dos cards e do bundle na escala da spec, sobre SQLite`.
 - Tarefa 7: commit `build(pacote): pacote de produção verificável e guia de implantação sem contêiner`.
 - Tarefa 8: commit `docs(jira): checklist da 1ª conexão e matriz de compatibilidade finais`.
@@ -103,6 +112,8 @@ Observações: o cache é o que muda a leitura concorrente; sem ele o gargalo é
 ## Depois da flag / com o usuário
 
 Efeito fora do repositório: o código está pronto e nada abaixo foi decidido nem executado pela IA.
+
+- **PERGUNTA PENDENTE (roteiro D9; Tarefa 3, passo 5): aprovar o documento de equivalência (`docs/analise/equivalencia-por-card.md`: 34 equivalentes, 107 diferenças esperadas, 1 não migrado) e a remoção do `legacy/` (Tarefa 9)?** Só o usuário responde, na conversa, e sem o "sim" a Tarefa 9 NÃO é executada e nada em `legacy/` muda. Opções: (1) "Aprovar e remover o `legacy/` na Tarefa 9 (Recomendada)": o código antigo fica na tag `legacy-final`; (2) "Aprovar com ajustes (indicar quais)": o executor ajusta o documento e pergunta de novo; (3) "Ainda não; manter o `legacy/`": a Tarefa 9 sai do PR e a pendência vai ao `HANDOFF.md`. Ao responder, registrar a resposta e a data aqui e no `HANDOFF.md`.
 
 - **Provedor OIDC real e os valores de `OIDC_*`:** o painel só valida contra emissor falso; o `OIDC_ISSUER`, o `client_id`, o segredo (se exigido), a URI de retorno cadastrada, a claim com o username do Jira (`OIDC_CLAIM_USERNAME`) e a regra de autenticação do endpoint do token (hoje `client_secret_post`) dependem da infraestrutura da empresa (Plano 13). Se a saída até o provedor passar por proxy, falta configurar o cliente HTTP do login (`ClienteHttpOidc.kt`) e o certificado raiz no JDK.
 - **`SESSION_SECRET` de produção** (gerar com 32 bytes ou mais e guardar no cofre/arquivo de variáveis), e a escolha do tempo da sessão (hoje 8 h fixas).
