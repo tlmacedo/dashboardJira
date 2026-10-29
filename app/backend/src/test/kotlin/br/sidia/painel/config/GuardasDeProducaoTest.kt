@@ -129,6 +129,9 @@ class GuardasDeProducaoTest {
         for (ruim in listOf("999.0.0.0", "256.1.1.1", "1.2.3.256", "4294967296", "0.0.0.4294967296", "1.16777216", "1.2.65536", "0.0.0.0.0")) {
             assertEquals(listOf("ESCUTA_NAO_LITERAL"), codigos(settingsValidas().copy(host = ruim)), ruim)
         }
+        // dezenas de zeros à esquerda: parte longa demais (limite de 10 caracteres por parte), sem BigInteger gigante
+        assertEquals(listOf("ESCUTA_NAO_LITERAL"), codigos(settingsValidas().copy(host = "0".repeat(60) + ".0.0.1")))
+        assertEquals(listOf("ESCUTA_NAO_LITERAL"), codigos(settingsValidas().copy(host = "1.2.3." + "0".repeat(11))))
         // formas numéricas curtas válidas continuam sendo interpretadas como o JDK as interpreta
         assertEquals(listOf("ESCUTA_ABERTA_A_TODAS"), codigos(settingsValidas().copy(host = "0.0.0")))
         assertEquals(emptyList(), codigos(settingsValidas().copy(host = "1.65535")))

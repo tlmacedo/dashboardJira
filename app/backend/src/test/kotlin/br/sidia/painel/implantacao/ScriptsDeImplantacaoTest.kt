@@ -194,7 +194,7 @@ class ScriptsDeImplantacaoTest {
         Ferramentas.exigir(temFerramentas(), "sem sh/unzip/sha256sum neste ambiente")
         val (codigo, saida) = rodar(listOf(shell()!!, repo.resolve("deploy/linux/ensaio-troca.sh").toString()))
         assertEquals(0, codigo, saida)
-        assertTrue("TROCA_OK" in saida && "REVERSAO_OK" in saida, saida)
+        assertTrue("TROCA_OK" in saida && "REVERSAO_OK" in saida && "TOCTOU_OK" in saida, saida)
     }
 
     @Test
@@ -369,6 +369,48 @@ class ScriptsDeImplantacaoTest {
             assertTrue(codigo != 0, "--backup '$arg': $saida")
             assertFalse(executou, "--backup '$arg' chegou a executar o painel: $saida")
         }
+    }
+
+    @Test
+    fun trocaDaCopiaPorLinkNoMeioDaReversaoNaoLevaSegredoParaOBanco() {
+        Ferramentas.exigir(shell() != null, "sem sh")
+        val pasta = Files.createTempDirectory("painel-toctou-")
+        try {
+            val c = montarCenarioDeReversao(pasta, "versao=2026.11.1\nbackup=painel-bom.db\n")
+            val original = pasta.resolve("backups/painel-bom.db")
+            val segredo = pasta.resolve("SEGREDO_DO_ROOT").also { Files.writeString(it, "SEGREDO_DO_ROOT conteudo sensivel") }
+            // O painel "da versão anterior" (executado por verificar-restauracao) troca a cópia original por um link para o
+            // segredo DEPOIS que o reverter a validou: simula a conta do serviço agindo dentro da janela.
+            val painel = c.raiz.resolve("2026.11.1/bin/painel")
+            Files.writeString(
+                painel,
+                "#!/bin/sh\nif [ \"\$1\" = verificar-restauracao ]; then rm -f '$original'; ln -s '$segredo' '$original'; echo RESTAURACAO OK; fi\n",
+            )
+            painel.toFile().setExecutable(true)
+            val (codigo, saida) = rodar(listOf(shell()!!, reverter, c.raiz.toString(), "--restaurar-banco", "--sem-servico"), c.env)
+            val banco = pasta.resolve("dados/painel.db")
+            val conteudo = if (Files.exists(banco)) Files.readString(banco) else ""
+            assertFalse("SEGREDO_DO_ROOT" in conteudo, "o conteúdo do segredo entrou no banco (código $codigo): $saida")
+            assertEquals("copia", conteudo.trim(), "o banco deve vir da cópia validada, não do caminho reaberto: $saida")
+            assertEquals(0, codigo, saida)
+        } finally {
+            pasta.toFile().deleteRecursively()
+        }
+    }
+
+    @Test
+    fun reverterCopiaUmaVezParaPastaTemporariaERestauraDeLa() {
+        val s = ler("deploy/linux/reverter.sh")
+        assertTrue("cp -P --" in s && "mktemp -d" in s && "trap" in s)
+        // a conferência e a restauração usam o temporário, nunca o caminho original reaberto
+        assertTrue(Regex("verificar-restauracao \"\\\$COPIA_SEGURA\"").containsMatchIn(s))
+        assertTrue(Regex("cat -- \"\\\$COPIA_SEGURA\" > \"\\\$BANCO\"").containsMatchIn(s) && "set -C" in s, "restaura do temporário, com O_EXCL no destino")
+        assertFalse(Regex("cp [^\\n]*\"\\\$COPIA\" \"\\\$BANCO\"").containsMatchIn(s), "nunca relê o caminho original para restaurar")
+        val p = ler("deploy/windows/reverter.ps1")
+        assertTrue("\$copiaSegura" in p && "finally" in p)
+        assertTrue(Regex("verificar-restauracao \\\$copiaSegura").containsMatchIn(p))
+        assertTrue(Regex("File\\]::Copy\\(\\\$copiaSegura, \\\$banco, \\\$false\\)").containsMatchIn(p), ".ps1 restaura do temporário sem sobrescrever")
+        assertFalse(Regex("File\\]::Copy\\(\\\$copia,").containsMatchIn(p), ".ps1 não relê o original para restaurar")
     }
 
     @Test

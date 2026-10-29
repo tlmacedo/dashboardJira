@@ -51,3 +51,18 @@ sh "$AQUI/reverter.sh" "$RAIZ" --sem-servico > /dev/null
 conferir_atual 2026.11.1
 [ -f "$RAIZ/2026.11.2/bin/painel" ] || erro "a versao revertida continua em disco"
 echo "REVERSAO_OK"
+
+# Prova de TOCTOU: a "conta do servico" troca a copia do backup por um link para um arquivo so do root NO MEIO da reversao (dentro
+# do verificar-restauracao). O banco restaurado tem de vir da copia ja validada, nunca do segredo.
+T="$ENSAIO/toctou"
+mkdir -p "$T/app/2026.11.1/bin" "$T/backups" "$T/dados"
+printf 'copia-valida\n' > "$T/backups/copia.db"
+printf 'SEGREDO_DO_ROOT\n' > "$T/segredo.txt"
+printf '#!/bin/sh\nif [ "$1" = verificar-restauracao ]; then rm -f "%s"; ln -s "%s" "%s"; echo RESTAURACAO OK; fi\n' \
+    "$T/backups/copia.db" "$T/segredo.txt" "$T/backups/copia.db" > "$T/app/2026.11.1/bin/painel"
+chmod +x "$T/app/2026.11.1/bin/painel"
+printf 'BACKUP_DIR=%s\nDATABASE_PATH=%s\n' "$T/backups" "$T/dados/painel.db" > "$T/painel.env"
+printf 'versao=2026.11.1\nbackup=copia.db\n' > "$T/app/versao-anterior.txt"
+PAINEL_ENV_FILE="$T/painel.env" sh "$AQUI/reverter.sh" "$T/app" --restaurar-banco --sem-servico > /dev/null
+[ "$(cat "$T/dados/painel.db")" = "copia-valida" ] || erro "a restauracao nao veio da copia validada (TOCTOU)"
+echo "TOCTOU_OK"

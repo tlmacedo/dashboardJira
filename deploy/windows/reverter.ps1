@@ -38,6 +38,9 @@ if ($anterior -eq '') { throw 'o arquivo versao-anterior.txt nao informa a versa
 if (-not (Test-PastaDaVersaoValida -App $app -Versao $anterior)) { throw 'a versao anterior do registro e invalida ou nao e uma pasta propria de app\' }
 
 $copia = ''
+$copiaSegura = ''
+$pastaSegura = ''
+try {
 if ($RestaurarBanco) {
     $pastaDeBackup = Ler-ValorDoArquivo -Arquivo $arquivoEnv -Nome 'BACKUP_DIR'
     if ($pastaDeBackup -eq '' -or -not (Test-Path -LiteralPath $pastaDeBackup -PathType Container)) { throw 'BACKUP_DIR nao esta definido (ou nao existe) no arquivo de variaveis' }
@@ -55,6 +58,17 @@ if ($RestaurarBanco) {
     # A copia tem de estar DENTRO de BACKUP_DIR (caminho completo, sem sair por .. e sem link).
     if (-not (Test-CaminhoDentroDe $copia $pastaDeBackup)) { throw 'a copia de seguranca esta fora de BACKUP_DIR' }
     if ((Get-Item -LiteralPath $copia).Attributes -band [System.IO.FileAttributes]::ReparsePoint) { throw 'a copia de seguranca e um link' }
+    # TOCTOU: BACKUP_DIR e gravavel pela conta do servico, que poderia trocar a copia por um link para um arquivo so de
+    # administradores ENTRE a validacao e o uso. Por isso a copia e lida UMA vez para uma pasta temporaria so de administradores,
+    # FORA de BACKUP_DIR, e dai em diante tudo (conferencia e restauracao) usa so o temporario, nunca o caminho original.
+    $pastaSegura = Join-Path ([System.IO.Path]::GetTempPath()) ('painel-reversao-' + [Guid]::NewGuid().ToString('N'))
+    New-Item -ItemType Directory -Force $pastaSegura | Out-Null
+    & icacls $pastaSegura /inheritance:r /grant:r "*S-1-5-32-544:(OI)(CI)F" | Out-Null
+    if ($LASTEXITCODE -ne 0) { throw 'nao foi possivel restringir a pasta temporaria da reversao' }
+    $copiaSegura = Join-Path $pastaSegura 'copia.db'
+    Copy-Item -LiteralPath $copia -Destination $copiaSegura
+    # Se a origem virou um link ENTRE a validacao e a copia, o que foi lido nao e a copia validada: recusa.
+    if ((Get-Item -LiteralPath $copia).Attributes -band [System.IO.FileAttributes]::ReparsePoint) { throw 'a copia de seguranca virou um link (recusada)' }
     # Confere a copia ANTES de mexer no banco atual (restaura num temporario e compara tabela a tabela).
     $guardada = $env:PAINEL_ENV_FILE
     $env:PAINEL_ENV_FILE = $arquivoEnv
@@ -62,7 +76,7 @@ if ($RestaurarBanco) {
     $acaoAnterior = $ErrorActionPreference
     $ErrorActionPreference = 'Continue'
     try {
-        $conferencia = (& (Join-Path $app "$anterior\bin\painel.bat") verificar-restauracao $copia 2>&1 | Out-String)
+        $conferencia = (& (Join-Path $app "$anterior\bin\painel.bat") verificar-restauracao $copiaSegura 2>&1 | Out-String)
     } finally {
         $ErrorActionPreference = $acaoAnterior
         $env:PAINEL_ENV_FILE = $guardada
@@ -84,7 +98,9 @@ if ($RestaurarBanco) {
     foreach ($sufixo in @('', '-wal', '-shm')) {
         if (Test-Path -LiteralPath "$banco$sufixo") { Move-Item -LiteralPath "$banco$sufixo" -Destination "$banco$sufixo.migrado-$data" }
     }
-    Copy-Item -LiteralPath $copia -Destination $banco
+    # Restaura SO a partir do temporario conferido. File.Copy sem sobrescrever recusa se o destino ja existir (inclusive um link
+    # plantado no lugar do banco), em vez de seguir o link como administrador.
+    [System.IO.File]::Copy($copiaSegura, $banco, $false)
     try { Set-Acl -LiteralPath $banco -AclObject (Get-Acl -LiteralPath "$banco.migrado-$data") } catch { Write-Host 'AVISO: confira a permissao do banco restaurado (a ACL do anterior nao foi copiada)' }
     Write-Host "OK banco restaurado (o anterior ficou em $banco.migrado-$data; o que foi gravado depois do backup so existe la)"
 }
@@ -101,3 +117,7 @@ if (-not $SemServico) {
 }
 
 Write-Host "REVERSAO_OK $anterior"
+} finally {
+    # A pasta temporaria sai SEMPRE, inclusive em falha.
+    if ($pastaSegura -ne '' -and (Test-Path -LiteralPath $pastaSegura)) { Remove-Item -LiteralPath $pastaSegura -Recurse -Force }
+}

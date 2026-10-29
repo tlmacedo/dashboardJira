@@ -51,6 +51,18 @@ falhou_depois_da_troca() {
     exit 1
 }
 
+# TOCTOU: o zip e o .sha256 sao lidos UMA vez para uma pasta temporaria 0700 so do root (cp -P nao segue links) e dai em diante a
+# conferencia do SHA-256 e a extracao usam so a copia; quem escrevesse na pasta de recebidos nao poderia trocar o zip entre uma
+# coisa e outra.
+PASTA_DO_ZIP="$(mktemp -d)"
+chmod 700 "$PASTA_DO_ZIP"
+trap 'rm -rf "$PASTA_DO_ZIP"' EXIT
+NOME_DO_ZIP="$(basename "$ZIP")"
+cp -P -- "$ZIP" "$PASTA_DO_ZIP/$NOME_DO_ZIP" || erro "nao foi possivel ler o zip"
+[ ! -f "$ZIP.sha256" ] || cp -P -- "$ZIP.sha256" "$PASTA_DO_ZIP/$NOME_DO_ZIP.sha256" || erro "nao foi possivel ler o .sha256"
+ZIP="$PASTA_DO_ZIP/$NOME_DO_ZIP"
+[ -f "$ZIP" ] && [ ! -L "$ZIP" ] || erro "o zip e um link simbolico (recusado)"
+
 confirmar_sha256 "$ZIP"
 echo "OK sha256"
 VERSAO="$(versao_do_zip "$ZIP")"

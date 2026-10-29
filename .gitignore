@@ -32,6 +32,8 @@ legacy/data/
 Filtros_Status_tool.txt
 Filtros_Status_tool.txt.bak
 **/build/
+# Dump de memoria da JVM (pode conter dados e segredos em claro)
+*.hprof
 **/.gradle/
 **/.kotlin/
 **/node_modules/

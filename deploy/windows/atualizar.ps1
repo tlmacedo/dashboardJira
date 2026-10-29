@@ -41,12 +41,28 @@ function Falhar-DepoisDaTroca([string]$Motivo) {
     exit 1
 }
 
-Confirmar-Sha256 -Zip $Pacote
-Write-Host 'OK sha256'
-$versao = Obter-VersaoDoZip -Zip $Pacote
+# TOCTOU: o zip e o .sha256 sao lidos UMA vez para uma pasta temporaria so de administradores e dai em diante a conferencia do
+# SHA-256 e a extracao usam so a copia (quem escrevesse na pasta de recebidos nao poderia trocar o zip entre uma coisa e outra).
+$pastaDoZip = Join-Path ([System.IO.Path]::GetTempPath()) ('painel-atualizar-' + [Guid]::NewGuid().ToString('N'))
+try {
+    New-Item -ItemType Directory -Force $pastaDoZip | Out-Null
+    & icacls $pastaDoZip /inheritance:r /grant:r "*S-1-5-32-544:(OI)(CI)F" | Out-Null
+    if ($LASTEXITCODE -ne 0) { throw 'nao foi possivel restringir a pasta temporaria da atualizacao' }
+    if ((Get-Item -LiteralPath $Pacote).Attributes -band [System.IO.FileAttributes]::ReparsePoint) { throw 'o zip e um link (recusado)' }
+    $nomeDoZip = Split-Path -Leaf $Pacote
+    $zipSeguro = Join-Path $pastaDoZip $nomeDoZip
+    Copy-Item -LiteralPath $Pacote -Destination $zipSeguro
+    if (Test-Path -LiteralPath "$Pacote.sha256") { Copy-Item -LiteralPath "$Pacote.sha256" -Destination "$zipSeguro.sha256" }
 
-Expandir-Pacote -Zip $Pacote -App $app
-Write-Host "OK extraido em $app\$versao"
+    Confirmar-Sha256 -Zip $zipSeguro
+    Write-Host 'OK sha256'
+    $versao = Obter-VersaoDoZip -Zip $zipSeguro
+
+    Expandir-Pacote -Zip $zipSeguro -App $app
+    Write-Host "OK extraido em $app\$versao"
+} finally {
+    if (Test-Path -LiteralPath $pastaDoZip) { Remove-Item -LiteralPath $pastaDoZip -Recurse -Force }
+}
 
 $anterior = Obter-VersaoAtual -App $app
 if ($anterior -ne '' -and -not (Test-VersaoValida $anterior)) { throw 'a versao atual (juncao) tem um nome inesperado' }

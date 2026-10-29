@@ -37,6 +37,12 @@ class GradlePropertiesTest {
     }
 
     @Test
+    fun dumpDeMemoriaFicaEmBuildEHprofEIgnorado() {
+        assertTrue("-XX:HeapDumpPath=build/" in linhas.getValue("org.gradle.jvmargs"))
+        assertTrue("*.hprof" in Files.readString(TestPaths.repoDir.resolve(".gitignore")).lines().map { it.trim() })
+    }
+
+    @Test
     fun ciDocumentaOArquivo() {
         val ci = Files.readString(TestPaths.repoDir.resolve("docs/operacao/ci.md"))
         assertTrue("gradle.properties" in ci && "Not enough memory" in ci)

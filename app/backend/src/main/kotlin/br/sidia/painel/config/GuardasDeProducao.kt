@@ -90,6 +90,8 @@ object GuardasDeProducao {
      * bytes restantes: `127.1` = 127.0.0.1). Nulo se alguma parte estourar a faixa. Nunca chama o resolvedor.
      */
     private fun valorIpv4(texto: String): Long? {
+        // Cada parte tem no máximo 10 caracteres (4294967295 já é o maior valor possível): dezenas de zeros à esquerda não valem.
+        if (texto.split('.').any { it.length > 10 }) return null
         val partes = texto.split('.').map { it.toBigIntegerOrNull() ?: return null }
         val n = partes.size
         var total = java.math.BigInteger.ZERO

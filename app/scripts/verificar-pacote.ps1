@@ -46,6 +46,15 @@ if ($alvo -like '*.zip') {
     $nomeDoZip = Split-Path -Leaf $zip
     if ($nomeDoZip -notmatch '^painel-[0-9]{4}\.(0[1-9]|1[0-2])\.[1-9][0-9]*\.zip$') { Falhar 'nome do pacote fora do padrao painel-AAAA.MM.N.zip' }
     if ((Get-Item $zip).Length -gt 209715200) { Falhar 'o zip passa de 200 MB (limite do pacote)' }
+    # O zip e o .sha256 sao lidos UMA vez para uma pasta temporaria e dai em diante conferencia, listagem e extracao usam so a
+    # copia: o arquivo original poderia ser trocado entre uma etapa e outra.
+    $zipTmp = Join-Path ([System.IO.Path]::GetTempPath()) ('painel-zip-' + [Guid]::NewGuid().ToString('N'))
+    New-Item -ItemType Directory -Force (Join-Path $zipTmp 'copia') | Out-Null
+    if ((Get-Item $zip).Attributes -band [System.IO.FileAttributes]::ReparsePoint) { Falhar 'o zip e um link (recusado)' }
+    $zipOriginal = $zip
+    $zip = Join-Path $zipTmp "copia\$nomeDoZip"
+    Copy-Item -LiteralPath $zipOriginal -Destination $zip
+    if (Test-Path -LiteralPath "$zipOriginal.sha256") { Copy-Item -LiteralPath "$zipOriginal.sha256" -Destination "$zip.sha256" }
     $arquivoHash = "$zip.sha256"
     if (-not (Test-Path $arquivoHash)) { Falhar "falta o arquivo $nomeDoZip.sha256 ao lado do zip" }
     $linha = ([string](Get-Content -Path $arquivoHash -TotalCount 1)).Trim()
@@ -77,7 +86,6 @@ if ($alvo -like '*.zip') {
         }
     }
     Write-Host 'ok: nenhuma entrada proibida'
-    $zipTmp = Join-Path ([System.IO.Path]::GetTempPath()) ('painel-zip-' + [Guid]::NewGuid().ToString('N'))
     [System.IO.Compression.ZipFile]::ExtractToDirectory($zip, (Join-Path $zipTmp 'extraido'))
     $alvo = Join-Path $zipTmp "extraido\$raiz"
 }

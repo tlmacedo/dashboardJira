@@ -58,13 +58,20 @@ case "$ALVO" in
             || falhar "nome do pacote fora do padrão painel-AAAA.MM.N.zip"
         TAMANHO="$(wc -c < "$ZIP" | tr -d ' ')"
         [ "$TAMANHO" -le 209715200 ] || falhar "o zip passa de 200 MB (limite do pacote)"
+        # O zip e o .sha256 sao lidos UMA vez para uma pasta temporaria (cp -P nao segue links) e dai em diante conferencia,
+        # listagem e extracao usam so a copia: o arquivo original poderia ser trocado entre uma etapa e outra.
+        ZIPTMP="$(mktemp -d)"
+        mkdir "$ZIPTMP/copia"
+        cp -P -- "$ZIP" "$ZIPTMP/copia/$NOME" || falhar "nao foi possivel ler o zip"
+        [ ! -f "$ZIP.sha256" ] || cp -P -- "$ZIP.sha256" "$ZIPTMP/copia/$NOME.sha256" || falhar "nao foi possivel ler o .sha256"
+        ZIP="$ZIPTMP/copia/$NOME"
+        [ -f "$ZIP" ] && [ ! -L "$ZIP" ] || falhar "o zip é um link simbólico (recusado)"
         [ -f "$ZIP.sha256" ] || falhar "falta o arquivo $NOME.sha256 ao lado do zip"
         ESPERADO="$(head -n 1 "$ZIP.sha256" | cut -d ' ' -f 1 | tr 'A-F' 'a-f' | tr -d '\r')"
         NOME_NO_ARQUIVO="$(head -n 1 "$ZIP.sha256" | sed 's/^[^ ]*  *\*\{0,1\}//' | tr -d '\r')"
         [ "$NOME_NO_ARQUIVO" = "$NOME" ] || falhar "o arquivo .sha256 não é deste zip"
         [ "$ESPERADO" = "$(calcula_sha256 "$ZIP")" ] || falhar "o SHA-256 do zip não confere com o arquivo .sha256"
         echo "ok: SHA-256 confere"
-        ZIPTMP="$(mktemp -d)"
         RAIZ="${NOME%.zip}"
         unzip -Z1 "$ZIP" > "$ZIPTMP/entradas.txt"
         # Tamanho TOTAL extraido (um zip pequeno pode expandir para gigabytes): no maximo 500 MB.

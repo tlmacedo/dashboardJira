@@ -73,8 +73,17 @@ if [ "$RESTAURAR" -eq 1 ]; then
     [ ! -L "$COPIA" ] || erro "a copia de seguranca e um link simbolico (recusada)"
     # A copia (resolvida, sem links) tem de estar DENTRO de BACKUP_DIR.
     caminho_dentro_de "$COPIA" "$PASTA_DE_BACKUP" || erro "a copia de seguranca esta fora de BACKUP_DIR"
+    # TOCTOU: BACKUP_DIR e gravavel pela conta do servico, que poderia trocar a copia por um link para um arquivo so do root
+    # ENTRE a validacao e o uso. Por isso a copia e lida UMA vez (cp -P nao segue links) para uma pasta temporaria 0700 so do
+    # root, FORA de BACKUP_DIR, e dai em diante tudo (conferencia e restauracao) usa so o temporario, nunca o caminho original.
+    PASTA_SEGURA="$(mktemp -d)"
+    chmod 700 "$PASTA_SEGURA"
+    trap 'rm -rf "$PASTA_SEGURA"' EXIT
+    COPIA_SEGURA="$PASTA_SEGURA/copia.db"
+    cp -P -- "$COPIA" "$COPIA_SEGURA" || erro "nao foi possivel copiar a copia de seguranca"
+    [ -f "$COPIA_SEGURA" ] && [ ! -L "$COPIA_SEGURA" ] || erro "a copia de seguranca e um link simbolico (recusada)"
     # Confere a copia ANTES de mexer no banco atual (restaura num temporario e compara tabela a tabela).
-    if ! PAINEL_ENV_FILE="$ARQUIVO_ENV" "$RAIZ/$ANTERIOR/bin/painel" verificar-restauracao "$COPIA" | grep -q "RESTAURACAO OK"; then
+    if ! PAINEL_ENV_FILE="$ARQUIVO_ENV" "$RAIZ/$ANTERIOR/bin/painel" verificar-restauracao "$COPIA_SEGURA" | grep -q "RESTAURACAO OK"; then
         erro "a copia nao passou em verificar-restauracao; nada foi alterado"
     fi
     echo "OK copia conferida"
@@ -95,7 +104,9 @@ if [ "$RESTAURAR" -eq 1 ]; then
             mv "$BANCO$sufixo" "$BANCO$sufixo.migrado-$DATA"
         fi
     done
-    cp "$COPIA" "$BANCO"
+    # Restaura SO a partir do temporario conferido. O destino e criado com O_EXCL (noclobber): se a conta do servico plantar um
+    # link no lugar do banco, a escrita recusa em vez de seguir o link como root.
+    ( set -C; cat -- "$COPIA_SEGURA" > "$BANCO" ) || erro "nao foi possivel criar o banco restaurado (o destino ja existe?)"
     chown --reference="$BANCO.migrado-$DATA" "$BANCO" 2>/dev/null || true
     chmod --reference="$BANCO.migrado-$DATA" "$BANCO" 2>/dev/null || true
     echo "OK banco restaurado (o anterior ficou em $BANCO.migrado-$DATA; o que foi gravado depois do backup so existe la)"
