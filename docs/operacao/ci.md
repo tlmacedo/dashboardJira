@@ -28,6 +28,8 @@ Todos os comandos partem da raiz do repositório.
 | Varredura do que a branch acrescenta | `git fetch origin main; sh scripts/ci/varrer-dados-pessoais.sh --base origin/main` | `git fetch origin main && sh scripts/ci/varrer-dados-pessoais.sh --base origin/main` |
 | Varredura de toda a árvore versionada | `sh scripts/ci/varrer-dados-pessoais.sh --arvore` | `sh scripts/ci/varrer-dados-pessoais.sh --arvore` |
 
+**Memória do build do backend.** `app/backend/gradle.properties` (versionado) define `org.gradle.jvmargs=-Xmx3g` e `kotlin.daemon.jvmargs=-Xmx3g`. Sem ele o padrão (512 MB) estoura na compilação dos testes (`:compileTestKotlin FAILED — Not enough memory to run compilation`) quando a suíte cresce, e o job `backend` do CI cai sem teste vermelho algum. Com o arquivo, `./gradlew test` (inclusive com `--no-daemon`, como no CI, e com `--rerun-tasks`) funciona sem `-Dorg.gradle.jvmargs` manual. Se a compilação voltar a faltar memória, aumente os dois valores juntos (o runner `ubuntu-latest` tem 16 GB; uma máquina de 8 GB aguenta 3 GB). O arquivo só tem memória: nada de caminho local, `java.home` nem segredo (um teste confere).
+
 No Windows, o `sh`, o `grep` e o `jq` vêm do Git for Windows (`$env:ProgramFiles\Git\usr\bin`). Se o PowerShell não achar `sh`, use `& "$env:ProgramFiles\Git\bin\sh.exe" <script>`. O `jq` é necessário para os testes de hook (`winget install jqlang.jq`, ou o do Git Bash).
 
 ## 3. Nomes proibidos (opcional)

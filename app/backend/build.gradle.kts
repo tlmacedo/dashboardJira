@@ -139,7 +139,7 @@ tasks.test {
     inputs.files(
         fileTree(raizDoRepo) {
             include(
-                ".github/**", "scripts/ci/**", "docs/operacao/**", "docs/jira/**", "docs/implantacao.md", "docs/implantacao/**", "deploy/**", ".gitignore",
+                ".github/**", "scripts/ci/**", "docs/operacao/**", "docs/jira/**", "docs/implantacao.md", "docs/implantacao/**", "deploy/**", "app/backend/gradle.properties", ".gitignore",
                 "app/.env.example", "app/iniciar.*", "app/README.md", "app/scripts/**", "app/config/**", "ops/**",
             )
         },
