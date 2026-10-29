@@ -1,2 +1,0 @@
-# Só se usar PostgreSQL (DATABASE_URL=postgresql+psycopg://...). SQLite não precisa disto.
-psycopg[binary]>=3.1
