@@ -187,7 +187,7 @@ class LinkJiraTest {
             assertEquals(dto.linhas.map { it.key }.toSet(), doLink)
             // access_log: rota e quantidade, nunca as chaves nem o endereço do Jira.
             val linha = linhasDoAccessLog(ctx).single()
-            assertEquals("/api/cartoes/TS-01/tasks", linha.first)
+            assertEquals("/api/cartoes/{id}/tasks", linha.first)
             assertTrue("\"total\":\"${dto.total}\"" in linha.second, linha.second)
             for (chave in dto.linhas.map { it.key }) assertFalse(chave in linha.second, "access_log guardou $chave")
             assertFalse("jira.exemplo" in linha.second || "jql" in linha.second.lowercase(), linha.second)

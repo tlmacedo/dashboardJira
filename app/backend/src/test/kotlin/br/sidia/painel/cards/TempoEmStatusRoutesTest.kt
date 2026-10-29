@@ -724,8 +724,8 @@ class TempoEmStatusRoutesTest {
         assertEquals(listOf("ana", "ana", "ana", "ana", "ex.papel"), linhas.map { it.first })
         assertEquals(
             listOf(
-                "/api/me", "/api/cards/tempo-em-status", "/api/cartoes/TS-01/tasks",
-                "/api/cards/tempo-em-status", "/api/me",
+                "/api/me", "/api/cards/tempo-em-status", "/api/cartoes/{id}/tasks",
+                "/api/cards/tempo-em-status", "desconhecida", // 403 sem papel vigente: antes do roteador, rótulo fixo
             ),
             linhas.map { it.second },
         )

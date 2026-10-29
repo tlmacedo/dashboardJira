@@ -4,6 +4,7 @@ import br.sidia.painel.AppContext
 import br.sidia.painel.cards.fluxo.Eixo
 import br.sidia.painel.cards.fluxo.Medida
 import br.sidia.painel.db.AccessLog
+import br.sidia.painel.operacao.modeloDaRota
 import br.sidia.painel.domain.IssueTimeline
 import br.sidia.painel.domain.ORDEM_NATURAL_DE_CHAVES
 import br.sidia.painel.domain.StatusCategory
@@ -192,7 +193,7 @@ suspend fun registrarNegacaoSemPapel(auditoria: AccessLog, ctx: AppContext, call
     try {
         withContext(Dispatchers.IO) {
             auditoria.record(
-                principal.userId.ifBlank { ID_NEUTRO }, rotaParaRegistro(call.request.path()),
+                principal.userId.ifBlank { ID_NEUTRO }, rotuloDaRota(call),
                 filtrosAuditados(call) + ("resultado" to HttpStatusCode.Forbidden.value.toString()),
                 ctx.clock.instant(),
             )
@@ -205,19 +206,11 @@ suspend fun registrarNegacaoSemPapel(auditoria: AccessLog, ctx: AppContext, call
 }
 
 /**
- * Rota como vai para o `access_log`: o PADRÃO, sem a chave de issue do caminho (a auditoria guarda rota e quantidade,
- * nunca chaves). Hoje só o histórico da auditoria leva a chave no caminho.
+ * Rótulo da rota no `access_log`: SEMPRE o MODELO da rota casada (`/api/tarefa/{key}`, `/api/cartoes/{id}/tasks`), nunca o
+ * caminho digitado (ele pode levar chave de issue ou id de pessoa). Sem rota casada (negação antes do roteador, como CSRF ou
+ * falta de papel): o rótulo fixo `desconhecida`.
  */
-internal fun rotaParaRegistro(caminho: String): String {
-    // Segmentos decodificados UM A UM (como o Ktor separa antes de decodificar): `..%2Fx%2FTG-1` é a chave, não três segmentos.
-    val s = segmentosNormalizados(caminho)
-    fun prefixo(vararg p: String) = s.size > p.size && p.indices.all { s[it].equals(p[it], ignoreCase = true) }
-    return when {
-        prefixo("api", "tarefa") -> "/api/tarefa/{key}"
-        prefixo("api", "auditoria", "historico") -> "/api/auditoria/historico/{key}"
-        else -> "/" + s.joinToString("/")
-    }
-}
+internal fun rotuloDaRota(call: ApplicationCall): String = modeloDaRota(call)
 
 /**
  * Caminho como o roteador o enxerga e como a auditoria deve guardá-lo: percent-decode repetido (até 3 vezes, para `%252D`),
@@ -346,13 +339,13 @@ internal suspend inline fun <reified T : Any> ApplicationCall.executar(
     } catch (e: CancellationException) {
         throw e
     } catch (e: Exception) {
-        log.error("Falha ao montar a resposta de {} ({})", rotaParaRegistro(request.path()), e.javaClass.simpleName)
+        log.error("Falha ao montar a resposta de {} ({})", rotuloDaRota(this), e.javaClass.simpleName)
         status = HttpStatusCode.InternalServerError
     }
     try {
         withContext(Dispatchers.IO) {
             auditoria.record(
-                principal.userId, rotaParaRegistro(request.path()),
+                principal.userId, rotuloDaRota(this@executar),
                 filtrosAuditados(this@executar) + (attributes.getOrNull(EXTRAS_DE_AUDITORIA).orEmpty()) +
                     ("resultado" to status.value.toString()),
                 ctx.clock.instant(),

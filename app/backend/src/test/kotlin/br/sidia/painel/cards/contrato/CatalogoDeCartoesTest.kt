@@ -256,7 +256,8 @@ class CatalogoDeCartoesTest {
         assertEquals(HttpStatusCode.Unauthorized, get(null, "/api/cartoes/catalogo").status)
         val linhas = linhasDoAccessLog()
         assertEquals(listOf("ana.silva", "ex.papel"), linhas.map { it.first }, linhas.toString())
-        assertTrue(linhas.all { it.second == "/api/cartoes/catalogo" }, linhas.toString())
+        // A negação por falta de papel acontece antes do roteador: rótulo fixo, nunca o caminho digitado.
+        assertEquals(listOf("/api/cartoes/catalogo", "desconhecida"), linhas.map { it.second }, linhas.toString())
         assertTrue("200" in linhas[0].third && "403" in linhas[1].third, linhas.toString())
     }
 }

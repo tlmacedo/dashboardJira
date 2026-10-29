@@ -194,7 +194,35 @@ class TarefaRoutesTest {
                 buildList { while (rs.next()) add(rs.getString(1)) }
             }
         }
-        assertTrue(rotas.none { "TG-1" in it || "/x" in it }, rotas.toString())
+        assertEquals(listOf("/api/tarefa/{key}"), rotas)
+    }
+
+    private fun rotasDoLog(): List<String> = requireNotNull(ctx!!.dataSource).connection.use { c ->
+        c.createStatement().executeQuery("SELECT route FROM access_log ORDER BY id").use { rs ->
+            buildList { while (rs.next()) add(rs.getString(1)) }
+        }
+    }
+
+    @Test
+    fun drillComChaveNoIdGravaOModeloDaRota() = rodar { get ->
+        get("gerente.exemplo", "/api/cartoes/TG-101/tasks?segmento=x")
+        assertEquals(listOf("/api/cartoes/{id}/tasks"), rotasDoLog())
+    }
+
+    @Test
+    fun drillComPontosCodificadosNaoFalsificaARota() = rodar { get ->
+        get("gerente.exemplo", "/api/cartoes/%2E%2E/tasks?segmento=pessoa:carla")
+        assertEquals(listOf("/api/cartoes/{id}/tasks"), rotasDoLog())
+    }
+
+    @Test
+    fun variantesDeTarefaGravamModeloOuRotuloFixo() = rodar { get ->
+        val caminhos = listOf("/api/tarefa/%2E%2E", "/api/tarefa/.%2E", "/api/tarefa/..;", "/api/tarefa/%00", "/api/tarefa/TG-1%00x")
+        for (p in caminhos) get("gerente.exemplo", p)
+        val rotas = rotasDoLog()
+        assertTrue(rotas.isNotEmpty())
+        // Nunca o texto digitado nem uma rota truncada (`/api`, `/api/tarefa`): só o modelo ou o rótulo fixo.
+        assertTrue(rotas.all { it == "/api/tarefa/{key}" || it == "desconhecida" }, rotas.toString())
     }
 
     @Test

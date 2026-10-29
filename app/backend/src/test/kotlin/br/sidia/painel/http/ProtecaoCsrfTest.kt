@@ -207,7 +207,8 @@ class ProtecaoCsrfTest {
                 c.createStatement().executeQuery("SELECT user_id, route, filters FROM access_log").use { rs ->
                     assertTrue(rs.next())
                     assertEquals("dev", rs.getString("user_id"))
-                    assertEquals("/api/teste-csrf", rs.getString("route"))
+                    // A negação CSRF acontece antes do roteador: rótulo fixo, nunca o caminho digitado.
+                    assertEquals("desconhecida", rs.getString("route"))
                     val filtros = rs.getString("filters")
                     assertTrue(filtros.contains("motivo") && filtros.contains("CSRF_AUSENTE"), filtros)
                 }
@@ -227,7 +228,7 @@ class ProtecaoCsrfTest {
             ctx.dataSource!!.connection.use { c ->
                 c.createStatement().executeQuery("SELECT route FROM access_log").use { rs ->
                     assertTrue(rs.next())
-                    assertEquals("/api/auditoria/historico/{key}", rs.getString("route"))
+                    assertEquals("desconhecida", rs.getString("route"))
                     assertTrue(!rs.next())
                 }
             }

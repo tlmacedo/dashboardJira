@@ -57,6 +57,12 @@ Branch `feat/complementos-telas-filtros-plano-10` (parte de `origin/main` com o 
 - Minors: teste da posse "outra pessoa" restaurado (`TarefaRoutesTest.posseDeQuemEstaForaDaVisaoViraOutraPessoa`), comentário do cenário corrigido, `titulo` removido de `urlDoDetalhe`.
 - **Adiado:** gavetas de Posse, Esforço, Tendência e Carga por tipo abrem "não encontrada" para task que já passou adiante (efeito do Ruling de visão só pelo responsável atual).
 
+## Terceira rodada da revisão (29/10)
+
+- Ruling (I-3, correção de raiz): o rótulo da rota no `access_log` é SEMPRE o modelo da rota casada (`modeloDaRota`, via `RoutingCallStarted`); `rotaParaRegistro` foi removida. Negações que acontecem antes do roteador (CSRF e falta de papel vigente) gravam o rótulo fixo `desconhecida`: perde-se a rota exata dessas negações, mas nenhum texto digitado chega ao log. `normalizarCaminho` ficou só como reforço de `rotaSensivel`.
+- Consequência: testes que esperavam `/api/cartoes/TS-01/tasks` etc. passaram a esperar `/api/cartoes/{id}/tasks`; o filtro "rota" do Registro de acesso agora enxerga o modelo.
+- Provas: `TarefaRoutesTest.drillComChaveNoIdGravaOModeloDaRota`, `drillComPontosCodificadosNaoFalsificaARota`, `variantesDeTarefaGravamModeloOuRotuloFixo`, `barraInvertidaCruaNaoFalsificaARotaDoLog`.
+
 ## Desvio de processo
 
 - No merge de `origin/main` usei `git add -A app docs` uma vez (escopo limitado a `app` e `docs`) para concluir a resolução de conflitos.
