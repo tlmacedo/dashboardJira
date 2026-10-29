@@ -141,7 +141,7 @@ describe('contraste calculado em TypeScript (mesma conta WCAG)', () => {
     '.cartao-balao': 'container do balão de ajuda',
     '.tabela-virtual': 'moldura da região rolável (a região tem foco visível e nome)',
     '.barra': 'container da barra de filtros',
-    '.chip': 'selo do filtro ativo: o texto e o botão × (22 px, texto) o identificam',
+    '.chip': 'selo do filtro ativo: o texto e o botão × (24 px, texto) o identificam',
     '.esqueleto': 'esqueleto de carregamento (decorativo)',
     '.estado': 'container de estado vazio/erro',
     '.barra-linha:hover': 'só realce de hover; o estado de foco é o outline',

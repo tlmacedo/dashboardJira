@@ -8,11 +8,12 @@ import { LangProvider } from '../i18n/LangProvider'
 import { Abertas } from '../screens/Abertas/Abertas'
 import type { AbertasDto } from '../screens/Abertas/api'
 import { ComparacaoDoPar } from '../screens/ChecklistReview/ComparacaoDoPar'
+import { HistoricoDrawer } from '../screens/Auditoria/HistoricoDrawer'
 import { FatoresDoRisco } from '../screens/Riscos/FatoresDoRisco'
 import { Shell } from '../shell/Shell'
 import { GavetaDeTasks } from '../shared/GavetaDeTasks'
 import { TarefaDrawer } from '../shared/TarefaDrawer'
-import { useModalAcessivel } from '../shared/useModalAcessivel'
+import { elementosComTab, useModalAcessivel } from '../shared/useModalAcessivel'
 import { simular, gaveta } from '../test/telas'
 import { ThemeProvider } from '../theme/ThemeProvider'
 
@@ -180,6 +181,7 @@ describe('gavetas e janelas', () => {
     ['TarefaDrawer', (f) => <TarefaDrawer chave="TG-1" aoFechar={f} />],
     ['FatoresDoRisco', (f) => <FatoresDoRisco linha={risco} aoFechar={f} />],
     ['ComparacaoDoPar', (f) => <ComparacaoDoPar par={par} aoFechar={f} />],
+    ['HistoricoDrawer', (f) => <HistoricoDrawer chave="TG-1" resumoDosFiltros="" aoFechar={f} />],
   ]
 
   for (const [nome, montar] of casos) {
@@ -221,12 +223,59 @@ describe('gavetas e janelas', () => {
     }
     render(<Gaveta aoFechar={() => {}} />)
     const usuario = userEvent.setup()
-    const campos = ['Fechar', 'Campo', 'Lista', 'Motivo'].map((n) => n)
     expect(screen.getByRole('button', { name: 'Fechar' })).toHaveFocus()
-    // Shift+Tab no primeiro vai ao ÚLTIMO da gaveta (a área de texto), e Tab nele volta ao primeiro.
-    await usuario.tab({ shift: true })
+    // Tab percorre na ordem do documento e fecha o ciclo: Fechar, Campo, Lista, Motivo, de volta a Fechar.
+    await usuario.tab()
+    expect(screen.getByRole('textbox', { name: 'Campo' })).toHaveFocus()
+    await usuario.tab()
+    expect(screen.getByRole('combobox', { name: 'Lista' })).toHaveFocus()
+    await usuario.tab()
     expect(screen.getByRole('textbox', { name: 'Motivo' })).toHaveFocus()
     await usuario.tab()
-    expect(screen.getByRole('button', { name: campos[0] })).toHaveFocus()
+    expect(screen.getByRole('button', { name: 'Fechar' })).toHaveFocus()
+    // Shift+Tab no primeiro vai ao ÚLTIMO da gaveta (a área de texto).
+    await usuario.tab({ shift: true })
+    expect(screen.getByRole('textbox', { name: 'Motivo' })).toHaveFocus()
+  })
+
+  it('tabIgnoraTabindexNegativoOcultosEContaGrupoDeRadioUmaVez', () => {
+    const { container } = render(
+      <div>
+        <button type="button">A</button>
+        <button type="button" tabIndex={-1}>fora-tabindex</button>
+        <button type="button" hidden>fora-hidden</button>
+        <div aria-hidden="true"><button type="button">fora-aria-hidden</button></div>
+        <div style={{ display: 'none' }}><button type="button">fora-display</button></div>
+        <input type="radio" name="g" aria-label="r1" />
+        <input type="radio" name="g" aria-label="r2" defaultChecked />
+        <input type="radio" name="g" aria-label="r3" />
+        <input type="checkbox" aria-label="c" />
+        <div tabIndex={0} aria-label="regiao" />
+        <button type="button" disabled>fora-disabled</button>
+        <button type="button">Z</button>
+      </div>,
+    )
+    const nomes = elementosComTab(container.firstElementChild as HTMLElement).map((e) => e.getAttribute('aria-label') ?? e.textContent)
+    // O grupo de rádio é uma parada só (o marcado); o último alcançável é o Z.
+    expect(nomes).toEqual(['A', 'r2', 'c', 'regiao', 'Z'])
+  })
+
+  it('tabNoUltimoVoltaAoPrimeiroMesmoComElementosForaDoCicloNoFim', async () => {
+    function Gaveta({ aoFechar }: { aoFechar: () => void }) {
+      const { raiz, fechar, aoTeclar } = useModalAcessivel(aoFechar)
+      return (
+        <div ref={raiz} role="dialog" aria-modal="true" aria-label="G" onKeyDown={aoTeclar}>
+          <button ref={fechar} type="button">Fechar</button>
+          <button type="button">Ultimo</button>
+          <button type="button" tabIndex={-1}>Escondido-do-Tab</button>
+        </div>
+      )
+    }
+    render(<Gaveta aoFechar={() => {}} />)
+    const usuario = userEvent.setup()
+    await usuario.tab()
+    expect(screen.getByRole('button', { name: 'Ultimo' })).toHaveFocus()
+    await usuario.tab()
+    expect(screen.getByRole('button', { name: 'Fechar' })).toHaveFocus()
   })
 })

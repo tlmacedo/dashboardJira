@@ -52,7 +52,8 @@ describe('tokens dos três temas', () => {
   })
 
   it('temaSidiaRedefineMenuFundoETextoEHerdaOResto', () => {
-    const sidia = tokensCss.slice(tokensCss.indexOf("[data-theme='sidia'] {"))
+    const iSidia = tokensCss.indexOf("[data-theme='sidia'] {")
+    const sidia = tokensCss.slice(iSidia, tokensCss.indexOf('}', iSidia))
     for (const n of ['bg', 'text', 'text2', 'line', 'line-control', 'soft', 'menu', 'menu-text', 'menu-text2', 'menu-line', 'menu-line-control', 'menu-active', 'menu-marca']) {
       expect(sidia, `--${n}`).toMatch(new RegExp(`--${n}:`))
     }
@@ -73,10 +74,25 @@ describe('tokens dos três temas', () => {
   // Cores escritas direto no CSS dos componentes (fora de tokens.css): só as da lista, cada uma com contraste conferido.
   it('corLiteralForaDosTokensSoNaListaRevisada', () => {
     const literais: string[] = []
+    const nomeadas = '(?:white|black|red|green|blue|gray|grey|orange|yellow|purple|silver|navy|teal|maroon)'
     for (const f of CSS_DOS_COMPONENTES) {
-      for (const m of readFileSync(f, 'utf8').matchAll(/(?<![\w-])#[0-9a-fA-F]{6}\b/g)) literais.push(`${rel(f)}: ${m[0].toLowerCase()}`)
+      const css = readFileSync(f, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '')
+      // Hexadecimal de 3, 4, 6 ou 8 dígitos.
+      for (const m of css.matchAll(/(?<![\w-])#[0-9a-fA-F]{3,8}\b/g)) literais.push(`${rel(f)}: ${m[0].toLowerCase()}`)
+      // Funções de cor e nomes de cor em propriedades de cor.
+      for (const m of css.matchAll(/(?<![\w-])(?:rgba?|hsla?|hwb|oklch|oklab|color-mix)\([^)]*\)/g)) literais.push(`${rel(f)}: ${m[0].replace(/\s+/g, ' ')}`)
+      const propriedade = new RegExp(`(?:^|[\\s;{])(?:color|background(?:-color)?|border(?:-[a-z]+)?|outline(?:-color)?|fill|stroke):[^;}]*?\\b${nomeadas}\\b`, 'g')
+      for (const m of css.matchAll(propriedade)) literais.push(`${rel(f)}: ${m[0].trim()}`)
     }
-    expect(literais.sort()).toEqual(['src/shell/shell.css: #77ff94', 'src/shell/shell.css: #b3261e'])
+    expect(literais.sort()).toEqual([
+      'src/shared/cartao.css: rgb(0 0 0 / 0.18)',
+      'src/shared/gaveta.css: rgb(0 0 0 / 0.22)',
+      'src/shared/gaveta.css: rgb(10 14 30 / 0.5)',
+      'src/shell/shell.css: #77ff94',
+      'src/shell/shell.css: #b3261e',
+      'src/shell/shell.css: #fff',
+      'src/shell/shell.css: rgb(0 0 0 / 55%)',
+    ])
   })
 
   it('literaisRevisadosTemContraste', () => {
@@ -98,7 +114,15 @@ describe('layout em 1440 e 390 px', () => {
   it('pontosDeQuebraFicamEntre390e1440', () => {
     // Todo max-width fica acima de 390 (a regra de celular vale a 390 px) e abaixo de 1440 (a 1440 vale o desktop).
     const pontos = new Set<number>()
-    for (const { css } of todos) for (const m of css.matchAll(/@media \(max-width:\s*(\d+)px\)/g)) pontos.add(Number(m[1]))
+    for (const { f, css } of todos) {
+      for (const m of css.matchAll(/@media([^{]*)\{/g)) {
+        const consulta = m[1].trim()
+        const largura = consulta.match(/^\(max-width:\s*(\d+)px\)$/)
+        // Só duas formas existem: max-width em px (testada aqui) e prefers-reduced-motion. Forma nova exige rever o teste.
+        expect(largura !== null || consulta === '(prefers-reduced-motion: reduce)', `${rel(f)}: @media ${consulta}`).toBe(true)
+        if (largura) pontos.add(Number(largura[1]))
+      }
+    }
     expect(pontos.size).toBeGreaterThan(0)
     for (const p of pontos) {
       expect(p, `ponto de quebra ${p}px`).toBeGreaterThan(390)
@@ -109,10 +133,16 @@ describe('layout em 1440 e 390 px', () => {
 
   it('minWidthMaiorQueOCelularSoDentroDeRolagemHorizontal', () => {
     // 390 px - 2 x 16 px de margem = 358 px úteis. Quem pede mais (gráficos SVG) precisa de um contêiner com overflow-x.
+    // O contêiner é o seletor irmão do mesmo prefixo (`.aging-svg` dentro de `.aging-grafico`): precisa ter overflow-x: auto.
     const achados: string[] = []
     for (const { f, css } of todos) {
-      for (const m of css.matchAll(/min-width:\s*(\d+)px/g)) {
-        if (Number(m[1]) > 358 && !/overflow-x:\s*auto/.test(css)) achados.push(`${rel(f)}: min-width ${m[1]}px sem overflow-x: auto`)
+      const regras = [...css.matchAll(/([^{}]+)\{([^{}]*)\}/g)].map((m) => ({ seletor: m[1].replace(/\/\*[\s\S]*?\*\//g, '').trim(), corpo: m[2] }))
+      for (const r of regras) {
+        const m = r.corpo.match(/min-width:\s*(\d+)px/)
+        if (!m || Number(m[1]) <= 358) continue
+        const prefixo = r.seletor.match(/^\.([a-z]+)-/)?.[1]
+        const rola = prefixo !== undefined && regras.some((o) => o.seletor.startsWith(`.${prefixo}-`) && /overflow-x:\s*auto/.test(o.corpo))
+        if (!rola) achados.push(`${rel(f)}: ${r.seletor} min-width ${m[1]}px sem contêiner irmão com overflow-x: auto`)
       }
     }
     expect(achados).toEqual([])
