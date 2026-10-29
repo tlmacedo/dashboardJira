@@ -105,6 +105,32 @@ class FixturesDeDemoTest {
     }
 
     @Test
+    fun fixturesDeDemoTemOsSeisCampos() {
+        val ids = manifesto.instancias.getValue("samsung").camposCustomIds
+        val nomes = listOf("Checklist Type", "SKU Type", "Model Name", "Model Category", "TG Request Type", "Carrier Code")
+        assertEquals(nomes.sorted(), ids.keys.sorted())
+        assertTrue(ids.values.all { it.matches(Regex("customfield_9000\\d")) }, "ids fictícios de 90001 a 90006")
+        val issues = issues("samsung")
+        for (nome in nomes) {
+            val chaveJson = ids.getValue(nome)
+            val valores = issues.mapNotNull { i ->
+                when (val v = fields(i)[chaveJson]) {
+                    is JsonObject -> texto(v, "value")
+                    is JsonPrimitive -> v.takeIf { it.isString }?.content
+                    else -> null
+                }
+            }.toSet()
+            assertTrue(valores.isNotEmpty(), "nenhuma issue da demonstração traz $nome")
+            if (nome in setOf("Checklist Type", "SKU Type", "Model Category", "TG Request Type")) {
+                assertTrue(valores.size >= 2, "$nome precisa de ao menos dois valores para exercitar filtro e agrupamento: $valores")
+            }
+        }
+        // Valores fictícios: sem e-mail nem host.
+        val bruto = DadosDeDemonstracao::class.java.getResourceAsStream("/demo/samsung.json")!!.readBytes().toString(Charsets.UTF_8)
+        assertTrue('@' !in bruto)
+    }
+
+    @Test
     fun fixturesSemDadosPessoais() {
         val ids = Regex("""(?m)^\s*-\s*id:\s*(\S+)""").findAll(
             Files.readString(TestPaths.configDir.resolve("papeis.exemplo.yaml")),

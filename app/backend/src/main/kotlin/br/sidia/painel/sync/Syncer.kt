@@ -63,6 +63,9 @@ class Syncer(
     private val osVersionCustomId: String? = campos?.forInstance(instance)
         ?.takeIf { it.has(CAMPO_OS_VERSION) }?.get(CAMPO_OS_VERSION)?.customId
 
+    /** Campos do dicionário com `filtro: true` da instância (Checklist Type, SKU Type etc.), gravados em cada issue. */
+    private val camposDeFiltro: List<CampoDeFiltro> = campos?.let { CamposDoDicionario.deFiltro(it, instance) }.orEmpty()
+
     /** CustomId de `Story Points`, `Epic Link` e `Flagged` na instância (campo fora do dicionário ou sem id fica nulo). */
     private val idsDeTrabalho: Map<String, String?> = listOf(
         CamposDeTrabalhoExtrator.STORY_POINTS, CamposDeTrabalhoExtrator.EPIC_LINK, CamposDeTrabalhoExtrator.FLAGGED,
@@ -120,7 +123,7 @@ class Syncer(
                     // O mesmo vale para o worklog, que SUBSTITUI os registros gravados da issue.
                     store.upsert(
                         issue, registros, instance, osVersionCustomId, IssueLinks.ler(chave, issue), clock.instant(), idsDeTrabalho,
-                        registrosDeWorklog,
+                        registrosDeWorklog, camposDeFiltro,
                     )
                     CamposDaIssue.de(issue).updated
                 }

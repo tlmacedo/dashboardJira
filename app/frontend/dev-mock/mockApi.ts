@@ -465,7 +465,22 @@ export function mockApi(): Plugin {
         if (url.pathname === '/api/meta') {
           corpo = { devMode: true, liveEnabled: false, zone: 'America/Manaus', banner: 'MODO DESENVOLVIMENTO (dados fictícios)' }
         } else if (url.pathname === '/api/me') corpo = { userId: 'dev', roles: ['GERENTE'] }
-        else if (url.pathname === '/api/cards/tempo-em-status') corpo = cartao(url.searchParams.get('unit') === 'corrido')
+        else if (url.pathname === '/api/filtros/opcoes') {
+          // Opções fictícias dos filtros (Plano 10): nomes e valores inventados.
+          corpo = {
+            squads: ['Alfa', 'Beta'], pessoas: ['ana', 'bruno', 'carla'], tipos: ['Checklist', 'Checklist Review', 'Task'],
+            prioridades: ['High', 'Medium', 'Low'], os: ['Android 16.0 (16)', 'Android 17.0 (OneUI_9.0)'],
+            campos: [
+              { nome: 'Checklist Type', slug: 'checklist-type', valores: ['Full', 'Regression'] },
+              { nome: 'SKU Type', slug: 'sku-type', valores: ['1st Carrier (Global)', 'MR'] },
+            ],
+            avisos: [],
+            rapidos: [
+              { id: 'checklist-review', rotuloPt: 'Só Checklist Review', rotuloEn: 'Checklist Review only', aplica: { tipo: ['Checklist Review'] } },
+              { id: 'prioridade-alta', rotuloPt: 'Prioridade alta', rotuloEn: 'High priority', aplica: { prioridade: ['High'] } },
+            ],
+          }
+        } else if (url.pathname === '/api/cards/tempo-em-status') corpo = cartao(url.searchParams.get('unit') === 'corrido')
         else if (url.pathname === '/api/cards/abertas') corpo = abertasMock(url.searchParams.get('unit') === 'corrido')
         else if (url.pathname === '/api/cards/negligenciadas') corpo = negligenciadasMock(url.searchParams.get('movimento') === 'semReal')
         else if (url.pathname === '/api/cards/fechadas') corpo = fechadasMock(url.searchParams.get('unit') === 'corrido')

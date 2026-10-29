@@ -1,6 +1,7 @@
 package br.sidia.painel.cards
 
 import br.sidia.painel.domain.TimeUnitMode
+import br.sidia.painel.sync.CampoDeFiltro
 import br.sidia.painel.sync.normalizarOsVersion
 import br.sidia.painel.trabalho.IssueSnapshot
 import io.ktor.http.HttpStatusCode
@@ -22,6 +23,8 @@ data class FiltrosDeCard(
     val de: LocalDate?,
     val ate: LocalDate?,
     val unit: TimeUnitMode,
+    /** Filtros por campo do dicionário: nome do campo -> valores aceitos (parâmetro de URL `campo.<slug>`, repetível). */
+    val campos: Map<String, Set<String>> = emptyMap(),
 ) {
     /** A issue passa nos filtros de tipo e de prioridade (sem diferenciar maiúsculas)? Lista vazia = sem filtro. */
     fun aceita(s: IssueSnapshot): Boolean =
@@ -31,6 +34,9 @@ data class FiltrosDeCard(
     companion object {
         private const val MAX_VALOR = 100
         private const val MAX_ITENS = 50
+        private const val MAX_VALOR_DE_CAMPO = 120
+        private const val PREFIXO_DE_CAMPO = "campo."
+        private val FORMATO_DE_SLUG = Regex("[a-z0-9-]{1,40}")
 
         /**
          * Lê e valida os filtros; qualquer valor ruim é 400 sem corpo (nunca 500, nunca eco do valor).
@@ -38,7 +44,10 @@ data class FiltrosDeCard(
          * informados; com `null` o card não tem período e as datas só existem se pedidas. O período pedido não passa
          * de [maxDias] dias (inclusivo) nem tem `de` depois de `ate`.
          */
-        fun ler(params: Parameters, hoje: LocalDate, periodoPadraoDias: Int?, maxDias: Int = 366): FiltrosDeCard {
+        fun ler(
+            params: Parameters, hoje: LocalDate, periodoPadraoDias: Int?, maxDias: Int = 366,
+            camposDeFiltro: List<CampoDeFiltro> = emptyList(),
+        ): FiltrosDeCard {
             val deInformado = data(params, "de")
             val ateInformado = data(params, "ate")
             val de: LocalDate?
@@ -67,7 +76,29 @@ data class FiltrosDeCard(
                 de = de,
                 ate = ate,
                 unit = unit,
+                campos = lerCampos(params, camposDeFiltro),
             )
+        }
+
+        /**
+         * `campo.<slug>=<valor>` (repetível). Slug fora de [camposDeFiltro], valor com controle ou com mais de
+         * [MAX_VALOR_DE_CAMPO] caracteres é 400 `FILTRO_INVALIDO`; o slug só volta no corpo se tiver o formato esperado.
+         */
+        private fun lerCampos(params: Parameters, camposDeFiltro: List<CampoDeFiltro>): Map<String, Set<String>> {
+            val saida = LinkedHashMap<String, Set<String>>()
+            for (nomeDoParametro in params.names().filter { it.startsWith(PREFIXO_DE_CAMPO, ignoreCase = true) }.sorted()) {
+                // Prefixo com outra caixa ("Campo.sku-type") é 400: ignorá-lo em silêncio devolveria o card sem filtro.
+                if (!nomeDoParametro.startsWith(PREFIXO_DE_CAMPO)) throw ErroHttp(HttpStatusCode.BadRequest, CODIGO_FILTRO_INVALIDO)
+                val slug = nomeDoParametro.removePrefix(PREFIXO_DE_CAMPO).lowercase(Locale.ROOT)
+                val parametros = if (FORMATO_DE_SLUG.matches(slug)) mapOf("campo" to slug) else emptyMap()
+                val invalido = { ErroHttp(HttpStatusCode.BadRequest, CODIGO_FILTRO_INVALIDO, parametros) }
+                val campo = camposDeFiltro.firstOrNull { it.slug == slug } ?: throw invalido()
+                val valores = params.getAll(nomeDoParametro).orEmpty().map { it.trim() }.filter { it.isNotEmpty() }
+                if (valores.size > MAX_ITENS) throw invalido()
+                valores.forEach { if (it.length > MAX_VALOR_DE_CAMPO || it.any(Char::isISOControl)) throw invalido() }
+                if (valores.isNotEmpty()) saida[campo.nome] = valores.toSet()
+            }
+            return saida
         }
 
         /** Parâmetro repetível: valores sem espaço nas pontas, sem repetição, no máximo [MAX_ITENS]. */

@@ -60,7 +60,7 @@ object CardNegativas : CardDeLeitura<NegativasDto> {
 }
 
 /**
- * Cartões da tela Negativas (inventário `NE-01` a `NE-08` e `NE-10`). O NE-09 ("maior tempo" por status) é do Plano 10.
+ * Cartões da tela Negativas (inventário `NE-01` a `NE-08` e `NE-10`). O NE-09 ("maior tempo" por status) é do Plano 10 (T10).
  * O NE-08 (taxas) abre as tasks dos NUMERADORES (as mesmas dos cartões de contagem) e a base `concluidas`.
  */
 internal fun cartoesDeNegativas(): List<CartaoRegistrado> {
@@ -88,6 +88,9 @@ internal fun cartoesDeNegativas(): List<CartaoRegistrado> {
                 "concluidas" to it.concluidas, "taxa:reabertura" to it.reabertas, "taxa:devolucao" to it.devolvidas,
                 "taxa:atraso" to it.concluidasComAtraso, "taxa:atrasoSemJustificativa" to it.atrasadasSemJustificativa,
             )
+        },
+        cartao(9, Natureza.QUALIDADE, comChangelog, { it.startsWith("maiorTempo:") }) { dto ->
+            dto.maiorTempoPorStatus.associate { "maiorTempo:${it.valor}" to it.n }
         },
         cartao(10, Natureza.PESSOAS, comChangelog, { it.startsWith("pessoa:") }) { dto ->
             buildMap {

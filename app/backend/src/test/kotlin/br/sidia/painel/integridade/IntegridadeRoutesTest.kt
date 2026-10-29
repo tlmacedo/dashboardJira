@@ -133,7 +133,7 @@ class IntegridadeRoutesTest {
         val linhas = linhasDoAccessLog()
         assertEquals(6, linhas.size, linhas.toString())
         assertEquals(
-            listOf("/api/integridade", "/api/integridade", "/api/integridade", "/api/cartoes/IN-99/tasks", "/api/cartoes/IN-01/tasks", "/api/integridade/catalogo"),
+            listOf("/api/integridade", "/api/integridade", "/api/integridade", "/api/cartoes/{id}/tasks", "/api/cartoes/IN-01/tasks", "/api/integridade/catalogo"),
             linhas.map { it.second },
         )
         assertEquals(listOf(gerente, gerente, "coord.um", gerente, gerente, "lider.alfa"), linhas.map { it.first })

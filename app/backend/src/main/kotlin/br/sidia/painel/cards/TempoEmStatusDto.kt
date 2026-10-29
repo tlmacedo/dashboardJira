@@ -59,6 +59,10 @@ data class AvisoDto(
         const val SEM_VAZAO_HISTORICA = "SEM_VAZAO_HISTORICA"
         /** Nenhum issue da base tem o campo de épico (`Epic Link`): a tabela de épicos fica vazia (informativo). */
         const val EPICO_INDISPONIVEL = "EPICO_INDISPONIVEL"
+        /** Alguma lista de opções de filtro passou do limite e foi cortada (`lista`, `limite`). */
+        const val OPCOES_TRUNCADAS = "OPCOES_TRUNCADAS"
+        /** Issues cujos campos do dicionário vieram só do `raw` antigo: a reconciliação completa os completa (`n`). */
+        const val CAMPOS_DO_DICIONARIO_INCOMPLETOS = "CAMPOS_DO_DICIONARIO_INCOMPLETOS"
         const val BLOQUEANTE = "bloqueante"
         const val INFORMATIVO = "informativo"
 

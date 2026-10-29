@@ -47,7 +47,7 @@ class AbertasCalculator(private val cal: BusinessCalendar, private val map: Stat
 
     fun analisar(
         todas: List<IssueSnapshot>, historico: List<IssueSnapshot>, agora: Instant, unit: TimeUnitMode,
-        temCamposDeTrabalho: Boolean = true,
+        temCamposDeTrabalho: Boolean = true, camposDeFiltro: List<br.sidia.painel.sync.CampoDeFiltro> = emptyList(),
     ): AbertasAnalise {
         val hoje = cal.localDate(agora)
         val avisos = mutableListOf<AvisoDto>()
@@ -107,6 +107,8 @@ class AbertasCalculator(private val cal: BusinessCalendar, private val map: Stat
         for (f in FAIXAS_DE_IDADE) segmentos["idade:$f"] = abertas.filter { faixaDeIdade(idades.getValue(it.key)) == f }
         for (f in FAIXAS_DE_VENCIMENTO) segmentos["vence:$f"] = abertas.filter { faixaDeVencimento(it, hoje) == f }
         historicoPorTipo.forEach { (tipo, l) -> segmentos["historico:$tipo"] = l }
+        val porCampo = br.sidia.painel.cards.agruparPorCampos(abertas, camposDeFiltro)
+        segmentos.putAll(porCampo.segmentos)
 
         val ordenados = segmentos.mapValues { (_, l) -> l.sortedWith(compareBy(ORDEM_NATURAL_DE_CHAVES) { it.key }) }
 
@@ -128,6 +130,7 @@ class AbertasCalculator(private val cal: BusinessCalendar, private val map: Stat
             },
             unit = if (unit == TimeUnitMode.UTIL) "util" else "corrido",
             avisos = avisos,
+            porCampo = porCampo.dtos,
         )
         return AbertasAnalise(dto, ordenados, ciclos, idades)
     }

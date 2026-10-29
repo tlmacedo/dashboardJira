@@ -5,6 +5,8 @@ import br.sidia.painel.cards.EntradaDeCard
 import br.sidia.painel.cards.INSTANCIA_TRABALHO
 import br.sidia.painel.cards.ResultadoDeCard
 import br.sidia.painel.cards.linhaDe
+import br.sidia.painel.cards.avisoDeCamposIncompletos
+import br.sidia.painel.cards.camposDeFiltroDe
 import br.sidia.painel.cards.CartaoDeLeitura
 import br.sidia.painel.cards.contrato.CartaoRegistrado
 import br.sidia.painel.cards.contrato.FonteDoDado
@@ -38,7 +40,10 @@ object CardAbertas : CardDeLeitura<AbertasDto> {
             ),
         ).filter { e.escopo.permiteAtual(it) }
         val analise = AbertasCalculator(ctx.calendar, ctx.statusMap)
-            .analisar(abertas, historico, e.agora, e.filtros.unit, e.store.temCamposDeTrabalho(INSTANCIA_TRABALHO))
+            .analisar(
+                abertas, historico, e.agora, e.filtros.unit, e.store.temCamposDeTrabalho(INSTANCIA_TRABALHO), camposDeFiltroDe(ctx),
+            )
+            .let { a -> avisoDeCamposIncompletos(ctx)?.let { v -> AbertasAnalise(a.dto.copy(avisos = a.dto.avisos + v), a.segmentos, a.ciclos, a.idades) } ?: a }
         val unidade = if (e.filtros.unit == TimeUnitMode.UTIL) "dias úteis" else "dias corridos"
         return ResultadoDeCard(analise.dto) { segmento ->
             analise.segmentos[segmento]?.map { s ->
@@ -92,5 +97,8 @@ internal fun cartoesDeAbertas(): List<CartaoRegistrado> {
             dto.porVencimento.associate { "vence:${it.chave}" to it.n }
         },
         CartaoDeLeitura(meta("AB-09", Natureza.ESTOQUE, comHistorico), CardAbertas, { it == "abertas" }) { mapOf("abertas" to it.abertas) },
+        CartaoDeLeitura(meta("AB-10", Natureza.ESTOQUE), CardAbertas, { it.startsWith("campo:") }) { dto ->
+            dto.porCampo.flatMap { a -> a.grupos.map { "campo:${a.slug}:${it.valor ?: br.sidia.painel.cards.AgrupamentoPorCampos.SEM_VALOR}" to it.n } }.toMap()
+        },
     )
 }

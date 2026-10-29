@@ -158,6 +158,25 @@
   background: var(--line);
 }
 
+/* Esqueleto de carregamento (decorativo; o texto "Carregando…" é para leitor de tela) */
+.esqueleto {
+  height: 96px;
+  border-radius: 10px;
+  background: var(--soft);
+  border: 1px solid var(--line);
+  animation: esqueleto-pulsar 1.2s ease-in-out infinite alternate;
+}
+@keyframes esqueleto-pulsar {
+  to {
+    opacity: 0.5;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .esqueleto {
+    animation: none;
+  }
+}
+
 /* Estados */
 .estado {
   border: 1px solid var(--line);

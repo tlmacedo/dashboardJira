@@ -212,6 +212,23 @@ class WorkStoreTest {
     }
 
     @Test
+    fun snapshotTrazCamposDoDicionario() {
+        Trb1.carregar(
+            ds,
+            listOf(
+                Trb1.issue(
+                    "TG-190", "Checklist", "ana", "10-01T12", "Open",
+                    campos = mapOf("SKU Type" to "MR", "Checklist Type" to "Full"),
+                ),
+                Trb1.issue("TG-191", "Checklist", "ana", "10-01T12", "Open"),
+            ),
+        )
+        val porChave = work.snapshots(ConsultaDeTrabalho(Trb1.INSTANCIA, null, Situacao.TODAS)).associateBy { it.key }
+        assertEquals(mapOf("Checklist Type" to "Full", "SKU Type" to "MR"), porChave.getValue("TG-190").camposDicionario)
+        assertEquals(emptyMap(), porChave.getValue("TG-191").camposDicionario)
+    }
+
+    @Test
     fun osVersionFiltraSemDiferenciarMaiusculas() {
         Trb1.carregar(
             ds,

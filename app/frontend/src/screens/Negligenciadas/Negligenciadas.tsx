@@ -68,7 +68,7 @@ export function Negligenciadas() {
         pergunta={t('negligenciadas.pergunta')}
         filtros={
           <>
-            <Filtros key={sp.toString()} campos={['squad', 'pessoa', 'tipo', 'prioridade', 'os', 'unit']} valor={sp} aoAplicar={aplicar} />
+            <Filtros key={sp.toString()} campos={['squad', 'pessoa', 'tipo', 'prioridade', 'os', 'campos', 'unit']} valor={sp} aoAplicar={aplicar} />
             <label className="controle-movimento">
               <input
                 type="checkbox"

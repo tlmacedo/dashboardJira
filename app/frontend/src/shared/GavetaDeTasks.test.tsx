@@ -338,3 +338,53 @@ describe('GavetaDeTasks: CSV', () => {
     expect(texto).toContain(`"'@x"`)
   })
 })
+
+describe('GavetaDeTasks: task e nova aba', () => {
+  const TAREFA = {
+    key: 'TG-2', resumo: 'Task 2', tipo: 'Checklist', status: 'Em revisão', categoria: 'ACTIVE', resolucao: null, responsavel: 'ana.silva',
+    prioridade: null, criada: '2026-10-01T12:00:00Z', atualizada: null, resolvida: null, vencimento: null, vencimentoOriginal: null, labels: [],
+    campos: {}, tempoPorStatus: [], posse: [], fatoresDeRisco: [], historico: null, linkJira: null, avisos: [],
+  }
+
+  function simularComTarefa() {
+    const mock = vi.fn(async (entrada: RequestInfo | URL) => {
+      const caminho = String(entrada).split('?')[0]
+      if (caminho === ROTA) return new Response(JSON.stringify(resposta(3)), { status: 200 })
+      if (caminho === '/api/tarefa/TG-2') return new Response(JSON.stringify(TAREFA), { status: 200 })
+      return new Response('', { status: 404 })
+    })
+    vi.stubGlobal('fetch', mock)
+    return mock
+  }
+
+  it('chaveDoDrillAbreGaveta', async () => {
+    simularComTarefa()
+    const gaveta = await abrir()
+    await userEvent.click(await within(gaveta).findByRole('button', { name: 'TG-2' }))
+    expect(await screen.findByRole('heading', { level: 2, name: 'Task TG-2' })).toBeInTheDocument()
+    // Esc fecha só a gaveta da task; a lista continua aberta e o foco volta à chave que a abriu.
+    await userEvent.keyboard('{Escape}')
+    expect(screen.queryByRole('heading', { level: 2, name: 'Task TG-2' })).toBeNull()
+    expect(screen.getByRole('dialog')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'TG-2' })).toHaveFocus()
+  })
+
+  it('novaAbaAbreODetalheComOMesmoRecorteSemOpener', async () => {
+    simularComTarefa()
+    const abrirJanela = vi.fn()
+    vi.stubGlobal('open', abrirJanela)
+    const gaveta = await abrir()
+    await within(gaveta).findByText('TG-1')
+    await userEvent.click(within(gaveta).getByRole('button', { name: 'Abrir em nova aba' }))
+    expect(abrirJanela).toHaveBeenCalledTimes(1)
+    const [url, alvo, recursos] = abrirJanela.mock.calls[0] as [string, string, string]
+    expect(alvo).toBe('_blank')
+    expect(recursos).toContain('noopener')
+    const u = new URL(url, 'http://localhost')
+    expect(u.pathname).toBe('/detalhe')
+    expect(u.searchParams.get('cartao')).toBe('TS-03')
+    expect(u.searchParams.get('segmento')).toBe('paradas')
+    expect(u.searchParams.get('squad')).toBe('Alfa')
+    expect(u.searchParams.get('unit')).toBe('corrido')
+  })
+})

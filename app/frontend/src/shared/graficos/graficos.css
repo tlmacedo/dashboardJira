@@ -1,0 +1,52 @@
+/* Gráficos compartilhados: SVG próprio, legenda sempre visível e tabela equivalente. */
+.grafico {
+  display: grid;
+  gap: 8px;
+}
+.grafico-svg {
+  width: 100%;
+  height: auto;
+  max-height: 280px;
+}
+.grafico-grade {
+  stroke: var(--line);
+  stroke-width: 1;
+}
+.grafico-eixo {
+  fill: var(--text2);
+  font-size: 11px;
+}
+.grafico-barra {
+  shape-rendering: crispEdges;
+}
+.grafico-botao {
+  cursor: pointer;
+}
+.grafico-botao:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+.grafico-linha {
+  fill: none;
+  stroke-width: 2;
+}
+.grafico-legenda {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  font-size: 0.85rem;
+  color: var(--text);
+}
+.grafico-legenda li {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.grafico-tabela summary {
+  cursor: pointer;
+  color: var(--text2);
+  font-size: 0.85rem;
+}

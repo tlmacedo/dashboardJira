@@ -372,17 +372,20 @@ class TempoEmStatusRoutesTest {
         assertEquals(emptyList(), drill("gerente.exemplo", "analisadas", osNaUrl("Android 99.0 (Inexistente)")))
     }
 
+    /** Corpo do 400 de filtro: só o código estável, sem eco do valor recebido (Plano 10, T9). */
+    private val SEM_ECO = """{"codigo":"FILTRO_INVALIDO","params":{}}"""
+
     @Test
     fun filtroOsInvalidoRetorna400SemCorpo() = rodar {
         val longo = get("gerente.exemplo", "/api/cards/tempo-em-status?os=${"x".repeat(101)}")
         assertEquals(HttpStatusCode.BadRequest, longo.status)
-        assertEquals("", longo.corpo)
+        assertEquals(SEM_ECO, longo.corpo)
         val controle = get("gerente.exemplo", "/api/cards/tempo-em-status?os=a%00b")
         assertEquals(HttpStatusCode.BadRequest, controle.status)
-        assertEquals("", controle.corpo)
+        assertEquals(SEM_ECO, controle.corpo)
         val drillRuim = get("gerente.exemplo", rotaDrill("analisadas") + "&os=a%0Ab")
         assertEquals(HttpStatusCode.BadRequest, drillRuim.status)
-        assertEquals("", drillRuim.corpo)
+        assertEquals(SEM_ECO, drillRuim.corpo)
     }
 
     @Test
@@ -722,7 +725,7 @@ class TempoEmStatusRoutesTest {
         assertEquals(
             listOf(
                 "/api/me", "/api/cards/tempo-em-status", "/api/cartoes/TS-01/tasks",
-                "/api/cards/tempo-em-status", "/api/me",
+                "/api/cards/tempo-em-status", "/api/me", // 403 sem papel vigente: antes do roteador, só o módulo conhecido
             ),
             linhas.map { it.second },
         )
@@ -777,10 +780,10 @@ class TempoEmStatusRoutesTest {
         )) {
             val card = get("gerente.exemplo", "/api/cards/tempo-em-status$consulta")
             assertEquals(HttpStatusCode.BadRequest, card.status, consulta)
-            assertEquals("", card.corpo, consulta)
+            assertEquals(SEM_ECO, card.corpo, consulta)
             val drill = get("gerente.exemplo", rotaDrill("analisadas") + "&${consulta.drop(1)}")
             assertEquals(HttpStatusCode.BadRequest, drill.status, consulta)
-            assertEquals("", drill.corpo, consulta)
+            assertEquals(SEM_ECO, drill.corpo, consulta)
         }
     }
 

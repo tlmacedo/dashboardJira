@@ -161,12 +161,12 @@ describe('tela Fluxo da semana', () => {
   })
 
   it('filtrosVaoParaAUrlESemUnidade', async () => {
-    const mock = simular({ [CARD]: { status: 200, corpo: DTO } })
+    const mock = simular({ [CARD]: { status: 200, corpo: DTO }, '/api/filtros/opcoes': { status: 200, corpo: { squads: ['Alfa'], pessoas: [], tipos: [], prioridades: [], os: [], campos: [], avisos: [], rapidos: [] } } })
     renderizarTela(<FluxoDaSemana />, '/fluxoDaSemana')
     await screen.findByRole('group', { name: 'Indicadores do fluxo' })
     // O fluxo conta tasks, não tempo: não há seletor de dias úteis/corridos.
     expect(screen.queryByRole('button', { name: 'Dias corridos' })).toBeNull()
-    await userEvent.type(screen.getByRole('textbox', { name: 'Squad' }), 'Alfa')
+    await userEvent.selectOptions(await screen.findByRole('combobox', { name: 'Squad' }), 'Alfa')
     await userEvent.click(screen.getByRole('button', { name: 'Aplicar filtros' }))
     expect(new URLSearchParams(screen.getByTestId('url').textContent ?? '').get('squad')).toBe('Alfa')
     await vi.waitFor(() => {

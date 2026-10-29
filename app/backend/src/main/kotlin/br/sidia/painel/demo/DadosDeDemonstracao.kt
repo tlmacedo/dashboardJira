@@ -1,6 +1,8 @@
 package br.sidia.painel.demo
 
 import br.sidia.painel.AppContext
+import br.sidia.painel.sync.CampoDeFiltro
+import br.sidia.painel.sync.CamposDoDicionario
 import br.sidia.painel.sync.ChangelogParser
 import br.sidia.painel.sync.ChavesDeUsuario
 import br.sidia.painel.sync.IssueLinks
@@ -28,7 +30,13 @@ import javax.sql.DataSource
 private val log = LoggerFactory.getLogger("br.sidia.painel.demo")
 
 /** Uma instância das fixtures: arquivo JSON, prefixo das chaves (`DEMO`, `DEMOCAT`) e o campo do OS Version. */
-data class InstanciaDemo(val arquivo: String, val prefixo: String, val osVersionCustomId: String?)
+data class InstanciaDemo(
+    val arquivo: String,
+    val prefixo: String,
+    val osVersionCustomId: String?,
+    /** Campos do dicionário (nome -> id fictício `customfield_9000N`) usados nas issues fictícias; só no manifesto. */
+    val camposCustomIds: Map<String, String> = emptyMap(),
+)
 
 /** Manifesto das fixtures. As datas absolutas dos JSON giram em torno da [ancora]. */
 data class ManifestoDemo(val versao: Int, val ancora: LocalDate, val instancias: Map<String, InstanciaDemo>)
@@ -43,7 +51,12 @@ class DemoRecusadaException(val codigo: String) : IllegalStateException("dados d
 private data class ManifestoYaml(val versao: Int, val ancora: String, val instancias: Map<String, InstanciaYaml>)
 
 @Serializable
-private data class InstanciaYaml(val arquivo: String, val prefixo: String, val osVersionCustomId: String? = null)
+private data class InstanciaYaml(
+    val arquivo: String,
+    val prefixo: String,
+    val osVersionCustomId: String? = null,
+    val camposCustomIds: Map<String, String> = emptyMap(),
+)
 
 private val FORMATO_PREFIXO = Regex("[A-Z]{1,20}")
 
@@ -61,7 +74,7 @@ internal fun lerManifestoDemo(pasta: String = "demo"): ManifestoDemo {
     val instancias = bruto.instancias.mapValues { (_, i) ->
         // O prefixo entra em LIKE: só letras maiúsculas, sem curingas.
         require(FORMATO_PREFIXO.matches(i.prefixo)) { "prefixo de demonstração inválido" }
-        InstanciaDemo(i.arquivo, i.prefixo, i.osVersionCustomId)
+        InstanciaDemo(i.arquivo, i.prefixo, i.osVersionCustomId, i.camposCustomIds)
     }
     return ManifestoDemo(bruto.versao, LocalDate.parse(bruto.ancora), instancias)
 }
@@ -169,6 +182,7 @@ class DadosDeDemonstracao(
             val chaveDaIssue = (issue["key"] as JsonPrimitive).content
             store.upsertNaTransacao(
                 con, issue, registros, instancia, inst.osVersionCustomId, IssueLinks.ler(chaveDaIssue, issue), agora,
+                camposDeFiltro = inst.camposCustomIds.map { (nome, id) -> CampoDeFiltro(nome, CamposDoDicionario.slugDe(nome), id) },
             )
             eventos += registros.size
         }

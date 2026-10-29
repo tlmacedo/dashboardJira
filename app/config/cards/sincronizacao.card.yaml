@@ -13,6 +13,11 @@ campos:
   - OS Version
   - SKU Type
   - Checklist Type
+  # Campos do dicionário com filtro (Plano 10): viram filtro e agrupamento nos cards.
+  - Model Name
+  - Model Category
+  - TG Request Type
+  - Carrier Code
   # Campos de trabalho (Plano 5): prioridade, estimativas, tempo gasto, componentes, pontos, épico e flag.
   - priority
   - timeoriginalestimate

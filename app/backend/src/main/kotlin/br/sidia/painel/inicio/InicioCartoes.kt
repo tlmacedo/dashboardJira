@@ -26,8 +26,12 @@ import io.ktor.http.Parameters
 /** Cartões da Central, só para a coordenação e o gerente. */
 private val ALTA = setOf(Role.COORDENADOR, Role.GERENTE)
 
-/** Para onde um número da Central aponta: o cartão de destino e o segmento dele. */
-internal class Destino(val cartao: String, val segmento: String)
+/**
+ * Para onde um número da Central aponta. [periodoDias] liga um período FIXO (os últimos N dias de Manaus, terminando
+ * [deslocamentoDias] dias antes de hoje) que a Central passa ao cartão de destino como `de` e `ate`: o número e a gaveta usam
+ * o mesmo período (VG-02 e VG-03, os 30 dias de Fechadas).
+ */
+internal class Destino(val cartao: String, val segmento: String, val periodoDias: Int? = null, val deslocamentoDias: Int = 0)
 
 /**
  * Cartão da Central (VG-nn): um painel de números que SÃO os de outros cartões. Não calcula nada: [valores] e [drill] chamam o
@@ -64,10 +68,22 @@ internal class CartaoDeCentral(
         return c
     }
 
+    /** A entrada do destino: a mesma de quem pergunta, ou, com período fixo, com `de` e `ate` (sem memória de cálculos). */
+    private fun entradaPara(e: EntradaDeCartao, d: Destino): EntradaDeCartao {
+        val dias = d.periodoDias ?: return e
+        val ate = hoje(e.ctx).minusDays(d.deslocamentoDias.toLong())
+        val parametros = Parameters.build {
+            appendAll(e.parametros)
+            set("de", ate.minusDays(dias - 1L).toString())
+            set("ate", ate.toString())
+        }
+        return EntradaDeCartao(e.ctx, e.store, e.principal, parametros)
+    }
+
     override suspend fun valores(e: EntradaDeCartao): Map<String, Int> = buildMap {
         for ((segmento, d) in destinos) {
             val c = visivel(e, d.cartao) ?: continue
-            c.valores(e)[d.segmento]?.let { put(segmento, it) }
+            c.valores(entradaPara(e, d))[d.segmento]?.let { put(segmento, it) }
         }
         dinamico?.let { (cartao, prefixo) ->
             val c = visivel(e, cartao) ?: return@let
@@ -79,7 +95,7 @@ internal class CartaoDeCentral(
         val d = destinos[segmento] ?: dinamico?.takeIf { segmento.startsWith(it.second) }?.let { Destino(it.first, segmento) }
             ?: throw ErroHttp(HttpStatusCode.BadRequest, CODIGO_SEGMENTO_INVALIDO)
         val c = visivel(e, d.cartao) ?: throw ErroHttp(HttpStatusCode.BadRequest, CODIGO_SEGMENTO_INVALIDO)
-        return c.drill(e, d.segmento)
+        return c.drill(entradaPara(e, d), d.segmento)
     }
 }
 
@@ -171,8 +187,8 @@ internal val DESTINOS_DA_CENTRAL: Map<String, Destino> = linkedMapOf(
 /**
  * Cartões do Início da coordenação e do gerente: VG-01 abertas, VG-04 no prazo, VG-05 vencidas, VG-08 risco, VG-09 itens de
  * atenção, VG-10 entregas por semana, VG-11 backlog, VG-12 por squad e VG-13 indício alto (só gerente, atrás da trava do DPO).
- * O VG-02/03 (concluídas e ciclo) estão em Fechadas e o VG-06/07 (negligenciadas e bloqueadas) são itens do VG-09; ver
- * `docs/analise/diferencas-esperadas-checklist-integridade-governanca.md`.
+ * O VG-02 e o VG-03 (concluídas dos últimos 30 dias com variação e ciclo) voltaram à Central no Plano 10 (T10, decisão registrada no
+ * progresso), com período fixo de 30 dias; o VG-06/07 (negligenciadas e bloqueadas) são itens do VG-09.
  */
 internal fun cartoesDeInicio(catalogo: () -> CatalogoDeCartoes): List<CartaoRegistrado> {
     val issue = listOf(FonteDoDado.ISSUE)
@@ -184,6 +200,12 @@ internal fun cartoesDeInicio(catalogo: () -> CatalogoDeCartoes): List<CartaoRegi
         CartaoDeCentral(meta(id, natureza, fontes), destinos, catalogo)
     return listOf(
         cartao("VG-01", Natureza.ESTOQUE, issue, mapOf("abertas" to Destino("AB-09", "abertas"))),
+        // VG-02 e VG-03 (Plano 10, T10): as concluídas dos últimos 30 dias (e dos 30 anteriores, para a variação) e o ciclo delas.
+        cartao(
+            "VG-02", Natureza.FLUXO, issue,
+            mapOf("atual" to Destino("FE-01", "concluidas", 30), "anterior" to Destino("FE-01", "concluidas", 30, 30)),
+        ),
+        cartao("VG-03", Natureza.FLUXO, comChangelog, mapOf("ciclo" to Destino("FE-03", "ciclo", 30))),
         cartao(
             "VG-04", Natureza.PRAZO, comConfig,
             mapOf("noPrazo" to Destino("MT-01", "noPrazo"), "noPrazoAjustado" to Destino("MT-01", "noPrazoAjustado"), "universo" to Destino("MT-01", "universo")),

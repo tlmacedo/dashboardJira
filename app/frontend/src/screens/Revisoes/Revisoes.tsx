@@ -66,7 +66,7 @@ export function Revisoes() {
         pergunta={t('revisoes.pergunta')}
         filtros={
           <Filtros
-            key={sp.toString()} campos={['squad', 'pessoa', 'prioridade', 'os']} valor={sp} aoAplicar={aplicar}
+            key={sp.toString()} campos={['squad', 'pessoa', 'prioridade', 'os', 'campos']} valor={sp} aoAplicar={aplicar}
             pessoas={dto?.linhas.map((l) => l.revisor)}
           />
         }

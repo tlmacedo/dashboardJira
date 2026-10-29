@@ -4,6 +4,7 @@
       "id": "910001", "key": "DEMO-1",
       "fields": {
         "summary": "Checklist de camera frontal (demonstracao 1)",
+        "customfield_90001": {"value": "Regression"}, "customfield_90002": {"value": "MR"}, "customfield_90003": "MODELO-A", "customfield_90004": {"value": "Tablet"}, "customfield_90005": {"value": "New Model"}, "customfield_90006": "OP02",
         "project": {"key": "TG", "name": "TG-Basic"}, "issuetype": {"name": "Checklist"},
         "status": {"name": "Done"}, "resolution": {"name": "Done"},
         "assignee": {"name": "dev.alfa1"}, "reporter": {"name": "pl.alfa"},
@@ -20,6 +21,7 @@
       "id": "910002", "key": "DEMO-2",
       "fields": {
         "summary": "Checklist de bateria (demonstracao 2)",
+        "customfield_90001": {"value": "Full"}, "customfield_90002": {"value": "MR"}, "customfield_90003": "MODELO-B", "customfield_90004": {"value": "Phone"}, "customfield_90005": {"value": "Maintenance"}, "customfield_90006": "OP03",
         "project": {"key": "TG", "name": "TG-Basic"}, "issuetype": {"name": "Checklist"},
         "status": {"name": "Done"}, "resolution": {"name": "Done"},
         "assignee": {"name": "dev.alfa2"}, "reporter": {"name": "pl.alfa"},
@@ -36,6 +38,7 @@
       "id": "910003", "key": "DEMO-3",
       "fields": {
         "summary": "Checklist TG de conectividade (demonstracao 3)",
+        "customfield_90001": {"value": "Regression"}, "customfield_90002": {"value": "1st Carrier (Global)"}, "customfield_90003": "MODELO-B", "customfield_90004": {"value": "Phone"}, "customfield_90005": {"value": "New Model"}, "customfield_90006": "OP01",
         "project": {"key": "TG", "name": "TG-Basic"}, "issuetype": {"name": "Checklist TG"},
         "status": {"name": "Done"}, "resolution": {"name": "Done"},
         "assignee": {"name": "dev.beta1"}, "reporter": {"name": "pl.beta"},
@@ -52,6 +55,7 @@
       "id": "910004", "key": "DEMO-4",
       "fields": {
         "summary": "Checklist de audio (demonstracao 4)",
+        "customfield_90001": {"value": "Full"}, "customfield_90002": {"value": "MR"}, "customfield_90003": "MODELO-A", "customfield_90004": {"value": "Tablet"}, "customfield_90005": {"value": "Maintenance"}, "customfield_90006": "OP02",
         "project": {"key": "TG", "name": "TG-Basic"}, "issuetype": {"name": "Checklist"},
         "status": {"name": "Done"}, "resolution": {"name": "Done"},
         "assignee": {"name": "dev.alfa1"}, "reporter": {"name": "pl.alfa"},
@@ -72,6 +76,7 @@
       "id": "910005", "key": "DEMO-5",
       "fields": {
         "summary": "Checklist de sensores (demonstracao 5)",
+        "customfield_90001": {"value": "Regression"}, "customfield_90003": "MODELO-A", "customfield_90004": {"value": "Phone"}, "customfield_90005": {"value": "New Model"}, "customfield_90006": "OP03",
         "project": {"key": "TG", "name": "TG-Basic"}, "issuetype": {"name": "Checklist"},
         "status": {"name": "Done"}, "resolution": {"name": "Done"},
         "assignee": {"name": "lider.alfa"}, "reporter": {"name": "pl.alfa"},
@@ -88,6 +93,7 @@
       "id": "910006", "key": "DEMO-6",
       "fields": {
         "summary": "Checklist de display (demonstracao 6)",
+        "customfield_90001": {"value": "Full"}, "customfield_90002": {"value": "1st Carrier (Global)"}, "customfield_90003": "MODELO-B", "customfield_90004": {"value": "Phone"}, "customfield_90006": "OP01",
         "project": {"key": "TG", "name": "TG-Basic"}, "issuetype": {"name": "Checklist"},
         "status": {"name": "Done"}, "resolution": {"name": "Done"},
         "assignee": {"name": "dev.beta1"}, "reporter": {"name": "pl.beta"},
@@ -104,6 +110,7 @@
       "id": "910007", "key": "DEMO-7",
       "fields": {
         "summary": "Revisao do checklist de rede (demonstracao 7)",
+        "customfield_90002": {"value": "MR"}, "customfield_90003": "MODELO-B", "customfield_90004": {"value": "Tablet"}, "customfield_90005": {"value": "New Model"}, "customfield_90006": "OP02",
         "project": {"key": "TG", "name": "TG-Basic"}, "issuetype": {"name": "Checklist Review"},
         "status": {"name": "Done"}, "resolution": {"name": "Done"},
         "assignee": {"name": "lider.beta"}, "reporter": {"name": "pl.beta"},
@@ -123,6 +130,7 @@
       "id": "910008", "key": "DEMO-8",
       "fields": {
         "summary": "Checklist de camera traseira (demonstracao 8)",
+        "customfield_90001": {"value": "Full"}, "customfield_90002": {"value": "MR"}, "customfield_90003": "MODELO-A", "customfield_90004": {"value": "Phone"}, "customfield_90005": {"value": "Maintenance"},
         "project": {"key": "TG", "name": "TG-Basic"}, "issuetype": {"name": "Checklist"},
         "status": {"name": "Done"}, "resolution": {"name": "Done"},
         "assignee": {"name": "dev.alfa2"}, "reporter": {"name": "pl.alfa"},
@@ -141,6 +149,7 @@
       "id": "910009", "key": "DEMO-9",
       "fields": {
         "summary": "Checklist de carregamento (demonstracao 9)",
+        "customfield_90001": {"value": "Regression"}, "customfield_90002": {"value": "1st Carrier (Global)"}, "customfield_90004": {"value": "Phone"}, "customfield_90005": {"value": "New Model"}, "customfield_90006": "OP01",
         "project": {"key": "TG", "name": "TG-Basic"}, "issuetype": {"name": "Checklist"},
         "status": {"name": "Done"}, "resolution": {"name": "Done"},
         "assignee": {"name": "dev.alfa1"}, "reporter": {"name": "pl.alfa"},
@@ -158,6 +167,7 @@
       "id": "910010", "key": "DEMO-10",
       "fields": {
         "summary": "Checklist TG de seguranca (demonstracao 10)",
+        "customfield_90001": {"value": "Full"}, "customfield_90003": "MODELO-B", "customfield_90004": {"value": "Tablet"}, "customfield_90005": {"value": "Maintenance"}, "customfield_90006": "OP02",
         "project": {"key": "TG", "name": "TG-Basic"}, "issuetype": {"name": "Checklist TG"},
         "status": {"name": "Done"}, "resolution": {"name": "Done"},
         "assignee": {"name": "dev.beta1"}, "reporter": {"name": "pl.beta"},
@@ -174,6 +184,7 @@
       "id": "910011", "key": "DEMO-11",
       "fields": {
         "summary": "Checklist de notificacoes (demonstracao 11)",
+        "customfield_90001": {"value": "Regression"}, "customfield_90002": {"value": "MR"}, "customfield_90003": "MODELO-B", "customfield_90004": {"value": "Phone"}, "customfield_90005": {"value": "New Model"}, "customfield_90006": "OP03",
         "project": {"key": "TG", "name": "TG-Basic"}, "issuetype": {"name": "Checklist"},
         "status": {"name": "Done"}, "resolution": {"name": "Done"},
         "assignee": {"name": "dev.alfa2"}, "reporter": {"name": "pl.alfa"},
@@ -190,6 +201,7 @@
       "id": "910012", "key": "DEMO-12",
       "fields": {
         "summary": "Revisao do checklist de camera (demonstracao 12)",
+        "customfield_90001": {"value": "Full"}, "customfield_90002": {"value": "1st Carrier (Global)"}, "customfield_90003": "MODELO-A", "customfield_90004": {"value": "Phone"}, "customfield_90006": "OP01",
         "project": {"key": "TG", "name": "TG-Basic"}, "issuetype": {"name": "Checklist Review"},
         "status": {"name": "Done"}, "resolution": {"name": "Done"},
         "assignee": {"name": "dev.alfa1"}, "reporter": {"name": "pl.alfa"},
@@ -209,6 +221,7 @@
       "id": "910013", "key": "DEMO-13",
       "fields": {
         "summary": "Checklist de gravacao de video (demonstracao 13)",
+        "customfield_90001": {"value": "Regression"}, "customfield_90002": {"value": "MR"}, "customfield_90003": "MODELO-A", "customfield_90004": {"value": "Tablet"}, "customfield_90005": {"value": "New Model"}, "customfield_90006": "OP02",
         "project": {"key": "TG", "name": "TG-Basic"}, "issuetype": {"name": "Checklist"},
         "status": {"name": "In Progress"},
         "assignee": {"name": "dev.alfa1"}, "reporter": {"name": "pl.alfa"},
@@ -226,6 +239,7 @@
       "id": "910014", "key": "DEMO-14",
       "fields": {
         "summary": "Checklist de modem (demonstracao 14)",
+        "customfield_90002": {"value": "MR"}, "customfield_90003": "MODELO-B", "customfield_90004": {"value": "Phone"}, "customfield_90005": {"value": "Maintenance"}, "customfield_90006": "OP03",
         "project": {"key": "TG", "name": "TG-Basic"}, "issuetype": {"name": "Checklist"},
         "status": {"name": "Blocked"},
         "assignee": {"name": "dev.beta1"}, "reporter": {"name": "pl.beta"},
@@ -241,6 +255,7 @@
       "id": "910015", "key": "DEMO-15",
       "fields": {
         "summary": "Checklist de biometria (demonstracao 15)",
+        "customfield_90001": {"value": "Regression"}, "customfield_90003": "MODELO-B", "customfield_90004": {"value": "Phone"}, "customfield_90005": {"value": "New Model"}, "customfield_90006": "OP01",
         "project": {"key": "TG", "name": "TG-Basic"}, "issuetype": {"name": "Checklist"},
         "status": {"name": "In Review"},
         "assignee": {"name": "dev.alfa2"}, "reporter": {"name": "pl.alfa"},
@@ -259,6 +274,7 @@
       "id": "910016", "key": "DEMO-16",
       "fields": {
         "summary": "Checklist de acessibilidade sem responsavel (demonstracao 16)",
+        "customfield_90001": {"value": "Full"}, "customfield_90002": {"value": "MR"}, "customfield_90003": "MODELO-A", "customfield_90004": {"value": "Tablet"}, "customfield_90005": {"value": "Maintenance"},
         "project": {"key": "TG", "name": "TG-Basic"}, "issuetype": {"name": "Checklist"},
         "status": {"name": "To Do"},
         "reporter": {"name": "pl.alfa"},
@@ -271,6 +287,7 @@
       "id": "910017", "key": "DEMO-17",
       "fields": {
         "summary": "Checklist de memoria de pessoa fora do diretorio (demonstracao 17)",
+        "customfield_90001": {"value": "Regression"}, "customfield_90002": {"value": "MR"}, "customfield_90003": "MODELO-A", "customfield_90004": {"value": "Phone"}, "customfield_90005": {"value": "New Model"}, "customfield_90006": "OP03",
         "project": {"key": "TG", "name": "TG-Basic"}, "issuetype": {"name": "Checklist"},
         "status": {"name": "In Progress"},
         "assignee": {"name": "fora.do.diretorio"}, "reporter": {"name": "pl.beta"},
@@ -285,6 +302,7 @@
       "id": "910018", "key": "DEMO-18",
       "fields": {
         "summary": "Checklist de dados moveis recem-iniciado (demonstracao 18)",
+        "customfield_90001": {"value": "Full"}, "customfield_90002": {"value": "1st Carrier (Global)"}, "customfield_90004": {"value": "Phone"}, "customfield_90006": "OP01",
         "project": {"key": "TG", "name": "TG-Basic"}, "issuetype": {"name": "Checklist"},
         "status": {"name": "In Progress"},
         "assignee": {"name": "dev.alfa2"}, "reporter": {"name": "pl.alfa"},
@@ -302,6 +320,7 @@
       "id": "910019", "key": "DEMO-19",
       "fields": {
         "summary": "Checklist cancelado por decisao do produto (demonstracao 19)",
+        "customfield_90001": {"value": "Regression"}, "customfield_90002": {"value": "MR"}, "customfield_90003": "MODELO-B", "customfield_90004": {"value": "Tablet"}, "customfield_90005": {"value": "New Model"}, "customfield_90006": "OP02",
         "project": {"key": "TG", "name": "TG-Basic"}, "issuetype": {"name": "Checklist"},
         "status": {"name": "Done"}, "resolution": {"name": "Won't Do"},
         "assignee": {"name": "dev.alfa1"}, "reporter": {"name": "pl.alfa"},
@@ -317,6 +336,7 @@
       "id": "910020", "key": "DEMO-20",
       "fields": {
         "summary": "Checklist fechado sem resolucao (demonstracao 20)",
+        "customfield_90001": {"value": "Full"}, "customfield_90003": "MODELO-A", "customfield_90004": {"value": "Phone"}, "customfield_90005": {"value": "Maintenance"}, "customfield_90006": "OP03",
         "project": {"key": "TG", "name": "TG-Basic"}, "issuetype": {"name": "Checklist"},
         "status": {"name": "Closed"},
         "assignee": {"name": "dev.alfa2"}, "reporter": {"name": "pl.alfa"},
@@ -332,6 +352,7 @@
       "id": "910021", "key": "DEMO-21",
       "fields": {
         "summary": "Epico de estabilidade do release (demonstracao 21)",
+        "customfield_90002": {"value": "1st Carrier (Global)"}, "customfield_90003": "MODELO-A", "customfield_90004": {"value": "Phone"}, "customfield_90005": {"value": "New Model"}, "customfield_90006": "OP01",
         "project": {"key": "TG", "name": "TG-Basic"}, "issuetype": {"name": "Epic"},
         "status": {"name": "In Progress"},
         "assignee": {"name": "lider.alfa"}, "reporter": {"name": "pl.alfa"},
@@ -346,6 +367,7 @@
       "id": "910022", "key": "DEMO-22",
       "fields": {
         "summary": "Checklist cancelado (demonstracao 22)",
+        "customfield_90001": {"value": "Full"}, "customfield_90002": {"value": "MR"}, "customfield_90003": "MODELO-B", "customfield_90004": {"value": "Tablet"}, "customfield_90005": {"value": "Maintenance"}, "customfield_90006": "OP02",
         "project": {"key": "TG", "name": "TG-Basic"}, "issuetype": {"name": "Checklist"},
         "status": {"name": "Cancelled"}, "resolution": {"name": "Won't Do"},
         "assignee": {"name": "dev.alfa1"}, "reporter": {"name": "pl.alfa"},
@@ -361,6 +383,7 @@
       "id": "910023", "key": "DEMO-23",
       "fields": {
         "summary": "Task com troca de responsavel por usuario comum (demonstracao 23)",
+        "customfield_90001": {"value": "Regression"}, "customfield_90002": {"value": "MR"}, "customfield_90003": "MODELO-B", "customfield_90004": {"value": "Phone"}, "customfield_90005": {"value": "New Model"}, "customfield_90006": "OP03",
         "project": {"key": "TG", "name": "TG-Basic"}, "issuetype": {"name": "Task"},
         "status": {"name": "In Progress"},
         "assignee": {"name": "dev.alfa2"}, "reporter": {"name": "pl.alfa"},
@@ -376,6 +399,7 @@
       "id": "910024", "key": "DEMO-24",
       "fields": {
         "summary": "Task com troca de responsavel pelo Squad Leader (demonstracao 24)",
+        "customfield_90001": {"value": "Full"}, "customfield_90002": {"value": "1st Carrier (Global)"}, "customfield_90003": "MODELO-A", "customfield_90004": {"value": "Phone"},
         "project": {"key": "TG", "name": "TG-Basic"}, "issuetype": {"name": "Task"},
         "status": {"name": "In Progress"},
         "assignee": {"name": "dev.mudou"}, "reporter": {"name": "pl.beta"},
@@ -391,6 +415,7 @@
       "id": "910025", "key": "DEMO-25",
       "fields": {
         "summary": "Task passada de mao em mao perto do vencimento (demonstracao 25)",
+        "customfield_90001": {"value": "Regression"}, "customfield_90003": "MODELO-A", "customfield_90004": {"value": "Tablet"}, "customfield_90005": {"value": "New Model"}, "customfield_90006": "OP02",
         "project": {"key": "TG", "name": "TG-Basic"}, "issuetype": {"name": "Task"},
         "status": {"name": "In Progress"},
         "assignee": {"name": "dev.beta1"}, "reporter": {"name": "pl.alfa"},
@@ -408,6 +433,7 @@
       "id": "910026", "key": "DEMO-26",
       "fields": {
         "summary": "Task que voltou a quem ja tinha tido (demonstracao 26)",
+        "customfield_90001": {"value": "Full"}, "customfield_90002": {"value": "MR"}, "customfield_90003": "MODELO-B", "customfield_90004": {"value": "Phone"}, "customfield_90005": {"value": "Maintenance"}, "customfield_90006": "OP03",
         "project": {"key": "TG", "name": "TG-Basic"}, "issuetype": {"name": "Task"},
         "status": {"name": "In Progress"},
         "assignee": {"name": "dev.alfa2"}, "reporter": {"name": "pl.alfa"},
@@ -427,6 +453,7 @@
       "id": "910027", "key": "DEMO-27",
       "fields": {
         "summary": "Task com vencimento adiado pelo proprio responsavel (demonstracao 27)",
+        "customfield_90001": {"value": "Regression"}, "customfield_90002": {"value": "1st Carrier (Global)"}, "customfield_90004": {"value": "Phone"}, "customfield_90005": {"value": "New Model"}, "customfield_90006": "OP01",
         "project": {"key": "TG", "name": "TG-Basic"}, "issuetype": {"name": "Task"},
         "status": {"name": "In Progress"},
         "assignee": {"name": "dev.beta1"}, "reporter": {"name": "pl.beta"},
@@ -442,6 +469,7 @@
       "id": "910028", "key": "DEMO-28",
       "fields": {
         "summary": "Task com vencimento alterado pelo Reporter (demonstracao 28)",
+        "customfield_90002": {"value": "MR"}, "customfield_90003": "MODELO-A", "customfield_90004": {"value": "Tablet"}, "customfield_90005": {"value": "Maintenance"}, "customfield_90006": "OP02",
         "project": {"key": "TG", "name": "TG-Basic"}, "issuetype": {"name": "Task"},
         "status": {"name": "In Progress"},
         "assignee": {"name": "dev.alfa1"}, "reporter": {"name": "pl.alfa"},
@@ -457,6 +485,7 @@
       "id": "910029", "key": "DEMO-29",
       "fields": {
         "summary": "Task com vencimento removido (demonstracao 29)",
+        "customfield_90001": {"value": "Regression"}, "customfield_90002": {"value": "MR"}, "customfield_90003": "MODELO-A", "customfield_90004": {"value": "Phone"}, "customfield_90005": {"value": "New Model"}, "customfield_90006": "OP03",
         "project": {"key": "TG", "name": "TG-Basic"}, "issuetype": {"name": "Task"},
         "status": {"name": "In Progress"},
         "assignee": {"name": "dev.alfa2"}, "reporter": {"name": "pl.alfa"},
@@ -472,6 +501,7 @@
       "id": "910030", "key": "DEMO-30",
       "fields": {
         "summary": "Task com primeira definicao de vencimento (demonstracao 30)",
+        "customfield_90001": {"value": "Full"}, "customfield_90003": "MODELO-B", "customfield_90004": {"value": "Phone"}, "customfield_90006": "OP01",
         "project": {"key": "TG", "name": "TG-Basic"}, "issuetype": {"name": "Task"},
         "status": {"name": "To Do"},
         "assignee": {"name": "dev.beta1"}, "reporter": {"name": "pl.beta"},
@@ -486,6 +516,7 @@
       "id": "910031", "key": "DEMO-31",
       "fields": {
         "summary": "Task fechada com label de atraso colocada por outra pessoa (demonstracao 31)",
+        "customfield_90001": {"value": "Regression"}, "customfield_90002": {"value": "MR"}, "customfield_90003": "MODELO-B", "customfield_90004": {"value": "Tablet"}, "customfield_90005": {"value": "New Model"}, "customfield_90006": "OP02",
         "project": {"key": "TG", "name": "TG-Basic"}, "issuetype": {"name": "Task"},
         "status": {"name": "Done"}, "resolution": {"name": "Done"},
         "assignee": {"name": "dev.alfa1"}, "reporter": {"name": "pl.alfa"},
@@ -502,6 +533,7 @@
       "id": "910032", "key": "DEMO-32",
       "fields": {
         "summary": "Task fechada com label de atraso colocada pelo responsavel (demonstracao 32)",
+        "customfield_90001": {"value": "Full"}, "customfield_90002": {"value": "MR"}, "customfield_90003": "MODELO-A", "customfield_90004": {"value": "Phone"}, "customfield_90005": {"value": "Maintenance"},
         "project": {"key": "TG", "name": "TG-Basic"}, "issuetype": {"name": "Task"},
         "status": {"name": "Done"}, "resolution": {"name": "Done"},
         "assignee": {"name": "dev.beta1"}, "reporter": {"name": "pl.beta"},
@@ -518,6 +550,7 @@
       "id": "910033", "key": "DEMO-33",
       "fields": {
         "summary": "Task aberta com label de atraso depois do vencimento (demonstracao 33)",
+        "customfield_90001": {"value": "Regression"}, "customfield_90002": {"value": "1st Carrier (Global)"}, "customfield_90003": "MODELO-A", "customfield_90004": {"value": "Phone"}, "customfield_90005": {"value": "New Model"}, "customfield_90006": "OP01",
         "project": {"key": "TG", "name": "TG-Basic"}, "issuetype": {"name": "Task"},
         "status": {"name": "In Progress"},
         "assignee": {"name": "dev.alfa2"}, "reporter": {"name": "pl.alfa"},
@@ -533,6 +566,7 @@
       "id": "910034", "key": "DEMO-34",
       "fields": {
         "summary": "Task com LATE_SENT colocada com antecedencia (demonstracao 34)",
+        "customfield_90001": {"value": "Full"}, "customfield_90002": {"value": "MR"}, "customfield_90003": "MODELO-B", "customfield_90004": {"value": "Tablet"}, "customfield_90005": {"value": "Maintenance"}, "customfield_90006": "OP02",
         "project": {"key": "TG", "name": "TG-Basic"}, "issuetype": {"name": "Task"},
         "status": {"name": "In Progress"},
         "assignee": {"name": "dev.alfa1"}, "reporter": {"name": "pl.alfa"},
@@ -548,6 +582,7 @@
       "id": "910035", "key": "DEMO-35",
       "fields": {
         "summary": "Task bloqueada pela Review de rede (demonstracao 35)",
+        "customfield_90003": "MODELO-B", "customfield_90004": {"value": "Phone"}, "customfield_90005": {"value": "New Model"}, "customfield_90006": "OP03",
         "project": {"key": "TG", "name": "TG-Basic"}, "issuetype": {"name": "Task"},
         "status": {"name": "Done"}, "resolution": {"name": "Done"},
         "assignee": {"name": "lider.beta"}, "reporter": {"name": "pl.beta"},
@@ -566,6 +601,7 @@
       "id": "910036", "key": "DEMO-36",
       "fields": {
         "summary": "Task que bloqueia a Review de camera (demonstracao 36)",
+        "customfield_90001": {"value": "Full"}, "customfield_90002": {"value": "1st Carrier (Global)"}, "customfield_90004": {"value": "Phone"}, "customfield_90006": "OP01",
         "project": {"key": "TG", "name": "TG-Basic"}, "issuetype": {"name": "Task"},
         "status": {"name": "Done"}, "resolution": {"name": "Done"},
         "assignee": {"name": "dev.alfa1"}, "reporter": {"name": "pl.alfa"},
@@ -584,6 +620,7 @@
       "id": "910037", "key": "DEMO-37",
       "fields": {
         "summary": "Task com chave interna de usuario resolvida (demonstracao 37)",
+        "customfield_90001": {"value": "Regression"}, "customfield_90002": {"value": "MR"}, "customfield_90003": "MODELO-A", "customfield_90004": {"value": "Tablet"}, "customfield_90005": {"value": "New Model"}, "customfield_90006": "OP02",
         "project": {"key": "TG", "name": "TG-Basic"}, "issuetype": {"name": "Task"},
         "status": {"name": "In Progress"},
         "assignee": {"name": "dev.alfa2", "key": "JIRAUSER10501"}, "reporter": {"name": "pl.alfa"},
@@ -599,6 +636,7 @@
       "id": "910038", "key": "DEMO-38",
       "fields": {
         "summary": "Task com chave interna de usuario sem resolucao (demonstracao 38)",
+        "customfield_90001": {"value": "Full"}, "customfield_90002": {"value": "MR"}, "customfield_90003": "MODELO-B", "customfield_90004": {"value": "Phone"}, "customfield_90005": {"value": "Maintenance"}, "customfield_90006": "OP03",
         "project": {"key": "TG", "name": "TG-Basic"}, "issuetype": {"name": "Task"},
         "status": {"name": "In Progress"},
         "assignee": {"name": "dev.alfa1"}, "reporter": {"name": "pl.alfa"},

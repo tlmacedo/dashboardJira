@@ -108,6 +108,27 @@ object CardRiscos : CardDeLeitura<RiscosDto> {
         }
     }
 
+    /**
+     * O risco de UMA task aberta, com o mesmo cálculo e as mesmas bases do card (histórico de 16 semanas e fila da visão de
+     * [e]); `null` para task concluída. Usado pela gaveta universal da task.
+     */
+    internal fun avaliarUma(e: EntradaDeCard, s: IssueSnapshot): Risco? {
+        val ctx = e.ctx
+        val map = ctx.statusMap
+        if (s.resolved != null || map.category(s.status) == StatusCategory.DONE) return null
+        val ficha = FiltroDeFicha.de(ctx.fichas.getValue(id))
+        val historico = e.store.snapshots(
+            ConsultaDeTrabalho(
+                INSTANCIA_TRABALHO, ficha, Situacao.RESOLVIDAS,
+                resolvidasDe = e.agora.minus(Duration.ofDays(SEMANAS_DE_HISTORICO * 7)),
+            ),
+        ).filter { e.escopo.permiteAtual(it) }
+        val filaDaVisao = e.store.snapshots(ConsultaDeTrabalho(INSTANCIA_TRABALHO, ficha, Situacao.ABERTAS)).filter { e.escopo.permiteAtual(it) }
+        val previsao = MotorDePessoas(ctx).agenda.comoPrevisao(filaDaVisao, e.hoje)
+        return RiscoCalculator(ctx.calendar, map, ctx.regrasDeRisco, previsao)
+            .avaliar(listOf(s), historico, e.agora, e.store.temCamposDeTrabalho(INSTANCIA_TRABALHO)).firstOrNull()
+    }
+
     /** "85 pontos (alto): idade acima do P85 do tipo 30; parada no status 15; ..." */
     private fun detalhe(r: Risco?): String {
         if (r == null) return ""

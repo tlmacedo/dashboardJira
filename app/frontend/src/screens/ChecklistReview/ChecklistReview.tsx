@@ -81,7 +81,7 @@ export function ChecklistReview() {
         pergunta={t('cr.pergunta')}
         filtros={
           <Filtros
-            key={sp.toString()} campos={['periodo', 'squad', 'pessoa', 'tipo', 'prioridade', 'os', 'unit']} valor={sp} aoAplicar={aplicar}
+            key={sp.toString()} campos={['periodo', 'squad', 'pessoa', 'tipo', 'prioridade', 'os', 'campos', 'unit']} valor={sp} aoAplicar={aplicar}
             pessoas={pessoas} tipos={TIPOS_DO_PAI}
           />
         }

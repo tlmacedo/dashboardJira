@@ -99,4 +99,19 @@ data class CentralDto(
     val confiancaDoBacklog: String?,
     val squads: List<CartaoSquadDto>,
     val avisos: List<AvisoDto>,
+    /** VG-02: concluídas dos últimos 30 dias e dos 30 anteriores, com a variação; nulo se o papel não vê o cartão. */
+    val concluidas30d: KpiComVariacaoDto? = null,
+    /** VG-03: P50 e P85 do ciclo das concluídas dos últimos 30 dias; nulo sem concluídas. */
+    val ciclo30d: FaixaDaCentral? = null,
 )
+
+/**
+ * Um número com a comparação ao período anterior. [variacao] é a mudança relativa em % ((atual - anterior) ÷ anterior); nula
+ * quando o período anterior não tem nada (sem base, nunca divisão por zero) ou o número está indisponível.
+ */
+@Serializable
+data class KpiComVariacaoDto(val atual: Int?, val anterior: Int?, val variacao: Double?)
+
+/** P50 e P85 em dias úteis e o tamanho da amostra [n] (as tasks que a gaveta do VG-03 abre). */
+@Serializable
+data class FaixaDaCentral(val p50: Double, val p85: Double, val n: Int)

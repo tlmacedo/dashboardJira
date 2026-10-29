@@ -62,7 +62,7 @@ export function Epicos() {
       <CardPage
         titulo={t('nav.epicos')}
         pergunta={t('epicos.pergunta')}
-        filtros={<Filtros key={sp.toString()} campos={['squad', 'pessoa', 'os']} valor={sp} aoAplicar={aplicar} />}
+        filtros={<Filtros key={sp.toString()} campos={['squad', 'pessoa', 'os', 'campos']} valor={sp} aoAplicar={aplicar} />}
         consulta={consulta}
         avisos={dto?.avisos}
         aoExportar={exportar}

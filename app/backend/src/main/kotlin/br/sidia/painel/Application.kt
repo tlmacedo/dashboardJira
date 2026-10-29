@@ -11,6 +11,7 @@ import br.sidia.painel.cards.contrato.catalogoPadrao
 import br.sidia.painel.cards.contrato.rotasDeDrillGenerico
 import br.sidia.painel.cards.contrato.rotasDoCatalogo
 import br.sidia.painel.cards.registrarNegacaoSemPapel
+import br.sidia.painel.cards.rotasDeOpcoesDeFiltro
 import br.sidia.painel.cards.rotasDosCardsDeTrabalho
 import br.sidia.painel.cards.rotasTempoEmStatus
 import br.sidia.painel.config.ArquivoEnv
@@ -19,6 +20,7 @@ import br.sidia.painel.config.Settings
 import br.sidia.painel.db.AccessLog
 import br.sidia.painel.db.CacheDeLeituras
 import br.sidia.painel.demo.prepararDemonstracao
+import br.sidia.painel.tarefa.rotasDeTarefa
 import br.sidia.painel.http.ConfigCsrf
 import br.sidia.painel.http.cabecalhosDeSeguranca
 import br.sidia.painel.http.protecaoCsrf
@@ -232,6 +234,8 @@ fun Application.module(
             rotasDeDrillGenerico(context, catalogo, SqliteIssueStore(ds), AccessLog(ds))
             rotasDeAuditoria(context, AccessLog(ds))
             rotasDosCardsDeTrabalho(context, AccessLog(ds))
+            rotasDeOpcoesDeFiltro(context, AccessLog(ds))
+            rotasDeTarefa(context, AccessLog(ds))
             rotasDeChecklistReview(context, AccessLog(ds))
             rotasDeIntegridade(context, AccessLog(ds))
             rotasDeDistribuicao(context, AccessLog(ds))

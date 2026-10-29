@@ -68,7 +68,7 @@ export function Bloqueios() {
       <CardPage
         titulo={t('nav.bloqueios')}
         pergunta={t('bloqueios.pergunta')}
-        filtros={<Filtros key={sp.toString()} campos={['squad', 'pessoa', 'tipo', 'prioridade', 'os']} valor={sp} aoAplicar={aplicar} />}
+        filtros={<Filtros key={sp.toString()} campos={['squad', 'pessoa', 'tipo', 'prioridade', 'os', 'campos']} valor={sp} aoAplicar={aplicar} />}
         consulta={consulta}
         avisos={dto?.avisos}
         aoExportar={exportar}

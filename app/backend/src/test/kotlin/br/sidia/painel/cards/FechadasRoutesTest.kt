@@ -166,4 +166,46 @@ class FechadasRoutesTest {
         val corrido = fechadas(get("gerente.exemplo", "/api/cards/fechadas?$PERIODO&unit=corrido"))
         assertEquals(6.5, corrido.ciclo!!.p50, 1e-9)
     }
+
+    private fun tg801() = Trb1.issue(
+        "TG-801", "Checklist", "ana", "10-01T12", "Closed", resolution = "Done", resolvida = "10-09T12", vence = "2026-10-09",
+        estimativaS = 4 * 3600L, gastoS = 6 * 3600L, eventos = Trb1.trilha("TG-801", "Open", "10-05T12" to "In Progress", "10-09T12" to "Closed"),
+    )
+
+    @Test
+    fun tempoAtivoPorPessoa() = rodar(listOf(tg801())) { get ->
+        val d = fechadas(get("gerente.exemplo", "/api/cards/fechadas?$PERIODO"))
+        // ana ficou em status ativo de segunda 05/10 a sexta 09/10: 4 dias úteis.
+        assertEquals(4.0, d.porPessoa.single { it.pessoa == "ana" }.tempoAtivoDias!!, 1e-9)
+        // Em dias corridos o mesmo trecho também são 4 dias (segunda a sexta, sem fim de semana no meio).
+        val corridos = fechadas(get("gerente.exemplo", "/api/cards/fechadas?$PERIODO&unit=corrido"))
+        assertEquals(4.0, corridos.porPessoa.single { it.pessoa == "ana" }.tempoAtivoDias!!, 1e-9)
+    }
+
+    @Test
+    fun tempoAtivoSoContaOTrechoDaPessoa() = rodar(
+        listOf(
+            Trb1.issue(
+                "TG-802", "Checklist", "bruno", "10-01T12", "Closed", resolution = "Done", resolvida = "10-09T12",
+                eventos = Trb1.trilha("TG-802", "Open", "10-05T12" to "In Progress", "10-09T12" to "Closed") +
+                    Trb1.ev("TG-802", "assignee", "ana", "bruno", "10-07T12"),
+            ),
+        ),
+    ) { get ->
+        val d = fechadas(get("gerente.exemplo", "/api/cards/fechadas?$PERIODO"))
+        // ana teve a task de 05 a 07 (2 dias úteis ativos) e bruno de 07 a 09 (2).
+        assertEquals(2.0, d.porPessoa.single { it.pessoa == "ana" }.tempoAtivoDias!!, 1e-9)
+        assertEquals(2.0, d.porPessoa.single { it.pessoa == "bruno" }.tempoAtivoDias!!, 1e-9)
+    }
+
+    @Test
+    fun tabelaDeConcluidasComRealSobreEstimado() = rodar(listOf(tg801(), Trb1.issue(
+        "TG-803", "Checklist", "ana", "10-01T12", "Closed", resolution = "Done", resolvida = "10-12T12",
+        gastoS = 3600L, eventos = Trb1.trilha("TG-803", "Open", "10-02T12" to "In Progress", "10-12T12" to "Closed"),
+    ))) { get ->
+        val linhas = fechadas(get("gerente.exemplo", "/api/cards/fechadas?$PERIODO")).linhas.associateBy { it.key }
+        assertEquals(1.5, linhas.getValue("TG-801").realSobreEstimado!!, 1e-9)
+        // Sem estimativa não há razão (nunca divisão por zero nem "infinito").
+        assertEquals(null, linhas.getValue("TG-803").realSobreEstimado)
+    }
 }

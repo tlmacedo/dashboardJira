@@ -8,6 +8,8 @@ import br.sidia.painel.domain.NoPrazo
 import br.sidia.painel.domain.ORDEM_NATURAL_DE_CHAVES
 import br.sidia.painel.domain.Percentiles
 import br.sidia.painel.domain.StatusMap
+import br.sidia.painel.domain.StatusCategory
+import br.sidia.painel.domain.TimelineBuilder
 import br.sidia.painel.domain.classificar
 import br.sidia.painel.domain.TimeUnitMode
 import br.sidia.painel.time.BusinessCalendar
@@ -52,6 +54,7 @@ class FechadasCalculator(
     fun analisar(
         resolvidas: List<IssueSnapshot>, candidatasNoPrazo: List<IssueSnapshot>, comEventoDeStatus: List<IssueSnapshot>,
         de: LocalDate, ate: LocalDate, agora: Instant, unit: TimeUnitMode, visiveis: Set<String>,
+        camposDeFiltro: List<br.sidia.painel.sync.CampoDeFiltro> = emptyList(),
     ): FechadasAnalise {
         val zona = cal.zone
         Fluxo.exigirStatusMapeados(map, candidatasNoPrazo, resolvidas)
@@ -123,11 +126,24 @@ class FechadasCalculator(
         for ((semana, _) in serie) segmentos["semana:$semana"] = porSemanaMap[semana].orEmpty()
         for ((tipo, l) in porTipoCiclos) segmentos["tipo:$tipo"] = l
         for ((projeto, l) in porProjeto) segmentos["projeto:$projeto"] = l
+        val porCampo = br.sidia.painel.cards.agruparPorCampos(concluidas, camposDeFiltro)
+        segmentos.putAll(porCampo.segmentos)
         for (p in pessoas) {
             segmentos["pessoa:$p:finalizou"] = finalizou[p].orEmpty()
             segmentos["pessoa:$p:participou"] = concluidas.filter { p in participantes.getValue(it) }
         }
         val ordenados = segmentos.mapValues { (_, l) -> l.sortedWith(Comparator { a, b -> ORDEM_NATURAL_DE_CHAVES.compare(a.key, b.key) }) }
+
+        // FE-11: o tempo em status ATIVO enquanto a pessoa era a responsável, somado nas concluídas do período.
+        val tempoAtivo = HashMap<String, Double>()
+        for (s in concluidas) {
+            for (iv in TimelineBuilder.intervals(s.timeline, agora, map)) {
+                val dono = iv.assignee ?: continue
+                if (iv.category != StatusCategory.ACTIVE || dono !in pessoas) continue
+                val dias = if (unit == TimeUnitMode.UTIL) cal.businessDays(iv.start, iv.end) else cal.calendarDays(iv.start, iv.end)
+                tempoAtivo.merge(dono, dias, Double::plus)
+            }
+        }
 
         val porPessoa = pessoas.map { p ->
             val dele = ordenados.getValue("pessoa:$p:finalizou")
@@ -140,6 +156,7 @@ class FechadasCalculator(
                 cicloP50 = Percentiles.median(dele.mapNotNull { ciclos[it.key] }),
                 horasEstimadas = estimadas.takeIf { it.isNotEmpty() }?.let { it.sum() / 3600.0 },
                 horasGastas = gastas.takeIf { it.isNotEmpty() }?.let { it.sum() / 3600.0 },
+                tempoAtivoDias = tempoAtivo[p],
             )
         }
 
@@ -191,11 +208,13 @@ class FechadasCalculator(
                     resolvida = diaDaResolucao.getValue(s.key).toString(), ciclo = ciclos[s.key], lead = leads[s.key],
                     vence = s.duedate?.toString(), prazo = situacaoDoPrazo(s), pontos = s.storyPoints,
                     horasEstimadas = s.estimateS?.let { it / 3600.0 }, horasGastas = s.spentS?.let { it / 3600.0 },
+                    realSobreEstimado = s.estimateS?.takeIf { it > 0 }?.let { est -> s.spentS?.let { it.toDouble() / est } },
                 )
             },
             semResolution = semResolution.size,
             unit = if (unit == TimeUnitMode.UTIL) "util" else "corrido",
             avisos = avisos,
+            porCampo = porCampo.dtos,
         )
         return FechadasAnalise(dto, ordenados, ciclos, leads, diaDaResolucao)
     }

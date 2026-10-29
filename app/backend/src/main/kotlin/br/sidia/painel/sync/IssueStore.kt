@@ -25,12 +25,16 @@ interface IssueStore {
      * `Story Points`, `Epic Link` e `Flagged` (nome do dicionário -> id), e os demais saem de campos nativos.
      * [worklogs]: os registros de horas da issue, SUBSTITUÍDOS na mesma transação (o que sumiu no Jira sai); nulo = a busca
      * não trouxe o campo e os gravados não mudam. O `raw` nunca guarda o worklog.
+     * [camposDeFiltro]: os campos do dicionário com `filtro: true` (Plano 10); o valor de cada um é gravado em `campos_dicionario`
+     * (objeto JSON nome -> valor, `{}` se nenhum veio). A linha só é marcada como completa (`campos_dicionario_em`) quando
+     * algum dos campos tem customId, isto é, quando a sincronização realmente pôde pedi-los.
      */
     fun upsert(
         issue: JsonObject, events: List<ChangeEventRecord>, instance: String, osVersionCustomId: String? = null,
         vinculos: List<VinculoRecord>? = null, vinculosEm: Instant = Instant.now(),
         idsDeTrabalho: Map<String, String?> = emptyMap(),
         worklogs: List<WorklogRecord>? = null,
+        camposDeFiltro: List<CampoDeFiltro> = emptyList(),
     )
 
     /**
@@ -210,14 +214,17 @@ class SqliteIssueStore(private val ds: DataSource) : IssueStore, IssueIndex {
         con: Connection, issue: JsonObject, events: List<ChangeEventRecord>, instance: String, osVersionCustomId: String?,
         vinculos: List<VinculoRecord>? = null, vinculosEm: Instant = Instant.now(),
         idsDeTrabalho: Map<String, String?> = emptyMap(), worklogs: List<WorklogRecord>? = null,
+        camposDeFiltro: List<CampoDeFiltro> = emptyList(),
     ) {
         val c = CamposDaIssue.de(issue)
         val osVersion = OsVersionExtrator.extrair(issue, osVersionCustomId)
         val trabalho = CamposDeTrabalhoExtrator.extrair(issue, idsDeTrabalho)
+        val dicionario = CamposDoDicionario.extrair(issue, camposDeFiltro)
+        val dicionarioEm = vinculosEm.takeIf { camposDeFiltro.any { it.customId != null } }
         // O changelog fica nas linhas de change_event e os vínculos em issue_link; o raw guarda só a issue, sem
         // dados pessoais e sem o que o Jira traz da outra ponta de cada link (resumo, status, prioridade).
         val raw = SanitizadorRaw.sanitizar(semChangelogNemVinculos(issue)).toString()
-        val issueId = gravarIssue(con, c, instance, raw, osVersion, trabalho)
+        val issueId = gravarIssue(con, c, instance, raw, osVersion, trabalho, dicionario, dicionarioEm)
         gravarEventos(con, issueId, events)
         if (vinculos != null) links.substituir(con, instance, c.key, vinculos, vinculosEm)
         if (worklogs != null) worklogStore.substituir(con, instance, issueId, worklogs)
@@ -234,12 +241,15 @@ class SqliteIssueStore(private val ds: DataSource) : IssueStore, IssueIndex {
     override fun upsert(
         issue: JsonObject, events: List<ChangeEventRecord>, instance: String, osVersionCustomId: String?,
         vinculos: List<VinculoRecord>?, vinculosEm: Instant, idsDeTrabalho: Map<String, String?>, worklogs: List<WorklogRecord>?,
+        camposDeFiltro: List<CampoDeFiltro>,
     ) {
         ds.connection.use { con ->
             val autoCommit = con.autoCommit
             con.autoCommit = false
             try {
-                upsertNaTransacao(con, issue, events, instance, osVersionCustomId, vinculos, vinculosEm, idsDeTrabalho, worklogs)
+                upsertNaTransacao(
+                    con, issue, events, instance, osVersionCustomId, vinculos, vinculosEm, idsDeTrabalho, worklogs, camposDeFiltro,
+                )
                 con.commit()
             } catch (e: Throwable) {
                 con.rollback()
@@ -271,13 +281,15 @@ class SqliteIssueStore(private val ds: DataSource) : IssueStore, IssueIndex {
 
     private fun gravarIssue(
         con: Connection, c: CamposDaIssue, instance: String, raw: String, osVersion: String?, trabalho: CamposDeTrabalho,
+        dicionario: Map<String, String>, dicionarioEm: Instant?,
     ): Long {
         liberarJiraIdDaChaveAntiga(con, c, instance)
         val sql = """
             INSERT INTO issue (key, instance, project, issue_type, status, resolution, assignee_ref, reporter_ref,
                                created, updated, resolved, duedate, labels, parent_key, estimate_s, spent_s, raw,
-                               os_version, jira_id, priority, remaining_s, story_points, epic_key, flagged, components)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                               os_version, jira_id, priority, remaining_s, story_points, epic_key, flagged, components,
+                               campos_dicionario, campos_dicionario_em)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT (instance, key) DO UPDATE SET
                 project = EXCLUDED.project, issue_type = EXCLUDED.issue_type,
                 status = EXCLUDED.status, resolution = EXCLUDED.resolution, assignee_ref = EXCLUDED.assignee_ref,
@@ -287,7 +299,8 @@ class SqliteIssueStore(private val ds: DataSource) : IssueStore, IssueIndex {
                 raw = EXCLUDED.raw, os_version = EXCLUDED.os_version,
                 jira_id = COALESCE(EXCLUDED.jira_id, issue.jira_id), removida_em = NULL,
                 priority = EXCLUDED.priority, remaining_s = EXCLUDED.remaining_s, story_points = EXCLUDED.story_points,
-                epic_key = EXCLUDED.epic_key, flagged = EXCLUDED.flagged, components = EXCLUDED.components
+                epic_key = EXCLUDED.epic_key, flagged = EXCLUDED.flagged, components = EXCLUDED.components,
+                campos_dicionario = EXCLUDED.campos_dicionario, campos_dicionario_em = EXCLUDED.campos_dicionario_em
             RETURNING id
         """.trimIndent()
         con.prepareStatement(sql).use { ps ->
@@ -317,6 +330,8 @@ class SqliteIssueStore(private val ds: DataSource) : IssueStore, IssueIndex {
             ps.setString(23, trabalho.epicKey)
             ps.setInt(24, if (trabalho.flagged) 1 else 0)
             ps.setString(25, trabalho.components.emJson())
+            ps.setString(26, CamposDoDicionario.paraJson(dicionario))
+            if (dicionarioEm != null) ps.setLong(27, dicionarioEm.toEpochMilli()) else ps.setNull(27, java.sql.Types.BIGINT)
             ps.executeQuery().use { rs ->
                 check(rs.next()) { "upsert da issue não devolveu o id" }
                 return rs.getLong(1)

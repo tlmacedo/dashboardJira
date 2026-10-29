@@ -11,6 +11,8 @@
 #               Lista vazia ou ausente significa texto livre (sem vocabulário fechado).
 #   customId    id técnico, ex.: customfield_NNNNN (opcional). Desconhecido por ora: será
 #               descoberto pelo nome na primeira conexão autorizada.
+#   filtro      true = o campo vira filtro e agrupamento nos cards (parâmetro de URL campo.<slug>) e é guardado por issue
+#               em `issue.campos_dicionario` (opcional; padrão false). Plano 10.
 
 campos:
   # Campos nativos do Jira
@@ -136,6 +138,7 @@ campos:
     tipo: SELECT
     instancia: samsung
     finalidade: Tipo de SKU
+    filtro: true
     valores:
       - "1st carrier (Latin)"
       - "1st Carrier (Global)"
@@ -144,22 +147,27 @@ campos:
     tipo: SELECT
     instancia: samsung
     finalidade: Tipo de checklist (tipo a confirmar)
+    filtro: true
   - nome: Model Name
     tipo: TEXT
     instancia: samsung
     finalidade: Nome do modelo (tipo a confirmar)
+    filtro: true
   - nome: Model Category
     tipo: SELECT
     instancia: samsung
     finalidade: Categoria do modelo (tipo a confirmar)
+    filtro: true
   - nome: TG Request Type
     tipo: SELECT
     instancia: samsung
     finalidade: Tipo de solicitação do TG (tipo a confirmar)
+    filtro: true
   - nome: Carrier Code
     tipo: TEXT
     instancia: samsung
     finalidade: Código da operadora (tipo a confirmar)
+    filtro: true
 
   # Campos de trabalho que dependem de id customizado (descobertos pelo nome na primeira conexão autorizada).
   - nome: Story Points

@@ -40,8 +40,8 @@ describe('tela Decisões', () => {
     expect(linhas[1]).toHaveTextContent('● Trocada')
     expect(linhas[1]).toHaveTextContent('a ana conhece o módulo')
     expect(linhas[1]).toHaveTextContent('Rebalanceamento')
-    expect(String(mock.mock.calls[0][0])).toContain('de=2026-10-01')
-    expect(String(mock.mock.calls[0][0])).toContain('ate=2026-10-30')
+    expect(mock.mock.calls.map((c) => String(c[0])).find((u) => !u.startsWith('/api/filtros')) ?? '').toContain('de=2026-10-01')
+    expect(mock.mock.calls.map((c) => String(c[0])).find((u) => !u.startsWith('/api/filtros')) ?? '').toContain('ate=2026-10-30')
     // Sem contagem nem coluna por pessoa que agregue: só quem decidiu em cada linha.
     expect(screen.getByText(/Sem contagem nem ordem por pessoa/)).toBeInTheDocument()
     for (const c of within(tabela).getAllByRole('columnheader')) expect(c.querySelector('button')).toBeNull()

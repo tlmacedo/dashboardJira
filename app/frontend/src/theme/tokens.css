@@ -24,6 +24,13 @@
   --s2: #772feb;
   --s3: #b85a0b;
   --s4: #0b7a3b;
+  /* Paleta categórica dos gráficos (Okabe-Ito ajustada): >= 3:1 sobre a superfície; o tema Sidia herda estes valores. */
+  --cat-1: #0072b2;
+  --cat-2: #b07800;
+  --cat-3: #00855f;
+  --cat-4: #b5528c;
+  --cat-5: #2a7fb8;
+  --cat-6: #c25400;
   --focus: #3333ff;
   --frame: none;
   --frame-altura: 0px;
@@ -54,6 +61,12 @@
   --s2: #b9a0ff;
   --s3: #f58634;
   --s4: #77ff94;
+  --cat-1: #4da3db;
+  --cat-2: #e69f00;
+  --cat-3: #2fc79a;
+  --cat-4: #e58fbf;
+  --cat-5: #56b4e9;
+  --cat-6: #f07a2b;
   --focus: #8fa8ff;
   color-scheme: dark;
 }

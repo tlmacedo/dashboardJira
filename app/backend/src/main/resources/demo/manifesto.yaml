@@ -9,6 +9,14 @@ instancias:
     prefixo: DEMO
     # Campo do OS Version nas issues fictícias (o mesmo valor usado nos testes do Tempo em status).
     osVersionCustomId: customfield_12416
+    # Campos do dicionário com filtro (Plano 10): ids FICTÍCIOS, só desta demonstração.
+    camposCustomIds:
+      "Checklist Type": customfield_90001
+      "SKU Type": customfield_90002
+      "Model Name": customfield_90003
+      "Model Category": customfield_90004
+      "TG Request Type": customfield_90005
+      "Carrier Code": customfield_90006
   sidia:
     arquivo: sidia.json
     prefixo: DEMOCAT

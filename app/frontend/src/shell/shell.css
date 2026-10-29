@@ -217,6 +217,33 @@ h1 {
   padding: 6px 10px;
   cursor: pointer;
 }
+/* Busca rápida por chave (I-26): uma linha discreta no topo do conteúdo. */
+.busca-chave {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 12px;
+}
+.busca-chave input {
+  font: inherit;
+  min-height: 34px;
+  width: min(220px, 100%);
+  padding: 0 10px;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--text2);
+  border-radius: 7px;
+}
+.busca-chave input:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+.busca-chave-erro {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--bad);
+}
 .notice {
   border: 1px solid var(--line);
   background: var(--soft);

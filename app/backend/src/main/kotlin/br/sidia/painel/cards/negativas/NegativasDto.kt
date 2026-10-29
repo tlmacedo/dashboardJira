@@ -32,6 +32,8 @@ data class NegativasDto(
     val porResponsavel: List<NegativaPessoaDto>,
     val unit: String,
     val avisos: List<AvisoDto>,
+    /** NE-09: quantas tasks das listas reabertas, devolvidas, canceladas e concluídas com atraso têm cada status como o de MAIOR tempo (valor, em ordem alfabética). */
+    val maiorTempoPorStatus: List<br.sidia.painel.cards.ContagemGrupoDto> = emptyList(),
 )
 
 /** Contagens atribuídas a uma pessoa pela posse da task NO INSTANTE do evento (ordem alfabética, sem ranking). */

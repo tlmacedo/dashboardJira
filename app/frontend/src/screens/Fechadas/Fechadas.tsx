@@ -7,6 +7,7 @@ import { baixarCsv } from '../../shared/csv'
 import { Filtros, resumoDosFiltros, useFiltrosDaUrl } from '../../shared/Filtros'
 import { dataCurta, inteiro, numero, percentual } from '../../shared/format'
 import { GavetaDeTasks } from '../../shared/GavetaDeTasks'
+import { PorCampo } from '../../shared/PorCampo'
 import { TabelaOrdenavel, type Coluna } from '../../shared/TabelaOrdenavel'
 import { temBloqueio, useCard } from '../../shared/useCard'
 import type { FechadasDto, LinhaFechada } from './api'
@@ -52,7 +53,7 @@ export function Fechadas() {
   }
 
   function razao(l: LinhaFechada): string {
-    return l.horasEstimadas && l.horasGastas != null ? numero(l.horasGastas / l.horasEstimadas, lang) : ''
+    return l.realSobreEstimado == null ? '' : numero(l.realSobreEstimado, lang)
   }
 
   const colunas: Coluna<LinhaFechada>[] = [
@@ -73,7 +74,7 @@ export function Fechadas() {
       ),
     },
     { id: 'pontos', cabecalho: t('fechadas.col.pontos'), valor: (l) => l.pontos, render: (l) => (l.pontos == null ? traco : numero(l.pontos, lang)), numerica: true },
-    { id: 'horas', cabecalho: `${t('fechadas.col.horasGastas')} / ${t('fechadas.col.horasEstimadas')}`, valor: (l) => (l.horasEstimadas && l.horasGastas != null ? l.horasGastas / l.horasEstimadas : null), render: (l) => razao(l) || traco, numerica: true },
+    { id: 'horas', cabecalho: `${t('fechadas.col.horasGastas')} / ${t('fechadas.col.horasEstimadas')}`, valor: (l) => l.realSobreEstimado ?? null, render: (l) => razao(l) || traco, numerica: true },
   ]
 
   return (
@@ -81,7 +82,7 @@ export function Fechadas() {
       <CardPage
         titulo={t('nav.fechadas')}
         pergunta={t('fechadas.pergunta')}
-        filtros={<Filtros key={sp.toString()} campos={['periodo', 'squad', 'pessoa', 'tipo', 'prioridade', 'os', 'unit']} valor={sp} aoAplicar={aplicar} />}
+        filtros={<Filtros key={sp.toString()} campos={['periodo', 'squad', 'pessoa', 'tipo', 'prioridade', 'os', 'campos', 'unit']} valor={sp} aoAplicar={aplicar} />}
         consulta={consulta}
         avisos={dto?.avisos}
         aoExportar={exportar}
@@ -222,6 +223,7 @@ export function Fechadas() {
                           <th scope="col" className="num">{t('fechadas.col.cicloP50')} ({unidade})</th>
                           <th scope="col" className="num">{t('fechadas.col.horasEstimadas')}</th>
                           <th scope="col" className="num">{t('fechadas.col.horasGastas')}</th>
+                          <th scope="col" className="num">{t('fechadas.col.tempoAtivo')} ({unidade})</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -245,6 +247,7 @@ export function Fechadas() {
                             <td className="num">{p.cicloP50 == null ? traco : numero(p.cicloP50, lang)}</td>
                             <td className="num">{p.horasEstimadas == null ? traco : numero(p.horasEstimadas, lang)}</td>
                             <td className="num">{p.horasGastas == null ? traco : numero(p.horasGastas, lang)}</td>
+                            <td className="num">{p.tempoAtivoDias == null ? traco : numero(p.tempoAtivoDias, lang)}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -253,6 +256,8 @@ export function Fechadas() {
                 </>
               )}
             </Cartao>
+
+            <PorCampo cartaoId="FE-13" agrupamentos={dto.porCampo ?? []} indisponivel={bloqueado} aoAbrir={(seg, titulo) => abrir('FE-13', seg, titulo)} />
 
             <Cartao id="FE-12" variante="lista" nivelDoTitulo={2} idDoTitulo="h-fe-tabela" titulo={t('fechadas.tabela')}
               aoAbrir={comAbrir(dto.concluidas, 'FE-12', 'concluidas', t('fechadas.tabela'))}>

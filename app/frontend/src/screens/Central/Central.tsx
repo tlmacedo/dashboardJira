@@ -25,7 +25,7 @@ function estadoDoCartao(e: string, t: (k: string) => string): { tipo: EstadoDoCa
 }
 
 /** Cartão da Central de cada KPI: o id do catálogo é o do cartão que abre as tasks. */
-const CARTAO_DO_KPI: Record<string, string> = { ABERTAS: 'VG-01', VENCIDAS: 'VG-05', RISCO_ALTO: 'VG-08', NO_PRAZO: 'VG-04', NO_PRAZO_AJUSTADO: 'VG-04' }
+const CARTAO_DO_KPI: Record<string, string> = { ABERTAS: 'VG-01', VENCIDAS: 'VG-05', RISCO_ALTO: 'VG-08', NO_PRAZO: 'VG-04', NO_PRAZO_AJUSTADO: 'VG-04', CONCLUIDAS_30D: 'VG-02', CICLO_30D: 'VG-03' }
 
 /**
  * Central de atenção (coordenação e gerente): a porta de entrada. Layout editorial: KPIs no topo, os indicadores que pedem
@@ -43,6 +43,21 @@ export function Central() {
     i.cartao && i.segmento && !bloqueado && (i.n ?? 0) > 0 ? () => setGaveta({ cartaoId: i.cartao as string, segmento: i.segmento as string, titulo }) : undefined
 
   const emAtencao = (dto?.itens ?? []).filter((i) => (i.estado === 'problema' || i.estado === 'atencao') && (i.n ?? 0) > 0).length
+
+  /** Legenda do KPI: a taxa dos que têm universo; a variação das concluídas; o P85 e o tamanho da amostra do ciclo. */
+  function legendaDoKpi(
+    i: ItemCentral,
+    ciclo: { p50: number; p85: number; n: number } | null | undefined,
+    conc: { anterior: number | null; variacao: number | null } | null | undefined,
+  ): string | undefined {
+    if (ciclo) return `${t('central.kpi.p85').replace('{valor}', numero(ciclo.p85, lang))} · ${inteiro(ciclo.n, lang)} tasks`
+    if (conc) {
+      if (conc.variacao === null || conc.anterior === null) return t('central.kpi.semBase')
+      const sinal = conc.variacao > 0 ? '+' : ''
+      return t('central.kpi.variacao').replace('{valor}', `${sinal}${numero(conc.variacao, lang)}`).replace('{anterior}', inteiro(conc.anterior, lang))
+    }
+    return i.universo ? percentual((i.n ?? 0) / i.universo, lang) : undefined
+  }
 
   function exportar() {
     if (!dto) return
@@ -77,11 +92,13 @@ export function Central() {
             <div role="group" aria-label={t('central.kpis')} className="cardpage-kpis">
               {dto.kpis.map((i) => {
                 const nome = t(`central.kpi.${i.item}`)
+                const ciclo = i.item === 'CICLO_30D' ? dto.ciclo30d : null
+                const conc = i.item === 'CONCLUIDAS_30D' ? dto.concluidas30d : null
                 return (
                   <Cartao
                     key={i.item} id={CARTAO_DO_KPI[i.item] ?? 'VG-01'} ajudaComTitulo titulo={nome}
-                    valor={bloqueado || i.n === null ? '—' : i.universo !== null ? `${inteiro(i.n, lang)}/${inteiro(i.universo, lang)}` : inteiro(i.n, lang)}
-                    legenda={i.universo ? percentual((i.n ?? 0) / i.universo, lang) : undefined}
+                    valor={ciclo ? (bloqueado ? '—' : numero(ciclo.p50, lang)) : bloqueado || i.n === null ? '—' : i.universo !== null ? `${inteiro(i.n, lang)}/${inteiro(i.universo, lang)}` : inteiro(i.n, lang)}
+                    legenda={legendaDoKpi(i, ciclo, conc)}
                     estado={estadoDoCartao(i.estado, t)}
                     aoAbrir={abrir(i, nome)}
                   />
