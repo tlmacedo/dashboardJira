@@ -17,6 +17,14 @@ Branch `fix/auditoria-final` (a partir da `main` em 1ad9529). Sem PR aberto. Rel
 - **I-3, escolha do `sudo -n` no teste em vez de passo dedicado no `ci.yml`:** o runner do GitHub tem sudo sem senha e o usuário `nobody`; assim nada muda no pipeline e não há Gradle como root deixando arquivos de root em `build/`. Os arquivos que o root e o `nobody` criam na pasta temporária do teste são apagados por `sudo rm -rf` ao fim. Conferido localmente com usuário comum + sudoers `NOPASSWD` + `CI=true`: 35 testes, 0 pulados; removendo a baixa de privilégio de `comum.sh` o teste falha; sem sudo, as 3 provas falham (não pulam).
 - **M-3:** a causa encadeada foi descartada (a mensagem do JDK repete o valor). Perde-se o rastro técnico da causa, que só repetia o texto digitado.
 
+## Segunda rodada (revisão em Opus do PR #52)
+
+- **I-1:** a trava saiu só de `main()`: `buscar_issues` (já na chamada, antes de montar a requisição), `_paginas` e `_ler_pagina` (antes de `abrir`) levantam `FlagDoJiraDesligada` sem eco. `main()` mantém a checagem cedo.
+- **M4 (paridade):** só `\n`, `\r` e `\r\n` quebram linha (como `Files.readAllLines`); o trim usa o conjunto do `String.trim()` do Kotlin (`Character.isWhitespace` ou `isSpaceChar`; U+0085 NÃO é aparado); valor em minúsculas só ASCII; UTF-8 inválido = desligada. Tabela de paridade nos testes e sondas do revisor conferidas.
+- **M5/M6:** mock do ambiente levanta em qualquer leitura da credencial/flag e em qualquer varredura; casos de flag só no ambiente, BOM, CRLF, CR; mutação `or os.environ.get(...)` agora falha.
+- **M2/M3 (varredura Kotlin):** TRAVADO exige a flag lida em código (não comentário, docstring, bloco, echo, constante) antes do primeiro uso de rede; em Python, toda função/bloco com rede exige a checagem antes (direta ou por função do arquivo). Detecção ampliada (iwr, irm, import_module, socket, aiohttp, nc, bitsadmin, certutil, `fetch (`, `.psm1 .bash .ts`, shebang sem extensão). **Lacunas conhecidas:** rede montada por concatenação de texto, `eval`/`__import__`, binários não listados, ordem dentro de ramos condicionais; `tests/` e `test*` ficam fora da varredura.
+- **M7:** o teste de mensagens agora cobre Operacao (disco, backup, métricas, logs), SYNC_*, RETENTION_*, OIDC, SESSION_SECRET(_ANTERIOR) e DASHBOARD_DPO_ACEITE; nenhuma ecoa. Lacuna: `DASHBOARD_DPO_ACEITE_REF` (texto livre, nunca validado, logo nunca citado) e `OIDC_HOSTS_PERMITIDOS`/`OIDC_DOMINIOS_PERMITIDOS` não têm caso próprio.
+
 ## Minor não corrigidos nesta branch
 
 - **M-1** (`access_log` grava valor textual cru de filtro nas rotas sensíveis): **adiado**. Decisão já registrada: o texto é limitado a 100 caracteres, digitado pelo próprio consultante e só aparece para quem tem acesso ao registro de acessos. Recomendação futura: gravar só datas ISO válidas ou `(invalido)` nas rotas sensíveis.
