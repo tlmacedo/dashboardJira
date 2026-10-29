@@ -179,7 +179,7 @@ class SegredosDeImplantacaoTest {
         val pasta = Files.createTempDirectory("painel-segredo-")
         try {
             val env = pasta.resolve("painel.env")
-            Files.writeString(env, "DASHBOARD_DEV_MODE=false\nSESSION_SECRET=\nOIDC_CLIENT_ID=painel\n")
+            Files.write(env, listOf("DASHBOARD_DEV_MODE=false", "SESSION_SECRET=", "OIDC_CLIENT_ID=painel"))
             val script = repo.resolve("deploy/linux/gerar-session-secret.sh").toString()
             val (c1, s1) = rodar(sh()!!, script, env.toString())
             assertEquals(0, c1, s1)
