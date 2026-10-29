@@ -2,7 +2,7 @@
 
 Versão em inglês: [`faq.md`](faq.md). Guia completo, tela por tela: [`guia-do-painel.md`](guia-do-painel.md) (em inglês: [`panel-guide.md`](panel-guide.md)). Os termos abaixo são os que as telas mostram.
 
-> **Estado de hoje (29/10/2026).** O acesso ao Jira está desligado (flag `JIRA_LIVE_ENABLED=false`): o painel só mostra dados de demonstração fictícios. As respostas sobre sincronização e sobre números reais valem depois que o usuário ligar a flag. A Auditoria e a Integridade ficam atrás da Trava do DPO (fechada por padrão até o aceite do encarregado de dados), e todos os papéis têm a tela "Meus dados".
+> **Estado de hoje (29/10/2026).** O acesso ao Jira está desligado (flag `JIRA_LIVE_ENABLED=false`): o painel só mostra dados de demonstração fictícios. As respostas sobre sincronização e sobre números reais valem depois que o usuário ligar a flag. A Auditoria e a Integridade ficam atrás da Trava do DPO (fechada por padrão até o aceite do encarregado de dados), e todos os papéis têm a tela "Meus dados". Quando o usuário ligar a flag, a primeira subida apaga sozinha os dados fictícios (só enquanto não houve nenhuma tentativa de sincronização), o painel mostra "Aguardando a primeira carga do Jira" até a primeira carga concluir, e o escopo por papel só vale com dados reais e login.
 
 ## 1. Por que "No prazo" e "No prazo ajustado" são diferentes?
 

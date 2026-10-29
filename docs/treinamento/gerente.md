@@ -2,7 +2,7 @@
 
 Material para o gerente do TG-Basic. É o **único** material que trata da Integridade e do Registro de acesso. Roteiro da sessão (agenda, pré-requisitos e fechamento): [`roteiro-da-sessao.md`](roteiro-da-sessao.md). Para as telas que o gerente divide com a coordenação (Metas e prazos, Fechadas, Divergência, Decisões), veja o [material da coordenação](coordenador.md). Guia completo: [`guia-do-painel.md`](../manual/guia-do-painel.md).
 
-> **Estado de hoje (29/10/2026).** O acesso ao Jira está desligado (`JIRA_LIVE_ENABLED=false`). A sessão usa os **dados de demonstração** fictícios; os números não são os do time. A **Integridade** e a **Auditoria** estão atrás da Trava do DPO: fechada por padrão até o aceite do encarregado de dados (configuração `DASHBOARD_DPO_ACEITE` com a referência do parecer, ligada só pelo usuário), e aberta apenas na demonstração.
+> **Estado de hoje (29/10/2026).** O acesso ao Jira está desligado (`JIRA_LIVE_ENABLED=false`). A sessão usa os **dados de demonstração** fictícios; os números não são os do time. A **Integridade** e a **Auditoria** estão atrás da Trava do DPO: fechada por padrão até o aceite do encarregado de dados (configuração `DASHBOARD_DPO_ACEITE` com a referência do parecer, ligada só pelo usuário), e aberta apenas na demonstração. Ao ligar a flag, a primeira subida apaga sozinha os dados fictícios (só enquanto não houve nenhuma tentativa de sincronização), o painel mostra "Aguardando a primeira carga do Jira" até a primeira carga concluir, a Trava do DPO continua fechada até o aceite, e o escopo por papel só vale com dados reais e login.
 
 ## Objetivo da sessão
 

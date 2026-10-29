@@ -2,7 +2,7 @@
 
 Portuguese version: [`perguntas-frequentes.md`](perguntas-frequentes.md). Full guide, screen by screen: [`panel-guide.md`](panel-guide.md) (in Portuguese: [`guia-do-painel.md`](guia-do-painel.md)). The terms below are the ones the English screens show.
 
-> **Today's state (2026-10-29).** Jira access is off (flag `JIRA_LIVE_ENABLED=false`): the dashboard shows only fictional demonstration data. The answers about synchronization and real numbers hold after the user turns the flag on. Audit and Integrity sit behind the DPO gate (closed by default until the data protection officer accepts), and every role has the "My data" screen.
+> **Today's state (2026-10-29).** Jira access is off (flag `JIRA_LIVE_ENABLED=false`): the dashboard shows only fictional demonstration data. The answers about synchronization and real numbers hold after the user turns the flag on. Audit and Integrity sit behind the DPO gate (closed by default until the data protection officer accepts), and every role has the "My data" screen. When the user turns the flag on, the first start deletes the fictional data by itself (only while no synchronization attempt has happened), the dashboard shows "Waiting for the first Jira load" until the first load finishes, and role scoping only applies with real data and login.
 
 ## 1. Why are "On time" and "Adjusted on time" different?
 
