@@ -17,6 +17,8 @@ app/config/equipes.yaml
 .env
 .env.*
 !.env.example
+# Arquivo de variaveis de producao (so existe no servidor); o modelo versionado e deploy/modelos/painel.env.exemplo
+**/painel.env
 **/config/equipes.yaml
 **/config/ausencias.yaml
 **/config/papeis.yaml
