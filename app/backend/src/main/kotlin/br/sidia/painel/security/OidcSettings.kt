@@ -27,6 +27,8 @@ class OidcSettings(
      * (IP literal, `localhost`, `*.local` e `*.localhost` são recusados; só pelo NOME, sem resolver DNS).
      */
     val hostsPermitidos: Set<String> = emptySet(),
+    /** `OIDC_USERNAME_ESTRATEGIA`: como a claim vira o username do Jira (Plano 13, T2). Padrão: a claim já é o username. */
+    val estrategiaUsername: EstrategiaDeUsername = EstrategiaDeUsername.CLAIM_DIRETO,
 ) {
     override fun toString() =
         "OidcSettings(issuer=$issuer, clientId=$clientId, clientSecret=${if (clientSecret != null) "***" else "nenhum"}, " +
@@ -69,6 +71,7 @@ class OidcSettings(
                 claimUsername = claim,
                 sessao = segredos,
                 hostsPermitidos = hostsPermitidos(valor("OIDC_HOSTS_PERMITIDOS")),
+                estrategiaUsername = EstrategiaDeUsername.daVariavel(valor("OIDC_USERNAME_ESTRATEGIA")),
             )
         }
 
