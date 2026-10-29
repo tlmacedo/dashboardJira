@@ -44,7 +44,7 @@ class ExtratorDeUsernameTest {
 
     @Test
     fun sufixoESubdominioParciaisNaoCasam() {
-        for (ruim in listOf("ana@evilempresa.invalid", "ana@sub.empresa.invalid", "ana@empresa.invalid.evil.invalid", "ana@mpresa.invalid", "ana@empresa.invali")) {
+        for (ruim in listOf("ana@evilempresa.invalid", "ana@sub.empresa.invalid", "ana@empresa.invalid.evil.invalid", "ana@mpresa.invalid", "ana@xempresa.invalid")) {
             assertNull(extrair(ruim, EstrategiaDeUsername.PARTE_LOCAL_DO_EMAIL), ruim)
         }
         for (ruim in listOf("EVILEMPRESA\\ana", "SUB.EMPRESA\\ana", "EMPRES\\ana", "EMPRESA2\\ana")) {

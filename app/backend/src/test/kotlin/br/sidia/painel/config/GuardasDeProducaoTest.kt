@@ -112,6 +112,33 @@ class GuardasDeProducaoTest {
     }
 
     @Test
+    fun grafiasEquivalentesDeTodasAsInterfacesNaoSobem() {
+        // todas resolvem para o endereço "qualquer" (isAnyLocalAddress): a guarda compara o ENDEREÇO, não o texto
+        val grafias = listOf(
+            "0", "0.0", "0.0.0", "00.00.00.00", "000.000.000.000", "::0", "0::0", "0:0:0:0:0:0:0:0",
+            "0000:0000:0000:0000:0000:0000:0000:0000", "::ffff:0.0.0.0", "::FFFF:0:0", "[::0]", "[0:0:0:0:0:0:0:0]", " 0.0.0.0 ",
+        )
+        for (g in grafias) {
+            assertEquals(listOf("ESCUTA_ABERTA_A_TODAS"), codigos(settingsValidas().copy(host = g)), "'$g'")
+        }
+    }
+
+    @Test
+    fun enderecosEspecificosEoLoopbackSobem() {
+        for (ok in listOf("127.0.0.1", "::1", "0:0:0:0:0:0:0:1", "10.0.0.7", "192.0.2.10", "2001:db8::5", "localhost", "LOCALHOST")) {
+            assertEquals(emptyList(), codigos(settingsValidas().copy(host = ok)), ok)
+        }
+    }
+
+    @Test
+    fun nomeDeHostQueNaoELocalhostNaoSobeSemResolverDns() {
+        // um nome pode virar qualquer endereço (inclusive "todas as interfaces"): em produção só IP literal ou localhost
+        for (nome in listOf("painel.exemplo.invalid", "0x0", "0x7f.1", "intranet", "dead", "1.2.3.4.5", ".:1")) {
+            assertEquals(listOf("ESCUTA_NAO_LITERAL"), codigos(settingsValidas().copy(host = nome)), nome)
+        }
+    }
+
+    @Test
     fun caminhoRelativoNaoSobe() {
         assertEquals(listOf("CAMINHO_RELATIVO"), codigos(settingsValidas().copy(databasePath = Path.of("data/painel.db"))))
         assertEquals(listOf("CAMINHO_RELATIVO"), codigos(settingsValidas().copy(configDir = Path.of("config"))))

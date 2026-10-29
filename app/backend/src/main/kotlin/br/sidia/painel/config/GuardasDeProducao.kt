@@ -56,7 +56,11 @@ object GuardasDeProducao {
 
         if (s.proxyConfiavel.isEmpty()) achados += "PROXY_NAO_CONFIGURADO"
 
-        if (s.host.trim() in ESCUTA_ABERTA) achados += "ESCUTA_ABERTA_A_TODAS"
+        when (classificarEscuta(s.host)) {
+            Escuta.TODAS -> achados += "ESCUTA_ABERTA_A_TODAS"
+            Escuta.NAO_LITERAL -> achados += "ESCUTA_NAO_LITERAL"
+            Escuta.ESPECIFICA -> {}
+        }
 
         if (!s.databasePath.isAbsolute || !s.configDir.isAbsolute || !s.staticDir.isAbsolute) achados += "CAMINHO_RELATIVO"
 
@@ -69,8 +73,28 @@ object GuardasDeProducao {
         if (achados.isNotEmpty()) throw ViolacaoDeProducao(achados)
     }
 
-    /** Todas as interfaces: vazio, `0.0.0.0`, `::` e `[::]`. */
-    private val ESCUTA_ABERTA = setOf("", "0.0.0.0", "::", "[::]")
+    private enum class Escuta { TODAS, NAO_LITERAL, ESPECIFICA }
+
+    private val IPV4_NUMERICO = Regex("^[0-9]+(\\.[0-9]+){0,3}$")
+    private val IPV6_LITERAL = Regex("^[0-9A-Fa-f:][0-9A-Fa-f:.]*$")
+
+    /**
+     * Compara o ENDEREÇO, não o texto: `0`, `0.0`, `000.000.000.000`, `::0`, `0::0`, `0:0:0:0:0:0:0:0` e `::ffff:0.0.0.0` valem
+     * "todas as interfaces". Só literais IP numéricos são interpretados (nunca há consulta de nome); fora `localhost`, qualquer
+     * nome é recusado porque poderia apontar para qualquer endereço.
+     */
+    private fun classificarEscuta(host: String): Escuta {
+        val h = host.trim().removeSurrounding("[", "]")
+        if (h.isEmpty()) return Escuta.TODAS
+        val literal = IPV4_NUMERICO.matches(h) || (':' in h && IPV6_LITERAL.matches(h))
+        if (!literal) return if (h.equals("localhost", ignoreCase = true)) Escuta.ESPECIFICA else Escuta.NAO_LITERAL
+        val endereco = try {
+            java.net.InetAddress.getByName(h)
+        } catch (e: java.net.UnknownHostException) {
+            return Escuta.NAO_LITERAL
+        }
+        return if (endereco.isAnyLocalAddress) Escuta.TODAS else Escuta.ESPECIFICA
+    }
 
     private fun uriOuNula(texto: String): URI? = try {
         URI(texto)
