@@ -63,6 +63,13 @@ Branch `feat/complementos-telas-filtros-plano-10` (parte de `origin/main` com o 
 - Consequência: testes que esperavam `/api/cartoes/TS-01/tasks` etc. passaram a esperar `/api/cartoes/{id}/tasks`; o filtro "rota" do Registro de acesso agora enxerga o modelo.
 - Provas: `TarefaRoutesTest.drillComChaveNoIdGravaOModeloDaRota`, `drillComPontosCodificadosNaoFalsificaARota`, `variantesDeTarefaGravamModeloOuRotuloFixo`, `barraInvertidaCruaNaoFalsificaARotaDoLog`.
 
+## Quarta rodada da revisão (29/10)
+
+- Ruling (I-4): cartão RESOLVIDO no catálogo (lista fechada) grava o id no rótulo (`/api/cartoes/IN-02/tasks`), mantendo o rastro "quem abriu as tasks de qual cartão" (Ruling I4 do Plano 7); cartão não resolvido continua `/api/cartoes/{id}/tasks`, nunca o texto digitado. Atributo `ROTULO_RESOLVIDO`.
+- Reforço: cartão não resolvido marca `ROTA_SENSIVEL` antes do 404, então o `segmento=pessoa:*` vai ao log só como tipo (`pessoa:*`).
+- Reforço: negação antes do roteador (CSRF, falta de papel) grava `/api/<módulo>` se o primeiro segmento estiver na lista fechada de módulos (`MODULOS_DA_API`) e `desconhecida` fora dela; nunca chave nem pessoa.
+- Provas: `TarefaRoutesTest.drillDeCartaoResolvidoGravaOIdDoCartao`, `drillDeCartaoNaoResolvidoNaoGravaSegmentoDePessoa`, `ProtecaoCsrfTest.negacaoGravaOModuloConhecidoOuRotuloFixo`; asserções de `IntegridadeRoutesTest` restauradas. A lista de módulos precisa de atualização quando surgir módulo novo em `/api`.
+
 ## Desvio de processo
 
 - No merge de `origin/main` usei `git add -A app docs` uma vez (escopo limitado a `app` e `docs`) para concluir a resolução de conflitos.

@@ -210,7 +210,27 @@ suspend fun registrarNegacaoSemPapel(auditoria: AccessLog, ctx: AppContext, call
  * caminho digitado (ele pode levar chave de issue ou id de pessoa). Sem rota casada (negação antes do roteador, como CSRF ou
  * falta de papel): o rótulo fixo `desconhecida`.
  */
-internal fun rotuloDaRota(call: ApplicationCall): String = modeloDaRota(call)
+internal fun rotuloDaRota(call: ApplicationCall): String {
+    call.attributes.getOrNull(ROTULO_RESOLVIDO)?.let { return it }
+    val modelo = modeloDaRota(call)
+    if (modelo != "desconhecida") return modelo
+    // Antes do roteador (CSRF, falta de papel): só o MÓDULO, se estiver na lista fechada; o resto do caminho nunca vai.
+    val s = segmentosNormalizados(call.request.path())
+    val modulo = s.getOrNull(1)?.lowercase(java.util.Locale.ROOT)
+    return if (s.getOrNull(0).equals("api", ignoreCase = true) && modulo in MODULOS_DA_API) "/api/$modulo" else "desconhecida"
+}
+
+/** Primeiro segmento após `/api/` das rotas do painel: lista fechada, sem nenhum valor vindo do pedido. */
+private val MODULOS_DA_API = setOf(
+    "auditoria", "cards", "cartoes", "central", "distribuicao", "filtros", "governanca", "integridade", "me", "meta",
+    "meu-painel", "operacao", "rebalanceamento", "squad", "sync", "tarefa",
+)
+
+/**
+ * Rótulo com o id de um cartão RESOLVIDO no catálogo (lista fechada), como `/api/cartoes/IN-02/tasks`: mantém o rastro de
+ * quem abriu as tasks de qual cartão. Cartão não resolvido não põe nada aqui (fica o modelo `{id}`, nunca o texto digitado).
+ */
+internal val ROTULO_RESOLVIDO = AttributeKey<String>("painel.auditoria.rotulo")
 
 /**
  * Caminho como o roteador o enxerga e como a auditoria deve guardá-lo: percent-decode repetido (até 3 vezes, para `%252D`),

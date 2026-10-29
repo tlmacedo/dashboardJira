@@ -5,6 +5,7 @@ import br.sidia.painel.cards.CODIGO_SEGMENTO_INVALIDO
 import br.sidia.painel.cards.EXTRAS_DE_AUDITORIA
 import br.sidia.painel.cards.ErroHttp
 import br.sidia.painel.cards.ROTA_SENSIVEL
+import br.sidia.painel.cards.ROTULO_RESOLVIDO
 import br.sidia.painel.cards.executar
 import br.sidia.painel.cards.papeisVigentes
 import br.sidia.painel.db.AccessLog
@@ -34,7 +35,12 @@ fun Route.rotasDeDrillGenerico(ctx: AppContext, catalogo: CatalogoDeCartoes, sto
             val principal = call.principal
             val papeis = papeisVigentes(ctx, principal)
             if (papeis.isEmpty()) throw ErroHttp(HttpStatusCode.Forbidden)
-            val cartao = catalogo.porId(call.parameters["id"].orEmpty()) ?: throw ErroHttp(HttpStatusCode.NotFound)
+            val cartao = catalogo.porId(call.parameters["id"].orEmpty()) ?: run {
+                // Cartão não resolvido: o `segmento` pode nomear uma pessoa (`pessoa:*`); trata como sensível para não ir ao log.
+                call.attributes.put(ROTA_SENSIVEL, true)
+                throw ErroHttp(HttpStatusCode.NotFound)
+            }
+            call.attributes.put(ROTULO_RESOLVIDO, "/api/cartoes/${cartao.meta.id}/tasks")
             // Cartão resolvido de módulo sensível: o registro mascara o achado, qualquer que seja a forma do caminho.
             val sensivel = cartao.moduloSensivel != null || call.request.queryParameters["segmento"]?.let { cartao.segmentoSensivel(it) } == true
             if (sensivel) call.attributes.put(ROTA_SENSIVEL, true)

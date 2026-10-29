@@ -158,7 +158,7 @@ class QualidadeRoutesTest {
                 buildList { while (rs.next()) add(rs.getString(1) to rs.getString(2)) }
             }
         }.takeLast(3)
-        assertEquals(listOf("/api/cartoes/{id}/tasks", rota, rota), linhas.map { it.first })
+        assertEquals(listOf("/api/cartoes/QD-03/tasks", rota, rota), linhas.map { it.first })
         assertTrue("\"segmento\":\"label:*\"" in linhas[0].second, linhas[0].second)
         assertFalse(linhas.any { "MYSTERY" in it.second || "TG-" in it.second }, linhas.toString())
         assertTrue("\"resultado\":\"403\"" in linhas[1].second)

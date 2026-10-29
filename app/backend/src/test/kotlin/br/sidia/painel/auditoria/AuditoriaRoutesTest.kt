@@ -568,7 +568,7 @@ class AuditoriaRoutesTest {
         assertEquals(HttpStatusCode.OK, get("coord.um", "/api/cartoes/AU-01/tasks?segmento=todos").status)
         val l = linhasDoAccessLog()
         assertEquals(5, l.size, l.toString())
-        assertEquals(listOf(sinais, sinais, sinais, "/api/auditoria/historico/{key}", "/api/cartoes/{id}/tasks"), l.map { it.second })
+        assertEquals(listOf(sinais, sinais, sinais, "/api/auditoria/historico/{key}", "/api/cartoes/AU-01/tasks"), l.map { it.second })
         assertEquals(listOf("coord.um", "coord.um", "ana", "coord.um", "coord.um"), l.map { it.first })
         assertTrue("200" in l[0].third && "\"sinal\":\"PASSA_BOLA\"" in l[0].third, l[0].third)
         // Filtros saneados: só os conhecidos vão para o registro.

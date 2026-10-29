@@ -210,6 +210,25 @@ class TarefaRoutesTest {
     }
 
     @Test
+    fun drillDeCartaoNaoResolvidoNaoGravaSegmentoDePessoa() = rodar { get ->
+        get("gerente.exemplo", "/api/cartoes/TG-101/tasks?segmento=pessoa:carla")
+        val filtros = requireNotNull(ctx!!.dataSource).connection.use { c ->
+            c.createStatement().executeQuery("SELECT filters FROM access_log").use { rs ->
+                buildList { while (rs.next()) add(rs.getString(1).orEmpty()) }
+            }
+        }
+        assertEquals(1, filtros.size)
+        // Só o tipo do segmento (`pessoa:*`), nunca o id da pessoa.
+        assertFalse("carla" in filtros[0], filtros[0])
+    }
+
+    @Test
+    fun drillDeCartaoResolvidoGravaOIdDoCartao() = rodar { get ->
+        get("gerente.exemplo", "/api/cartoes/AB-01/tasks?segmento=abertas")
+        assertEquals(listOf("/api/cartoes/AB-01/tasks"), rotasDoLog())
+    }
+
+    @Test
     fun drillComPontosCodificadosNaoFalsificaARota() = rodar { get ->
         get("gerente.exemplo", "/api/cartoes/%2E%2E/tasks?segmento=pessoa:carla")
         assertEquals(listOf("/api/cartoes/{id}/tasks"), rotasDoLog())
